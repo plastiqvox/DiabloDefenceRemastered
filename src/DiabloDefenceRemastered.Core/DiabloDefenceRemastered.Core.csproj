@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 그래픽 없는 순수 로직: 데이터·길찾기·시뮬레이션·틱 누적기·장애물 굽기. MonoGame 을 참조하지 않는다 (설계서 1.2) -->
+  <PropertyGroup>
+    <RootNamespace>DiabloDefenceRemastered.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DiabloDefenceRemastered.Tests" />
+  </ItemGroup>
+
+  <!-- 묶음마다 같은 using 을 되풀이하지 않게 계약 namespace 를 전역으로 연다 -->
+  <ItemGroup>
+    <Using Include="System.Numerics" />
+    <Using Include="DiabloDefenceRemastered.Core.Common" />
+    <Using Include="DiabloDefenceRemastered.Core.Defs" />
+    <Using Include="DiabloDefenceRemastered.Core.Data.Registry" />
+    <Using Include="DiabloDefenceRemastered.Core.Sim" />
+    <Using Include="DiabloDefenceRemastered.Core.Sim.Contracts" />
+  </ItemGroup>
+
+</Project>

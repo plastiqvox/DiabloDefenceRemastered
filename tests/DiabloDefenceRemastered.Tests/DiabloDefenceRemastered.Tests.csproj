@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- xunit.v3 는 실행 파일이어야 하고 runner.visualstudio 3.x 가 있어야 dotnet test 가 찾는다 (설계서 1.3) -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>DiabloDefenceRemastered.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit.v3" Version="3.1.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!-- 게임 프로젝트는 참조하지 않는다. 그래픽 없이 돈다 -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\DiabloDefenceRemastered.Core\DiabloDefenceRemastered.Core.csproj" />
+  </ItemGroup>
+
+  <!-- 실제 정의 JSON 을 링크로 출력 Data\ 에 복사한다 → 실제 데이터 시험이 그림 없이 돈다 -->
+  <ItemGroup>
+    <None Include="..\..\src\DiabloDefenceRemastered\Data\**\*.json" LinkBase="Data" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="System.Numerics" />
+    <Using Include="DiabloDefenceRemastered.Core.Common" />
+    <Using Include="DiabloDefenceRemastered.Core.Defs" />
+    <Using Include="DiabloDefenceRemastered.Core.Data.Registry" />
+    <Using Include="DiabloDefenceRemastered.Core.Sim" />
+    <Using Include="DiabloDefenceRemastered.Core.Sim.Contracts" />
+    <Using Include="DiabloDefenceRemastered.Tests.TestKit" />
+  </ItemGroup>
+
+</Project>
