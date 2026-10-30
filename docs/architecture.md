@@ -1,6 +1,6 @@
 # Diablo Defence Remastered — 설계서 (Architecture)
 
-- 상태: v0.5.2 (설계 담당).
+- 상태: v0.5.3 (설계 담당).
   - v0.1: 첫 판.
   - v0.2: 세 리뷰(`docs/reviews/architecture-planner.md`, `architecture-implementer.md`, `architecture-verifier.md`)를 반영했다 — 지적별 처리는 13.1~13.3.
   - v0.3: 기획서 v0.4 의 **디아블로 1 원본 자원 사용**(사용자 요구 10)을 받았다 — 자원 가져오기 도구(1.4), 등각 아레나 좌표·타일 충돌(4.1·4.2),
@@ -18,7 +18,9 @@
     두 줄 벽 함께 보임·칸 바뀜 값 잇기(4.11), 몸 높이까지 보는 "또렷이 보임"과 `kite` 띠 당기기(4.11·6.3·6.6 — 기획 v0.6.1 값), 공정성 계측(10.1), 고정 안개 장면 `--preview fog`(9절·10.2),
     보이는 생성 후보 버림 규칙 뺌(6.12), `FogMath` 소유 WP5. 처리 목록은 13.9.
   - v0.5.2: WP1c 구현(시야 계약·`VisibilityField`·`FogMath`)이 문서와 다르게·더 정한 것을 옮겼다. 처리 목록은 13.10.
-  기준 기획서: `docs/gdd.md` v0.6.1(설계에 넘긴 목록은 기획서 23·24절 끝). 출발점: `docs/brief.md`.
+  - v0.5.3: 기획서 v0.6.2 의 **중간 보스 늘리기**(사용자 요구 "중간 보스 늘리자" — 스테이지 1 은 2명, 스테이지 2 는 3명)를 받았다 — 패턴 조건 `clear_sight`·발사 프레임 시야 재확인(6.5·6.6),
+    중간 보스의 `kite`·`split_on_death`, 보스 막대 여러 줄(8.2), 검증 13.5-18(6.14), 계약 보탬 **WP1d**(11.1). 처리 목록은 13.11.
+  기준 기획서: `docs/gdd.md` v0.6.2(설계에 넘긴 목록은 기획서 23·24·25절 끝). 출발점: `docs/brief.md`.
 - 이 문서는 **코드 구조·형식·알고리즘·작업 나누기**를 정한다. 수치·규칙은 기획서가 정하고, 여기서는 그것을 어디에 어떻게 담는지만 정한다.
   기획서와 다르게 해석한 곳은 그 자리에 `[해석]` 으로 표시하고 12.1 에 모았다.
 - 코드 조각은 인터페이스 시그니처 수준이다. 이름은 구현 때 바뀔 수 있지만 **11절 작업 묶음 사이의 계약**(굵게 표시한 형)은 WP1·WP1b 가 정한 뒤 고치려면 관련 묶음 담당과 합의한다.
@@ -1276,7 +1278,7 @@ public interface IDataValidator { string Name { get; } void Validate(GameDefs de
 {
   "enemies": [
     { "id": "skeleton_king", "name": "해골왕", "tags": ["undead", "boss"],
-      "sprites": "set_sking", "variant": "genrl", "hp": 8000, "speed": 55, "damage": 30, "armor": 0,
+      "sprites": "set_sking", "variant": "genrl", "hp": 9000, "speed": 55, "damage": 30, "armor": 0,
       "knockback_resist": 1.0, "xp": 0, "movement": "astar",
       "immunities": ["knockback", "slow"], "show_boss_bar": true, "time_scaling": false, "rank": "boss",
       "enrage": { "after": "03:00", "damage_mul": 2, "speed_mul": 1.3 },
@@ -1312,6 +1314,7 @@ public interface IDataValidator { string Name { get; } void Validate(GameDefs de
 
 도살자(기획 9.5)는 특수 그림이 없어 시체 부르기를 `"clip": "idle"` + 소환 자리 `fx_blood_burst` 로 보이고, 피의 땅은 `telegraphed_blast`(`"points": { "hero": true, "around": 2, "radius": 120 }`)다.
 2페이즈에서 대사를 한 번 더 내는 것은 페이즈의 `"voice": true`(v0.3, 계약 변경) → 신호 `BossPhase`(7.9).
+(v0.5.3) 해골왕 `hp` 는 기획 v0.6.2 의 9000 이다(도살자 15000 → 18000 — 중간 보스가 늘어 보스 전 상자 강화가 늘었다, 기획 9.4·9.5).
 
 - (해골왕에 `skeleton` 태그를 달지 않는다 — `target_tag: skeleton` 오라·호위 규칙의 대상이 아니다. 태그는 "같은 종 규칙의 대상" 이라는 뜻으로만 단다.)
 - 패턴 `range_band` 는 [최소, 최대] 거리, `hp_once` 는 HP 문턱 1회. `telegraph` 는 선택이지만 **예고 필수 조건**에 걸리는 패턴·능력은 없으면 로딩 오류다(기획 12.6·13.5-13).
@@ -1330,6 +1333,40 @@ public interface IDataValidator { string Name { get; } void Validate(GameDefs de
   **로더(WP7)가** 정의 `patterns` 에서 시작해 첫 페이즈부터 그 페이즈까지 `patch → add → remove` 를 **누적** 적용하고, 부품 매개변수 역직렬화·연결까지 마친 완성 목록을
   `PhaseDef.Patterns` 에 채운다(WP1 코드). 같은 ID 패턴은 원래 자리를 지킨다. WP4 는 `PhaseDef.Patterns` 만 읽고 JSON 을 다시 풀지 않는다(6.6).
 - 일반 적도 `patterns` 를 가질 수 있다(`mud_man`). 패턴과 `behaviors` 의 능력 부품은 같은 실행 경로를 탄다(6.6).
+
+**중간 보스 — 패턴 틀 + 일반 부품** (v0.5.3, 기획 v0.6.2 9.4. 부품만 발췌)
+
+```json
+{ "id": "blackash", "name": "불타는 블랙애시", "tags": ["undead", "fire"], "rank": "miniboss",
+  "sprites": "set_skelbow", "variant": "bashtb", "glow": { "color": [255, 120, 40], "alpha": 0.2 }, "scale": 1.5, "radius": 18,
+  "hp": 2100, "speed": 62, "damage": 0, "armor": 1, "knockback_resist": 0.9, "xp": 150, "movement": "astar",
+  "immunities": ["slow"], "show_boss_bar": true, "time_scaling": false, "drop_table": "dt_miniboss",
+  "behaviors": [ { "type": "kite", "range_band": [220, 320] } ],
+  "patterns": [
+    { "id": "raise_60", "hp_once": 0.6, "clip": "special",
+      "actions": [ { "type": "summon", "spawns": [ { "enemy": "burning_dead", "count": 4 } ], "radius": 140, "alive_cap": 12 } ] },
+    { "id": "raise_30", "hp_once": 0.3, "clip": "special",
+      "actions": [ { "type": "summon", "spawns": [ { "enemy": "burning_dead", "count": 4 } ], "radius": 140, "alive_cap": 12 } ] },
+    { "id": "fire_rain", "cooldown": 8.0, "clip": "attack", "clear_sight": true,
+      "actions": [ { "type": "telegraphed_blast", "points": { "hero": true, "around": 3, "radius": 110 },
+                     "telegraph": { "effect": "fx_warning_circle", "time": 0.8 }, "radius": 55, "damage": 18, "effect": "fx_fire_explosion" } ] },
+    { "id": "fire_fan", "range_band": [0, 340], "cooldown": 2.8, "clip": "attack", "clear_sight": true,
+      "actions": [ { "type": "projectile_spread", "projectile": "pj_fire_arrow", "count": 5, "arc": 60, "aim": "hero", "damage": 10 } ] } ] }
+
+// 데스스핏 산성 자국 — 클립 없는 쿨 동작은 behaviors 의 trigger: cooldown(로트피스트 독 웅덩이와 같은 꼴, 기획 8.3)
+{ "type": "ground_hazard", "trigger": "cooldown", "cooldown": 2.0, "effect": "fx_acid_pool", "radius": 45, "duration": 4.0,
+  "tick": 0.5, "damage": 5, "cap_group": "acid", "cap": 20 }
+// 슬러지 남작 죽으면 분열 — 썩은 시체와 같은 부품, 나올 적만 다름
+{ "type": "split_on_death", "spawn": "mud_man", "count": 3, "throw": 80, "delay": 0.3 }
+```
+
+- **`clear_sight`**(패턴 조건, v0.5.3 — 기획 13.3 "또렷이 보임"): `true` 면 `PatternAbility.TryBegin` 이 다른 조건에 더해 `EnemyCtx.SeenClearly` 를 보고, 이벤트 프레임에 한 번 더 본다(6.6).
+  겨누어 멀리 쏘는 중간 보스 패턴에 단다(블랙애시 `fire_rain`·`fire_fan`, 데스스핏 산성 침 부채). 사방(`arc: 360`)·근접·장판 패턴에는 달지 않는다(기획 9.4). 계약 `PatternDef.ClearSight`(WP1d).
+- 중간 보스도 `behaviors` 와 `patterns` 를 함께 가진다(정의 형이 이미 둘을 따로 가진다). 슬롯 = 정의 부품 + 패턴 합집합: 블랙애시 5(`kite` + 4), 데스스핏 3, 슬러지 남작 3(패턴 2 + 죽음 훅) — 12 안.
+  `kite` 의 "다가감"(`SeekHero`)은 정의 `movement` 대로 A* 를 탄다(4.4 `MoveIntent`), 물러남(`Away`)·멈춤(`Hold`)은 일반 궁수와 같다.
+- `rank: miniboss` 의 `damage` 는 쓰는 근접 부품이 없으면 0 이다(블랙애시·데스스핏 — 몸이 닿아도 피해 없음, 기획 9.4). 정예 상자·금화·룬은 드롭 표 `dt_miniboss`(WP3)가 낸다.
+- 해골 일으키기 두 번은 `hp_once` 패턴 둘이다(문턱 하나에 한 번씩). 불러낸 불타는 해골은 `summon` 의 등장 연출(`Emerging` 0.4s, 6.6)을 탄다.
+  블랙애시에도 `skeleton` 태그를 달지 않는다(위 해골왕과 같은 이유 — 대장 오라·호위 규칙의 대상이 아니다).
 
 ### 6.6 행동 부품 실행 모델 (WP4 소유, 이 절이 설계)
 
@@ -1377,15 +1414,21 @@ public struct ActionState { public sbyte PartIndex, ActionIndex; public byte Sta
 public readonly struct EnemyCtx(World world, Enemy self) { /* 거리·길 트임·SeenClearly·난수(Ai)·적대 대상 질의·ICombatSpawner·피해 요청·버프 붙이기·PlacementResolver 도우미 */ }
 ```
 
-- **시야 조건**(v0.5, 기획 10.7 공정성): `EnemyCtx.SeenClearly` = 정의 `rank` 가 `miniboss`·`boss` 면 늘 참, 아니면 `World.Visibility.IsClearlyVisible(self.Pos, self.BodyTop)`(4.11 — v0.5.1: 몸 위 끝까지). 이것을 쓰는 곳은 셋이다.
-  - `shoot_projectile.TryBegin`: 거리·쿨·`ProjectileLineClear` 에 더해 `SeenClearly`.
+- **시야 조건**(v0.5, 기획 10.7 공정성): `EnemyCtx.SeenClearly` = `World.Visibility.IsClearlyVisible(self.Pos, self.BodyTop)`(4.11 — v0.5.1: 몸 위 끝까지).
+  v0.5.3: v0.5 의 "정의 `rank` 가 `miniboss`·`boss` 면 늘 참" 을 없앴다 — 등급과 상관없이 실제 시야다(기획 v0.6.2 25절 넘긴 것 1). 보스가 시야를 안 보는 것은 **패턴에 조건이 없어서**이고,
+  보스 패턴은 `clear_sight` 를 단 것만 본다(6.5). MVP 의 다른 중간 보스·보스는 `shoot_projectile`·`kite`·`charge` 를 쓰지 않아 바뀌는 것이 없다. `[해석]` 이것을 쓰는 곳은 넷이다.
+  - `shoot_projectile.TryBegin`: 거리·쿨·`ProjectileLineClear` 에 더해 `SeenClearly`. v0.5.3: **이벤트(발사) 프레임에 `SeenClearly` 를 한 번 더 보고, 거짓이면 그 발사만 버린다**(클립은 끝까지, 쿨은 씀).
+    시작과 발사 사이(활 클립 약 0.5s)에 주인공이 움직여 안 보이게 될 수 있는데, 공정성 `unseen_shots`(10.1)는 투사체가 생기는 순간을 센다 — 기획 8.1 "또렷이 보일 때만 쏜다" 를 쏘는 순간에 맞춘다. `[해석]`
+  - `PatternAbility`(v0.5.3): 패턴에 `clear_sight` 가 있으면 `TryBegin` 조건에 `SeenClearly`, 이벤트 프레임에 다시 보고 거짓이면 그 패턴의 `actions` 를 하나도 `Begin` 하지 않는다(위와 같은 규칙).
+    `clear_sight` 패턴이 만드는 투사체는 `EnemyProjectileSpawn.SightGated = true`(WP1d) — 공정성 계측이 이 발사를 보스 제외에서 빼고 센다(10.1).
   - `kite.TryPosition`(v0.5.1 — 기획 v0.6.1 8.3 "띠 당기기", 떨림 막기 R29): L = `World.Visibility.ClearReach(normalize(self.Pos − HeroPos), self.BodyTop)`(그 방향으로 또렷이 보이는 가장 먼 거리, 벽 제외).
     쓰는 띠 = 최대' = min(최대, L − 10), 최소' = min(최소, 최대' − 40). ① `SeenClearly` 가 거짓이거나 거리 > 최대' → `SeekHero`(다가감). ② 거리 < 최소' → 물러남. ③ 그 밖 → 멈추고 쏨.
     띠 폭이 늘 40 이상이라 주인공이 조금 움직여도 쏘기·이동을 오가지 않는다. 양옆은 L = R − 40 ≥ 최대 + 20 이라 띠가 그대로이고, 화면 위아래 쪽에서만 당겨진다(위쪽 한계 약 164~194 가 띠 최소보다 작아도 쏠 자리가 있다).
     L 은 틱마다 그 적 방향으로 한 번(사각형 네 변과 원 하나의 교점 — 할당 없음). 물러날 수 없을 때(0.5s 못 움직임) 제자리 사격은 그대로이고 `shoot_projectile` 쪽 조건을 탄다.
     `kite` 상태가 바뀔 때마다 `World.Fairness.KiteSwitches` 를 1 늘린다(계측, 10.1).
   - `charge.TryBegin`: 길 트임(`HasClearLine`)·거리 ≤ 260 에 더해 `SeenClearly`. 돌진 중에 안 보이게 되어도 끊지 않는다(시작 조건일 뿐).
-  보스 패턴(`PatternAbility`)·근접(`chase_melee`·`melee_slam`)·`self_destruct`·오라·함성에는 시야 조건이 없다(기획 9.5 — 보스는 늘 보이고, 근접·자폭은 닿아야 맞는다).
+  `kite` 는 등급과 상관없이 위 규칙 그대로다 — 중간 보스 블랙애시(기획 9.4)도 안 보이면 다가가고 띠를 당긴다(`BodyTop` = `body_height` × 최종 크기 1.5).
+  `clear_sight` 가 없는 보스 패턴(`PatternAbility`)·근접(`chase_melee`·`melee_slam`)·`self_destruct`·오라·함성에는 시야 조건이 없다(기획 9.5 — 보스는 늘 보이고, 근접·자폭은 닿아야 맞는다).
   대신 그리기가 닿는 적을 늘 보인다: 근접은 `Enemy.TouchReach`(4.11), 자폭은 **점화 중 `Visual.ForceShown = true`**(v0.5.1 — 점화 뒤 주인공이 벽 모서리를 돌아도 반경 60 폭발 전에 번쩍임 예고가 보인다, 기획 12.6).
   E 단계에 멀리서 때리는 새 부품을 만들면 같은 `SeenClearly` 를 쓴다(6.13 "새 부품" 규칙). 시험은 10.1 `Enemies`, 전체 계측은 10.1 `InvariantChecker` 의 공정성 열.
 - **`Enemy.BodyTop`·`Enemy.TouchReach`**(v0.5.1): 생성 때 한 번 쓴다(WP4). `BodyTop` = 그림 묶음 `body_height`(6.3) × 최종 크기(px, Core 정의만으로 계산 — 그림 파일 없이 됨).
@@ -1393,7 +1436,9 @@ public readonly struct EnemyCtx(World world, Enemy self) { /* 거리·길 트임
 
 - **훅 어댑터**: `behaviors` 원소에 `trigger` 가 있으면 그 `type` 을 `EnemyAction` 에서 찾아 `TriggeredAction` 으로 감싼다.
   `on_death` → `IDeathHookPart`, `on_spawn` → `ISpawnHookPart`, `cooldown` → 클립 없는 `IAbilityPart`. 접두사 `fire_enchanted` 의 `telegraphed_blast`, `black_death` 의 `ground_hazard` 가 보스와 같은 동작 코드를 탄다.
-- **`PatternAbility`**(데코레이터): 조건(`range_band`·`cooldown`·`hp_once`) → 클립 재생 → 예고가 있으면 `Telegraph` 를 만들고 예고 시간 동안 클립을 이벤트 프레임 앞에서 멈춤 →
+  (v0.5.3) `cooldown` 훅은 **그 틱에 끝나는 즉시 동작**이다: `TryBegin` 이 `Begin` 까지 하고 독점 행동을 남기지 않는다 → 같은 틱 7번(이동 의도)이 그대로 돈다.
+  로트피스트 독 웅덩이·데스스핏 산성 자국(기획 9.4 — 표에는 패턴으로 적혔지만 클립이 없다)이 이것이다. 데스스핏은 걸으면서 2s 마다 웅덩이를 남긴다. 다른 독점 행동(시전 클립)이 진행 중인 틱에는 미뤄진다(5번).
+- **`PatternAbility`**(데코레이터): 조건(`range_band`·`cooldown`·`hp_once`, v0.5.3 `clear_sight`) → 클립 재생 → 예고가 있으면 `Telegraph` 를 만들고 예고 시간 동안 클립을 이벤트 프레임 앞에서 멈춤 →
   이벤트 프레임에서 `actions` 를 순서대로 `Begin` → 마지막 동작이 `Running` 이면 `Done` 까지 `Tick`.
 - **슬롯 수**: 부품 슬롯은 적마다 `PartSlots`(인라인 12칸) — 정의 부품 + 모든 페이즈 패턴의 합집합 + 접두사 부품. 12 를 넘는 정의·조합은 로딩 오류(접두사 조합은 최대 2개 기준으로 검사). 풀에서 꺼낸 적에 배열을 새로 만들지 않는다.
 - **페이즈**: 덮어쓴 매개변수를 가진 완성 패턴 목록은 **로더(WP7)가** `PhaseDef.Patterns` 에 채워 둔다(6.2 3·4단계). WP4 는 그 목록과 정의 `patterns` 로
@@ -1433,6 +1478,9 @@ public struct MoveOrder { public OrderKind Kind; public Vector2 Dir; public Enti
 
 - 죽음(`DeathHooks`): `Cause == Damage` 면 진행 중 행동에 `Interrupt(Death)` → `self_destruct` 는 여기서 폭발하지 않고 `fx_spark` 만(기획 8.3) → 죽음 훅들 → 호위 공포.
   `Collapse`·`Culled` 는 행동만 끊고 훅을 부르지 않는다(분열·폭발·웅덩이 없음).
+  (v0.5.3, 기획 9.4 슬러지 남작) 중간 보스의 죽음 훅도 같은 순서다: 13 `DeathHooks` 가 분열(`split_on_death` — 머드맨 3, `Source = Split`, 일반 등급, 그 틱의 시간 배율, 분열·소환 상한 360 의 `SpawnGate`)과 `EnemyKilled` →
+  14 `DeathRewards`(WP3)가 드롭 표 `dt_miniboss`(정예 상자·금화·끌어당김 룬) → 히트 스톱 0.08s(`World.Freeze`, 기획 12.6 — 지금까지 거는 곳이 정해지지 않았다. `DeathHooks`(WP4)가 `rank: miniboss`·우두머리 처치에서 그 틱에 건다).
+  분열체는 생긴 다음 틱부터 세고(3.5) `delay` 0.3s 를 기다리므로 히트 스톱 동안 움직이지 않는다. 최종 보스 처치로 무너지는(`Collapse`) 슬러지 남작은 분열하지 않는다(기획 2.2·9.4).
 
 **표시 상태 `EnemyVisual`** (기획 8.3 번쩍임·알파, 9.1~9.3 발광)
 
@@ -1766,7 +1814,9 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
         { "at": "04:30", "type": "elite_pack", "enemy": "skeleton", "count": 4, "affixes": 1, "unique_chance": 0.3 },
         { "at": "05:00", "type": "miniboss", "enemy": "rotfeast", "at_entry": "gate_sw" },
         { "at": "05:00", "type": "escort", "enemy": "skeleton_captain", "escorts": 8, "at_entry": "gate_nw" },
+        { "at": "06:00", "type": "elite_pack", "enemy": "ghoul", "count": 4, "affixes": 1, "unique_chance": 1.0 },
         { "at": "06:30", "type": "march", "enemy": "fallen", "count": 20, "at_entry": "gate_se", "toward_entry": "gate_nw", "straight": 15 },
+        { "at": "07:30", "type": "miniboss", "enemy": "blackash", "at_entry": "gate_nw" },
         { "at": "10:00", "type": "boss", "enemy": "skeleton_king", "at_entry": "gate_ne" }
       ] }
   ]
@@ -1774,6 +1824,9 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 ```
 
 - 배율 식 `[a, b]` = a + b × 분. 구간은 `from`/`to`, 보스 중 구간은 `during: "boss"`. 이벤트 종류 = 기획 13.4, 각 종류가 `PartKind.StageEvent` 부품(레지스트리 등록, WP4).
+- (v0.5.3, 기획 v0.6.2 9.4·10.3·10.4) 중간 보스는 스테이지 1 이 5:00 로트피스트·7:30 블랙애시, 스테이지 2 가 3:00 데스스핏(`gate_nw`)·6:00 스틸메이스(`gate_sw`)·9:00 슬러지 남작(`gate_se`)이다.
+  `miniboss` 이벤트는 앞 중간 보스가 살아 있어도 제 시각에 낸다(미루지 않음). 중간 보스 시각이 든 구간은 앞 구간보다 줄인 값이고(스테이지 1 은 7:00–7:30 / 7:30–8:30 / 8:30–9:00 으로 나눔),
+  이 리듬은 검증 13.5-18(6.14)이 경고로 지킨다. 위 예는 이벤트 일부만 보인다 — 전체 값은 기획 10.3·10.4 표가 정본이다.
 - `weights` 는 JSON 객체로 적지만 로딩 때 **적힌 순서의 배열**로 바뀐다(3.4). 감독은 종류를 먼저 뽑고, 그 종류의 `spawn_group` 이 있으면 무리 크기를 거기서 뽑는다(6.5).
 - `victory`: `{ "type": "boss" }`(최종 보스 처치) 또는 `{ "type": "survive", "at": "10:00" }`(그 시각까지 생존). 처리는 3.5 끝.
 - **단계 1 세로 조각**(기획 14.1·10.3): 그때는 폴른 원·썩은 시체·핀드·불타는 해골 궁수 정의가 아직 없어 전체 구간표가 "없는 적" 오류가 된다.
@@ -1807,7 +1860,7 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 3. **부품 조합**: 일반 적 부품 13종 + 적 동작 7종(패턴·훅 안쪽)을 **어떤 적이든** 쓸 수 있다. 원거리 부품은 투사체 ID 를, 오라·함성은 버프 ID 를 받는다.
 4. **등급 × 접두사**: 17종 × (일반/정예/우두머리) × 접두사 조합이 실행 중에 만들어진다. 접두사 제외 조건(6.7)이 어색한 조합을 막는다.
 
-**MVP 17종(+분열체)과 보스 4** (기획 8.2·9.4·9.5) — 새 C# 은 두 곳뿐이다.
+**MVP 17종(+분열체)과 중간 보스 5·보스 2** (기획 8.2·9.4·9.5 — v0.5.3: 중간 보스 2 → 5) — 새 부품은 두 곳뿐이다. v0.5.3 의 새 중간 보스 셋은 새 부품 없이 되고 패턴 조건 `clear_sight` 하나만 더한다(6.5).
 
 | 적 | 그림 묶음 · 변종 / 덧입힘 | 정의 | 새 코드 |
 |---|---|---|---|
@@ -1829,19 +1882,25 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 | `mud_man` | `set_fat` · `blue`, ×1.15 | 패턴 `melee_slam` + 예고(6.5) | — |
 | `fire_clan` | `set_goatmace` · `red` + 발광 | `charge`, `spawn_group [5,7]` | — |
 | `corpse_spawn` | `set_zombie` · `grey`, ×0.65 | `chase_melee`(분열로만) | — |
-| `rotfeast` / `steelmace` | `set_zombie` · `eth` ×1.6 / `set_goatmace` · `bhsm` ×1.4 + 붉은 발광 | 중간 보스 패턴(기획 v0.3 의 썩은 거인·타락한 기사 대장 그대로) | — |
+| `rotfeast` / `steelmace` | `set_zombie` · `eth` ×1.6 / `set_goatmace` · `bhsm` ×1.4 + 붉은 발광 | 중간 보스 패턴(기획 v0.3 의 썩은 거인·타락한 기사 대장 그대로). 로트피스트 독 웅덩이는 `ground_hazard(trigger: cooldown)` | — |
+| `blackash` (v0.5.3) | `set_skelbow` · `bashtb` ×1.5 + 발광 | `kite` + 패턴 4(`summon` ×2·`telegraphed_blast`·`projectile_spread(pj_fire_arrow)`, 뒤 둘 `clear_sight`) — 6.5 | (`clear_sight` 조건, WP4) |
+| `deathspit` (v0.5.3) | `set_acid` · `bfds` ×1.5 | `ground_hazard(trigger: cooldown)` + 패턴 `projectile_spread(pj_acid)` 둘(사방 / 부채 `clear_sight`) | — |
+| `baron_sludge` (v0.5.3) | `set_fat` · `bsm` ×1.5 | 패턴 `summon(mud_man)`·`melee_slam` + 예고, `split_on_death(mud_man)` | — |
 | `skeleton_king` / `butcher` | `set_sking` · `genrl` / `set_fatc` · `genrl` ×1.3 | 보스 패턴·페이즈(6.5) | — |
 
 - 기획 v0.3(설계 v0.2)의 `skeleton_mage`·`wraith`·`goatman_shaman`·`plague_zombie`·`fallen_knight`·`bone_brute`·`hell_goat`·`rotting_hulk`·`blood_king` 과 그 투사체는 없앤다(기획 8.2 "v0.3 에서 바뀐 것").
 - **확장 후보(E, 기획 8.4)의 비용**: 대부분 "가져오기 표 한 줄 + 정의 1개". 새 부품이 필요한 것만: `scavenger`(`eat_corpse`), `hidden`·`counselor`(`blink`, 자리는 `PlacementResolver`),
   `gargoyle`(`stone_form`), `blood_knight`(`lifesteal` — 접두사 `vampiric` 과 공유, `HitLanded` 사용).
-  멀리서 피해를 주는 새 부품(투사체·원거리 즉발·돌진류)은 시작 조건에 `EnemyCtx.SeenClearly` 를 넣는다(v0.5, 6.6 — 보이지 않는 곳에서 맞지 않음).
+  멀리서 피해를 주는 새 부품(투사체·원거리 즉발·돌진류)은 시작 조건에 `EnemyCtx.SeenClearly` 를 넣는다(v0.5, 6.6 — 보이지 않는 곳에서 맞지 않음). 보스 패턴으로 겨누어 쏘면 `clear_sight`(v0.5.3).
+- **중간 보스 늘리기의 비용**(v0.5.3, 기획 9.4 "고르는 기준" ②): 그림 묶음이 그 스테이지 목록에 이미 있는 원작 고유 몬스터면 "가져오기 표 `variants` 한 칸(고유 TRN `monsters\monsters\<이름>.trn`) + 그림 묶음 `variants` 한 칸 + 정의 1개 + `miniboss` 이벤트 한 줄 + 그 구간 줄임" 이다.
+  쓰는 클립이 그 묶음 정의에 아직 없으면(블랙애시·데스스핏의 `special`) 클립 한 줄과 소리 연결 `special` 한 줄이 더 든다(WP5·WP8).
 
 **"새 적 = JSON 1개" 를 자동으로 확인하는 시험** (WP4, 10.1 `Enemies`)
 
 - **적 정의 전수 연기 시험**(`Theory`, 실제 `Data/` 의 생성 가능한(`abstract` 아님) 적 전부 + `Fixtures/variants/`): 빈 맵에 무적 주인공과 150px 떨어뜨려 하나 생성 →
   10초(600틱) 동안 예외·NaN 없음 → 근접형은 주인공 쪽으로 움직였거나 피해 요청을 냈고, 원거리형은 거리 띠 안에서 투사체를 냈음 → HP 0 으로 만들면 죽음 훅이 돌고 저장소에서 빠지고 보석 1개.
   보스·중간 보스는 패턴 하나 이상이 실행됐는지를 본다. **새 적을 데이터에 넣으면 이 시험이 저절로 늘어난다.** 그림이 없어도 돈다(그림은 정의 값만 쓴다).
+  v0.5.3: 빈 맵은 시야가 꺼진 시험 월드(`Enabled = false` — 질의 늘 참, 4.11)라 `clear_sight` 패턴도 돈다(블랙애시는 150px 에서 띠 220 까지 물러난 뒤 부채를 쏜다).
 - **코드 없는 변형 증거**: `tests/…/Fixtures/variants/ash_skeleton.json`(`extends: skeleton` + 색조 + `behaviors_add: [ground_hazard on_death]` + `behaviors_patch`)을 위 시험에 넣는다.
   이 파일을 바꾸면서 C# 을 고쳐야 했다면 구조가 깨진 것이다.
 - `--preview enemies` 는 배치를 고정한다(9절): 적 정의마다 한 행(ID·변종, 방향 0·고정 프레임으로 걷기/공격/특수/죽음 칸 + 8방향을 도는 칸) → 같은 시각 캡처가 늘 같은 그림이라 정의를 고친 전후를 나란히 비교할 수 있다.
@@ -1868,11 +1927,13 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 | 13.5-14 | 정의 `scale` 이 0.65~1.6 밖, 또는 정의 `scale` × 받을 수 있는 가장 큰 등급 배율 > `rules.ranks.max_scale` 이면 경고(넘는 쪽은 생성 때 잘림, 6.5) | Data |
 | 13.5-15 (v0.5) | 스테이지마다 주인공 빛 반경(= 시야 반경 — 정의 값과 그 스테이지 `light_change` 가 넣는 `hero_light.radius` 값 모두)이 **380 이상(기획 10.5-3 하한 — v0.5.1, 원거리 적이 없는 스테이지에도) 화면 가로 반폭(`ViewSize.X / 2` = 480) 이하**이고, **그 스테이지에 나오는 적**(구간 가중치·이벤트·소환·분열·호위 — 6.14 "안 나오는 적" 과 같은 계산) 중 `kite` 를 가진 적의 `range_band` 최대 + `rules.sight.edge` + `rules.sight.ranged_margin`(40 + 20 = 60) **이상**. 어기면 오류: `stage_catacombs: 빛 반경 360 < burning_archer 거리 유지 최대 340 + 60`. 주인공 빛(`hero_light`)이 없거나 반경 0 이하면 같은 오류다 — 그래서 `VisibilityField.Enabled` 가 거짓인 것은 맵 없는 시험 월드뿐이다(4.11) | Data(380·반폭) + WP4 검사기(`kite` 매개변수를 읽음) |
 | 13.5-16 (v0.5.1) | **원본 유래 값의 출처 주석**(오류)(사용자 결정 B 의 조건, 1.4): JSON 주석은 로더가 버리므로 원문 문자열로 본다. `Data/tilesets/*.json` 의 `props`·`sol_known_diffs`, `Data/sprites/*.json` 의 `frame_time`·`event_frame`, 가져오기 표 `Table/tilesets.json` 의 `overlay` 가 있는 줄마다, 그 줄 끝 또는 그 줄을 담은 객체·배열을 여는 줄 끝에 `// 출처: 원본 확인` 또는 `// 출처: DevilutionX 참고` 가 있다(줄 단위 + 괄호 깊이 추적) | 시험 `Data/SourceCommentTests`(기본 분류, WP0a 작성 — 실제 `Data/`·가져오기 표 원문만 읽음) |
+| 13.5-18 (v0.5.3) | **중간 보스 리듬**(경고, 기획 13.5-18): 스테이지마다 `miniboss`·`boss` 이벤트 시각을 정렬해 이웃끼리 2:00 미만이면 경고. `miniboss` 이벤트 시각이 든 생성 구간(`from` ≤ 시각 < `to`)의 `max_alive`·`per_second` 중 하나라도 바로 앞 구간보다 크면 경고(같으면 통과 — 스테이지 2 의 3:00 구간). 같은 스테이지의 `miniboss` 이벤트 둘이 같은 그림 묶음(`sprites`)을 쓰면 경고. 자원 없이 늘 돈다 | WP4 검사기(이벤트 매개변수 `enemy`·`at` 를 읽음 — 13.5-15 와 같은 자리) |
 | 소리 | 소리 연결 표의 대상(무기·투사체·이펙트·그림 묶음·적·획득물·스테이지)과 소리 ID 가 있음, 분류가 `rules.audio` 에 있음, 소리 파일 ≥ 1 | Audio (WP8) |
 | 추가(오류, v0.5) | 스테이지가 있는데 `rules.sight` 가 없음(6.10) | Data (WP7) |
 | 추가(오류) | `extends` 순환·없는 부모, `abstract` 정의를 생성에 씀, 부품 `(종류, type)` 미등록, 부품 매개변수 검사, `*_patch` 의 없는 id, 클립·이벤트 프레임 범위, 큰 피해 패턴의 예고 필수(13.5-13), 참조 쪽 덮어쓰기는 색조·크기만, 부품 슬롯 > 12, 여러 틱 동작이 `actions` 마지막이 아님, `rules` 하위 키 중복, atlas 그림에 `sheet`·`color_key`·`slack` 속성, 쓰는 클립(`special`·`cast_*`)이 그림 묶음에 없음, `tilesets`·`maps` 에 `extends`·`*_add`·`*_patch` | Data + 부품 |
 | 추가(경고) | flow 유닛 반경 > 26, 명시한 `radius` 가 `round(base_radius × scale)` 와 2 넘게 다름, 크기 범위(13.5-14), 사거리가 몸 반경 합 + `melee_reach_over_contact` 를 넘는 단일 대상 근접(6.5), **생성 가능한 적인데 어느 스테이지에서도 나오지 않음**, **같은 스테이지에 나오는 두 적이 같은 그림 묶음 + 같은 변종이고 색조 거리(RGB 유클리드) < 60, 크기 차 < 0.15, 알파·발광도 같음**, 소리 연결이 없는 그림 묶음을 쓰는 생성 가능한 적(소리 없는 적, WP8), **13.5-17 `include_bosses: true` 인 오라·함성·범위 버프**(v0.5.1 — MVP 데이터에는 없어야 함, 결정 C. WP4 매개변수 검사) | Data + 부품 |
 
+- 13.5-15 의 "`kite` 를 가진 적" 은 등급과 상관없다 — v0.5.3 에 스테이지 1 블랙애시(`kite` 최대 320 + 60 = 380 ≤ 420)가 든다. 13.5-13 예고 검사는 새 중간 보스의 불비(18, 예고 0.8s)·진흙 강타(반경 75 피해 26, 0.6s)도 본다.
 - 구별 경고는 변종이 다르면 구별되는 것으로 본다(원작 TRN 은 색이 크게 다르다 — 기획 8.2). 기준값(60·0.15)은 설계 제안이고 최종 판정은 `--preview enemies` 캡처를 사람이 본다.
 - v0.2 에서 "그림이 있을 때만" 이던 기하 검사(13.5-4~6)는 v0.3 에서 **늘 돈다**(충돌을 저장소 데이터로 만들므로, 4.2). 기획 13.5-4 의 "다각형이 없으면 건너뜀" 은 필요 없어졌다. `[해석]`
 
@@ -1944,6 +2005,7 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
   `volume`(분류 배율에 곱함), `max_instances`(기본 `same_sound`), `min_interval`(기본 `rules.audio.min_interval`), `pitch_jitter`(± 비율), `offscreen`(분류 값 덮어쓰기), `loop`.
 - `music[]`: `file`, `loop`(기본 true). 기획 12.7 의 곡 목록.
 - 연결 키의 대상은 그 종류의 정의 ID 다. `sprite_sets` 의 소리를 적 정의가 덮어쓰려면 `enemies.<id>.{attack,hit,death,special}`. 보스·중간 보스(정의 `rank`)가 낸 몬스터 소리는 분류를 `boss` 로 올린다(기획 12.7 "보스·중간 보스 소리").
+  v0.5.3: 새 중간 보스는 그림 묶음이 같아 소리가 저절로 따라온다. 다만 `special` 을 처음 쓰는 묶음(`set_skelbow` — 블랙애시 해골 일으키기, `set_acid` — 데스스핏 산성 분출)은 `sprite_sets.<묶음>.special` 한 줄과 그 WAV(`monsters\skelbow\sklbws*.wav`·`monsters\acid\acids*.wav`)를 가져오기 소리 표에 더한다. 중간 보스에는 등장 대사(`voice`)가 없다(기획 12.7).
 - 파일 이름은 가져오기 출력(1.4: 원작 경로를 소문자로 `d1/sound/` 아래에 그대로)이다. 13.5-10 시험이 표와 맞춘다.
 - 소리 길이는 정의에 적지 않고 가져오기 출력 `d1/sound/index.json`(Core `Assets/SoundIndex`: 파일마다 표본 수·표본율·채널)에서 읽는다. 무음에서도 읽는다(7.9 고르기).
 - 정의 형(`SoundDef`, `MusicDef`, `SoundBindingsDef`, `AudioRulesDef`)은 Core `Defs/`(데이터 모양, 계약 WP1b)이고, 검사기·고르기 규칙은 Core `Audio/`(WP8), 재생은 게임 `Audio/`(WP8). `Sim/` 은 어느 것도 쓰지 않는다.
@@ -2327,6 +2389,9 @@ public interface IAutoplayDriver { AppTick Now { get; } bool Ready(IScene scene)
 ### 8.2 HUD (기획 12.1)
 
 - `Hud` 하나가 `World` 를 읽어 그린다: 경험치 막대, 시간, 보스 막대(최종 위·중간 아래), 무기·패시브 칸, 처치·금화, 미니맵, 체력 구슬, 지속 효과, 알림 문구.
+- **보스 막대 여러 줄**(v0.5.3, 기획 12.1 v0.6.2): `World.BossBars`(`List<BossBar(Id, Name, Final)>`, WP4 씀)는 **등장 순서**로 쌓고 죽거나 무너진 적의 줄을 뺀다. 계약 형은 그대로다.
+  HUD 는 `Final` 인 줄을 맨 위 큰 막대(480×10, 2페이즈 선)로, 나머지를 목록 순서대로 그 아래 작은 막대(320×6)로 그린다. `Final` 이 없으면 목록 첫 줄(가장 먼저 나온 중간 보스)이 큰 막대다.
+  최대 4줄(중간 보스 3 + 최종 보스 — 기획 12.1). 넘으면 `Final` 과 먼저 나온 중간 보스 3줄만 그리고 로그에 경고 한 번(MVP 데이터로는 생기지 않는다). 체력은 그 적에서 읽는다.
 - 체력 구슬은 코드로: 원 마스크 텍스처(생성) + 붉은 채움 사각형을 비율만큼(원 안만 보이게 그리기 순서로) + 돌 테(코드로 만든 회색 고리 그라데이션).
   v0.2 의 "맵 질감으로 구운 테" 는 장애물 굽기와 함께 없앴다. 원작 UI 그림(`ctrlpan\*.cel`)으로 바꿀지는 기획 열린 질문 17.
 - 미니맵: 가져오기 도구가 구운 맵의 `minimap.png`(외곽 상자 1/16, 마름모, 막힌 곳 어둡게 — 7.6)를 알파 0.75 로. 점은 1px 텍스처 늘이기, 좌표는 월드 ÷ 16.
@@ -2428,8 +2493,8 @@ $p.ExitCode
 | `Combat` | `DamageMath` — 기획 4.2 예(오라+함성 = ×1.55, 반올림 마지막, 방어 후 최소 1, 치명), `damage_pct` 한 번만, 발사 시점 고정, 시간 배율 제외 대상, 등급 배율, 피격 무적, `--god`, 승리 대기 중 주인공 피해 무시, 입장 중 적만 있는 월드에서 매직 미사일이 쏘지 않음·장판 위를 지나도 HP 그대로, **투사체 `on_end` 장판(맞음·사거리 끝·장애물)**, 신호(`WeaponFired` 발동당 하나, 피격 무적 중 `HeroHurt` 없음) | WP3 |
 | `Weapons` | `WeaponStats.Resolve`(count+projectile_count, area_pct 는 선언된 키에만, 쿨 상한 0.6/마력 폭주 0.8, **damage 는 damage_pct 와 무관**, `null` = 상시), 조준 5종, 패턴별 발사 결과(발 수·퍼짐각·궤도 위치·접선 `Vel`), 관통·튕김이 같은 적을 두 번 안 때림, 적별 타격 간격 | WP3 |
 | `Progression` | 경험치 곡선(1→5, 2→15, 19→185, 20→198, 40→461), 레벨업 후보(가중치·칸 참·초반 보장·채움·3장 미만), 재추첨 수, 상자(진화 우선·중간 보스 3회·강화 없으면 금화), 레벨업 밀어내기(반경 150, 80px) | WP3 |
-| `Enemies` | **전수 연기 시험**(6.13), 점화 중 죽으면 폭발 없음, 분열 3마리 일반 등급·튕김 80px(장애물에서 멈춤)·0.3s 대기, 대장 죽음 → **그 대장의 호위만** 공포 1.5s, 호위 없는 대장 죽음 → 주변 해골 공포 없음, **`panic_on_ally_death`(반경 150 안 같은 종 죽음 → 0.8s 도망, 1.5s 안에 다시 안 겁먹음, 정예는 안 겁먹음, `Collapse`·`Culled` 로는 안 겁먹음)**, `escort` 대형 120·풀림 250·출처별 호위 수(이벤트 값 / 기본 8 / 구간 0), 행진 직진 시간 뒤 보통 행동(`toward`·`toward_entry`), `kite` 거리 띠·물러날 수 없으면 제자리 사격, `shoot_projectile` 가리면 안 쏨, **시야 조건(v0.5): 또렷이 보이지 않는 궁수는 쏘지 않고 다가옴(시야 막힘 벽 뒤·R − 40 밖·화면 위아래 밖 세 경우), 보이게 되면 그 틱부터 쏨, 돌진은 또렷이 보일 때만 시작·돌진 중 안 보여도 안 끊김, 보스 패턴·근접·자폭은 시야 무관**. v0.5.1 — 시야 조건이 판정을 바꾸는지 드러나게 짠다: 벽 뒤 경우는 **시야만 막는 `L` 줄**(걷기·투사체는 트임) 뒤에 궁수·돌진 적을 둔다(`X` 벽이면 `ProjectileLineClear`·`HasClearLine` 이 먼저 막아 `SeenClearly` 를 빼먹어도 통과한다). R − 40 밖 경우는 `TestWorldBuilder` 로 빛 반경을 띠 최대 + 20 쯤으로 낮춘다(13.5-15 를 거치지 않음). 화면 위 경우는 몸 위 끝이 화면 안쪽 16px 밖이고 발은 안인 자리. **각 시험은 같은 배치에서 시야를 끈 월드(`Enabled = false`)로 쏘거나 돌진하는지 대조군을 같이 본다**. **떨림(R29)**: 주인공 바로 위에 궁수를 두고 ① 주인공이 위로 다가갈 때 ② 멈춰 있을 때 10초 동안 `kite` 상태(다가감·물러남·쏨) 전환 수 ≤ 6, ③ 주인공이 아래로 물러날 때 궁수가 따라옴, 위쪽 궁수가 그 자리에서 쏨(위쪽 한계가 띠 최소보다 작아도). **자폭 점화 중 `ForceShown`**, 생성 때 `BodyTop`·`TouchReach`(사거리 여분 + 10 이 16 을 넘는 합성 근접 적). **함성 대상(결정 C)**: `buff_area` 를 쓰는 `rank: miniboss` 적이 자기 자신과 반경 안 다른 중간 보스·보스에게 버프를 걸지 않음, 오버로드 정예 함성 반경 안 도살자의 식칼 피해가 35 그대로(`DamageMath` 까지 통과한 값), 돌진 예고·시간, `ground_hazard` 동시 20 상한, `war_cry` 겹치지 않음(큰 값 하나), 버프 면역(`slow`), `phase_through` 경계만 막힘·`alpha_over`, `heavy_strike` 넉백, `summon` 상한 30·절대 상한 360, 보스 페이즈 50% 1회·패턴 덮어쓰기·쿨다운이 같은 패턴에 남음·`voice` 신호, 패턴 `actions` 두 개가 같은 프레임, 접두사 합치기·제외 조건, `attack_cooldown_pct` 가 모든 능력 쿨에, 승리 때 `Collapse`(분열·폭발·드롭 없음) | WP4 |
-| `Director` | 누적기(무리 1~3, `spawn_group`, 최대 수에서 3 고정), 생성 위치가 생성 띠 안·걸을 수 있음·여유 거리(v0.5 의 "보이지 않음" 조건은 v0.5.1 에서 뺌 — 6.12), 12번 실패 → 먼 입구, **마름모 모서리 주인공에서 입구 대체 비율 기록**(R23), 상한 300/360 과 출처별 막는 순서·지우는 순서(`Culled` 는 보상·시체 없음), 포위 고리 반경 줄이기·생략(마름모 밖 자리), 정예 종류 뽑기에서 `elite_eligible: false` 제외, `--start-at` 이 지난 이벤트 건너뜀·**지난 `light_change` 는 차례로 적용**(12:00 시작 스테이지 2 의 `World.Lighting` = 처음부터 돈 판의 12:00 값)·보스 시각 이후면 보스 바로, **생성 수**: 상한 무한·처치 없음 월드에서 구간마다 `floor(초당 × 구간 길이)` ± 3 | WP4 |
+| `Enemies` | **전수 연기 시험**(6.13), 점화 중 죽으면 폭발 없음, 분열 3마리 일반 등급·튕김 80px(장애물에서 멈춤)·0.3s 대기, 대장 죽음 → **그 대장의 호위만** 공포 1.5s, 호위 없는 대장 죽음 → 주변 해골 공포 없음, **`panic_on_ally_death`(반경 150 안 같은 종 죽음 → 0.8s 도망, 1.5s 안에 다시 안 겁먹음, 정예는 안 겁먹음, `Collapse`·`Culled` 로는 안 겁먹음)**, `escort` 대형 120·풀림 250·출처별 호위 수(이벤트 값 / 기본 8 / 구간 0), 행진 직진 시간 뒤 보통 행동(`toward`·`toward_entry`), `kite` 거리 띠·물러날 수 없으면 제자리 사격, `shoot_projectile` 가리면 안 쏨, **시야 조건(v0.5): 또렷이 보이지 않는 궁수는 쏘지 않고 다가옴(시야 막힘 벽 뒤·R − 40 밖·화면 위아래 밖 세 경우), 보이게 되면 그 틱부터 쏨, 돌진은 또렷이 보일 때만 시작·돌진 중 안 보여도 안 끊김, 보스 패턴·근접·자폭은 시야 무관**. v0.5.1 — 시야 조건이 판정을 바꾸는지 드러나게 짠다: 벽 뒤 경우는 **시야만 막는 `L` 줄**(걷기·투사체는 트임) 뒤에 궁수·돌진 적을 둔다(`X` 벽이면 `ProjectileLineClear`·`HasClearLine` 이 먼저 막아 `SeenClearly` 를 빼먹어도 통과한다). R − 40 밖 경우는 `TestWorldBuilder` 로 빛 반경을 띠 최대 + 20 쯤으로 낮춘다(13.5-15 를 거치지 않음). 화면 위 경우는 몸 위 끝이 화면 안쪽 16px 밖이고 발은 안인 자리. **각 시험은 같은 배치에서 시야를 끈 월드(`Enabled = false`)로 쏘거나 돌진하는지 대조군을 같이 본다**. **떨림(R29)**: 주인공 바로 위에 궁수를 두고 ① 주인공이 위로 다가갈 때 ② 멈춰 있을 때 10초 동안 `kite` 상태(다가감·물러남·쏨) 전환 수 ≤ 6, ③ 주인공이 아래로 물러날 때 궁수가 따라옴, 위쪽 궁수가 그 자리에서 쏨(위쪽 한계가 띠 최소보다 작아도). **자폭 점화 중 `ForceShown`**, 생성 때 `BodyTop`·`TouchReach`(사거리 여분 + 10 이 16 을 넘는 합성 근접 적). **중간 보스(v0.5.3)**: `clear_sight` 패턴은 `L` 줄 뒤(대조군: 시야 끈 월드에서는 시작)·R − 40 밖에서 시작하지 않고 조건 없는 패턴(사방 산성 분출)은 시작함, 시작 뒤 이벤트 프레임 전에 주인공을 `L` 줄 뒤로 옮기면 투사체 0·쿨은 씀(`shoot_projectile` 도 같은 시험), `clear_sight` 패턴 투사체의 `SightGated` 가 참, `rank: miniboss` 의 `kite` 가 `L` 줄 뒤에서 다가옴(시야 끈 대조군은 멈추고 쏨), 클립 없는 `trigger: cooldown` 동작이 그 틱의 이동 의도를 막지 않음(걷는 중 2s 마다 장판), 중간 보스 `split_on_death` → 머드맨 3 일반 등급·`Source = Split`·같은 틱 `EnemyKilled` 하나·히트 스톱 5틱, `Collapse` 면 분열 없음, `BossBars` 가 등장 순서·죽으면 빠짐(최종 보스는 `Final`). **함성 대상(결정 C)**: `buff_area` 를 쓰는 `rank: miniboss` 적이 자기 자신과 반경 안 다른 중간 보스·보스에게 버프를 걸지 않음, 오버로드 정예 함성 반경 안 도살자의 식칼 피해가 35 그대로(`DamageMath` 까지 통과한 값), 돌진 예고·시간, `ground_hazard` 동시 20 상한, `war_cry` 겹치지 않음(큰 값 하나), 버프 면역(`slow`), `phase_through` 경계만 막힘·`alpha_over`, `heavy_strike` 넉백, `summon` 상한 30·절대 상한 360, 보스 페이즈 50% 1회·패턴 덮어쓰기·쿨다운이 같은 패턴에 남음·`voice` 신호, 패턴 `actions` 두 개가 같은 프레임, 접두사 합치기·제외 조건, `attack_cooldown_pct` 가 모든 능력 쿨에, 승리 때 `Collapse`(분열·폭발·드롭 없음) | WP4 |
+| `Director` | 누적기(무리 1~3, `spawn_group`, 최대 수에서 3 고정), 생성 위치가 생성 띠 안·걸을 수 있음·여유 거리(v0.5 의 "보이지 않음" 조건은 v0.5.1 에서 뺌 — 6.12), 12번 실패 → 먼 입구, **마름모 모서리 주인공에서 입구 대체 비율 기록**(R23), 상한 300/360 과 출처별 막는 순서·지우는 순서(`Culled` 는 보상·시체 없음), 포위 고리 반경 줄이기·생략(마름모 밖 자리), 정예 종류 뽑기에서 `elite_eligible: false` 제외, `--start-at` 이 지난 이벤트 건너뜀·**지난 `light_change` 는 차례로 적용**(12:00 시작 스테이지 2 의 `World.Lighting` = 처음부터 돈 판의 12:00 값)·보스 시각 이후면 보스 바로, **생성 수**: 상한 무한·처치 없음 월드에서 구간마다 `floor(초당 × 구간 길이)` ± 3, **중간 보스 이벤트(v0.5.3)**: 앞 중간 보스가 살아 있어도 다음 `miniboss` 가 제 시각에 나옴, 13.5-18 검사기가 고장 난 작은 스테이지 셋(간격 1:30, 중간 보스 구간이 앞보다 큼, 같은 묶음 중간 보스 둘)에서 경고 하나씩·실제 두 스테이지에서 경고 0 | WP4 |
 | `Audio` | `SoundMixer`: 전체 24·같은 소리 3·최소 간격 0.05·몬스터 맞음 0.08s 한 번·죽음 4·같은 종 0.1s·보석 0.06s, 자리가 없으면 새 소리를 버리고 높은 우선순위가 먼저 자리를 얻음, **자리는 길이 색인의 끝 틱에 빔(높낮이 배율 반영)**, 화면 밖 버림(분류별), 좌우 값, 같은 입력 같은 결과, **같은 신호 열 → 무음과 소리 켬의 `AUDIO` 수가 같음**. 연결 표 검사기(없는 대상·없는 소리·없는 분류 → 오류, 소리 없는 그림 묶음 → 경고). **`Sim/` 소스 파일이 `Core.Audio` 를 참조하지 않음**(저장소 소스 문자열 검사) | WP8 |
 | `Art` | 아틀라스 메타·PNG 대조 검사기(자원 있을 때만), PNG IHDR 읽기 | WP5 |
 | `Dev`·`Save` | `DevOptions` 파싱(값 형식, 여러 캡처 시각, 오류 메시지, 개발 옵션이면 저장 안 읽음·기본 무음 판정 — **`--reveal`·`--god`·`--level`·`--weapons`·`--passives` 하나만 줘도 개발 옵션**(v0.5.1), `--sound`/`--mute`, `--preview fog`), `StateHasher` 가 같은 상태에 같은 값·가 본 칸 집합만 다르면 다른 값, 저장 직렬화·버전(음량 셋 포함) | WP7 |
@@ -2449,7 +2514,8 @@ $p.ExitCode
   `stuck`(입장·공포·기절·`Hold`·독점 행동이 아니고 주인공까지 거리 > 공격 사거리 + 32 인데 3초 동안 8px 미만 이동), `over_cap`(상한 초과).
   기준: `nan = out_of_map = over_cap = 0`, `in_obstacle` 이 같은 적에서 1초 넘게 이어지지 않음, `stuck` 최댓값 ≤ 살아 있는 적의 2%. 시나리오 시험은 늘 켜고, 게임은 `--check`(`RunOptions.Check`)로 켠다.
 - **공정성 열**(v0.5.1, 기획 10.7 공정성 1~5 — 부품마다 단위 시험만으로는 새 부품·접두사·소환 경로에서 깨져도 못 잡는다). `World.Fairness`(계약 WP1c, 누적 수)를 쓰는 곳이 세고 `InvariantChecker` 가 열로 낸다. 기준은 셋 다 **0**.
-  - `unseen_shots`: 적 진영 투사체를 만드는 순간(`ICombatSpawner` 한 곳, WP3) 쏜 적이 보스·중간 보스가 아니고 `IsClearlyVisible(발, BodyTop)` 이 거짓.
+  - `unseen_shots`: 적 진영 투사체를 만드는 순간(`ICombatSpawner` 한 곳, WP3) 쏜 적이 보스·중간 보스가 아니거나 **`SightGated` 인 발사**이고(v0.5.3 — `clear_sight` 패턴, 기획 10.7 "세지 않는 것" 의 예외), `IsClearlyVisible(발, BodyTop)` 이 거짓.
+    발사 프레임에 다시 보는 규칙(6.6)이 있어 기준 0 이 지켜진다.
   - `unseen_charges`: 돌진(`charge`)을 시작하는 순간(WP4) 같은 조건.
   - `hidden_hits`: `DamageResolve`(WP3)가 주인공 피해를 적용할 때(`--god`·피격 무적으로 피해를 버리기 전에 센다 — `--god` 시나리오에서도 셈) 원인이 적 본체(근접·자폭·돌진 — 적 투사체·장판·예고 패턴은 뺌)이고 보스·중간 보스가 아니며 그 순간 `FogMath.EnemyAlpha`(틱 값) = 0.
     자폭은 점화 중 `ForceShown` 이라 폭발 순간 1 이다 — 점화를 시야 밖에서 시작해도 번쩍임이 보이므로 맞다.
@@ -2481,6 +2547,7 @@ $p.ExitCode
 | 전투·손맛 | `--start-at 04:00 --level 15 --weapons …` | 투사체(원작 마법 그림·16방향)·폭발·피해 숫자·번쩍임이 보임 |
 | 레벨업 창 | `--capture-on levelup` | 카드 3장 문구가 `피해 14 → 18` 꼴, 기획 12.2 배치, 무기 아이콘이 원작 마법 프레임 |
 | 보스 | 기획 15절 예 | 패턴 예고·보스 막대·페이즈 |
+| 중간 보스 겹침 (v0.5.3, WP6·단계 3) | `--stage stage_catacombs --start-at 05:50 --autoplay --god --weapons magic_missile:1 --capture-at 200,230`(약한 무기로 스틸메이스를 9:00 까지 살려 둠 — 레벨업 창 시간만큼 스테이지 시각이 늦으니 두 장 중 하나) | 스틸메이스·슬러지 남작 막대 두 줄(먼저 나온 스틸메이스가 큰 막대), 슬러지 남작 `bsm`·데스스핏 `bfds`·블랙애시 `bashtb` 가 같은 묶음 일반 적과 색으로 구별됨(`--preview enemies`, 기획 열린 질문 16) |
 | 결과 | `--capture-on result --exit-on-result` | 무기별 피해 표, `RESULT` 로그 줄 |
 | 소리 고르기 | `--sound --autoplay --god --stage stage_cathedral --start-at 07:00 --quit-after 60 --seed 3` (null 장치 — 스피커로 나지 않음, 동의 필요 없음) | 오류 없이 끝남, `AUDIO device="No Output"`, `AUDIO` 줄의 `played` 가 초당 기준 안(전체 24 동시), 같은 씨앗의 `--mute` 실행과 `requested`·`played`·`dropped_*` 가 같음 |
 | 재현 | 같은 명령 두 번(한 번은 `--time-scale 8`). 그리고 같은 명령을 `--mute` 와 null 장치 `--sound` 로 한 번씩 | 두 `--log-hash` CSV 같음, 같은 `--capture-at` PNG 바이트 같음(안개 0.15s 바뀜도 스테이지 틱이라 같음), `--mute` 와 `--sound` 의 `--log-hash` CSV 같음 |
@@ -2503,7 +2570,7 @@ $p.ExitCode
 
 ## 11. 구현 작업 묶음 (Work Package)
 
-- 순서: **WP1(끝남, 커밋 `ec851d6`) → WP1b(계약 갱신, 끝남, 커밋 `02c3b8b`) → WP1c(시야 계약 갱신, 혼자, 짧게 — v0.5) → WP0a(최소 실제 데이터, 짧게) → WP0·WP2~WP8 이 서로 파일이 겹치지 않고 동시에**. 통합(실제 데이터 엄격 시험, `PlayScene` 완성, 단계 끝 실행)은 WP6 이 맡는다.
+- 순서: **WP1(끝남, 커밋 `ec851d6`) → WP1b(계약 갱신, 끝남, 커밋 `02c3b8b`) → WP1c(시야 계약 갱신, 끝남, 커밋 `ceddc36` — v0.5) → WP1d(중간 보스 계약 보탬, 아주 짧게 — v0.5.3, WP0a 와 동시 가능) → WP0a(최소 실제 데이터, 짧게) → WP0·WP2~WP8 이 서로 파일이 겹치지 않고 동시에**. 통합(실제 데이터 엄격 시험, `PlayScene` 완성, 단계 끝 실행)은 WP6 이 맡는다.
 - **자원 파일이 없어도 Core 시험은 모두 돈다**(실제 데이터 검사·길 검사·시나리오·성능 포함, 4.2·6.14). 자원이 필요한 것은 게임 실행 확인(캡처)과 자원 대조 검사(13.5-7 실제 쪽)뿐이다.
   다만 실제 맵 길 검사·단계 1 시나리오가 쓰는 **데이터**는 세 묶음에 나뉘어 있고(타일 번호·성질 = 원본 SOL 을 봐야 채움, 맵 배치, 그림 묶음의 프레임 수), 그중 원본으로 확인해야 하는 값이 있다.
   그래서 그 최소분을 **WP0a** 가 먼저 저장소에 넣는다. WP0a 뒤에는 WP0(가져오기 도구 본체)이 늦어도 WP2·WP3·WP4·WP7·WP8 의 Core 쪽은 막히지 않는다. WP5·WP6 의 화면 확인은 WP0 의 단계별 출력을 기다린다.
@@ -2513,7 +2580,7 @@ $p.ExitCode
 - 맡는 파일은 "맡는 것" 이 전부다. 다른 묶음의 파일을 고쳐야 하면 그 묶음 담당에게 요청한다. 계약(WP1·WP1b 파일) 변경은 11.3.
 
 ```
-WP1 (끝남) ── WP1b (끝남) ── WP1c 시야 계약 ── WP0a 최소 실제 데이터 ──┬── WP0 가져오기 도구·가져오기 표·타일셋 ────────┐   (자원: 게임 화면 확인에 필요)
+WP1 (끝남) ── WP1b (끝남) ── WP1c (끝남) ── WP1d·WP0a ─────────────────┬── WP0 가져오기 도구·가져오기 표·타일셋 ────────┐   (자원: 게임 화면 확인에 필요)
                                                                       ├── WP2 내비·충돌(타일 충돌 포함)·공간·시야 ─────┤
                                                                       ├── WP3 주인공·전투·무기·성장 ───────────────────┤
                                                                       ├── WP4 적·감독·자동 조작 ────────────────────────┼── 통합(WP6) ── 검증
@@ -2568,7 +2635,7 @@ v0.3 결정 때문에 바뀌는 **계약 변경** 전부를 한 묶음에 모은
   `ImportTable` 표 8개 읽기·이름 목록(묶음 × 변종 페이지), `ArenaArt.FloorChunks`, `FacingMath` 등각 열(화면 (−32, 16) → 8방향 열 1)·16방향 왕복·`ToVector(SW)`.
   이 문서(1.4, 4.1, 6.3, 6.11, 6.15, 7.6, 7.9, 11.2)의 시그니처·JSON 모양이 계약 파일에 빠짐없이 있다.
 
-#### WP1c — 시야 계약 갱신 (v0.5, WP1b 뒤·WP0a 앞, 혼자, 짧게)
+#### WP1c — 시야 계약 갱신 (v0.5, 끝남, 커밋 `ceddc36`)
 
 기획 v0.6 의 전장의 안개(사용자 요구 11)가 바꾸는 **계약**과, 여러 묶음이 같이 쓰는 **순수 로직**(`VisibilityField`·`FogMath`)을 한 묶음에 모은다.
 시야는 원거리 적(WP4)·생성(WP4)·그리기(WP5)·미니맵(WP6)·해시(WP7)가 다 읽으므로 WP2~WP8 이 시작하기 전에 형과 동작이 서 있어야 한다.
@@ -2594,6 +2661,20 @@ v0.3 결정 때문에 바뀌는 **계약 변경** 전부를 한 묶음에 모은
   **옛 글자 점검**: `rg -n "\"[.WMX]{4}\"|'W'|'M'" src tests tools Data` 로 저장소의 `W`·`M` 성질 글자를 모두 찾아 줄마다 새 뜻(걷기 + 시야 / 시야 + 투사체)이 맞는지 확인한 결과를 완료 보고에 적는다(6.11 "주의").
   이 문서(4.11 코드 조각, 6.6 `Enemy` 새 필드, 6.10 `rules.sight`, 6.11 글자 표, 9절 `--reveal`·`--preview fog`)의 시그니처·모양이 계약 파일에 빠짐없이 있다. `git diff` 에 실제 `Data/` 변경 없음.
 
+#### WP1d — 중간 보스 계약 보탬 (v0.5.3, WP1c 뒤·WP2~WP8 앞, 혼자, 아주 짧게)
+
+기획 v0.6.2 의 중간 보스 늘리기(9.4)가 바꾸는 **계약** 두 곳. 둘 다 기본값이 있는 필드 더하기라 기존 코드·시험이 그대로 컴파일된다.
+WP2~WP8 이 시작하기 전이라 11.3 의 "모아서 다음 갱신" 을 기다리지 않고 메인 세션이 바로 낸다. 파일이 겹치지 않아 WP0a 와 동시에 해도 된다. 실제 `Data/` 는 쓰지 않는다.
+
+| # | 파일·형 | 바꾸는 것 | 이유 | 영향 |
+|---|---|---|---|---|
+| 1 | `Defs/EnemyDefs.cs` `PatternDef` | `bool ClearSight`(`clear_sight`, 기본 `false`), 주석 "참이면 시작·이벤트 프레임에 `SeenClearly`(6.6)" | 패턴 조건(6.5). 로더가 모르는 속성을 오류로 내므로 형에 있어야 데이터에 적을 수 있다 | WP4·WP7 |
+| 2 | `Sim/Contracts/Queries.cs` `EnemyProjectileSpawn` | 끝에 `bool SightGated = false` — "시야 조건을 지켜야 하는 발사(`shoot_projectile`, `clear_sight` 패턴)" | 공정성 `unseen_shots` 가 `clear_sight` 패턴 투사체를 보스 제외에서 빼고 셈(10.1) | WP3(셈)·WP4(채움) |
+| 3 | `Sim/Contracts/WorldState.cs` `FairnessCounters.UnseenShots` 주석 | "(보스·중간 보스 제외)" → "(보스·중간 보스 제외, 단 `SightGated` 발사는 셈)" | 2 와 맞춤 | — |
+
+- 하지 않는 것: `SeenClearly`·`PatternAbility` 조건·발사 프레임 재확인(WP4, 6.6), `unseen_shots` 세기(WP3), 보스 막대 줄 순서(WP4 씀·WP6 그림 — `BossBar` 형은 그대로, 8.2).
+- **완료 기준**: `dotnet build -p:SkipAssetCheck=true` 통과, `dotnet test` 통과. 새 시험 둘: 공용 STJ 옵션(`DefJson`, WP1b #21)으로 `{ "clear_sight": true }` 를 `PatternDef` 로 읽으면 `ClearSight` 참·생략하면 거짓, `EnemyProjectileSpawn` 의 `SightGated` 기본 거짓.
+
 #### WP0a — 최소 실제 데이터 (WP1c 뒤, WP2~WP8 앞, 짧게)
 
 WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 실제 데이터로 돌게, 원본을 봐야 정할 수 있는 숫자만 먼저 저장소에 넣는다. 이 PC 에서 한다(원본 읽기만).
@@ -2605,6 +2686,7 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   - `Data/rules/sight.json`(v0.5): 6.10 의 값 그대로(기획 23절 "정한 수치"). 원본 유래 값이 아니고 첫 판일 뿐이다 — 그 뒤 소유는 WP5.
   - `Data/maps/cathedral_arena.json`: 배치·입구·기준점·주인공 시작(6.11 예 값, 칸 중심 규칙).
   - `Data/sprites/monsters.json`·`hero.json` 의 **단계 1 그림 묶음**(기획 14.1 의 단계 1 적 5종 + 주인공): 프레임 수·방향·칸은 `scan` 값, 이벤트 프레임·프레임 시간은 원작 동작 값(출처 주석, 1.4).
+    (v0.5.3) `set_skelbow` 는 단계 1 판이라 `variants` 에 `bashtb`·클립에 `special` 을 아직 넣지 않는다 — 블랙애시(단계 2)를 넣을 때 WP5 가 더한다(값은 `scan`: `sklbws` 16프레임).
 - **소유**: `tilesets/` 는 WP0a 뒤에도 WP0. `maps/`·`sprites/` 는 WP0a 가 첫 판을 쓰고 **WP5 로 넘긴다**(WP5 가 미리보기로 기준점·입구·`origin` 을 맞춘다, 11.3). WP0a 는 한 담당이 혼자 한다(WP0 담당 권장).
 - **완료 기준**: `dotnet test` 통과(`MapDataReader` 로 실제 두 파일을 읽어 오류 0, `Expand` 성공, 13.5-4 배치 검사 통과), 세 파일의 원본 유래 값마다 출처 주석 — **원문 문자열 시험 `Data/SourceCommentTests`(6.14 13.5-16, 기본 분류)를 WP0a 가 써서 통과**,
   `git diff` 에 원작 바이트·덤프 없음(성질 표 키 = 타일셋이 이름 붙인 번호, 13.5-12).
@@ -2618,6 +2700,8 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 - **계약**: 1.4 의 명령·종료 코드·출력 폴더·manifest·메타·소리 색인(Core `Assets/` 형), 13.5-10 을 만족하는 표, 타일셋 성질 표 = 원본 SOL(+ 알려진 차이) — **v0.5: bit0·bit1·bit2 세 비트**(1.4 성질 대조), 단계 3 의 L2 협로 벽 시야 비트 포함. 맵 정의는 Core `MapDataReader` 로 읽고
   `ArenaLayout.Expand` 로 펼친다(직접 파싱·펼치기를 하지 않는다). 굽기 결과가 바뀌는 변경은 `AssetFormat.Version` 을 올린다(1.4 캐시). 부록 A 의 형식 규칙을 따른다.
 - **단계**: 1 = 몬스터 5종 묶음·변종, 주인공 한 벌, 무기 3종 마법·아이콘, L1 타일셋·아레나. 2 = 나머지 스테이지 1 몬스터·보스, 무기 3종, 이펙트 전부, **소리·음악**. 3 = L2 타일셋(번호 조사, 기획 열린 질문 15)·지하묘지 몬스터.
+  v0.5.3 중간 보스(기획 9.4): 단계 2 에 `skelbow` 변종 `bashtb` + 동작 `special`(`s`) + 소리 `sklbws*`, 단계 3 에 `acid` 변종 `bfds` + 동작 `special` + 소리 `acids*`(`monsters\acid\`), `fat` 변종 `bsm`.
+  고유 TRN 경로는 `monsters\monsters\<이름>.trn`(세 파일 모두 diabdat 원본 목록에서 확인, 256바이트). 새 그림 묶음은 없고 변종 페이지만 셋 는다(R7 의 `vram_mb` 에 조금 더해짐).
 - **완료 기준**: 도구 시험 통과(10.1 `DiabloAssetImporter.Tests` — 합성 바이트·시험이 만든 MPQ, 결정론·캐시·실패 시 manifest 없음).
   이 PC 실제 실행(창 없음): 단계 목록 전부 생성·종료 코드 0, 두 번 돌려 manifest 같음, 두 번째가 캐시로 빠름(두 시간을 1.4 에 적음), 원본 폴더 파일들의 수정 시각 그대로,
   일부러 없는 경로 하나를 표에 넣으면 종료 코드 3·manifest 없음. `contact` 견본(좀비 원색·`bluered`, 파이어볼 16방향, L1 아레나 바닥 + 벽, 마법사 시전)을 스크래치에 만들어 **눈으로 봄** 을 기록.
@@ -2659,6 +2743,9 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   v0.5.1: `SeenClearly` 의 몸 위 끝(`Enemy.BodyTop` = `body_height` × 크기), `kite` 띠 당기기(`ClearReach`, 6.6), `Enemy.TouchReach`·자폭 점화 중 `Visual.ForceShown`, `Fairness.UnseenCharges`·`KiteSwitches` 세기,
   `--start-at` 이 지난 `light_change` 를 차례로 적용. 일반 생성 자리의 "보이는 후보 버림" 은 하지 않는다(6.12).
   `AutoplayPolicy` 는 `World.Visibility` 를 읽지 않는다(9절).
+  v0.5.3(기획 v0.6.2 중간 보스): 단계 2 에 `blackash`, 단계 3 에 `deathspit`·`baron_sludge` 정의(6.5·6.13 — 중간 보스 5·보스 2), 두 스테이지 구간표·이벤트(기획 10.3·10.4), 해골왕 `hp` 9000·도살자 18000,
+  `SeenClearly` 등급 예외 없앰·`PatternAbility` 의 `clear_sight`·`shoot_projectile`·`clear_sight` 패턴의 발사 프레임 재확인과 `SightGated` 채우기(6.6), 즉시 끝나는 `trigger: cooldown` 동작,
+  중간 보스 죽음 순서·히트 스톱(`DeathHooks`), `BossBars` 등장 순서(8.2), 13.5-18 검사기(6.14).
 - 실제 맵·그림 묶음 정의는 WP0a(타일셋·맵·단계 1 그림 묶음)와 WP5 가 낸다. WP4 는 그 파일을 고치지 않고, 단계 1 판 적 정의는 WP0a 의 그림 묶음 ID 를 가리킨다.
   부품 시험은 처음부터 `TestKit` 합성 맵·합성 그림 묶음으로 한다(실제 데이터를 기다리지 않는다).
 - **완료 기준**: 테스트 통과(부품·생성기·전수 연기 시험·변형 픽스처·결정성 30초, 오라·함성이 `include_bosses: false` 면 보스에 안 걸림,
@@ -2666,6 +2753,8 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   v0.5: 또렷이 보이지 않는 궁수는 쏘지 않고 다가옴·돌진 시작 조건(10.1 `Enemies` — v0.5.1: `L` 줄·낮춘 반경·대조군으로), 정위 궁수 떨림 시험, 함성 대상 시험, 실제 스테이지가 13.5-15 를 통과). 단계 1: 적 5종과 `stage_cathedral`(단계 1 판) 시간표가 10분 돈다
   (`Scenario`: 자동 조작 + `--god`, 예외 없음, 불변식 기준·공정성 열 0, 상한 무한 월드의 생성 수 기준 — 10.1 `Director`), 공정성 합성 맵 3분 `Scenario`. 마름모 모서리에 주인공을 둔 생성 시험에서 입구 대체 비율을 로그로 낸다(R23).
   `rules/sight.json` 의 시뮬레이션 값(`edge`·`view_inset`·`refresh_ticks`·`ranged_margin`)이 바뀌면 `Scenario`·13.5-15 를 다시 돌린다(6.10).
+  v0.5.3: 10.1 `Enemies` 의 "중간 보스" 시험과 `Director` 의 중간 보스 이벤트·13.5-18 시험 통과. 단계 2: `stage_cathedral` 전체 판 10분 `Scenario`(블랙애시 포함)에서 공정성 세 열 0·`kite_switches` 기준, 실제 두 스테이지 13.5-18 경고 0.
+  단계 3: 같은 `Scenario` 를 `stage_catacombs` 12분으로(중간 보스 셋이 겹쳐도 예외 없음·상한 360 안).
 
 #### WP5 — 렌더·그림·미리보기
 
@@ -2678,6 +2767,7 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   **안개(v0.5)**: `LightRT` 순서 ①~④(7.7 — v0.5.1: 값은 알파 채널, `FogBlend` 표), 칸 값 텍스처·`FogRT`·`MemRT`·합치기, `FogMath` 알파로 대상 숨기기(그리기용 오버로드, 7.10), `--reveal`, `--debug-nav sight`, `--preview fog`·`FOG` 로그 줄·`_light.png`,
   `RenderContext.ScreenToWorld` 구현 — WP6 이 HUD·마우스 이동에 쓴다. 기획 열린 질문 7 의 기준점·입구 칸·크기 배율, 10(혼합), 11(그림자 값 — 표는 WP0 에 요청), 18(늘린 그림)을
   `--preview`·`--debug-nav` 로 맞춰 데이터에 반영.
+  v0.5.3: 그림 묶음 `variants`·클립 보탬 — `set_skelbow` 에 `bashtb`·`special`(단계 2), `set_acid` 에 `bfds`·`special`, `set_fat` 에 `bsm`(단계 3). 표 줄은 WP0 에 요청(11.3). 새 고유 TRN 색과 ×1.5 크기는 `--preview enemies` 로 본다(기획 열린 질문 16·18).
 - **완료 기준**: `Art` 테스트 통과. `--preview sprites/enemies/effects/tiles/blend` 캡처를 10.2 의 "통과 =" 문장으로 검증 담당이 판정(못 한 것은 "판정 못 함").
   `--stress 300 --freeze-ai` 장면에서 4.9 표의 렌더 기준 — **렌더 CPU p99 와 `draw_calls` ≤ 600 둘 다 단계 1 완료 조건**(단계 1 은 `stage_cathedral`, 10.3). 스테이지 시작 로그의 `vram_mb` 를 R7 에 적는다.
   10.2 의 "뒷벽·앞 턱·아치"·"예고·빛" 행. v0.5: 10.2 "안개 고정 장면"·"안개 흐름"·"안개 재현" 행(안개는 기획 14.1 단계 1 범위 — 고정 장면의 빛 값 대조 ①·⑤·⑥ 포함),
@@ -2689,6 +2779,7 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 - **계약**: `KeyboardMouseSource : IInputSource`(WASD·방향키·왼쪽 버튼 이동, 기획 3절 키), 씬 9개, HUD(미니맵은 가져온 그림 — v0.5: 가 본 칸만 보이게 가림·점 규칙, 8.2. 기획 14.1 단계 2), 레벨업·상자·일시정지·설정(**음량 셋**)·결과, 저장 연동(WP7 `SaveStore`),
   자동 조작 메뉴 넘김(`AutoStep(IAutoplayDriver)`), `SCENE`·`RESULT` 로그 문장, 레벨업 오버레이를 같은 앱 틱에 올림(3.3).
   v0.3: 씬별 음악·UI 소리(`IAudioServices`), 일시정지에서 `SetPaused`, **`PlayScene` 프레임 끝 소비 순서 `FxSystem.Consume → Audio.Consume → Presentation.Clear`**, 자원 없음 안내 화면(DataError 화면 재사용, 1.4 끝).
+  v0.5.3: 보스 막대 여러 줄(8.2 — `Final` 위 큰 막대, 나머지 등장 순서로 작은 막대, 최대 4줄). 단계 3 에 10.2 "중간 보스 겹침" 행.
 - **완료 기준**: `--autoplay --seed 1 --quit-after 30` 이 타이틀 → 선택 → 플레이까지 사람 입력 없이 감(`SCENE` 로그 세 줄). 캡처 4장(타이틀, 플레이 HUD, 레벨업 창, 결과)을 10.2 문장으로 판정.
   단계 2: 10.2 "미니맵 기억" 행(v0.5.1 — WP5 의 단계 1 안개 행에서 옮김).
   통합 뒤: 실제 데이터 엄격 시험 통과, 10.2 "단계 끝" 행 통과. 키보드로 한 판(사람)·소리를 귀로 듣기는 "동작 확인 못 함" 으로 따로 적는다.
@@ -2714,6 +2805,7 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 - **맡는 것**: Core `Audio/`(`AudioModule`·연결 표 검사기, `SoundMixer`), 게임 `Audio/`(`AudioServices.cs`, `AudioSystem`, `SoundBank`, `MusicPlayer`), Data `audio/`(sounds·music·bindings), `rules/audio.json`.
   테스트 `Audio/`.
 - **계약**: 6.15 데이터 모양과 검사, 7.9 의 신호 → 소리 규칙·고르기·재생·무음·로그, `IAudioServices` 구현.
+  v0.5.3: 소리 연결 `sprite_sets.set_skelbow.special`(단계 2)·`set_acid.special`(단계 3)과 그 소리 정의(6.15). 새 중간 보스는 그림 묶음 연결을 그대로 쓰고 분류만 `boss` 로 오른다.
 - **완료 기준**: `Audio` 시험 통과(10.1). 게임 실행(개발 옵션, null 장치): `--sound` 를 준 자동 조작 실행이 오류 없이 끝나고 `AUDIO` 로그 줄의 수가 기준 안(맞음 소리 0.08s 제한 → 초당 ≤ 12.5 등) —
   **기준은 `--mute` 와 `--sound` 어느 쪽이든 같은 수**(같은 씨앗이면 두 실행의 `AUDIO` 수가 같다, 7.9), 로그에 `AUDIO device="No Output"`, 두 실행의 `--log-hash` CSV 같음(10.2 "재현").
   장면 바뀜 프레임에 `slow_frames` 가 늘지 않음(음악 읽기, 7.9). 소리를 귀로 확인하는 것은 사용자 몫(`--sound-device default`, 동의를 받고 — "동작 확인 못 함" 으로 적음).
@@ -2765,7 +2857,7 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 
 - WP1b 가 끝나기 전에는 다른 묶음이 코드를 쓰지 않는다. WP1b 는 계약을 이 문서 그대로 적는다. 이 문서에 없는 한 묶음 상태는 그 묶음이 자기 조각에 둔다.
 - 계약(WP1·WP1b 파일) 형을 바꿔야 하면 메인 세션이 바꾸고 알린다. 다른 묶음은 계약 파일을 직접 고치지 않는다. 자기 조각 파일에 필드를 더하는 것은 자유다.
-  WP2~WP8 진행 중에 생기는 계약 변경은 모아서 다음 갱신 묶음(WP1d)으로 낸다 — 한 번에 하나씩 흩어 고치지 않는다.
+  WP2~WP8 진행 중에 생기는 계약 변경은 모아서 다음 갱신 묶음(WP1e — v0.5.3 에 WP1d 는 중간 보스 계약 보탬으로 썼다)으로 낸다 — 한 번에 하나씩 흩어 고치지 않는다.
   (v0.5 의 WP1c 는 기획 v0.6 의 시야 계약을 WP2~WP8 시작 전에 넣는 묶음이다. WP1b 와 같은 규칙으로 혼자 하고, 끝나기 전에는 다른 묶음이 코드를 쓰지 않는다.)
 - 한 묶음만 구현·사용하는 형은 그 묶음 소유다(`IFirePattern`·`ITargeting`·`WeaponStats` → WP3, 부품 계약·`PartSlot`·`ActionState`·`MoveOrder` → WP4, `Navigator`·`NavAgentState` → WP2,
   `SoundMixer` → WP8). WP1 은 레지스트리 등록 지점만 가진다.
@@ -2930,6 +3022,8 @@ AppServices.Render (RenderContext?)    // GameApp 이 그래픽 장치 뒤에 �
 | 13.1 안개 값 자리 | 스테이지마다 또는 모든 스테이지 같은 값이면 공통 규칙에 한 번 | 공통 `rules.sight` 한 곳(+ 시야 쪽 값 `refresh_ticks`·`view_inset`·`touch_margin`·`ranged_margin`), 키별 소유(시뮬레이션 값은 메인 세션 합의, v0.5.1) | 두 스테이지 값이 같다. 달라질 때 스테이지 `lighting.fog` 덮어쓰기를 더한다(6.10) |
 | 10.7·12.6 닿은 적·자폭 (v0.5.1) | 주인공에 닿은 적은 늘 보임, 근접·자폭은 닿아야 맞음 | 닿은 거리는 적마다 `TouchReach`(최소 `touch_margin`, 근접 사거리 여분 + 10 까지), 자폭 점화 중 적은 늘 그림 | 근접 사거리가 긴 적이 1칸 벽 너머에서, 점화한 자폭 적이 벽 모서리 너머에서 숨은 채 때리지 않게(공정성 3·5) |
 | 10.7 피해 숫자·표시 이펙트 | 피해 숫자는 시야 밖 적이면 숨김, 주인공 무기 이펙트는 늘 | 피해 숫자는 대상의 안개 알파, 표시 이펙트(`FxSystem`)는 적 쪽도 늘 그림(적 등장 연출·죽는 그림·시체만 숨김) | 적 쪽 이펙트는 위험(폭발·강타)이라 안개에 가리지 않는 쪽이 공정성(기획 10.7)에 맞다. `FxSystem` 이 이펙트 주인을 몰라도 된다(7.10) |
+| 9.4·10.7·25절 `clear_sight` (v0.5.3) | 이 조건을 단 패턴과 그 적의 `kite` 는 등급과 상관없이 실제 시야 | `SeenClearly` 의 등급 예외를 통째로 없앰 — 시야 조건이 있는 일반 부품(`shoot_projectile`·`kite`·`charge`)은 어느 등급이든 실제 시야, 보스 패턴은 `clear_sight` 만 | 규칙 하나로 같은 결과. MVP 의 다른 중간 보스·보스는 이 부품을 쓰지 않는다. E 단계에 보스가 일반 원거리·돌진 부품을 쓰면 그것도 시야를 본다(기획 10.7 공정성과 같은 방향) `[해석]` |
+| 8.1·10.7 "또렷이 보일 때만 쏜다" (v0.5.3) | 쏘는 조건(시점은 적지 않음) | 시작 조건 + **발사 프레임에 다시 봄**, 그때 안 보이면 그 발사만 버림(클립은 끝까지, 쿨은 씀). `shoot_projectile`·`clear_sight` 패턴 둘 다 | 시작에서 발사까지(약 0.5s) 주인공이 움직여 안 보이게 되면 공정성 `unseen_shots`(투사체가 생기는 순간을 셈)가 0 이 안 된다(6.6·10.1) `[해석]` |
 
 ---
 
@@ -3249,6 +3343,31 @@ WP1c(커밋 전) 코드가 문서와 다르게 또는 더 정한 것. 코드가 
 | 4.11 `Rules`·더한 멤버 | `SightRulesDef Rules` | `SightRulesDef? Rules`(없으면 `Enabled` 거짓), `ViewRect`(틱 시작 화면 사각형)·`CellOf(pos)`·`Size`, 시험용 `internal` `RecomputeCount`·`LineClear` | 규칙이 없는 시험 월드도 늘 `Visibility` 를 가짐. 그리기·디버그가 같은 칸 변환·사각형을 쓰게 |
 | 4.11 경계 처리 | 정하지 않음 | "또렷이 보임" 의 안쪽 사각형은 경계 포함(`ClearReach` 끝 자리도 또렷이 보임), `ClearReach` 는 0 이상·방향 0 이면 R − edge, `EnemyAlpha` 틱 값은 `Visibility.HeroPos`·두 반경은 `Enemy.Radius + Hero.Radius`, `ExploredHash` 는 두 사슬로 64비트 | 시험이 경계 값을 그대로 확인(10.1) |
 | 4.11 계산 범위 안 선 걷기 | 칸마다 선 걷기 | 주인공 칸과 그 칸을 잇는 상자에 시야 막힘 칸이 없으면 걷지 않음(누적합, 결과 같음 — 기준 구현 비교 시험) | 다시 계산 1회 Debug 0.09ms → 0.05ms(`Perf`, N 40·R 420·벽 줄) |
+
+### 13.11 v0.5.3 — 기획서 v0.6.2(중간 보스 늘리기) 반영
+
+사용자 요구 "중간 보스 늘리자"(메인 세션 결정: 스테이지 1 은 2명, 스테이지 2 는 3명, 2~3분마다 강적 하나). 기획 25절 "설계에 넘기는 것" 의 처리:
+
+| # | 넘긴 것 | 처리 | 자리 |
+|---|---|---|---|
+| 1 | `clear_sight` 패턴과 그 적의 `kite` 는 실제 시야, `unseen_shots` 가 이 패턴을 셈 | 계약 `PatternDef.ClearSight`. `SeenClearly` 의 등급 예외를 없앰(12.1 `[해석]`). 발사 프레임 재확인(`shoot_projectile` 포함, 12.1 `[해석]`). 계약 `EnemyProjectileSpawn.SightGated` 로 셈 | 6.5·6.6·10.1·WP1d |
+| 2 | 중간 보스에 `behaviors` + `patterns` | 정의 형이 이미 둘을 가짐 — 슬롯 블랙애시 5·데스스핏 3·슬러지 남작 3(≤ 12). `kite` 다가감은 `movement: astar`. 클립 없는 장판은 `trigger: cooldown`(즉시 동작으로 정함) | 6.5·6.6 |
+| 3 | 중간 보스 죽음 순서 | `DeathHooks` 분열·`EnemyKilled`·히트 스톱(거는 곳을 이번에 정함) → `DeathRewards` 드롭. `Collapse` 는 분열 없음 | 6.6 |
+| 4 | 보스 막대 여러 줄 | `BossBars` 등장 순서 목록(형 그대로), HUD 그리기 규칙, 최대 4줄 | 8.2·WP6 |
+| 5 | 데이터 | 적 정의 셋(6.5 예), 이벤트(6.12), 해골왕 `hp` 9000(6.5 예), 가져오기 변종 셋·`special` 동작·소리 | 6.5·6.12·6.13·6.15·WP0·WP5·WP8 |
+| 6 | 검증 13.5-18, 13.5-15 에 블랙애시 | 13.5-18 = WP4 검사기(경고 셋). 13.5-15 는 등급과 상관없이 `kite` 를 봄(380 ≤ 420) | 6.14·10.1 |
+| 7 | 6.12·6.13 의 중간 보스 언급 | 6.12 예에 6:00 우두머리 무리·7:30 블랙애시, 6.13 표에 세 행 | 6.12·6.13 |
+| 8 | WP4 범위 | WP4 v0.5.3 줄·완료 기준, 10.1 `Enemies`·`Director`, 10.2 "중간 보스 겹침" | 10.1·10.2·11.1 |
+
+**원본으로 확인한 것**(조사 자료 `scan.tsv`, 읽기만): 고유 TRN `monsters\monsters\bashtb.trn`·`bfds.trn`·`bsm.trn` 이 diabdat 에 있음(256바이트).
+쓰는 클립의 프레임 수가 기획 표와 같음 — `sklbwa`·`sklbws` 16, `acida`·`acids` 12, `fata` 15·`fats` 10. 원작 종(불타는 해골 궁수·산성 짐승·머드맨)과 층(4·6·8, 출처: DevilutionX 참고)도 기획 9.4 와 같다.
+
+**기획서에서 고친 것**(기획 25절 끝에도 적음): 12.6 의 "슬러지 남작 진흙 강타(반경 26)" → "(반경 75, 피해 26)". 그 밖의 패턴은 예고 기준(13.5-13)·상한 360·13.5-15·슬롯 12 를 지키고, 없는 부품이 필요한 패턴은 없다.
+
+**남은 열린 질문**
+1. 데스스핏 산성 자국은 `pj_acid` 웅덩이와 같은 상한 무리(`acid`, 20)를 쓴다. 산성 분출 10발 + 산성 짐승이 겹치면 오래된 자국부터 지워진다 — 첫 플레이에서 자국이 일찍 사라져 보이면 자국만 따로 무리를 둔다(데이터 한 줄).
+2. 발사 프레임 재확인으로 버려지는 발사 수 — `kite_switches` 처럼 로그 열로 볼지는 WP4 첫 `Scenario` 결과를 보고 정한다(많으면 화면 위아래 궁수가 헛손질처럼 보일 수 있다).
+3. 기획 열린 질문 16·18(새 고유 TRN 색, ×1.5 크기)·24(상자 수와 보스 HP)·25(원거리·장판 중간 보스의 손맛)는 첫 플레이·`--preview enemies` 로 본다.
 
 ---
 
