@@ -44,15 +44,15 @@ public sealed class DefTable<T> where T : class, IDef
 
 /// <summary>
 /// 로딩 결과 = 모든 정의 (설계서 6.2). 로더(WP7)가 만든 뒤 바뀌지 않는다. 시험은 코드로 만든다(TestKit).
-/// 종류 키는 <see cref="Kinds"/>.
+/// 종류 키는 <see cref="Kinds"/>. <c>tilesets</c>·<c>maps</c> 는 Core <c>Map/MapDataReader</c> 결과를 그대로 받는다(타일셋 연결까지 됨).
 /// </summary>
 public sealed class GameDefs
 {
-    /// <summary>JSON 최상위 종류 키(설계서 6.1).</summary>
+    /// <summary>JSON 최상위 종류 키(설계서 6.1). <c>rules</c>·<c>sound_bindings</c> 는 객체 하나, 나머지는 배열.</summary>
     public static readonly IReadOnlyList<string> Kinds =
     [
-        "rules", "sprites", "sprite_sets", "effects", "projectiles", "maps", "obstacle_kinds", "enemies", "affixes", "buffs",
-        "weapons", "passives", "evolutions", "pickups", "drop_tables", "stages",
+        "rules", "sprites", "sprite_sets", "effects", "projectiles", "tilesets", "maps", "enemies", "affixes", "buffs",
+        "weapons", "passives", "evolutions", "pickups", "drop_tables", "stages", "sounds", "music", "sound_bindings",
     ];
 
     public static GameDefs Empty { get; } = new();
@@ -62,8 +62,8 @@ public sealed class GameDefs
     public DefTable<SpriteSetDef> SpriteSets { get; init; } = DefTable<SpriteSetDef>.Empty;
     public DefTable<EffectDef> Effects { get; init; } = DefTable<EffectDef>.Empty;
     public DefTable<ProjectileDef> Projectiles { get; init; } = DefTable<ProjectileDef>.Empty;
+    public DefTable<TilesetDef> Tilesets { get; init; } = DefTable<TilesetDef>.Empty;
     public DefTable<MapDef> Maps { get; init; } = DefTable<MapDef>.Empty;
-    public DefTable<ObstacleKindDef> ObstacleKinds { get; init; } = DefTable<ObstacleKindDef>.Empty;
     public DefTable<EnemyDef> Enemies { get; init; } = DefTable<EnemyDef>.Empty;
     public DefTable<AffixDef> Affixes { get; init; } = DefTable<AffixDef>.Empty;
     public DefTable<BuffDef> Buffs { get; init; } = DefTable<BuffDef>.Empty;
@@ -73,4 +73,7 @@ public sealed class GameDefs
     public DefTable<PickupDef> Pickups { get; init; } = DefTable<PickupDef>.Empty;
     public DefTable<DropTableDef> DropTables { get; init; } = DefTable<DropTableDef>.Empty;
     public DefTable<StageDef> Stages { get; init; } = DefTable<StageDef>.Empty;
+    public DefTable<SoundDef> Sounds { get; init; } = DefTable<SoundDef>.Empty;
+    public DefTable<MusicDef> Music { get; init; } = DefTable<MusicDef>.Empty;
+    public SoundBindingsDef SoundBindings { get; init; } = new();
 }

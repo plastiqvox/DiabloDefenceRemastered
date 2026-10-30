@@ -1,7 +1,10 @@
 namespace DiabloDefenceRemastered.Core.Common;
 
-/// <summary>그림 묶음의 클립 이름(<c>sprite_sets[].clips</c> 의 키).</summary>
-public enum ClipKind : byte { Idle, Walk, Attack, Cast, Die }
+/// <summary>
+/// 그림 묶음의 클립 이름(<c>sprite_sets[].clips</c> 의 키, 원작 클립 이름 — 설계서 6.3).
+/// <c>Special</c> = 몬스터의 시전·함성·소환(v0.2 의 cast), <c>Cast*</c> = 주인공 시전(무기 <c>cast_clip</c>).
+/// </summary>
+public enum ClipKind : byte { Idle, Walk, Attack, Special, Die, CastFire, CastLightning, CastMagic }
 
 [Flags]
 public enum AnimStep : byte
@@ -27,10 +30,17 @@ public struct AnimClock
     public ClipKind Clip;
     /// <summary>클립 시작부터 흐른 시간(재생 배율 반영, 초).</summary>
     public float Time;
-    /// <summary>재생 배율(걷기 = 실제 속도 / base_speed, anim_speed …).</summary>
+    /// <summary>재생 배율(걷기 = <see cref="WalkRate"/>, anim_speed …).</summary>
     public float Rate;
     public bool Loop;
     public bool Done;
+
+    /// <summary>
+    /// 걷기 재생 배율 = 땅 기준 속도 / base_speed (4.1·6.3). 주인공(WP3)·적(WP4)·미리보기·시체(WP5)가 모두 이것을 쓴다.
+    /// <paramref name="baseSpeed"/> ≤ 0 이면 1.
+    /// </summary>
+    public static float WalkRate(Vector2 vel, float baseSpeed) =>
+        baseSpeed > 0f ? FacingMath.GroundSpeed(vel) / baseSpeed : 1f;
 
     public void Play(ClipKind clip, bool loop, float rate = 1f)
     {

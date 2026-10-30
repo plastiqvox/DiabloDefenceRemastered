@@ -18,16 +18,23 @@ public sealed partial class World
         Rng = new SimRandom(seed);
         Stage = stage;
         Map = stage?.Map.Def;
-        MapSize = Map is { } map ? map.Size.ToVector2() : CameraMath.DefaultViewSize;
+        if (Map is { } map)
+        {
+            // 배치 풀기·좌표 풀기는 여기서 한 번(4.1). 다른 묶음은 Arena·Resolved 만 읽고 IsoMath 를 따로 부르지 않는다
+            Arena = ArenaLayout.Expand(map);
+            Resolved = ResolvedMap.Resolve(map, Arena.Iso);
+            MapSize = Arena.Iso.BoxSize;
+        }
+        else MapSize = CameraMath.DefaultViewSize;
 
-        if (stage is not null) Lighting.Load(stage.Lighting, defs.ObstacleKinds);
+        if (stage is not null && Resolved is not null) Lighting.Load(stage.Lighting, Resolved);
 
         Hero.Reset();
         if (defs.Rules.Hero is { } rules) Hero.Radius = rules.Radius;
-        if (Map is { } m)
+        if (Resolved is { } r)
         {
-            Hero.Pos = Hero.PrevPos = m.HeroStart.Pos;
-            Hero.Facing = FacingMath.ToVector(m.HeroStart.Facing);
+            Hero.Pos = Hero.PrevPos = r.HeroStart;
+            Hero.Facing = FacingMath.ToVector(r.HeroFacing);
         }
         else Hero.Pos = Hero.PrevPos = MapSize * 0.5f;
         ViewRect = CameraMath.ViewRect(Hero.Pos, MapSize, ViewSize);
@@ -38,7 +45,11 @@ public sealed partial class World
     public GameDefs Defs { get; }
     public StageDef? Stage { get; }
     public MapDef? Map { get; }
-    /// <summary>맵 크기(px). 맵이 없는 시험 월드는 960×540.</summary>
+    /// <summary>맵 배치를 푼 격자(하위 칸 성질·둘레 표시·<c>LayoutHash</c>). 맵 없는 시험 월드는 null.</summary>
+    public ArenaGrid? Arena { get; }
+    /// <summary>입구·기준점·주인공 시작을 월드 px 로 푼 것. 맵 위치가 필요한 묶음은 이것만 읽는다(4.1). 맵 없는 시험 월드는 null.</summary>
+    public ResolvedMap? Resolved { get; }
+    /// <summary>외곽 상자 64N × (32N + H)(카메라·생성 띠 기준, 4.1). 맵 없는 시험 월드는 960×540.</summary>
     public Vector2 MapSize { get; set; }
     public ulong Seed { get; }
     public SimRandom Rng { get; }

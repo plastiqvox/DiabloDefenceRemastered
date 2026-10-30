@@ -1,14 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- 실행 파일: 렌더·입력·화면·앱. MGCB(콘텐츠 파이프라인)는 쓰지 않는다 (설계서 1.3) -->
+  <!-- 실행 파일: 렌더·소리 재생·입력·화면·앱. MGCB(콘텐츠 파이프라인)는 쓰지 않는다 (설계서 1.3) -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <RootNamespace>DiabloDefenceRemastered</RootNamespace>
     <AssemblyName>DiabloDefenceRemastered</AssemblyName>
     <TieredPGO>true</TieredPGO>
-    <!-- 그림 자원 폴더. 검사·복사가 같이 읽는다. 실패 경로 시험은 -p:DdrAssetDir=<빈 폴더> 로 한다 -->
+    <!-- 자원 폴더(원작 exe PNG + 가져오기 도구 출력 d1\). 검사·복사가 같이 읽는다.
+         게임의 자원 폴더를 바꾸는 길은 이 속성 하나다: -p:DdrAssetDir=<빈 폴더> -p:SkipAssetCheck=true -o <임시 폴더> (1.4) -->
     <DdrAssetDir Condition="'$(DdrAssetDir)' == ''">$(MSBuildProjectDirectory)\Assets</DdrAssetDir>
     <SkipAssetCheck Condition="'$(SkipAssetCheck)' == ''">false</SkipAssetCheck>
+    <!-- 가져오기 표(WP0 소유). 시작 검사가 출력 ImportTable\ 의 해시를 manifest 의 표 해시와 비교한다 -->
+    <DdrImportTableDir>$(MSBuildProjectDirectory)\..\..\tools\DiabloAssetImporter\Table</DdrImportTableDir>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,20 +29,36 @@
     <Using Include="Microsoft.Xna.Framework.Vector2" Alias="XnaVector2" />
     <Using Include="DiabloDefenceRemastered.Core.Common" />
     <Using Include="DiabloDefenceRemastered.Core.Defs" />
+    <Using Include="DiabloDefenceRemastered.Core.Map" />
     <Using Include="DiabloDefenceRemastered.Core.Data.Registry" />
     <Using Include="DiabloDefenceRemastered.Core.Sim" />
     <Using Include="DiabloDefenceRemastered.Core.Sim.Contracts" />
     <Using Include="DiabloDefenceRemastered.App.Contracts" />
   </ItemGroup>
 
-  <!-- 그림(PNG·cur, git 제외)과 정의 JSON 을 출력 폴더로 복사한다 -->
+  <!-- 자원(git 제외)을 출력 Assets\ 로 폴더 그대로 복사한다(README·가져오기 캐시·실행 보고 제외).
+       프로젝트 안 Assets 는 SDK 기본 None 에서 빼고 이 한 줄로만 넣는다(DdrAssetDir 이 다른 곳이어도 출력 경로가 같게) -->
   <ItemGroup>
-    <None Include="$(DdrAssetDir)\*.png;$(DdrAssetDir)\*.cur" Link="Assets\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Remove="Assets\**" />
+    <None Include="$(DdrAssetDir)\**\*"
+          Exclude="$(DdrAssetDir)\README.md;$(DdrAssetDir)\d1\.cache\**;$(DdrAssetDir)\d1\import.log"
+          Link="Assets\%(RecursiveDir)%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" />
     <None Include="Data\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="$(DdrImportTableDir)\*.json" Link="ImportTable\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- 원본 manifest 가 없으면 출력 manifest 를 지운다(SkipAssetCheck 여도, DDR0001 로 멈추기 전에). 가져오기가 중간에 실패한 뒤
+       PreserveNewest 복사가 옛 manifest 를 남겨 섞인 자원으로 뜨는 일을 막는다(1.3). CheckAssets 보다 먼저 선언 — 같은 BeforeTargets 는 선언 순서로 돈다 -->
+  <Target Name="RemoveStaleAssetManifest" BeforeTargets="BeforeBuild" Condition="!Exists('$(DdrAssetDir)\d1\manifest.json')">
+    <Delete Files="$(OutDir)Assets\d1\manifest.json" />
+  </Target>
+
+  <!-- 빌드는 manifest·TITLE.png 가 있는지만 본다. 판 번호·파일 목록 대조는 실행 시작 때(WP7 AssetCheck, 1.4 끝) -->
   <Target Name="CheckAssets" BeforeTargets="BeforeBuild" Condition="'$(SkipAssetCheck)' != 'true'">
-    <Error Code="DDR0001" Text="그림 자원이 없다. tools\import-assets.ps1 로 채운다 (README 참고)" Condition="!Exists('$(DdrAssetDir)\Dungeon1.png')" />
+    <Error Code="DDR0001"
+           Text="자원이 없다. tools\import-all.ps1 -Diabdat &lt;diabdat.mpq&gt; -Exe &lt;DiabloDefence.exe&gt; 로 채운다 (README 참고)"
+           Condition="!Exists('$(DdrAssetDir)\d1\manifest.json') Or !Exists('$(DdrAssetDir)\TITLE.png')" />
   </Target>
 
 </Project>

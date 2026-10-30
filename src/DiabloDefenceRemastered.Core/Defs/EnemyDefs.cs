@@ -8,7 +8,8 @@ public enum MovementKind : byte { Flow, Astar, Direct }
 /// <summary>정의 자체의 등급. 정예·우두머리는 정의가 아니라 생성 때 붙는 등급(<c>EnemyRank</c>).</summary>
 public enum DefRank : byte { Normal, Miniboss, Boss }
 
-public enum DeathStyle : byte { Anim, KnightFade }
+/// <summary>죽음 연출. anim(죽기 클립 재생)만 남았다 — v0.2 의 knight_fade(원작 exe 검사 그림)는 없앴다.</summary>
+public enum DeathStyle : byte { Anim }
 
 /// <summary>
 /// 몬스터 <c>enemies[]</c> (설계서 6.5). <c>extends</c>·<c>abstract</c>·<c>*_add</c>·<c>*_patch</c> 는 로딩 3단계에서 풀리고 지워진다.
@@ -20,6 +21,9 @@ public sealed record EnemyDef : IDef
     public string Name { get; init; } = "";
     public IReadOnlyList<string> Tags { get; init; } = [];
     public required DefRef<SpriteSetDef> Sprites { get; init; }
+    /// <summary>그림 묶음의 원작 TRN 변종 이름(<c>""</c> = 원색). 묶음 <c>variants</c> 안에 있어야 한다. 변종이 다르면 다른 페이지 파일이다(7.5).</summary>
+    public string Variant { get; init; } = "";
+    /// <summary>덧입힘(색조·발광·알파·크기)은 정예·우두머리·접두사 표시와 원작에 없는 변형에 쓴다. 일반 몬스터는 될 수 있으면 TRN 만.</summary>
     public Rgb Tint { get; init; } = Rgb.White;
     public GlowDef? Glow { get; init; }
     public float Scale { get; init; } = 1f;
@@ -91,6 +95,8 @@ public sealed record PhaseDef
     public ShakeDef? Shake { get; init; }
     public GlowDef? Glow { get; init; }
     public float? Speed { get; init; }
+    /// <summary>이 페이즈에 들어설 때 대사를 한 번 더 낸다(신호 <c>BossPhase</c>, 도살자 2페이즈, 7.9).</summary>
+    public bool Voice { get; init; }
     public JsonObject? Patch { get; init; }
     public IReadOnlyList<PatternDef> Add { get; init; } = [];
     public IReadOnlyList<string> Remove { get; init; } = [];

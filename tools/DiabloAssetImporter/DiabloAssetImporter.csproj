@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 디아블로 1 자원 가져오기 도구 (설계서 1.4, 소유 WP0). MonoGame 없음. MPQ 읽기 패키지(War3Net.IO.Mpq)는 WP0 이 넣는다.
+       가져오기 표(Table/*.json)·맵 정의 읽기·배치 풀기는 Core(Assets/ImportTable, Map/MapDataReader·ArenaLayout)를 그대로 쓴다 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>DiabloAssetImporter</RootNamespace>
+    <AssemblyName>DiabloAssetImporter</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\DiabloDefenceRemastered.Core\DiabloDefenceRemastered.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="System.Numerics" />
+    <Using Include="DiabloDefenceRemastered.Core.Common" />
+    <Using Include="DiabloDefenceRemastered.Core.Defs" />
+    <Using Include="DiabloDefenceRemastered.Core.Map" />
+    <Using Include="DiabloDefenceRemastered.Core.Assets" />
+    <Using Include="DiabloDefenceRemastered.Core.Data.Registry" />
+  </ItemGroup>
+
+</Project>

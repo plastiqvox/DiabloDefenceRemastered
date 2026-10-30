@@ -1,7 +1,8 @@
 namespace DiabloDefenceRemastered.Tests.TestKit;
 
 /// <summary>
-/// 시험 월드 만들기 (WP1 TestKit, 설계서 10.1). 코드로 만든 작은 맵·정의 + 전수 공간 질의 + 직선 내비.
+/// 시험 월드 만들기 (WP1 TestKit, WP1b 갱신, 설계서 10.1). 코드로 만든 작은 합성 타일셋·맵(<see cref="ArenaGrid"/> 로 푼 등각 아레나)·정의
+/// + 전수 공간 질의 + 직선 내비(바깥 마름모 경계). 주인공은 맵의 <c>hero_start</c>(<c>World.Resolved</c>)에서 시작한다.
 /// 각 묶음은 다른 묶음 없이 자기 시스템만 넣어 시험한다(R9).
 /// <code>
 /// var t = new TestWorldBuilder().WithSystem(SimPhase.EnemyThink, new MySystem()).Build();
@@ -12,7 +13,7 @@ namespace DiabloDefenceRemastered.Tests.TestKit;
 public sealed class TestWorldBuilder
 {
     private ulong _seed = 1;
-    private Vector2 _mapSize = new(1536, 1024);
+    private int _megaTiles = TestDefs.DefaultMegaTiles;
     private GameDefs? _defs;
     private VictoryDef? _victory;
     private bool _presentation;
@@ -22,8 +23,8 @@ public sealed class TestWorldBuilder
 
     public TestWorldBuilder WithSeed(ulong seed) { _seed = seed; return this; }
 
-    /// <summary>기본 정의(<see cref="TestDefs.Basic"/>)의 맵 크기.</summary>
-    public TestWorldBuilder WithMapSize(float width, float height) { _mapSize = new Vector2(width, height); return this; }
+    /// <summary>기본 정의(<see cref="TestDefs.Basic"/>)의 맵 메가타일 수(하위 타일 N = 2M, 외곽 상자 64N × (32N + 128)).</summary>
+    public TestWorldBuilder WithMegaTiles(int megaTiles) { _megaTiles = megaTiles; return this; }
 
     /// <summary>정의 묶음을 통째로 바꾼다. 첫 스테이지가 있으면 그것으로 월드를 만든다.</summary>
     public TestWorldBuilder WithDefs(GameDefs defs) { _defs = defs; return this; }
@@ -53,12 +54,11 @@ public sealed class TestWorldBuilder
 
     public TestWorld Build()
     {
-        var defs = _defs ?? TestDefs.Basic(_mapSize, _victory);
+        var defs = _defs ?? TestDefs.Basic(_megaTiles, _victory);
         var stage = defs.Stages.Count > 0 ? defs.Stages[0] : null;
         var world = new World(defs, _seed, stage);
-        if (stage is null) world.MapSize = _mapSize;
         world.Presentation.Enabled = _presentation;
-        world.Nav = new StraightNav(world.MapSize);
+        world.Nav = world.Arena is { } arena ? new StraightNav(arena.Iso) : new StraightNav(world.MapSize);
         world.Spatial = new BruteForceSpatial(world);
         foreach (var setup in _setups) setup(world);
 

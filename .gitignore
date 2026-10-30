@@ -3,6 +3,22 @@ obj/
 .vs/
 *.user
 
-# 디아블로 1 그림 자원은 저작물이라 올리지 않는다. tools/import-assets.ps1 로 채운다.
+# 디아블로 1 자원은 저작물이라 올리지 않는다. tools/import-all.ps1(원작 exe PNG + diabdat 가져오기)로 채운다.
 src/DiabloDefenceRemastered/Assets/*
 !src/DiabloDefenceRemastered/Assets/README.md
+
+# 실행 캡처·로그(원작 그림이 찍힌다, R24). 견본·캡처는 원래 저장소 밖(스크래치·임시 폴더)에 둔다
+out/
+logs/
+
+# 원작 형식 파일이 저장소에 섞이지 않게(R24, 대소문자를 가리는 체크아웃에서도 — 원작 이름은 DIABDAT.MPQ 처럼 대문자). 원본은 사용자 PC 의 diabdat.mpq 에만 있다
+*.[mM][pP][qQ]
+*.[cC][lL]2
+*.[cC][eE][lL]
+*.[pP][aA][lL]
+*.[tT][rR][nN]
+*.[mM][iI][nN]
+*.[tT][iI][lL]
+*.[sS][oO][lL]
+*.[dD][uU][nN]
+*.[aA][mM][pP]

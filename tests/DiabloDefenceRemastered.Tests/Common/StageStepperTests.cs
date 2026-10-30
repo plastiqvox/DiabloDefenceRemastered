@@ -113,7 +113,7 @@ public class StageStepperTests
     [Fact]
     public void WorldWithoutSimulation_Throws()
     {
-        var world = new World(TestDefs.Basic(new Vector2(960, 540)), 1);
+        var world = new World(TestDefs.Basic(), 1);
         Assert.Throws<InvalidOperationException>(() => StageStepper.AppTick(world, default));
     }
 }

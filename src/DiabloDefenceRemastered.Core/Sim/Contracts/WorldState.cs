@@ -9,9 +9,11 @@ public enum RunOutcome : byte { Running, VictoryPending, Victory, DefeatPending,
 /// <summary>선택 대기. EndTick 이 켜고 PlayScene 이 같은 앱 틱에 오버레이를 올린다(3.3).</summary>
 public enum ChoiceKind : byte { None, LevelUp, Chest }
 
-/// <summary>장애물 종류 하나의 현재 빛.</summary>
-public struct KindLight
+/// <summary>점 빛 하나의 현재 값(월드 px). 깜빡임·맥동은 렌더가 스테이지 틱으로 계산한다(7.7).</summary>
+public struct PointLight
 {
+    public string Id;
+    public Vector2 Pos;
     public Rgb Color;
     public float Radius;
     public float Flicker;
@@ -21,40 +23,61 @@ public struct KindLight
 
 /// <summary>
 /// 현재 조명 (<c>World.Lighting</c>). 스테이지 정의로 시작하고 <c>light_change</c> 이벤트(WP4)가 바꾸며 렌더(WP5)가 읽는다.
-/// 종류별 빛 = 장애물 종류 정의의 빛 위에 스테이지 <c>kind_lights</c> 를 덮어쓴 값(빛이 없던 종류에 새로 붙일 수도 있다).
+/// 점 빛은 정의 순서 그대로이고 자리는 로딩 때 <see cref="ResolvedMap"/> 으로 월드 px 로 푼 값이다(기준점 ID 또는 [tx,ty]).
 /// </summary>
 public sealed class LightingState
 {
-    private readonly Dictionary<string, KindLight> _kinds = new(StringComparer.Ordinal);
+    private readonly List<PointLight> _lights = [];
+    private readonly Dictionary<string, int> _index = new(StringComparer.Ordinal);
 
     public Rgb Ambient { get; set; } = Rgb.White;
     public float Darkness { get; set; }
     public Rgb HeroLightColor { get; set; } = Rgb.White;
     public float HeroLightRadius { get; set; }
+    /// <summary>유닛(주인공·적·시체·획득물) 밝기 하한(0 = 끔, 7.7).</summary>
+    public float UnitMinLight { get; set; }
 
-    /// <summary>찾기 전용(순회 순서에 기대지 않는다).</summary>
-    public bool TryGetKind(string kindId, out KindLight light) => _kinds.TryGetValue(kindId, out light);
+    /// <summary>점 빛(정의 순서). 매 프레임 for 로 돌려도 할당이 없다.</summary>
+    public IReadOnlyList<PointLight> Lights => _lights;
 
-    public void SetKind(string kindId, KindLight light) => _kinds[kindId] = light;
+    /// <summary>ID 로 찾기(<c>light_change</c> 의 <c>lights.&lt;id&gt;.*</c>).</summary>
+    public bool TryGetLight(string id, out PointLight light)
+    {
+        if (_index.TryGetValue(id, out var i)) { light = _lights[i]; return true; }
+        light = default;
+        return false;
+    }
 
-    public void Load(LightingDef lighting, DefTable<ObstacleKindDef> kinds)
+    /// <summary>있는 빛을 바꾼다. 없는 ID 면 false(새 빛은 만들지 않는다 — 자리는 정의에서만 온다).</summary>
+    public bool SetLight(string id, in PointLight light)
+    {
+        if (!_index.TryGetValue(id, out var i)) return false;
+        _lights[i] = light with { Id = id };
+        return true;
+    }
+
+    public void Load(LightingDef lighting, ResolvedMap map)
     {
         Ambient = lighting.Ambient;
         Darkness = lighting.Darkness;
         HeroLightColor = lighting.HeroLight.Color;
         HeroLightRadius = lighting.HeroLight.Radius;
-        _kinds.Clear();
-        foreach (var kind in kinds.All)
-            if (kind.Light is { } l)
-                _kinds[kind.Id] = new KindLight { Color = l.Color, Radius = l.Radius, Flicker = l.Flicker };
-        foreach (var (kindId, o) in lighting.KindLights)
+        UnitMinLight = lighting.UnitMinLight;
+        _lights.Clear();
+        _index.Clear();
+        foreach (var l in lighting.Lights)
         {
-            _kinds.TryGetValue(kindId, out var k);
-            if (o.Color is { } c) k.Color = c;
-            if (o.Radius is { } r) k.Radius = r;
-            if (o.Flicker is { } f) k.Flicker = f;
-            if (o.Pulse is { } p) { k.PulsePeriod = p.Period; k.PulseAmount = p.Amount; }
-            _kinds[kindId] = k;
+            if (!_index.TryAdd(l.Id, _lights.Count)) throw new ArgumentException($"점 빛 ID '{l.Id}' 가 두 번 있다");
+            _lights.Add(new PointLight
+            {
+                Id = l.Id,
+                Pos = map.ToWorld(l.AtTile),
+                Color = l.Color,
+                Radius = l.Radius,
+                Flicker = l.Flicker,
+                PulsePeriod = l.Pulse?.Period ?? 0f,
+                PulseAmount = l.Pulse?.Amount ?? 0f,
+            });
         }
     }
 }

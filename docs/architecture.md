@@ -1,6 +1,6 @@
 # Diablo Defence Remastered — 설계서 (Architecture)
 
-- 상태: v0.4 (설계 담당).
+- 상태: v0.4.2 (설계 담당).
   - v0.1: 첫 판.
   - v0.2: 세 리뷰(`docs/reviews/architecture-planner.md`, `architecture-implementer.md`, `architecture-verifier.md`)를 반영했다 — 지적별 처리는 13.1~13.3.
   - v0.3: 기획서 v0.4 의 **디아블로 1 원본 자원 사용**(사용자 요구 10)을 받았다 — 자원 가져오기 도구(1.4), 등각 아레나 좌표·타일 충돌(4.1·4.2),
@@ -8,7 +8,10 @@
     WP1 구현(커밋 `ec851d6`)이 문서와 다르게 정한 것을 문서에 옮겼다(11.4). 처리 목록은 13.4.
   - v0.4: v0.3 리뷰(`docs/reviews/architecture-v03-review.md`, 구현·검증·기획 담당 지적 41개)를 반영했다 — 맵 데이터 읽기 공용화(`MapDataReader`), 가져오기 표 7개와 `arena.json` 모양,
     최소 실제 데이터 선행 단계(WP0a), 벽 정렬 단계 나누기, 원본 SOL 사실 맞추기(앞둘레 턱 = `X`), 개발 실행의 null 오디오 장치, 저작물 유출 막기, 원작 형식 규칙 부록(부록 A). 처리 목록은 13.5.
-  기준 기획서: `docs/gdd.md` v0.4(설계에 넘긴 목록은 기획서 20절 끝). 출발점: `docs/brief.md`.
+  - v0.4.1: 기획서 v0.5 와 맞췄다 — 13.5 의 열린 질문 중 기획서가 답한 것(큰 피해 기준 `telegraph_required`, 조명 판독성 값과 `unit_min_light` 대상, 최종 크기 자르기 `max_scale` 1.6,
+    벽 가림 `wall_fade` 기본, 앞둘레 턱 문구)을 설계 값·규칙에 옮기고, 그 밖에 두 문서가 다르게 적은 곳(진입점 `N−6`, 목표 문 행진 끝, 주인공 맞음 소리, 검증 13.5-12~14)을 맞췄다. 처리 목록은 13.6.
+  - v0.4.2: WP1b 구현 리뷰를 반영했다 — `GameModules` 위치, 무음 `AudioServices`, 걷기 재생 배율 함수, 시그니처를 코드에 맞춤. 처리 목록은 13.7.
+  기준 기획서: `docs/gdd.md` v0.5.1(설계에 넘긴 목록은 기획서 20절 끝, v0.5 처리는 21절). 출발점: `docs/brief.md`.
 - 이 문서는 **코드 구조·형식·알고리즘·작업 나누기**를 정한다. 수치·규칙은 기획서가 정하고, 여기서는 그것을 어디에 어떻게 담는지만 정한다.
   기획서와 다르게 해석한 곳은 그 자리에 `[해석]` 으로 표시하고 12.1 에 모았다.
 - 코드 조각은 인터페이스 시그니처 수준이다. 이름은 구현 때 바뀔 수 있지만 **11절 작업 묶음 사이의 계약**(굵게 표시한 형)은 WP1·WP1b 가 정한 뒤 고치려면 관련 묶음 담당과 합의한다.
@@ -71,8 +74,9 @@ DiabloDefenceRemastered/
 │  │  ├─ Nav/           ArenaCollision(막힘 → 평행사변형), NavGrid, ClearanceField, FlowField, AStar, BinaryHeap, PathSmoother,
 │  │  │                 Navigator, PlacementResolver, NavConst, Validation/(길 검사)
 │  │  ├─ Spatial/       SpatialHash(ISpatialQuery 구현), ObstacleIndex
+│  │  ├─ Modules/       GameModules(모듈 목록 — 조립 뿌리, Sim/ 밖이라 Core.Audio 를 알아도 됨)              (계약, WP1·WP1b)
 │  │  ├─ Sim/
-│  │  │  ├─ World.cs  Simulation.cs  StageStepper.cs  GameModules.cs
+│  │  │  ├─ World.cs  Simulation.cs  StageStepper.cs
 │  │  │  ├─ Contracts/  시스템 계약·틱 이벤트·표시 이벤트(신호 포함)·명령·피해 요청·이동 의도·질의 인터페이스·모듈
 │  │  │  ├─ Core/       BeginTickSystem, EndTickSystem
 │  │  │  ├─ Entities/   Enemy, Hero, Projectile, Hazard, Telegraph, Pickup 의 공통 조각(partial, WP1)
@@ -226,7 +230,7 @@ dotnet run --project tools/DiabloAssetImporter -- audit [--out <Assets 폴더>] 
     { "out": "d1/missiles/firerun",  "cl2": "missiles\\firerun{d}.cl2", "dirs": 8, "width": 128, "shadow_alpha": 0.5 } ] }
 
 // Table/icons.json — 아이콘 = 마법 프레임 한 장 이상을 겹친 48×48. layers 는 그리는 순서
-{ "size": 48, "background": [16, 12, 10],
+{ "size": 48, "background": [16, 12, 10],          // "palette"(선택) — 없으면 missiles.json 의 palette
   "icons": [
     { "out": "d1/icons/fireball", "cl2": "missiles\\fireba{d}.cl2", "dirs": 16, "width": 96,
       "layers": [ { "dir": 4, "frame": 7 } ] },
@@ -265,6 +269,8 @@ dotnet run --project tools/DiabloAssetImporter -- audit [--out <Assets 폴더>] 
   값마다 출처를 JSON 주석으로 남긴다: `// 출처: 원본 확인`(이 PC 의 diabdat 를 읽어 확인) 또는 `// 출처: DevilutionX 참고`(원본 파일에 없는 게임 동작 값). 둘 곳은 위에 적은 한 곳뿐이다.
 - 맵 그림은 표에 없다: 도구가 게임 정의 `Data/tilesets/*.json`·`Data/maps/*.json`(6.11)을 **Core `Map/MapDataReader.Read(dataDir)`** 로 읽어 `ArenaLayout.Expand` 로 펼친다.
   `MapDataReader` 는 `tilesets`·`maps` 두 종류만 읽고(다른 종류·부품 등록·다른 묶음의 데이터 오류와 무관), 공용 STJ 옵션·변환기(Core `Data/Json`)를 쓰고, `MapDef.Tileset` 을 ID 로 연결한다.
+  결과는 `MapDataResult(Maps, Tilesets, Errors)`, 로더용 오버로드 `Read(IEnumerable<MapDataElement>)`(파일·JSON 경로를 그대로 넘김)가 있다.
+  예외: JSON 문법이 깨진 파일과 중복 키가 있는 파일은 두 종류가 있는지 알 수 없어 다른 묶음 파일이어도 오류로 낸다(중복 키는 정의·표 모두 오류, `DefJson.FindDuplicateKey`).
   두 종류는 `extends`·`*_add`·`*_patch` 를 쓰지 않는다(쓰면 오류) → 병합 규칙이 두 벌이 될 일이 없다. 게임 로더(WP7 `DataLoader`)도 이 두 종류는 `MapDataReader` 결과를 그대로 받는다(6.2).
 
 **출력** — `--out` 기본 = 저장소 뿌리의 `src/DiabloDefenceRemastered/Assets`(위 "실행" 의 찾기 규칙). 도구는 그 아래 `d1/` 만 쓴다(원작 exe PNG 는 뿌리, `import-assets.ps1` 이 그대로 쓴다).
@@ -529,12 +535,13 @@ Draw:
     화면 45° `(−1, 1)` 로 두면 16방향 열로는 남남서가 된다.
   `--preview sprites` 에서 8·16방향을 돌려 맞는지 보고, 틀리면 `IsoYScale`(1 = 보정 없음)과 `ColumnOffsetDegrees` 두 상수만 고친다.
 - **걷기 재생 배율**도 땅 기준 속도로 센다: `AnimClock` 재생 배율 = `|(vx, IsoYScale·vy)| / base_speed`(`base_speed` = 화면 가로로 걸을 때의 px/s, 6.3).
+  계산은 **`AnimClock.WalkRate(vel, baseSpeed)`(= `FacingMath.GroundSpeed(vel) / baseSpeed`) 한 곳** — 주인공(WP3)·적(WP4)·미리보기·시체(WP5)가 식을 따로 쓰지 않는다.
   원작 걷기 그림은 땅 위 걸음에 맞춰 그려져, 화면 세로로 같은 화면 속도로 걸으면 땅 거리는 두 배다 — 화면 속도로 재면 세로 걷기에서 발이 미끄러진다(기획 4.1·8.1, 확인은 `--preview enemies` 의 방향별 걷기). `[해석]`
 
 ### 4.2 충돌 도형과 내비 격자 (v0.3: 타일 배치에서 만든다)
 
 - **정본 = 저장소의 타일 배치 + 타일 성질 표**: 맵 `layout`(6.11) → Core `ArenaLayout.Expand` → `ArenaGrid`(하위 타일마다 걷기 막힘·투사체 막힘)
-  → WP2 `ArenaCollision.Build` → 도형 목록. 같은 메가타일 번호가 그림(가져오기 도구가 원작 CEL·MIN 으로 굽는다)과 충돌(성질 표)을 함께 정하고,
+  → WP2 `ArenaCollision.Build(ArenaGrid)` → `IReadOnlyList<CollisionShape>`(타일셋·`IsoMath` 는 `ArenaGrid` 가 가진다). 같은 메가타일 번호가 그림(가져오기 도구가 원작 CEL·MIN 으로 굽는다)과 충돌(성질 표)을 함께 정하고,
   성질 표는 가져오기 도구가 원작 SOL 과 대조한다(1.4) → "그림과 충돌이 어긋날 수 없다"(요구 3)가 원작 타일에서도 선다. Core 는 SOL·CEL 을 모른다.
 - 기획 10.1 은 "SOL 이 정본, 가져오기 도구가 충돌 다각형을 `Assets/` 에 쓴다" 였다. 그러면 충돌이 자원에 묶여 클론 직후·CI 에서 길 검사·내비 시험·시나리오가 모두 못 돈다
   (기획 20절이 넘긴 질문). 성질 표는 우리가 쓰는 메가타일 십여 개의 "어느 하위 칸이 막혔나" 라는 사실만 담고(그림·소리 바이트 없음), 원본과 다르면 가져오기가 실패하므로
@@ -545,10 +552,10 @@ Draw:
   3. 도형마다 `BlocksWalk`·`BlocksProjectiles`·`IsBoundary`. 걷기만 막는 칸(`W`)은 `BlocksWalk` 만, 투사체만 막는 칸(`M`)은 `BlocksProjectiles` 만.
      **원본 사실**(v0.4, diabdat 직접 확인): L1 앞둘레 턱 메가타일 18·19·20·24 는 하위 칸 4개가 모두 SOL 15(Solid·BlockLight·BlockMissile·Transparent) = `X` 다 — 걷기도 투사체도 막는
      하위 칸 두 줄 두께의 벽이다. 뒷벽(메가타일 1·2)은 한 줄만 막히고 나머지 반은 바닥이다. 그래서 MVP 맵에는 `W` 칸이 없다. "낮은 턱은 투사체 통과" 는 원본과 다르므로 쓰지 않는다
-     (기획 10.1·10.2 문구는 기획 담당이 고친다). 투사체가 앞둘레를 넘어야 할 기획 이유가 생기면 그때 성질 표에 `design_diffs`(이유 필수, `sol_known_diffs` 와 따로)를 더한다(6.11).
+     (기획 v0.5 10.1·10.2 도 같은 사실로 고쳤다 — 앞 턱은 보기에만 낮은 두 줄 두께 벽, 기획 의도 차이는 MVP 에 없음). 투사체가 앞둘레를 넘어야 할 기획 이유가 생기면 그때 성질 표에 `design_diffs`(이유 필수, `sol_known_diffs` 와 따로)를 더한다(6.11).
   4. 맵 경계 = 바깥 마름모(4.1). 밖은 맵 밖이고 입장 중인 유닛만 지나간다(기획 2.4).
      **둘레 도형**: 타일셋 `borders` 와 문 끝 조각(`end_a`/`end_b`)에서 온 막힌 칸의 도형은 `IsBoundary = true` 다. 장애물 통과 유닛(`phase_through`)도 이 도형에는 막힌다(4.7-3).
-     → 핀드가 기획 8.3 "맵 경계(둘레 벽)만 막힘" 대로 둘레 벽 칸 안으로 들어가지 않는다(벽 기둥에 가려 안 보이고 투사체로 못 맞히는 자리에서 주인공을 때리는 일을 막는다).
+     → 핀드가 기획 8.3 "안쪽 장애물만 무시, 둘레 벽(타일 테두리 칸 전부)과 맵 바깥은 막힘" 대로 둘레 벽 칸 안으로 들어가지 않는다(벽 기둥에 가려 안 보이고 투사체로 못 맞히는 자리에서 주인공을 때리는 일을 막는다).
   - 같은 목록에서 ① 충돌 해소(정확한 도형) ② 내비 격자 clearance ③ 투사체 막음 ④ `--debug-nav shapes` 를 만든다. 그림은 이 목록으로 만들지 않는다(가져오기 도구가 같은 배치로 굽는다).
 - 흙처럼 그림이 32px 떠 보이는 막힌 칸도 충돌은 그 칸 자리다(기획 10.1, 보이는 것과 32px 어긋나는 것이 정상).
 - 원작의 "대각선 걸음은 두 옆 칸이 비어야 함" 은 두지 않는다 — 다각형 충돌과 격자의 코너 자르기 금지가 대신한다(기획 10.1).
@@ -568,7 +575,7 @@ Draw:
 | 필드 | 통과 조건 | 쓰는 유닛 |
 |---|---|---|
 | `S` | clearance ≥ `NavConst.FieldS` (16) | 몸 반경 ≤ 16 (해골·좀비·궁수·폴른 원·핀드·염소인간·산성 짐승·블랙 데스·오버로드 16, 대부분의 정예) |
-| `M` | clearance ≥ `NavConst.FieldM` (26) | 몸 반경 16 초과 (썩은 시체 19, 머드맨 18, 정예·우두머리 썩은 시체 22·25, 정예·우두머리 오버로드 18·21, 우두머리 머드맨 24 등). 26 을 넘는 flow 유닛은 데이터 검증에서 경고 |
+| `M` | clearance ≥ `NavConst.FieldM` (26) | 몸 반경 16 초과 (썩은 시체 19, 머드맨 18, 정예·우두머리 썩은 시체 22·22(우두머리는 최종 크기 1.6 으로 잘림, 6.5), 정예·우두머리 오버로드 18·21, 우두머리 머드맨 24 등). 26 을 넘는 flow 유닛은 데이터 검증에서 경고 |
 
 - 문턱 값은 `NavConst` 한 곳에 두고 필드·길 검사(13.5-5)·생성 위치 검사가 같이 읽는다.
 - **계산**: 목표 = 주인공. 주인공 둘레 (주인공 반경 + 16)px 안의 그 필드 통과 칸을 모두 시작점(거리 0)으로 하는 다중 시작 다익스트라.
@@ -854,7 +861,7 @@ public interface ITargeting   // nearest / random_in_radius / facing / densest /
   종류 키: `rules`(객체, 아래), `sprites`, `sprite_sets`, `effects`, `projectiles`, `tilesets`, `maps`, `enemies`, `affixes`, `buffs`,
   `weapons`, `passives`, `evolutions`, `pickups`, `drop_tables`, `stages`, `sounds`, `music`, `sound_bindings`(v0.3: `tilesets`·소리 셋 추가, `obstacle_kinds` 삭제).
 - `rules` 는 **여러 파일에서 하위 키 단위로 합친다**: `rules/hero.json` = `{ "rules": { "hero": …, "xp_curve": …, "level_up": … } }`,
-  `rules/enemies.json` = `{ "rules": { "ranks": …, "caps": …, "spawn": … } }`, `rules/audio.json` = `{ "rules": { "audio": … } }`. 같은 하위 키가 두 파일에 있으면 오류. 그래서 두 묶음이 같은 파일을 고치지 않는다.
+  `rules/enemies.json` = `{ "rules": { "ranks": …, "enemies": …, "caps": …, "spawn": … } }`, `rules/audio.json` = `{ "rules": { "audio": … } }`. 같은 하위 키가 두 파일에 있으면 오류. 그래서 두 묶음이 같은 파일을 고치지 않는다.
 - 권장 배치(소유 묶음은 11절):
 
 ```
@@ -1071,10 +1078,12 @@ public interface IDataValidator { string Name { get; } void Validate(GameDefs de
 
 - **그림**: `sprites` = 그림 묶음 ID, `variant` = 그 묶음의 원작 TRN 변종 이름(`""` = 원색, 기본). 같은 묶음 + 다른 변종이면 다른 시트 파일이다(7.5).
   `tint`·`glow`·`alpha`·`scale` 은 **덧입힘**이다 — 일반 몬스터는 될 수 있으면 원작 TRN 만 쓰고(기획 8.1), 정예·우두머리·접두사 표시와 원작에 없는 변형(분열체 ×0.65)에 쓴다.
-  `scale` 은 0.65~1.6 밖이면 경고(늘린 그림이 흐려짐, 기획 8.1·열린 질문 18). 경고는 **정의 `scale` × 그 적이 받을 수 있는 가장 큰 등급 배율**(정예 대상이면 `rules.ranks` 의 우두머리 배율)로 본다
-  — 썩은 시체 ×1.35 가 우두머리(×1.3)가 되면 1.755 다. 기획이 상한을 정하면 `rules.ranks.max_scale`(선택)로 생성 때 최종 크기를 자른다(몸 반경도 자른 크기로). 값은 기획 9.1·9.2(열린 질문, 13.5).
+  **최종 크기**(생성 때) = `min(정의 scale × 등급 배율, rules.ranks.max_scale)` — 기획 8.1(v0.5): 크기 범위 0.65~1.6 은 정의 크기 × 등급 배율(정예 ×1.15, 우두머리 ×1.3)에 걸고,
+  1.6 을 넘으면 1.6 으로 자른다(썩은 시체 우두머리 1.35 × 1.3 = 1.755 → 1.6). 검사는 경고(기획 13.5-14): 정의 `scale` 이 0.65~1.6 밖이거나,
+  **정의 `scale` × 그 적이 받을 수 있는 가장 큰 등급 배율**(정예 대상이면 `rules.ranks` 의 우두머리 배율)이 `max_scale` 을 넘으면 — 넘는 쪽은 실제로 잘린다는 알림이다.
 - **몸 반경**: 그림 묶음의 `base_radius` × `scale` 을 반올림(`radius` 생략 시). 위 `mud_man` 은 `round(16 × 1.15) = 18`. 값을 직접 적을 수도 있고(중간 보스·보스처럼 기획 표 값을 그대로 쓸 때),
-  계산값과 2 넘게 다르면 경고다. → "`extends` + `scale` 만 바꾸기" 변형이 부모 반경을 물려받아 충돌·필드 등급이 조용히 틀어지는 일이 없다. 정예·우두머리 크기 배율은 생성 때 여기에 다시 곱한다.
+  계산값과 2 넘게 다르면 경고다. → "`extends` + `scale` 만 바꾸기" 변형이 부모 반경을 물려받아 충돌·필드 등급이 조용히 틀어지는 일이 없다.
+  생성 때 몸 반경은 **자른 최종 크기**로 다시 센다: `round(base_radius × 최종 크기)`(정의가 `radius` 를 직접 적었으면 `round(radius × 최종 크기 / scale)`). 썩은 시체 우두머리 = `round(14 × 1.6) = 22`(기획 8.1).
 - `melee_slam` 의 피해를 생략하면 그 적의 `damage` 를 쓴다(일반 적 패턴은 시간 배율을 받는 적 피해, 보스 패턴은 표 값). 이벤트 프레임을 생략하면 그림 묶음 클립의 `event_frame`(원작 표 값).
 - `behaviors` 는 `extends` 에서 **통째로 교체**된다(배열 규칙). 부모 부품에 하나만 더하려면 `"behaviors_add": [ … ]`, 부모 부품의 매개변수 몇 개만 바꾸려면
   `"behaviors_patch": { "<부품 id>": { "cooldown": 0.7 } }`(부품의 선택 `id` 로 찾아 깊은 병합, 없는 id 는 오류). 패턴·페이즈도 `patterns_add`/`patterns_patch`/`phases_patch` 로 같다.
@@ -1127,7 +1136,8 @@ public interface IDataValidator { string Name { get; } void Validate(GameDefs de
 
 - **오라·함성·범위 버프는 보스를 거르지 않으면 보스에게도 걸린다**: `command_aura`·`war_cry`·`buff_area` 는 매개변수 `include_bosses`(기본 `false`)를 가진다.
   `false` 면 정의 `rank` 가 `miniboss`·`boss` 인 적에게는 걸지 않는다(대장 오라가 해골왕의 내려치기를 30 → 37.5 로 바꾸는 일을 막는다). 정예·우두머리(생성 등급)는 받는다.
-  기본값은 설계 제안이고 기획 4.2·9.5 가 확정한다(열린 질문, 13.5). `[해석]`
+  지휘 오라는 기획 8.2 가 대상 종(해골·해골 궁수·불타는 해골·불타는 해골 궁수·다른 해골 대장)을 정해 보스·중간 보스 본체에 걸리지 않는 것이 확정이다.
+  전투 함성(`war_cry`, 오버로드 반경 250)·스틸메이스 함성(`buff_area`, 반경 300)이 중간 보스·보스 본체에 걸리는지는 기획서에 아직 없다 — 그때까지 `false` 가 설계 기본이다(기획 열린 질문 21, 13.6). `[해석]`
 - 공포는 `escort` 부품의 규칙이다: 대장이 죽으면 **그 대장을 `Leader` 로 가진 적만** `fear_on_leader_death` 초 동안 도망간다(기획 8.3). 오라 반경 안의 다른 해골이나, 호위 없이 나온 대장 주변의 적은 영향이 없다.
 - `panic_on_ally_death`(기획 v0.4 새 부품, 폴른 원, WP4): 지난 틱 `EnemyKilled`(`Cause == Damage`) 중 같은 정의·반경 안이 있으면 `Order = Flee(fear)`, 다시 겁먹기까지 `rearm`. 정예·우두머리는 겁먹지 않는다.
   공포 동작은 호위 공포와 같은 `Flee` 지시다(6.6).
@@ -1178,10 +1188,15 @@ public interface IDataValidator { string Name { get; } void Validate(GameDefs de
 2페이즈에서 대사를 한 번 더 내는 것은 페이즈의 `"voice": true`(v0.3, 계약 변경) → 신호 `BossPhase`(7.9).
 
 - (해골왕에 `skeleton` 태그를 달지 않는다 — `target_tag: skeleton` 오라·호위 규칙의 대상이 아니다. 태그는 "같은 종 규칙의 대상" 이라는 뜻으로만 단다.)
-- 패턴 `range_band` 는 [최소, 최대] 거리, `hp_once` 는 HP 문턱 1회. `telegraph` 는 선택이지만 **예고 필수 조건**에 걸리는 패턴·능력은 없으면 검사에 걸린다(기획 12.6).
-  조건은 `rules.enemies.telegraph_required` 의 값으로 판정한다: `{ "hp_pct": 0.25, "reach_over_contact": 30, "area": true }` —
-  ① 한 번 피해 ≥ 주인공 기본 최대 체력 × `hp_pct` 이면서 닿는 거리 > (자기 반경 + 주인공 반경 + `reach_over_contact`), 또는 ② `area` 가 참이고 범위 피해(폭발·장판·`melee_slam` 반경·`telegraphed_blast`)가
-  같은 거리 밖까지 닿음. 그 거리 안의 근접 내려치기는 공격 그림 자체를 예고로 본다. 숫자는 설계 제안이고 기획 12.6 이 정한다 — **기획서가 값을 정하기 전까지 이 검사는 경고**다(13.5).
+- 패턴 `range_band` 는 [최소, 최대] 거리, `hp_once` 는 HP 문턱 1회. `telegraph` 는 선택이지만 **예고 필수 조건**에 걸리는 패턴·능력은 없으면 로딩 오류다(기획 12.6·13.5-13).
+  기준값은 `rules.enemies.telegraph_required` 에 둔다(6.10): `{ "min_damage": 10, "min_time": 0.4, "melee_reach_over_contact": 50, "heavy_melee_damage": 25, "heavy_melee_windup": 0.35 }`.
+  "피해" 는 **기본 피해**(정의에 적은 값 — 동작의 `damage`, 생략하면 그 적의 `damage`. 시간·등급·버프·광폭화 배율 전)다. 부품 종류로 나눈다(정의끼리만 보므로 자원 없이 돈다):
+  - **예고 필수** — 기본 피해 ≥ `min_damage` 인 ① 범위 즉발 피해(`radius` 가 있는 `melee_slam`, `telegraphed_blast` — 불타는 접두사의 죽음 폭발 포함, `self_destruct`) ② 돌진(`charge`·`dash`).
+    `telegraph.time` ≥ `min_time` 이어야 한다. `self_destruct` 는 `fuse`(번쩍임)가 예고다(`fuse` ≥ `min_time`).
+  - **예고 없어도 됨** — 근접 단일 대상(`radius` 없는 `melee_slam`, `chase_melee`)으로 닿는 거리 ≤ 자기 반경 + 주인공 반경(`rules.hero.radius`) + `melee_reach_over_contact`:
+    공격 그림이 예고다. 단 기본 피해 ≥ `heavy_melee_damage` 면 공격 시작부터 이벤트 프레임까지 `(event_frame − 1) × 프레임 시간 / anim_speed` ≥ `heavy_melee_windup` 이어야 한다(해골왕 내려치기 30·도살자 식칼 35·스틸메이스 강타 25).
+    투사체(`projectile_spread`·`shoot_projectile` — 폭발이 있어도 날아오는 그림이 예고)와 장판 틱(`ground_hazard`, 투사체 `on_end`)도 예고 없어도 된다.
+  - 단일 대상인데 닿는 거리가 위 값을 넘는 근접은 기획 12.6 의 두 갈래에 없다 — 오류 대신 경고로 알린다(기준을 기획에 물을 자리).
 - `clip`: `attack`·`special`·`idle`(기획 13.3). 쓰는 클립이 그림 묶음에 없으면 로딩 오류(도살자 `fatc` 에는 `special` 이 없다).
 - `actions` 는 **같은 이벤트 프레임에 순서대로** 실행한다(시전 애니메이션 한 번, 소환과 버프가 같은 틱). 여러 틱 걸리는 동작(`dash`)은 목록의 마지막에만 올 수 있다(검증).
 - `arc` = 전체 퍼짐각(±20° = 40). 360 이면 사방.
@@ -1252,13 +1267,14 @@ public enum SpawnSource : byte { Interval, ElitePack, Ring, March, Escort, Escor
 public readonly record struct SpawnContext(SpawnSource Source, EntityId Owner, int EscortCount = -1);   // 계약 (WP1). -1 = 정의 기본값
 
 public enum OrderKind : byte { None, March, Follow, Flee }
-public struct MoveOrder { public OrderKind Kind; public Vector2 Dir; public EntityId Leader; public Vector2 Offset; public int UntilTick; }
+public struct MoveOrder { public OrderKind Kind; public Vector2 Dir; public EntityId Leader; public Vector2 Offset; public int UntilTick; public Vector2? Target; }
 ```
 
 - `Enemy` 에 `Source`(생성 출처), `Leader`(호위가 따르는 대장), `Summoner`(소환자), `Order`(이동 지시)를 둔다(WP4 조각, 11.2).
 - **생성 훅은 출처를 본다**: `escort` 의 `OnSpawn` 은 `Source == Escort`(이벤트) 일 때만 호위를 데려온다. 수 = `EscortCount ≥ 0` 이면 그 값(이벤트 `escorts`, 0 포함), 아니면 `default_count`.
   구간 생성·정예 판정·`elite_pack` 으로 나온 대장은 호위가 없다(기획 8.3). 호위 하나하나는 `Source = EscortMember`, `Leader = 대장`, `Order = Follow(대장, 대형 자리)`, 자리는 `PlacementResolver`.
-- **이동 지시**: `march` 이벤트는 `Order = March(방향, 지금 + 직진 시간)`. `Follow` 는 주인공이 그 호위의 `break_range` 안에 들거나 대장이 죽으면 풀린다. 공포는 `Order = Flee(UntilTick)`.
+- **이동 지시**: `march` 이벤트는 `Order = March(방향, 지금 + 직진 시간)`. `toward_entry` 면 `Target` = 그 진입점(월드 px, `World.Resolved`)이고, 발이 `Target` 에서 48px 안에 들거나 지나치면
+  (`Dir · (Target − 발) ≤ 0` — 분리에 밀려 그 점을 못 밟는 무리 가장자리도 풀리게) `UntilTick` 전이라도 지시를 푼다(기획 10.3 v0.5). `Follow` 는 주인공이 그 호위의 `break_range` 안에 들거나 대장이 죽으면 풀린다. 공포는 `Order = Flee(UntilTick)`.
   지시는 위치 잡기만 대신한다 — 행진 중에도 사거리 안이면 공격한다(공포만 능력을 막는다).
 - **소환 상한**: `summon` 은 `Summoner == 자신` 인 살아 있는 적 수를 세서(저장소를 한 번 훑음, 소환은 드물다) `alive_cap` 까지만 부른다.
 - **상한 정리 순서**: 감독의 `SpawnGate.Reserve(source, n)` 가 출처를 셋으로 나눈다 — 일반(`Interval`) → 이벤트(`ElitePack`·`Ring`·`March`·`Escort`·`EscortMember`·`Miniboss`·`Boss`·`EventOther`) → 분열·소환(`Split`·`Summon`).
@@ -1319,7 +1335,7 @@ public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public
   오라처럼 범위 안에 있는 동안만 붙는 효과는 매 틱 2틱짜리로 다시 붙이고, 시간제(함성 6s)는 그 시간으로 붙인다. 칸이 모자라면 가장 먼저 끝나는 것을 바꾼다.
   `debuff` 가 있는 버프는 정의 `immunities` 에 같은 이름이 있으면 붙지 않는다(`slow` 면역 = 보스·중간 보스). 버프 붙이기 도우미는 WP1 공통 코드라 WP3(장판 둔화)·WP4(오라·함성)가 같이 쓴다.
   → "새 오라를 가진 적" 이 정의(버프 1개 + 오라 부품 매개변수)만으로 늘어난다.
-- 정예·우두머리 배율(HP ×3.5/×8, 피해 ×1.4/×1.6, 이동 ×1.1, 경험치 ×4/×10, 크기 ×1.15/×1.3, 넉백 저항, 발광, 드롭)과
+- 정예·우두머리 배율(HP ×3.5/×8, 피해 ×1.4/×1.6, 이동 ×1.1, 경험치 ×4/×10, 크기 ×1.15/×1.3 — 최종 크기 상한 `max_scale` 1.6(6.5), 넉백 저항, 발광, 드롭)과
   정예 무리 기본값(`pack_size: [3,5]`, `unique_chance: 0.3`, `banner: "정예 무리가 나타났다"`, `banner_time: 1.5`)은 `rules.ranks` 의 `elite`·`unique`·`pack` 에 둔다(`rules/enemies.json`, 6.10).
 - `EnemyFactory.Create(def, rank, affixes, minutes, in SpawnContext)` 가 정의 + 등급 + 접두사를 합쳐 인스턴스를 만든다(데코레이터 방식: 정의는 그대로, 인스턴스가 합친 값을 가짐).
   접두사 부품은 정의 부품 뒤 슬롯에 붙는다. 분열체는 `rank` 를 물려받지 않는다(부품 매개변수 `inherit_rank: false` 기본). 생성 직후 `ISpawnHookPart` 들을 부른다.
@@ -1438,7 +1454,10 @@ public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public
                            "glow": [90, 140, 255], "pulse": { "period": 1.2, "alpha": [0.25, 0.45] } },
                "unique": { "hp": 8,   "damage": 1.6, "speed": 1.1, "xp": 10, "scale": 1.3,  "knockback_resist": 0.8,   "affixes": 2, "drop_table": "dt_unique",
                            "glow": [255, 200, 80] },
-               "pack":   { "pack_size": [3, 5], "unique_chance": 0.3, "banner": "정예 무리가 나타났다", "banner_time": 1.5 } },
+               "pack":   { "pack_size": [3, 5], "unique_chance": 0.3, "banner": "정예 무리가 나타났다", "banner_time": 1.5 },
+               "max_scale": 1.6 },
+    "enemies": { "telegraph_required": { "min_damage": 10, "min_time": 0.4, "melee_reach_over_contact": 50,
+                                         "heavy_melee_damage": 25, "heavy_melee_windup": 0.35 } },
     "caps": { "enemies": 300, "enemies_absolute": 360, "hero_projectiles": 400, "enemy_projectiles": 200, "gems": 300 },
     "spawn": { "band": [40, 200], "tries": 12, "edge_margin": 4, "group": [1, 3], "group_radius": 40, "accumulator_hold": 3 }
   }
@@ -1448,6 +1467,7 @@ public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public
 - 카드 문구 `피해 14 → 18` 은 레벨 표 두 행을 비교해 `stat_labels` 로 만든다 → 새 무기도 문구가 저절로 생긴다.
   패시브 카드(`최대 체력 +20`, `피해 +10%`)도 같은 표에서 `StatKey` 라벨과 `format`(`abs` 기본 / `pct`)으로 만든다. 표에 없는 키를 쓰는 무기·패시브는 검증 경고.
 - `level_up_push`: 선택 창이 닫힌 다음 스테이지 틱에 주인공 반경 150 안 적을 80px 밀어낸다(피해 0, 기획 12.6).
+- `ranks.max_scale`: 생성 때 최종 크기(정의 크기 × 등급 배율) 상한(기획 8.1, 6.5). `enemies.telegraph_required`: 예고가 꼭 필요한 "큰 피해" 기준(기획 12.6, 판정은 6.5, 검사는 6.14 의 13.5-13).
 
 ### 6.11 타일셋 `tilesets`, 맵 `maps` (v0.3: 원작 타일 아레나, 기획 10.1)
 
@@ -1490,11 +1510,10 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
         "place": [ { "piece": "pillar", "at": [[7,7], [13,7], [7,13], [13,13], [10,4], [16,10], [10,16], [4,10]] } ] },
       "entries": [ { "id": "gate_nw", "outside": [-4, 19.5], "inside": [4, 19.5] },
                    { "id": "gate_ne", "outside": [19.5, -4], "inside": [19.5, 4] },
-                   { "id": "gate_se", "outside": [43, 19.5], "inside": [35, 19.5] },
-                   { "id": "gate_sw", "outside": [19.5, 43], "inside": [19.5, 35] } ],
+                   { "id": "gate_se", "outside": [43, 19.5], "inside": [34, 19.5] },
+                   { "id": "gate_sw", "outside": [19.5, 43], "inside": [19.5, 34] } ],
       "hero_start": { "tile": [19.5, 19.5], "facing": "south" },
       "anchors": { "center": [19.5, 19.5] },
-      "wall_fade": { "mode": "hero" },
       "art": "d1/maps/cathedral_arena" }
   ]
 }
@@ -1506,8 +1525,8 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
     L1 번호는 조사 문서의 해골왕 방(`SklKng2.DUN`) 짜임이다.
   - **`props`**(성질 표): 쓰는 메가타일마다 하위 칸 4개(TIL 순서: 위-왼, 위-오른, 아래-왼, 아래-오른 = 하위 타일 (2mx,2my) (2mx+1,2my) (2mx,2my+1) (2mx+1,2my+1)).
     글자: `.` 바닥, `W` 걷기만 막힘, `M` 투사체만 막힘, `X` 둘 다(원본 SOL 의 bit0·bit2 와 대응, 1.4 성질 대조). 지금 MVP 맵에 `W` 칸은 없다 — 앞둘레 턱도 `X` 다(4.2).
-    쓰는 메가타일인데 표에 없으면 로딩 오류. **표에 쓰지 않는 메가타일이 있어도 오류**: `props` 의 키 ⊆ 그 타일셋을 쓰는 맵 배치의 메가타일 번호(`floor`·`borders`·`gates`·`pieces`)
-    → 성질 표가 SOL 전체를 옮긴 덤프로 커지지 않는다(R24).
+    쓰는 메가타일인데 표에 없으면 로딩 오류. **표에 이름 붙이지 않은 메가타일이 있어도 오류**: `props` 의 키 = 그 타일셋이 이름 붙인 번호(`floor`·`borders`·`gates`·`pieces`)와 같은 집합
+    (맵과 무관하게 타일셋만으로 판정, 번호 ≥ 0) → 성질 표가 SOL 전체를 옮긴 덤프로 커지지 않는다(R24). 이름만 붙이고 어느 맵도 안 쓰는 조각은 남을 수 있다.
   - `sol_known_diffs`: 원본 SOL 과 일부러 다르게 둔 칸 중 **원작 수정판이 고치는 SOL 오류**만(고치지 않으면 아치 밑으로 투사체가 지나감, 기획 10.1). 원소 = 메가타일 번호·하위 칸·원본 글자·쓰는 글자·이유.
     가져오기 도구가 대조할 때만 쓴다(1.4). 기획 이유로 원본과 다르게 둘 칸이 생기면 따로 `design_diffs`(이유 필수)에 적는다 — 두 목록을 섞지 않는다. 지금은 `design_diffs` 가 없다.
 - **맵**(`MapDef`, 계약 변경 WP1b): `size` = 메가타일 수 M(정사각, 하위 타일 N = 2M), `tileset`, `palette`(층 팔레트 — 가져오기·그림만 씀, 기획 10.1 "맵마다 고정"), `art` = 가져오기 출력 폴더(7.6).
@@ -1522,11 +1541,13 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
      성질 표나 보정 목록을 고치면 바닥/벽 나눔이 바뀔 수 있으므로 해시도 바뀐다.
 - 위치(`entries` 의 `outside`/`inside`, `hero_start.tile`, `anchors`)는 **하위 타일 좌표(실수, 칸 중심 = 정수)**, 형은 `TileCoord`(4.1). 입구 ID 는 문 ID 와 같게 둔다(`entry:gate_ne`, 기획 10.1).
   기획 10.1 의 진입점 값은 첫 값이고 `--debug-nav entries,tiles` 로 맞춘다(기획 열린 질문 7). 위 예는 문 틈 중심(19.5)에 맞췄다 — 20 이면 문 틈 중심에서 0.5칸(약 14px) 비켜 행진이 한쪽 문설주로 몰린다.
+  진입점은 기획 10.1 표 그대로 뒤 문 `4`, 앞 문 `N − 6`(N 40 → 34), 바깥 시작점 `−4`·`N + 3` 이다 — 뒤 벽은 한 줄, 앞 턱은 두 줄 두께라 둘 다 벽 안쪽 면에서 3.5칸(약 100px) 떨어진다.
   다른 묶음은 이 값을 직접 쓰지 않고 `World.Resolved`(월드 px, 4.1)를 읽는다.
-- `wall_fade`(선택, 기본 `{ "mode": "hero" }`): 반투명으로 그릴 벽(7.6). `hero` = 주인공을 가리는 벽만, `radius` = 주인공 둘레 `radius` px 원과 겹치고 그 안 유닛 하나라도 가리는 앞 벽 전부
-  (`{ "mode": "radius", "radius": 260 }`). 협로 벽이 다가오는 적을 통째로 가리는 맵(스테이지 2)에 쓰는 선택지 — 어느 쪽을 쓸지는 기획 10.2·10.4 가 정한다(13.5).
+- `wall_fade`(선택, 기본 `{ "mode": "light" }`): 반투명으로 그릴 벽(7.6). `light` = 기획 10.2(v0.5)의 두 규칙 — 주인공보다 앞이고 ① 주인공 그림 사각형과 겹치는 벽, 또는
+  ② 주인공 빛 반경(`World.Lighting` 의 현재 `hero_light.radius`) 안의 벽. 모든 맵의 기본이고 MVP 두 맵은 적지 않는다. `hero` = ① 만(미리보기 비교용).
+  `radius`(선택, px)를 적으면 ② 에 빛 반경 대신 그 값을 쓴다. v0.4 의 `radius` 모드("그 원 안 유닛을 가리는 벽만")는 기획이 유닛 조건 없이 정해 없앴다.
 - 스테이지 2(`catacombs_arena`, L2, M = 22): L2 테두리·문·벽 조각 번호가 아직 없다(기획 열린 질문 15). WP0 이 단계 3 전에 `tilesets/l2.json` 을 채운다.
-  앞쪽 낮은 턱 조각이 L2 에 없으면 그 변도 높은 벽 테두리를 쓰고 가림 규칙(7.6, `wall_fade`)에 맡긴다. 협로 벽은 `place` 의 `line`. L2 조각의 성질도 원본 SOL 로 확인한다 —
+  앞쪽 둘레·협로 벽은 보기에 낮은 조각을 먼저 찾고(기획 10.4), L2 에 없으면 높은 벽을 쓰고 가림 규칙(7.6, `wall_fade` 기본 `light`)에 맡긴다. 협로 벽은 `place` 의 `line`. L2 조각의 성질도 원본 SOL 로 확인한다 —
   "낮은 턱이라 투사체 통과" 를 미리 가정하지 않는다(L1 앞둘레 턱은 `X` 였다).
 
 ### 6.12 스테이지 `stages`
@@ -1535,8 +1556,8 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 {
   "stages": [
     { "id": "stage_cathedral", "name": "대성당", "map": "cathedral_arena", "unlock": null,
-      "lighting": { "ambient": [200, 200, 215], "darkness": 0.6,
-                    "hero_light": { "color": [255, 240, 220], "radius": 300 },
+      "lighting": { "ambient": [200, 200, 215], "darkness": 0.5,
+                    "hero_light": { "color": [255, 240, 220], "radius": 420 },
                     "unit_min_light": 0.6,
                     "lights": [] },
       "victory": { "type": "boss" },
@@ -1567,12 +1588,14 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 - **단계 1 세로 조각**(기획 14.1·10.3): 그때는 폴른 원·썩은 시체·핀드·불타는 해골 궁수 정의가 아직 없어 전체 구간표가 "없는 적" 오류가 된다.
   WP4 는 단계 1 에 `stages/stage_cathedral.json` 을 **단계 1 판**(5종 가중치, `survive 10:00`, 보스·중간 보스 이벤트 없음)으로 쓰고, 단계 2 에서 전체 판으로 바꾼다. 두 판을 같이 두지 않는다.
 - `march` 방향(v0.3, 등각 맵이라 방위보다 목표가 자연스럽다): `toward`(기준점 ID) / `toward_entry`(입구 ID — 그 진입점 쪽) / `heading`(방위, v0.2 그대로) 중 하나, `straight` = 직진 시간.
+  `toward_entry` 행진은 그 진입점에 닿으면 직진 시간이 남아 있어도 보통 행동으로 바뀐다(기획 10.3 v0.5 — 빠른 핀드가 맞은편 벽까지 가서 멈춰 있지 않게, 6.6 `MoveOrder.Target`).
   매개변수 이름은 이벤트 부품을 만드는 WP4 가 정한다(11.3).
 - **조명**(계약 변경 WP1b): v0.2 의 `kind_lights`(장애물 종류별 빛)는 장애물 종류와 함께 없앴다. 대신 `lights: [{ "id", "at": 기준점 ID 또는 [tx,ty], "color", "radius", "flicker", "pulse": { "period", "amount" } }]`
   (점 빛, MVP 두 스테이지는 비어 있음 — 기획 10.3·10.4 "화로·기둥 빛 없앰"). `[tx,ty]` 는 `TileCoord` 이고 `World.Lighting` 은 로딩 때 월드 px 로 바꾼 값을 가진다(4.1 `ResolvedMap`).
-- `unit_min_light`(선택, 기본 0 = 끔): 유닛(주인공·적)이 받는 빛의 하한(0~1). 바닥·벽은 원작처럼 어둡게 두고 유닛 몸통만 어둠에서 읽히게 한다(7.7). 값·어둠·빛 반경은 기획 10.3~10.5 가 정한다
-  (위 0.6 은 v0.3 리뷰가 든 예, 13.5). `light_change` 의 경로에도 들어간다.
-- `light_change` 이벤트는 바꿀 곳을 경로로 고른다: `{ "at": "11:30", "type": "light_change", "set": { "darkness": 0.8 } }`. 받는 경로: `ambient`, `darkness`, `unit_min_light`, `hero_light.*`, `lights.<id>.*`.
+- `unit_min_light`(선택, 기본 0 = 끔): 주인공·적·시체·획득물이 받는 빛의 하한(0~1, 기획 10.5 의 "유닛 밝기 하한"). 바닥·벽은 원작처럼 어둡게 두고 이것들만 어둠에서 읽히게 한다(7.7).
+  값은 기획 10.3~10.5(v0.5): 두 스테이지 모두 0.6, 어둠 스테이지 1 0.5·스테이지 2 0.6·스테이지 2 11:30 부터 0.7(상한 0.7), 주인공 빛 반경 420·380(380~480 안).
+  `light_change` 의 경로에도 들어간다.
+- `light_change` 이벤트는 바꿀 곳을 경로로 고른다: `{ "at": "11:30", "type": "light_change", "set": { "darkness": 0.7 } }`(스테이지 2). 받는 경로: `ambient`, `darkness`, `unit_min_light`, `hero_light.*`, `lights.<id>.*`.
   감독(WP4)이 `World.Lighting` 을 바꾸고 렌더(WP5)가 읽는다.
 - 이벤트가 적 정의를 덮어쓰는 매개변수: `escort` 의 `escorts`(호위 수, 0 포함), `march` 의 방향·`straight`, `boss`/`miniboss` 의 `enrage`·`arrival`. 호위 수는 `SpawnContext.EscortCount` 로 넘기고(생성 훅이 읽음), 행진 지시·광폭화·등장 연출은 이벤트가 생성 직후 그 적에 직접 건다(6.6).
 - 스테이지 음악은 스테이지 정의에 두지 않고 소리 연결 표의 `music.<스테이지 ID>`(6.15).
@@ -1633,7 +1656,7 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 | 13.5-1 | 종류 안 ID 유일, 모든 `DefRef` 존재(그림·그림 묶음·이펙트·투사체·버프·타일셋·맵·입구 `entry:`·기준점·몬스터·드롭 표·진화 재료·보스), 맵의 테두리·문·조각 이름이 타일셋에 있음, 적 `variant` ∈ 그림 묶음 `variants` | Data (WP7) |
 | 13.5-2 | 레벨 표 길이 = 최대 레벨, 키 = 패턴 `LevelKeys`, 단조성. `null` 은 `NullableKeys` 에서만 | **Data(발사 패턴 등록 여부 — `WeaponDef.Pattern` 의 `[PartType(FirePattern)]`) + WP3 검사기(레벨 키·단조성·null)** (WP1 코드) |
 | 13.5-3 | 생성 구간이 0:00 부터 빈틈·겹침 없이, 가중치 합 > 0, `during: boss` 는 보스 있을 때만 | Data |
-| 13.5-4 | 배치가 M×M 안, 쓰는 메가타일이 모두 성질 표에 있음, **성질 표의 키 ⊆ 쓰는 메가타일**, 문 칸이 비어 있음, 놓은 조각이 테두리와 겹치지 않음. 충돌 도형 묶음끼리·경계와 80px 이상 또는 붙음 | Map(WP1b 배치) + Nav/Validation (WP2) — **자원 없이 늘 돈다** |
+| 13.5-4 | 배치가 M×M 안, 쓰는 메가타일이 모두 성질 표에 있음, **성질 표의 키 = 타일셋이 이름 붙인 번호**(13.5-12), 문 칸이 비어 있음, 놓은 조각이 테두리와 겹치지 않음. 충돌 도형 묶음끼리·경계와 80px 이상 또는 붙음 | Map(WP1b 배치) + Nav/Validation (WP2) — **자원 없이 늘 돈다** |
 | 13.5-5 | 길 검사: 반경 14(주인공 시작 → 모든 입구 진입점·도달 칸), `NavConst.FieldS`·`FieldM`(16·26)과 34(입구 진입점 → `center`), 주인공이 설 수 있는 모든 칸에서 `S` 필드 시작점 ≥ 1 | Nav/Validation (WP2) — 늘 돈다 |
 | 13.5-6 | 입구 진입점·시작 위치의 clearance ≥ 38, 바깥 시작점은 맵 밖(바깥 마름모 밖) | Nav/Validation (WP2) — 늘 돈다 |
 | 13.5-7 | **정의끼리**(늘): grid 시트 = 프레임 × 개수(+slack), atlas 는 방향·프레임 > 0·`origin` 이 칸 안, 클립 존재, `event_frame` ≤ 프레임 수. **실제 자원**(있을 때만): manifest 판, atlas 메타의 칸·방향·프레임 = 정의, 사각형이 페이지 안, PNG IHDR = 메타 페이지(변종마다), grid PNG = `sheet`, 맵 `arena.json` 의 `layout_hash` = 배치 | Data / Art (WP5) |
@@ -1641,9 +1664,12 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 | 13.5-9 | 패시브 키 ∈ `StatKey`, 접두사·버프 키 ∈ `EnemyStatKey` | Data |
 | 13.5-10 | 정의가 가리키는 파일 이름(atlas 페이지 × 변종, 메타, grid PNG, 맵 `art` 폴더의 파일 — `arena.json`·`columns.*`·`minimap.png`·바닥 조각 이름 규칙(1.4)으로 계산한 `floor_*`, 소리·음악 파일, 소리 색인) ⊂ **가져오기 표가 만드는 이름 + `Table/exe.json`** — 자원 없이 돈다(기획 13.5-10). 두 쪽으로 나눈다: ① 표 → 이름 목록(`ImportTable`, 기본 분류) ② 정의 → 이름 추출과 대조(실제 `Data/` 를 WP7 로더로 읽으므로 `Integration`) | 시험 `tests/…/Assets/` (WP0 작성, ② 는 통합 때 기본으로) |
 | 13.5-11 | 아래 "추가(경고)" 의 구별 경고(기획 13.5-11) | Data |
+| 13.5-12 | 성질 표의 키 = 타일셋이 이름 붙인 번호(`floor`·`borders`·`gates`·`pieces`, 번호 ≥ 0 — `ArenaLayout.ValidateTileset`), `sol_known_diffs`·`design_diffs` 원소의 메가타일이 성질 표에 있음, `why` 가 비면 오류 | Map(WP1b `MapDataReader`) — 늘 돈다 |
+| 13.5-13 | 큰 피해 패턴·부품의 예고(6.5 판정, `rules.enemies.telegraph_required`): 예고 필수인데 없거나 `min_time` 보다 짧으면 **오류**, 무거운 근접 단일 대상의 타격 프레임까지 시간이 `heavy_melee_windup` 미만이면 **오류** | Data + 부품(WP4 매개변수 검사) |
+| 13.5-14 | 정의 `scale` 이 0.65~1.6 밖, 또는 정의 `scale` × 받을 수 있는 가장 큰 등급 배율 > `rules.ranks.max_scale` 이면 경고(넘는 쪽은 생성 때 잘림, 6.5) | Data |
 | 소리 | 소리 연결 표의 대상(무기·투사체·이펙트·그림 묶음·적·획득물·스테이지)과 소리 ID 가 있음, 분류가 `rules.audio` 에 있음, 소리 파일 ≥ 1 | Audio (WP8) |
-| 추가(오류) | `extends` 순환·없는 부모, `abstract` 정의를 생성에 씀, 부품 `(종류, type)` 미등록, 부품 매개변수 검사, `*_patch` 의 없는 id, 클립·이벤트 프레임 범위, 큰 피해 패턴의 예고 필수(`rules.enemies.telegraph_required` 기준 — 기획서가 값을 정하기 전까지는 경고, 6.5), 참조 쪽 덮어쓰기는 색조·크기만, 부품 슬롯 > 12, 여러 틱 동작이 `actions` 마지막이 아님, `rules` 하위 키 중복, atlas 그림에 `sheet`·`color_key`·`slack` 속성, 쓰는 클립(`special`·`cast_*`)이 그림 묶음에 없음, `tilesets`·`maps` 에 `extends`·`*_add`·`*_patch` | Data + 부품 |
-| 추가(경고) | flow 유닛 반경 > 26, 명시한 `radius` 가 `round(base_radius × scale)` 와 2 넘게 다름, 정의 `scale` × 받을 수 있는 가장 큰 등급 배율이 0.65~1.6 밖(6.5), **생성 가능한 적인데 어느 스테이지에서도 나오지 않음**, **같은 스테이지에 나오는 두 적이 같은 그림 묶음 + 같은 변종이고 색조 거리(RGB 유클리드) < 60, 크기 차 < 0.15, 알파·발광도 같음**, 소리 연결이 없는 그림 묶음을 쓰는 생성 가능한 적(소리 없는 적, WP8) | Data |
+| 추가(오류) | `extends` 순환·없는 부모, `abstract` 정의를 생성에 씀, 부품 `(종류, type)` 미등록, 부품 매개변수 검사, `*_patch` 의 없는 id, 클립·이벤트 프레임 범위, 큰 피해 패턴의 예고 필수(13.5-13), 참조 쪽 덮어쓰기는 색조·크기만, 부품 슬롯 > 12, 여러 틱 동작이 `actions` 마지막이 아님, `rules` 하위 키 중복, atlas 그림에 `sheet`·`color_key`·`slack` 속성, 쓰는 클립(`special`·`cast_*`)이 그림 묶음에 없음, `tilesets`·`maps` 에 `extends`·`*_add`·`*_patch` | Data + 부품 |
+| 추가(경고) | flow 유닛 반경 > 26, 명시한 `radius` 가 `round(base_radius × scale)` 와 2 넘게 다름, 크기 범위(13.5-14), 사거리가 몸 반경 합 + `melee_reach_over_contact` 를 넘는 단일 대상 근접(6.5), **생성 가능한 적인데 어느 스테이지에서도 나오지 않음**, **같은 스테이지에 나오는 두 적이 같은 그림 묶음 + 같은 변종이고 색조 거리(RGB 유클리드) < 60, 크기 차 < 0.15, 알파·발광도 같음**, 소리 연결이 없는 그림 묶음을 쓰는 생성 가능한 적(소리 없는 적, WP8) | Data |
 
 - 구별 경고는 변종이 다르면 구별되는 것으로 본다(원작 TRN 은 색이 크게 다르다 — 기획 8.2). 기준값(60·0.15)은 설계 제안이고 최종 판정은 `--preview enemies` 캡처를 사람이 본다.
 - v0.2 에서 "그림이 있을 때만" 이던 기하 검사(13.5-4~6)는 v0.3 에서 **늘 돈다**(충돌을 저장소 데이터로 만들므로, 4.2). 기획 13.5-4 의 "다각형이 없으면 건너뜀" 은 필요 없어졌다. `[해석]`
@@ -1657,8 +1683,9 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
     { "id": "snd_cbolt",       "files": ["d1/sound/sfx/misc/cbolt.wav"], "category": "weapon_fire" },
     { "id": "snd_zombie_hit",  "files": ["d1/sound/monsters/zombie/zombieh1.wav", "d1/sound/monsters/zombie/zombieh2.wav"],
       "category": "monster_hit", "pitch_jitter": 0.05 },
-    { "id": "snd_hero_hurt",   "files": ["d1/sound/sfx/sorceror/mage69.wav", "d1/sound/sfx/sorceror/mage69b.wav", "d1/sound/sfx/sorceror/mage71.wav"],
+    { "id": "snd_hero_hurt",   "files": ["d1/sound/sfx/sorceror/mage69.wav", "d1/sound/sfx/sorceror/mage69b.wav"],
       "category": "hero" },
+    { "id": "snd_hero_death",  "files": ["d1/sound/sfx/sorceror/mage71.wav"], "category": "hero" },   // 기획 4.0: mage71 은 죽음, sfx/misc/dead.wav(전사)는 안 씀
     { "id": "snd_gem",         "files": ["d1/sound/sfx/items/invgrab.wav"], "category": "pickup", "volume": 0.4, "min_interval": 0.06 },
     { "id": "snd_wallloop",    "files": ["d1/sound/sfx/misc/wallloop.wav"], "category": "ambient", "loop": true }
   ],
@@ -1765,7 +1792,7 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 - 9~10층은 가상 좌표(960×540)로 배치하고 `UiCanvas` 가 창 배율로 바꿔 그린다. 글꼴은 크기 × 배율로 요청해 늘 선명하다(FontStashSharp 는 크기별로 그림을 굽는다).
 - v0.2 의 "장애물 그림자"(1층)와 "가려진 주인공 실루엣"(7층)은 없앴다 — 원작 타일 그림에 그림자가 있고, 가리는 벽은 반투명으로 그린다(7.6).
 - **예고를 두 번 그리는 이유**(기획 12.6 "예고 없이 큰 피해 없음"): 1층 예고(채움)는 4층의 160px 벽 기둥 아래에 깔려, 벽 뒤(화면 위쪽)에 생긴 피의 땅·폭발·강타 예고의 바깥 부분이 가려진다.
-  가림 반투명은 주인공과 겹치는 벽에만 걸리므로 이것을 못 막는다. 7층에 테두리만 다시 그려 벽 위에서도 범위가 보이게 한다(빛 뒤라 어둠에도 묻히지 않는다).
+  가림 반투명은 주인공보다 앞(화면 아래)의 벽에만 걸리므로(7.6) 주인공 뒤쪽 벽 너머의 예고는 못 살린다. 7층에 테두리만 다시 그려 벽 위에서도 범위가 보이게 한다(빛 뒤라 어둠에도 묻히지 않는다).
   뒷둘레 벽은 0b 층이라 1층 예고가 그 밑동 위에 그려진다.
 
 ### 7.4 y 정렬과 그리기 호출
@@ -1837,9 +1864,10 @@ v0.2 의 `ObstacleBaker`(맵 질감으로 장애물 몸체·옆면·그림자를
   기둥 그림의 마지막 픽셀 줄은 `C.y + 15` 에 온다. 식으로: **기둥 그림 왼쪽 위 = `(C.x − 32, C.y + 16 − Hc)`**(Hc = 160 → 그림 줄 0..159 가 `C.y − 144 .. C.y + 15`).
   바닥 조각도 같은 월드 px 로 굽는다(조각 안 칸의 마름모 줄 = `C.y − 15 .. C.y + 15`). 두 쪽이 같은 `IsoMath.CellCenter` 를 쓰므로 1px 틈·겹침이 생기지 않는다(도구 시험이 맞닿은 줄을 본다, 10.1).
   정렬 키는 7.4. 흙 칸처럼 바닥 단이 비고 위 단만 있는 칸은 그림이 32px 떠 보이지만 그대로 둔다(충돌은 칸 자리, 기획 10.1).
-- **가림(반투명)**: 4층·5층을 그릴 때 벽 항목이 ① 주인공보다 앞(4층은 SortY > 주인공 발 y, 5층 앞둘레는 늘 앞)이고 ② 그 그림 사각형이 주인공 그림 사각형과 겹치면 **알파 0.5** 로 그린다(기획 10.2, 아치 덧그림 포함).
-  기본 대상은 주인공 하나다(맵 `wall_fade.mode = "hero"`, 적이 가려지는 것은 그대로). `"radius"` 면 주인공 둘레 `radius` px 원과 겹치는 앞 벽 중 그 원 안 유닛(적 포함)을 하나라도 가리는 것도
-  반투명(6.11 — 스테이지 2 협로처럼 다가오는 적이 통째로 가려지는 맵용, 기획이 고름). 원작의 구역 표(TransList)는 옮기지 않는다. 판정은 주인공 둘레 칸만 본다(칸 번호로 바로 찾음, 할당 0).
+- **가림(반투명)**: 4층·5층을 그릴 때 벽 항목(아치 덧그림 포함)이 주인공보다 앞(4층은 SortY > 주인공 발 y, 5층 앞둘레는 늘 앞)이고 아래 둘 중 하나면 **알파 0.5** 로 그린다(기획 10.2 v0.5).
+  ① 그 그림 사각형이 주인공 그림 사각형과 겹친다. ② 그 칸 마름모 중심이 주인공 발에서 빛 반경(`World.Lighting` 의 현재 `hero_light.radius`, 맵 `wall_fade.radius` 가 있으면 그 값) 안이다
+  — 협로 벽·앞쪽 높은 벽 너머로 다가오는 무리가 통째로 가려지지 않게. 맵 `wall_fade.mode = "hero"` 면 ① 만(비교용, 6.11). 주인공보다 뒤의 벽이 그 뒤 적을 가리는 것은 그대로다.
+  원작의 구역 표(TransList)는 옮기지 않는다. 판정은 4·5층 벽 항목을 모을 때 칸마다 한 번(주인공 발과의 y·거리 비교, 할당 0). 0b 층 뒷둘레 벽은 늘 주인공 뒤라 판정하지 않는다.
 - **빛**: 바닥·벽도 유닛과 같이 빛 지도(7.7)가 곱해진다. 원작의 거리별 어두움(16단계 빛 표)은 쓰지 않는다(기획 10.2).
 - **맵 밖**: 마름모 바깥은 그리지 않는다(검정). 빛 지도의 어둠이 원작처럼 바깥을 덮는다.
 - **미니맵**: 가져오기가 구운 `minimap.png`(외곽 상자 1/16 — 스테이지 1 은 160×88, 바닥 밝게·막힌 칸 어둡게)를 HUD 가 그린다(기획 12.1).
@@ -1855,9 +1883,10 @@ v0.2 의 `ObstacleBaker`(맵 질감으로 장애물 몸체·옆면·그림자를
 - `WorldRT` 위에 `LightRT` 를 **곱하기 혼합**(`ColorSourceBlend = DestinationColor, ColorDestinationBlend = Zero`)으로 늘려 그린다.
   → 주변광 곱하기와 어둠 뚫기가 한 번에 된다(기획 10.5 의 두 단계와 같은 결과, 단 빛이 겹쳐도 1 을 넘지 않음). 마름모 바깥도 같이 어두워진다.
 - 빛 상한 64: 주인공·점 빛을 먼저, 남는 자리를 짧은 빛(폭발) 중 주인공에게 가까운 순으로.
-- **유닛 최소 밝기**(`lighting.unit_min_light` > 0, 6.12): 빛을 다 그린 `LightRT` 에, 화면 안 유닛(주인공·적)의 현재 프레임을 절반 크기로 `(m, m, m)` 색, **최댓값 혼합**
+- **유닛 최소 밝기**(`lighting.unit_min_light` > 0, 6.12): 빛을 다 그린 `LightRT` 에, 화면 안 주인공·적·시체(2층)·획득물(3층)(기획 10.5 "유닛 밝기 하한" 의 대상)의 현재 프레임을 절반 크기로 `(m, m, m)` 색, **최댓값 혼합**
   (`BlendState { ColorBlendFunction = BlendFunction.Max, ColorSourceBlend = One, ColorDestinationBlend = One }`, 알파 0 픽셀은 그리지 않게 알파 기준으로 자름)으로 한 번 더 그린다.
   → 곱하기 뒤 유닛 몸통은 밝기 ≥ m, 바닥·벽은 원작처럼 어둡다(기획 10.5 의 판독성). 적 투사체·발광은 이미 7층(빛 뒤)이라 영향 없다.
+  시체(최대 150)·획득물(보석 최대 300)도 같은 목록에 넣는다 — 절반 해상도에 작은 그림이라 채움 비용이 작고, 같은 텍스처끼리 모으면 호출도 몇 번이다.
   대가: 유닛 앞에 안쪽 벽 기둥·앞둘레 턱이 겹치면 그 벽 위에 유닛 모양으로 밝은 자리가 생긴다 — 가림 판정과 같은 사각형 검사로 **앞 벽이 겹친 유닛은 건너뛴다**(7.4 발광과 같은 처리).
   `LightRT` 가 절반 해상도라 테두리 1px 정도가 바닥에 번진다(부드러운 테로 허용). 값이 0 이면 이 단계 전체를 건너뛴다.
 
@@ -2007,7 +2036,7 @@ public interface IAutoplayDriver { AppTick Now { get; } bool Ready(IScene scene)
 ### 8.3 저장 (기획 열린 질문 3)
 
 - 위치: `%LOCALAPPDATA%\DiabloDefenceRemastered\save.json`(기록·해금·누적 금화·설정 한 파일, `version` 필드). 쓰기는 임시 파일 → 바꿔치기.
-- 설정(`GameSettings`, 계약 변경 WP1b): 전체 화면, 화면 흔들림, 미니맵, 피해 숫자, **음량 셋**(전체·효과음·음악, 0~100% 10% 단위 — 기획 12.3). 저장 파일에 없으면 음량은 `rules.audio.defaults`(80·80·60%).
+- 설정(`GameSettings`, 계약 변경 WP1b): 전체 화면, 화면 흔들림, 미니맵, 피해 숫자, **음량 셋**(전체·효과음·음악, 0~100% 10% 단위 — 기획 12.3). 저장 파일에 없으면 음량은 `rules.audio.defaults`(80·80·60%) — `GameSettings` 의 음량은 `float?`(null = 없음)이고 기본값은 rules 한 곳에만 둔다.
 - `--save-dir <폴더>` 로 위치를 바꾼다. 개발 옵션 실행(9절 목록)인데 `--save-dir` 가 없으면 사용자 저장 파일을 **읽지도 쓰지도 않는다** — 기본값(창 모드, 스테이지 1 만 열림, 기록 없음)으로 시작하고 메모리에만 저장한다.
   읽기까지 막는 이유: 사용자가 켜 둔 전체 화면이 검증 실행에서 화면을 덮고, 사용자의 해금 상태에 따라 자동 조작이 고르는 스테이지가 달라지기 때문이다(brief 7절).
 
@@ -2124,9 +2153,9 @@ $p.ExitCode
 | 타이틀 | `--autoplay --capture-at 1` | 로고 애니메이션·메뉴·한글이 보임(네모 없음) |
 | 그림 규칙 | `--preview enemies`, `--preview sprites` | 걷는 방향이 칸의 방향과 맞음(8방향, 등각 대각선), 발 기준점 십자가 발바닥 ±4px, 그림자가 반투명, 같은 스테이지 적끼리 구별됨(변종 색) |
 | 타일 아레나 | `--preview tiles` + `--stage stage_cathedral --capture-at 3` | 벽·아치·기둥이 원작처럼 맞물림, 성질 겹침이 벽 줄·기둥 칸과 맞음, 바닥 조각 경계에 틈 없음, 마름모 밖은 어둠 |
-| 벽 가림·정렬 | `--stage stage_cathedral --start-at 00:00 --autoplay --god --capture-at 5,10,15,20` (자동 조작이 기둥 둘레를 지남) | 기둥 뒤 주인공 위 벽이 반투명, 기둥 앞 유닛이 기둥 위에 그려짐, 기둥 오른쪽 아래에 붙은 유닛이 벽 뒤로 들어가지 않음 |
+| 벽 가림·정렬 | `--stage stage_cathedral --start-at 00:00 --autoplay --god --capture-at 5,10,15,20` (자동 조작이 기둥 둘레를 지남) | 기둥 뒤 주인공 위 벽이 반투명, 주인공보다 앞이고 빛 반경 안인 벽·앞 턱도 반투명(뒤쪽 벽은 불투명), 기둥 앞 유닛이 기둥 위에 그려짐, 기둥 오른쪽 아래에 붙은 유닛이 벽 뒤로 들어가지 않음 |
 | 뒷벽·앞 턱·아치 | `--stage stage_cathedral --start-at 04:00 --autoplay --god --capture-at 10,30,60`(무리가 뒷벽을 타고 돎) + `--debug-nav entries` | **뒷벽에 붙어 선 적의 무기·팔이 다음 벽 칸에 잘리지 않음**, 앞둘레 턱이 그 앞 유닛을 덮음(주인공이면 반투명), 아치 문 아래 유닛은 아치 앞면에 덮이고 문 앞 칸 유닛은 아치 위에 그려짐, 뒤쪽 문으로 들어오는 적이 뒷벽 위에 떠 보이지 않음 |
-| 예고·빛 | `--stage stage_cathedral --start-at 07:00 --autoplay --god --capture-at 5,15` | 벽 뒤쪽에 생긴 예고의 테두리가 벽 위로 보임(7층), `unit_min_light` 를 켠 스테이지에서 화면 가장자리 적의 몸통이 보이고 바닥은 어두움 |
+| 예고·빛 | `--stage stage_cathedral --start-at 07:00 --autoplay --god --capture-at 5,15` | 벽 뒤쪽에 생긴 예고의 테두리가 벽 위로 보임(7층), `unit_min_light` 0.6(두 스테이지 모두)으로 화면 가장자리 적의 몸통·시체·보석이 보이고 바닥은 어두움 |
 | 혼합 비교 | `--preview blend` | 무기마다 보통/가산 두 칸이 나란히 보임 — 판정은 기획 담당(열린 질문 10) |
 | 길찾기 | `--stage stage_catacombs --start-at 07:00 --stress 180 --debug-nav flow,shapes --god --check --capture-at 5,20` | 앞쪽 협로로 몰리는 흐름, 큰 유닛 우회, 로그의 `stuck`·`in_obstacle` 기준(10.1) 통과 |
 | 전투·손맛 | `--start-at 04:00 --level 15 --weapons …` | 투사체(원작 마법 그림·16방향)·폭발·피해 숫자·번쩍임이 보임 |
@@ -2191,22 +2220,22 @@ v0.3 결정 때문에 바뀌는 **계약 변경** 전부를 한 묶음에 모은
 | 1 | `Defs/SpriteDefs.cs` | `SpriteDef.Source`(`grid`/`atlas`), atlas 는 `Sheet`·`ColorKey`·`Slack` 대신 메타 + `Action`(페이지 안 동작 이름), `Frame` = 칸, `ColorKey` nullable(null = PNG 알파 — grid 에서 속성이 없으면 로더가 검정을 채움, 6.3). `SpriteSetDef.Variants`. `ClipKind`·`ClipSetDef`: `Cast` → `Special`, `CastFire`·`CastLightning`·`CastMagic` 추가 | 원작 시트·TRN 변종·원작 클립 이름(6.3) | WP3·WP4·WP5·WP7 |
 | 2 | `Defs/EnemyDefs.cs` | `EnemyDef.Variant`(기본 `""`), `DeathStyle.KnightFade` 삭제, `PhaseDef.Voice`(bool) | 변종, 원작 exe 검사 그림 안 씀, 도살자 2페이즈 대사 | WP4·WP5 |
 | 3 | `Defs/EffectDefs.cs` | `EffectDef.Intro`(솟음 구간), `EffectDef.Scatter`, `ProjectileDef.OnEnd`(장판 명세) | 화염벽·산 웅덩이, 산성 침 웅덩이(6.4) | WP3·WP5 |
-| 4 | `Defs/MapDefs.cs` | `MapDef` 모양 바꿈(`Tileset`·`Palette`·`Size`(메가타일)·`Layout`·`Entries`(`OutsideTile`·`InsideTile`)/`HeroStart.Tile`/`AnchorsTile` — 형은 `TileCoord`·`Art`·`WallFade`), 새 `TilesetDef`(`Props`·`SolKnownDiffs`·`DesignDiffs`)·`ArenaLayoutDef`. `MapCollisionDef`·`ObstacleKindDef`·`DecorKind`·`ObstacleLightDef` 삭제 | 원작 타일 아레나(6.11), 타일·월드 좌표 섞임 막기(4.1) | WP2·WP5·WP0 |
+| 4 | `Defs/MapDefs.cs` | `MapDef` 모양 바꿈(`Tileset`·`Palette`·`Size`(메가타일)·`Layout`·`Entries`(`OutsideTile`·`InsideTile`)/`HeroStart.Tile`/`AnchorsTile` — 형은 `TileCoord`·`Art`·`WallFade`(`Mode` = `Light` 기본/`Hero`, `Radius?`, 6.11)), 새 `TilesetDef`(`Props`·`SolKnownDiffs`·`DesignDiffs`)·`ArenaLayoutDef`. `MapCollisionDef`·`ObstacleKindDef`·`DecorKind`·`ObstacleLightDef` 삭제 | 원작 타일 아레나(6.11), 타일·월드 좌표 섞임 막기(4.1) | WP2·WP5·WP0 |
 | 5 | `Defs/StageDefs.cs` | `Obstacles`·`ObstaclePlacementDef`·`LintelDef` 삭제, `LightingDef.KindLights`·`KindLightDef` → `Lights`(점 빛, `AtTile` 또는 기준점 ID), `LightingDef.UnitMinLight` | 코드 장애물 없음(6.12), 유닛 최소 밝기(7.7) | WP4·WP5 |
 | 6 | `Defs/WeaponDefs.cs` | `WeaponDef.CastClip`(`ClipKind`, 기본 `CastMagic`) | 무기마다 시전 그림(기획 5.1) | WP3 |
-| 7 | 새 `Defs/AudioDefs.cs`, `RulesDefs.cs` | `SoundDef`·`MusicDef`·`SoundBindingsDef`, `RulesDef.Audio`(`AudioRulesDef`) | 소리 데이터(6.15) | WP7·WP8 |
+| 7 | 새 `Defs/AudioDefs.cs`, `RulesDefs.cs` | `SoundDef`·`MusicDef`·`SoundBindingsDef`, `RulesDef.Audio`(`AudioRulesDef`). `RanksDef.MaxScale`(기본 1.6), `RulesDef.Enemies`(`EnemyRulesDef.TelegraphRequired` — 6.10 의 다섯 값) | 소리 데이터(6.15). 최종 크기 자르기·큰 피해 기준(기획 v0.5 8.1·12.6, 6.5) | WP4·WP7·WP8 |
 | 8 | `Data/Registry/GameDefs.cs` | `Kinds` 에 `tilesets`·`sounds`·`music`·`sound_bindings` 추가, `obstacle_kinds` 삭제, 테이블 추가·삭제 | 위 정의 | WP7 |
-| 9 | 새 `Map/IsoMath.cs`·`TileCoord.cs`·`ArenaLayout.cs`·`ArenaGrid.cs`·`ResolvedMap.cs`·`MapDataReader.cs` | 4.1 식, 배치 풀기(6.11 1~5단계), 하위 칸 성질·둘레 표시·`LayoutHash`(타일셋 정의 포함), 타일 → 월드 풀기, `MapDataReader.Read(dataDir) → (maps, tilesets, errors)`(두 종류만, 타일셋 ID 연결, `extends` 금지) — **구현과 시험까지** | WP0(그림)과 WP2(충돌)가 같은 풀기, 도구와 WP7 로더가 같은 읽기를 써야 함(1.4·6.2) | WP0·WP2·WP5·WP7 |
+| 9 | 새 `Map/IsoMath.cs`·`TileCoord.cs`·`ArenaLayout.cs`·`ArenaGrid.cs`·`ResolvedMap.cs`·`MapDataReader.cs` | 4.1 식, 배치 풀기(6.11 1~5단계), 하위 칸 성질·둘레 표시·`LayoutHash`(타일셋 정의 포함), 타일 → 월드 풀기, `MapDataReader.Read(dataDir) → MapDataResult(Maps, Tilesets, Errors)`와 로더용 `Read(IEnumerable<MapDataElement>)`(두 종류만, 타일셋 ID 연결, `extends` 금지, 중복 키 오류) — **구현과 시험까지** | WP0(그림)과 WP2(충돌)가 같은 풀기, 도구와 WP7 로더가 같은 읽기를 써야 함(1.4·6.2) | WP0·WP2·WP5·WP7 |
 | 10 | 새 `Assets/AssetFormat.cs`·`AssetManifest.cs`·`ImportTable.cs`·`SpriteMeta.cs`·`ArenaArt.cs`·`SoundIndex.cs` | 판 번호, manifest 모양(표 해시·파일 크기), **가져오기 표 8개의 모양(1.4 예 전부 — 동작별 `width`·`shadow_alpha` 덮어쓰기, 아이콘 `layers`, 소리 `vars`, `optional`, `tilesets.json`)과 "만들 이름 목록"**, 아틀라스 메타(페이지 여럿·동작별) 읽기·검사, `arena.json` record(`cells` frame 1부터)·바닥 조각 이름 규칙 `FloorChunks`, 소리 색인 — 구현과 시험까지 | 도구(쓰기)와 게임·시험(읽기)의 약속. 표 모양을 WP1b 가 다 정해야 WP0 이 곧바로 형을 바꾸러 오지 않는다(WP1c) | WP0·WP5·WP7·WP8 |
-| 11 | `Common/FacingMath.cs` | `IsoYScale = 2`(열 고르기 전 y 2배), `FromColumn` = `normalize(−sin θ, cos θ / IsoYScale)`(ToColumn 의 역), `ToVector(Compass)` 대각선 = `normalize(±2, ±1)`(4.1) | 원작 등각 방향(4.1), `--preview` 방향 돌리기·데이터 방위 | WP3·WP4·WP5 |
+| 11 | `Common/FacingMath.cs` | `IsoYScale = 2`(열 고르기 전 y 2배), `FromColumn` = `normalize(−sin θ, cos θ / IsoYScale)`(ToColumn 의 역), `ToVector(Compass)` 대각선 = `normalize(±2, ±1)`(4.1), 걷기 재생 배율 `FacingMath.GroundSpeed(vel)`·`AnimClock.WalkRate(vel, baseSpeed)`(4.1) | 원작 등각 방향(4.1), `--preview` 방향 돌리기·데이터 방위 | WP3·WP4·WP5 |
 | 12 | `Sim/World.cs` | `Arena`(`ArenaGrid?`), `MapSize` = 외곽 상자(`IsoMath`), **`Resolved`(`ResolvedMap`: 입구·기준점·주인공 시작을 월드 px 로 한 번 풀어 둠)**, 주인공 시작 = `Resolved.HeroStart`, `Lighting.Load(stage.Lighting, Resolved)` | 맵 모양 바뀜, 다른 묶음이 `IsoMath` 를 따로 부르지 않게(4.1) | 모두 |
 | 13 | `Sim/Contracts/WorldState.cs` | `LightingState` 종류별 빛 → 점 빛 목록(ID 로 찾기) | 5번 | WP4·WP5 |
 | 14 | `Sim/Contracts/Presentation.cs` | `CueEvent`·`CueKind`·`PresentationBuffer.Cues`, `CorpseSpawned` 에 `Enemy`(`EnemyDef`)·`Variant` | 소리 신호(7.9), 시체 변종·죽음 소리 | WP3·WP4·WP5·WP8 |
-| 15 | `Nav/ResolvedObstacles.cs` → `Nav/ArenaCollision.cs` | 빈 연결 파일: `ArenaCollision.Build(ArenaGrid, TilesetDef, IsoMath …) → 도형 목록`, `INavDebugView.Collision`·`Arena`. 굽기 관련(`Kind`·`Height`·`Lintel`) 삭제 | 4.2 | WP2·WP5 |
-| 16 | `Sim/GameModules.cs` | `AudioModule`(Core `Audio/`, 빈 본문 → WP8) 추가 | 소리 연결 표 검사기 등록 | WP8 |
+| 15 | `Nav/ResolvedObstacles.cs` → `Nav/ArenaCollision.cs` | 빈 연결 파일: `ArenaCollision.Build(ArenaGrid) → IReadOnlyList<CollisionShape>`(도형 형 `CollisionShape` 는 WP1b 계약), `INavDebugView.Collision`·`Arena`. 굽기 관련(`Kind`·`Height`·`Lintel`) 삭제 | 4.2 | WP2·WP5 |
+| 16 | `Sim/GameModules.cs` → `Modules/GameModules.cs`(namespace `Core.Modules`) | `AudioModule`(Core `Audio/`, 빈 본문 → WP8) 추가. 조립 뿌리라 `Sim/` 밖으로 옮김(`Sim/` 소스는 `Core.Audio` 를 참조하지 않는다, 10.1 `Audio`) | 소리 연결 표 검사기 등록 | WP8 |
 | 17 | 게임 `App/Contracts/AppServices.cs` | `IArtServices.Sprite(SpriteDef, string variant) → SpriteHandle`(텍스처 + `SpriteMeta?` + 동작 — atlas 는 사각형·`ox,oy` 없이는 못 그린다)와 `IArtServices.DrawFrame(SpriteBatch, SpriteDef, variant, dir, frame, pos, scale, color)`(WP6 처럼 WP5 밖에서 그리는 쪽용), 새 `IAudioServices`(7.9) + `AppServices.Audio`, `GameSettings` 에 `ShowDamageNumbers`·`MasterVolume`·`SfxVolume`·`MusicVolume`, `AppOptions.Muted`·`SoundDevice`, `AppOptions.Preview` 값에 `tiles`·`blend`(`obstacles` 삭제) | 7.5·7.9·8.3·9절 | WP5·WP6·WP7·WP8 |
-| 18 | 게임 빈 연결 파일 `Audio/AudioServices.cs` | `Create(AppServices) → IAudioServices`(→ WP8) | GameApp(WP7)이 이 파일만 부르게 | WP7·WP8 |
-| 19 | csproj·sln·`.gitignore` | 게임: DDR0001 확인 파일·문장(1.3), Assets 재귀 복사(`.cache`·`import.log` 제외), 원본 manifest 가 없으면 출력 manifest 지우기, 가져오기 표를 출력 `ImportTable\` 로 복사. 테스트: 가져오기 표 링크(`ImportTable\`). sln: `tools/DiabloAssetImporter`·`tests/DiabloAssetImporter.Tests` 빈 프로젝트(→ WP0). `.gitignore`: `out/`, `logs/`, `*.mpq *.cl2 *.cel *.pal *.trn *.min *.til *.sol *.dun *.amp`(R24) | 1.3·1.4 | WP0·WP7 |
+| 18 | 게임 빈 연결 파일 `Audio/AudioServices.cs` | `Create(AppServices) → IAudioServices`(→ WP8). WP8(단계 2)이 들어오기 전까지 던지지 않고 무음 무동작 구현을 돌려준다(단계 1 의 WP7·WP6 이 그대로 부름) | GameApp(WP7)이 이 파일만 부르게 | WP7·WP8 |
+| 19 | csproj·sln·`.gitignore` | 게임: DDR0001 확인 파일·문장(1.3), Assets 재귀 복사(`.cache`·`import.log` 제외), 원본 manifest 가 없으면 출력 manifest 지우기, 가져오기 표를 출력 `ImportTable\` 로 복사. 테스트: 가져오기 표 링크(`ImportTable\`). sln: `tools/DiabloAssetImporter`·`tests/DiabloAssetImporter.Tests` 빈 프로젝트(→ WP0). `.gitignore`: `out/`, `logs/`, `*.mpq *.cl2 *.cel *.pal *.trn *.min *.til *.sol *.dun *.amp`(R24, 대소문자 무관 패턴 `*.[mM][pP][qQ]` 꼴 — 원작 이름은 `DIABDAT.MPQ` 처럼 대문자) | 1.3·1.4 | WP0·WP7 |
 | 20 | `TestKit/TestDefs.cs`·`TestWorldBuilder.cs` | 작은 합성 타일셋·맵(번호는 가짜, 성질만 — `W` 칸·둘레 칸 포함), `ArenaGrid` 로 월드 만들기, 1~19 에 맞춰 고침 | 묶음이 실제 데이터 없이 시험 | 모두 |
 | 21 | 새 `Data/Json/DefJson.cs` | 공용 STJ 옵션(snake_case·주석·끝 쉼표·`Disallow`)과 변환기 `Vector2`·`TileCoord`·`Rgb`·`RectI`. WP7 로더·`MapDataReader`·`ImportTable` 이 같이 씀 | 병합·변환 규칙이 두 벌이 되어 도구와 게임이 다른 배치를 만드는 일 막기(1.4) | WP0·WP7 |
 
@@ -2225,7 +2254,7 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   - `Data/maps/cathedral_arena.json`: 배치·입구·기준점·주인공 시작(6.11 예 값, 칸 중심 규칙).
   - `Data/sprites/monsters.json`·`hero.json` 의 **단계 1 그림 묶음**(기획 14.1 의 단계 1 적 5종 + 주인공): 프레임 수·방향·칸은 `scan` 값, 이벤트 프레임·프레임 시간은 원작 동작 값(출처 주석, 1.4).
 - **소유**: `tilesets/` 는 WP0a 뒤에도 WP0. `maps/`·`sprites/` 는 WP0a 가 첫 판을 쓰고 **WP5 로 넘긴다**(WP5 가 미리보기로 기준점·입구·`origin` 을 맞춘다, 11.3). WP0a 는 한 담당이 혼자 한다(WP0 담당 권장).
-- **완료 기준**: `dotnet test` 통과(`MapDataReader` 로 실제 두 파일을 읽어 오류 0, `Expand` 성공, 13.5-4 배치 검사 통과), 세 파일의 원본 유래 값마다 출처 주석, `git diff` 에 원작 바이트·덤프 없음(성질 표 키 ⊆ 쓰는 메가타일).
+- **완료 기준**: `dotnet test` 통과(`MapDataReader` 로 실제 두 파일을 읽어 오류 0, `Expand` 성공, 13.5-4 배치 검사 통과), 세 파일의 원본 유래 값마다 출처 주석, `git diff` 에 원작 바이트·덤프 없음(성질 표 키 = 타일셋이 이름 붙인 번호, 13.5-12).
   단계 3 의 L2·`catacombs_arena` 는 WP0a 범위가 아니다(그때까지 WP2 는 합성 맵).
 
 #### WP0 — 가져오기 도구 (WP0a 뒤, 다른 묶음과 동시)
@@ -2245,7 +2274,7 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 
 - **맡는 것**: Core `Geometry/`, `Nav/`(`ArenaCollision`, `Navigator`, `PlacementResolver`, `NavConst`, `Validation/` = 13.5-4(도형 거리 쪽),5,6 검사기, `NavModule.cs`), `Spatial/`, `Sim/Movement/`(+ `Enemy.Nav.cs` 조각, `Invariants/`).
   테스트 `Geometry/ Nav/ Spatial/ Movement/ Invariants/`.
-- **계약**: `ArenaCollision.Build`(4.2), `NavWorld.Build(World) : INavWorld`(외곽 상자 격자·바깥 마름모 경계), `SpatialHash : ISpatialQuery`, `ObstacleIndex`, `Navigation / Locomotion / Collision / SpatialRebuild` 시스템,
+- **계약**: `ArenaCollision.Build(ArenaGrid) → IReadOnlyList<CollisionShape>`(4.2 — `CollisionShape` 는 WP1b 계약 형, `INavDebugView` 로 WP5 가 읽는다. `Geometry/` 다각형은 이것에서 변환), `NavWorld.Build(World) : INavWorld`(외곽 상자 격자·바깥 마름모 경계), `SpatialHash : ISpatialQuery`, `ObstacleIndex`, `Navigation / Locomotion / Collision / SpatialRebuild` 시스템,
   이동 의도 → 희망 속도(4.4 끝), `Enemy.MoveBlockedTime`·`Hero.TouchingCount` 쓰기, `INavDebugView`(충돌 도형·격자·필드·경로·하위 칸 성질), `InvariantChecker`(`SpatialRebuild` 안에서 60틱마다, 10.1).
 - **완료 기준**: 테스트 통과(무작위 A* 최적성, 해시 = 전수·넘침, **실제 맵의 길 검사·전수 성질 — 자원 없이**(단계 1: WP0a 가 넣은 `cathedral_arena`), 겹친 점, 둘레 도형이 `phase_through` 를 막음, `ArenaCollision` 의 평행사변형 합집합 = 막힌 칸 합집합(점 표본)). 그래픽 없는 측정: 적 500 을 맵에 흩어 플로우로 주인공에게 모으는 3,600틱이
   Navigation+Locomotion+Collision 평균 ≤ 1.0ms(4.9 표), 불변식 기준 통과. 단계 3 전까지는 스테이지 2 맵 대신 시험용 합성 맵으로.
@@ -2271,7 +2300,8 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   v0.3: 적 17종 + 보스 4 데이터(그림 묶음·변종, 6.13), 새 부품 `panic_on_ally_death`, `phase_through.alpha_over`, 신호 `EnemyAttack`·`EnemySpecial`·`EnemyShot`·`BossArrived`·`BossPhase`·`ElitePack`, 단계 1 판 스테이지(6.12).
 - 실제 맵·그림 묶음 정의는 WP0a(타일셋·맵·단계 1 그림 묶음)와 WP5 가 낸다. WP4 는 그 파일을 고치지 않고, 단계 1 판 적 정의는 WP0a 의 그림 묶음 ID 를 가리킨다.
   부품 시험은 처음부터 `TestKit` 합성 맵·합성 그림 묶음으로 한다(실제 데이터를 기다리지 않는다).
-- **완료 기준**: 테스트 통과(부품·생성기·전수 연기 시험·변형 픽스처·결정성 30초, 오라·함성이 `include_bosses: false` 면 보스에 안 걸림). 단계 1: 적 5종과 `stage_cathedral`(단계 1 판) 시간표가 10분 돈다
+- **완료 기준**: 테스트 통과(부품·생성기·전수 연기 시험·변형 픽스처·결정성 30초, 오라·함성이 `include_bosses: false` 면 보스에 안 걸림,
+  우두머리 썩은 시체 최종 크기 1.6·반경 22(6.5), 실제 적·보스 정의가 13.5-13 예고 기준을 통과 — 기획 12.6 "지금 표의 패턴은 모두 이 기준을 지킨다", 목표 문 행진이 진입점에서 풀림). 단계 1: 적 5종과 `stage_cathedral`(단계 1 판) 시간표가 10분 돈다
   (`Scenario`: 자동 조작 + `--god`, 예외 없음, 불변식 기준, 상한 무한 월드의 생성 수 기준 — 10.1 `Director`). 마름모 모서리에 주인공을 둔 생성 시험에서 입구 대체 비율을 로그로 낸다(R23).
 
 #### WP5 — 렌더·그림·미리보기
@@ -2367,6 +2397,7 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 - 한 묶음만 구현·사용하는 형은 그 묶음 소유다(`IFirePattern`·`ITargeting`·`WeaponStats` → WP3, 부품 계약·`PartSlot`·`ActionState`·`MoveOrder` → WP4, `Navigator`·`NavAgentState` → WP2,
   `SoundMixer` → WP8). WP1 은 레지스트리 등록 지점만 가진다.
 - 부품 매개변수 record 와 그 JSON 이름은 부품을 만드는 묶음이 정하고, 같은 묶음이 그 데이터 파일을 쓴다. WP1·WP1b 는 실제 `Data/` 를 쓰지 않는다.
+  예외 하나: `ground_hazard` 부품 매개변수는 Defs 의 `GroundHazardDef`(투사체 `on_end` 와 같은 모양, WP1b)를 그대로 쓰거나 같은 키 이름을 쓴다(WP4) — 같은 장판이 두 모양이 되지 않게.
   그래서 다른 묶음이 정한 매개변수 이름과 데이터가 어긋나 `Disallow` 오류가 한꺼번에 터지는 일이 없다.
 - `rules` 는 파일을 나눠 쓴다(6.1): WP3 `rules/hero.json`, WP4 `rules/enemies.json`, WP8 `rules/audio.json`. 데이터 파일 하나를 두 묶음이 고치는 일이 없다.
 - **최소 실제 데이터 선행**(v0.4): `tilesets/l1.json`·`maps/cathedral_arena.json`·단계 1 그림 묶음은 WP0a 가 WP2~WP8 시작 전에 낸다(11.1). 그 뒤 소유는 아래 그대로다.
@@ -2395,7 +2426,7 @@ public sealed class ModuleContext
     public Simulation CreateSimulation(World world);
     public void ApplyRunSetups(World world, RunOptions options);   // world.Options = options 를 먼저 넣고 등록 순서대로 Apply
 }
-// GameModules.Create() = [LoadingModule, NavModule, CombatModule, EnemyModule, ArtModule] (+ AudioModule, WP1b)
+// GameModules.Create() = [LoadingModule, NavModule, CombatModule, EnemyModule, ArtModule] (+ AudioModule, WP1b) — WP1b 리뷰 뒤 Core `Modules/GameModules.cs`(namespace Core.Modules)
 
 // 적 쪽 생성 인자 (Sim/Contracts/Queries.cs)
 public readonly record struct EnemyProjectileSpawn(ProjectileDef Def, Vector2 Pos, Vector2 Dir, int Damage, EntityId Owner, EntityId Target = default, float Speed = 0f);
@@ -2428,7 +2459,7 @@ public struct PassiveSlot { PassiveDef? Def; Level; AcquiredTick; IsEmpty }   //
 
 // 표시 이벤트 (Sim/Contracts/Presentation.cs) — 이름이 v0.2 문서와 다르다
 FxEvent(Tick, EffectDef Def, Pos, Scale, Tint, Radius = 0, Dir = default)   DamageNumber(Tick, Target, Pos, Value, Crit, ToHero)
-CorpseSpawned(Tick, SpriteSetDef Sprites, Pos, Facing, Tint, Scale, Alpha, GlowColor, GlowAlpha, DeathStyle Death)   ShakeEvent(Tick, Px, Duration)
+CorpseSpawned(Tick, EnemyDef Enemy, SpriteSetDef Sprites, string Variant, Pos, Facing, Tint, Scale, Alpha, GlowColor, GlowAlpha, DeathStyle Death)   ShakeEvent(Tick, Px, Duration)
 // 알림 문구는 표시 이벤트가 아니다: World.Banner(BannerState { Text, StartTick, EndTick; Show(text, tick, seconds) }) 하나 — WP4 씀, WP6 읽음
 
 // 게임 계약 (App/Contracts)
@@ -2480,6 +2511,9 @@ AppServices.Render (RenderContext?)    // GameApp 이 그래픽 장치 뒤에 �
 
 ### 12.1 기획서와 다르게 해석·보탠 것
 
+기획 v0.5·v0.5.1 이 이 표의 몇 줄을 기획서에 옮겼다(10.1 `H`·충돌 정본, 13.5-4, 10.2 정렬 키, 소리 ID 자리, `--mute`·`--sound`, 낮은 턱, 걷기 재생 배율, 큰 피해 기준, 조명 판독성).
+그 줄은 "기획서" 열에 옛 문구를 남긴 기록이고, 지금 두 문서는 같다(v0.4.1, 13.6).
+
 | 자리 | 기획서 | 설계 | 이유 |
 |---|---|---|---|
 | 15절 `--time-scale` | (v0.2) "화면 한 장마다 고정 틱을 n 번" | 실제 시간 n 배속(60Hz 화면에서는 같은 뜻). 기획 v0.3 에서 문구를 맞춤 | 화면 주사율이 달라도 같은 속도. 결과는 어느 쪽이든 같다(결정성) |
@@ -2499,11 +2533,13 @@ AppServices.Render (RenderContext?)    // GameApp 이 그래픽 장치 뒤에 �
 | 8.1·4.0 방향 | brief 4절 45° 단위 열 | 같은 열 순서, 열을 고르기 전에 화면 y 를 2배(등각 보정) | 원작 그림의 대각선은 화면 (−32, 16) 쪽이다(4.1). 미리보기로 확인, 상수 하나로 끌 수 있음 |
 | 12.7·13.1 소리 ID 자리 | 정의(무기·투사체·이펙트·그림 묶음·적·획득물)에 소리 ID | 소리 연결 표 한 곳(`sound_bindings`) + 시뮬레이션은 신호만 | 시뮬레이션이 소리를 모르게, WP8 이 다른 묶음 파일을 고치지 않게(6.15) |
 | 12.7·15 `--mute` | 개발 실행에서도 소리를 냄 / `--mute` 를 기본으로 켜는 것을 권함 | 개발 옵션 실행은 기본 무음 + 늘 출력 없는 장치(`ALSOFT_DRIVERS=null`), `--sound` 는 그 장치로 재생 경로만 켬, 실제 스피커는 `--sound-device default`(동의). 보통 실행은 소리 냄, `--mute` 로 끔 | 검증 실행이 사용자 스피커로 소리를 내지 않게(brief 7절 취지). MonoGame 이 장치를 늘 열어 "장치를 열지 않음" 은 지킬 수 없다. 무음에서도 길이 색인으로 고르기 수는 같게 센다(7.9) |
-| 10.1·10.2 낮은 턱 | 앞쪽 둘레는 낮은 턱 — 걷기만 막고 투사체는 넘어감(`blocks_projectiles: false`) | 원본 SOL 대로 앞둘레 턱도 `X`(걷기·투사체 둘 다 막힘). `W` 칸은 MVP 맵에 없음. 의도한 차이가 필요하면 `design_diffs` | diabdat 직접 확인: 메가타일 18·19·20·24 = SOL 15(4.2). 문서대로 두면 가져오기 성질 대조가 실패한다 — 기획 문구는 기획 담당이 고친다 |
-| 8.2·9.5 오라·함성 대상 | 대장 오라는 해골 4종과 다른 대장에만, "다른 종에는 걸리지 않음". 보스 본체 언급 없음 | `command_aura`·`war_cry`·`buff_area` 의 `include_bosses` 기본 `false`(정의 `rank` 가 miniboss·boss 면 안 걸림), 해골왕에 `skeleton` 태그를 달지 않음 | 9:00 호위 대장 오라가 10:00 해골왕의 이동·피해를 경고 없이 올리는 일을 막음(6.5). 기본값은 기획이 확정 |
+| 10.1·10.2 낮은 턱 | 앞쪽 둘레는 낮은 턱 — 걷기만 막고 투사체는 넘어감(`blocks_projectiles: false`) | 원본 SOL 대로 앞둘레 턱도 `X`(걷기·투사체 둘 다 막힘). `W` 칸은 MVP 맵에 없음. 의도한 차이가 필요하면 `design_diffs` | diabdat 직접 확인: 메가타일 18·19·20·24 = SOL 15(4.2). 문서대로 두면 가져오기 성질 대조가 실패한다 — 기획 v0.5 10.1·10.2 가 같은 사실로 고쳤다(차이 없음) |
+| 8.2·9.5 오라·함성 대상 | 대장 오라는 해골 4종과 다른 대장에만, "다른 종에는 걸리지 않음". 보스 본체 언급 없음 | `command_aura`·`war_cry`·`buff_area` 의 `include_bosses` 기본 `false`(정의 `rank` 가 miniboss·boss 면 안 걸림), 해골왕에 `skeleton` 태그를 달지 않음 | 9:00 호위 대장 오라가 10:00 해골왕의 이동·피해를 경고 없이 올리는 일을 막음(6.5). 지휘 오라는 기획 8.2 대로 확정, 함성(`war_cry`·`buff_area`)이 보스 본체에 걸리는지는 기획 열린 질문 21 |
 | 4.1·8.1 걷기 재생 배율 | 실제 속도 / 기준 속도 | 땅 기준 속도(`vx`, `2·vy` 벡터의 길이) / 기준 속도 | 원작 걷기 그림은 땅 위 걸음 기준이라 화면 세로 이동에서 발이 미끄러짐(4.1). `--preview` 로 확인 |
-| 12.6 큰 피해 | "예고 없이 큰 피해 없음"(기준값 없음) | `rules.enemies.telegraph_required`(체력 비율·닿는 거리·범위)로 판정, 값이 정해지기 전까지는 경고 | 기준이 없으면 구현 담당이 문턱을 골라 보스 내려치기가 로딩 오류가 되거나 규칙이 아무것도 못 거름(6.5) |
-| 10.5 조명 판독성 | 빛 밖은 거의 보이지 않음 | 값은 기획서 그대로 두되 `unit_min_light`(유닛 몸통 밝기 하한, 기본 0)를 둠 | 기획이 판독성 하한을 정하면 데이터 한 줄로 켠다(7.7). 값은 기획 담당 |
+| 12.6 큰 피해 | (v0.4) "예고 없이 큰 피해 없음"(기준값 없음). v0.5: 범위 즉발·돌진 + 기본 피해 ≥ 10 → 예고 ≥ 0.4s, 근접 단일(사거리 ≤ 몸 반경 합 + 50)은 면제·피해 ≥ 25 면 타격까지 ≥ 0.35s, 투사체·장판 틱 면제 | 기준값을 `rules.enemies.telegraph_required` 한 곳에 두고 **부품 종류**로 범위·돌진·근접·투사체·장판을 가른다(6.5). 오류. 단일 대상인데 사거리가 기준을 넘는 근접은 경고 | 기획 기준을 그대로 담음. 두 갈래에 들지 않는 경우만 설계가 경고로 보탬 |
+| 10.5 조명 판독성 | (v0.4) 빛 밖은 거의 보이지 않음. v0.5: 유닛 밝기 하한 0.6(주인공·적·시체·획득물), 어둠 ≤ 0.7, 빛 반경 380~480, 그리는 방법은 설계 | `unit_min_light` = 빛 지도에 대상 모양을 하한값으로 최댓값 혼합, 앞 벽이 겹친 대상은 건너뜀(7.7). 값은 기획서 그대로(6.12) | 값은 기획, 그리는 방법은 설계(기획 10.5) |
+| 10.2 가림 ② | 주인공보다 앞이고 "주인공 빛 반경 안" 의 벽 | 벽 칸 마름모 중심과 주인공 발의 거리 ≤ 현재 주인공 빛 반경. `wall_fade.mode = "hero"` 로 ① 만 쓸 수 있음(비교용) | 판정을 칸마다 한 번의 거리 비교로(7.6) |
+| 10.3 목표 문 행진 | 목표 문의 진입점에 "닿으면" 보통 행동 | 진입점에서 48px 안 또는 진입점을 지나치면(`MoveOrder.Target`, 6.6) | 20마리 무리는 분리에 밀려 모두 그 점을 밟지 못한다 |
 | 19.2 프레임 수 | 도구가 원본 파일에서 읽음 | 도구가 읽고, 정의에도 적어 자원이 있을 때 대조 | 자원 없이 이벤트 프레임 범위를 검사하려면 정의에 수가 있어야 함(6.3) |
 | 19.2 PNG 묶는 방식 | 첫 단계는 고정 칸 시트(단순) | 처음부터 프레임을 잘라 묶은 아틀라스 | TRN 변종마다 시트가 한 벌씩이라 고정 칸이면 스테이지 1 만 300MB 를 넘음(7.5). 렌더 쪽 복잡도는 사각형 하나 더 읽는 정도 |
 | 10.4 단계 1 구간표 | "1단계용 구간표를 따로 둔다 — 설계" | 단계 1 에는 단계 1 판 스테이지 파일만 두고 단계 2 에서 바꿈(두 판을 같이 두지 않음) | 같은 ID 두 판은 검증·자동 조작 명령을 헷갈리게 함(6.12) |
@@ -2693,14 +2729,56 @@ AppServices.Render (RenderContext?)    // GameApp 이 그래픽 장치 뒤에 �
 | 낮음 P8 화면 세로 걷기에서 발이 미끄러짐 | 반영 | 재생 배율 = (`vx`, `2·vy` 벡터의 길이) / `base_speed`(4.1·6.3·12.1), `--preview` 로 확인 |
 | 낮음 P9 R24 "읽지 않음" 과 6.3 "옮겨 적음" 이 어긋남 | 반영 | 구현 I16·검증 V9 와 같이(R24·1.4·6.3) |
 
-**남은 열린 질문**(기획 담당에게 넘김 — 설계는 장치만 두고 값·방침은 기획서가 정한다)
-1. 보스·중간 보스 본체가 다른 적의 오라·함성 버프를 받는가(설계 기본: 받지 않음, `include_bosses: false`).
-2. 판독성 하한: 어둠 값·주인공 빛 반경·`unit_min_light` 값(리뷰 예: 어둠 S1 0.5·S2 0.6·보스 0.7, 하한 0.6), 원거리 적 kite 띠를 빛 반경 안으로.
-3. "큰 피해" 기준 숫자(`hp_pct`·`reach_over_contact`·`area`) — 정해질 때까지 검사는 경고.
-4. 스테이지 2 협로·앞둘레가 높은 벽일 때 `wall_fade` 를 `hero` 로 둘지 `radius` 로 둘지(열린 질문 15 와 함께).
-5. 등급 배율을 곱한 최종 크기를 자를지(`rules.ranks.max_scale`), 또는 썩은 시체류를 우두머리 크기 배율에서 뺄지.
-6. 원본 유래 수치를 저장소에 손으로 적는 범위(1.4 "원본에서 온 수치")를 사용자가 승인하는지(기획 열린 질문 19).
-7. 기획 10.1·10.2 의 "낮은 턱은 투사체 통과" 문구 — 원본은 `X`. 앞둘레를 투사체가 넘어야 할 기획 이유가 있으면 `design_diffs` 로 적는다.
+**남은 열린 질문**(기획 담당에게 넘김 — 설계는 장치만 두고 값·방침은 기획서가 정한다). v0.4.1 에서 기획서 v0.5 의 답을 붙였다(처리는 13.6).
+1. 보스·중간 보스 본체가 다른 적의 오라·함성 버프를 받는가(설계 기본: 받지 않음, `include_bosses: false`). → **일부 답**: 지휘 오라는 기획 8.2 가 대상 종을 정해 보스에 안 걸림. 함성은 아직 — 기획 열린 질문 21.
+2. 판독성 하한: 어둠 값·주인공 빛 반경·`unit_min_light` 값(리뷰 예: 어둠 S1 0.5·S2 0.6·보스 0.7, 하한 0.6), 원거리 적 kite 띠를 빛 반경 안으로. → **답**: 기획 10.3~10.5(하한 0.6, 어둠 0.5/0.6/0.7, 빛 420/380). 미리보기로 고르는 일은 기획 열린 질문 20.
+3. "큰 피해" 기준 숫자(`hp_pct`·`reach_over_contact`·`area`) — 정해질 때까지 검사는 경고. → **답**: 기획 12.6·13.5-13(기준이 바뀌어 `telegraph_required` 값을 다시 짰고 검사는 오류).
+4. 스테이지 2 협로·앞둘레가 높은 벽일 때 `wall_fade` 를 `hero` 로 둘지 `radius` 로 둘지(열린 질문 15 와 함께). → **답**: 기획 10.2·10.4 — 모든 맵에서 "주인공 빛 반경 안의 앞 벽" 도 반투명(`wall_fade` 기본 `light`). L2 낮은 조각 조사는 기획 열린 질문 15.
+5. 등급 배율을 곱한 최종 크기를 자를지(`rules.ranks.max_scale`), 또는 썩은 시체류를 우두머리 크기 배율에서 뺄지. → **답**: 기획 8.1·9.1·9.2 — 최종 크기를 1.6 으로 자름(`max_scale` 1.6, 반경도 자른 크기로).
+6. 원본 유래 수치를 저장소에 손으로 적는 범위(1.4 "원본에서 온 수치")를 사용자가 승인하는지(기획 열린 질문 19). → **열림**: 기획 19.1 이 원칙을 같은 뜻으로 적었고 사용자 확인을 기다린다.
+7. 기획 10.1·10.2 의 "낮은 턱은 투사체 통과" 문구 — 원본은 `X`. 앞둘레를 투사체가 넘어야 할 기획 이유가 있으면 `design_diffs` 로 적는다. → **답**: 기획 10.1 — 앞 턱은 걷기·투사체 모두 막음, 기획 의도 차이는 MVP 에 없음.
+
+### 13.6 v0.4.1 — 기획서 v0.5 와 맞춤
+
+기획서 v0.5(21절)와 설계서 v0.4 를 다른 담당이 같은 때 고쳐 어긋난 곳을 맞췄다. 값·규칙은 기획서, 구조·시그니처는 이 문서가 정본이다. 기획서 쪽 표현을 고친 곳은 기획 v0.5.1(기획 22절).
+
+| 어긋난 곳 | 기획서 v0.5 | 설계서 v0.4 | 맞춘 것 | 자리 |
+|---|---|---|---|---|
+| 큰 피해 기준 | 12.6: 범위 즉발·돌진 + 기본 피해 ≥ 10 → 예고 ≥ 0.4s, 근접 단일 면제(사거리 ≤ 반경 합 + 50, 피해 ≥ 25 면 타격까지 ≥ 0.35s), 13.5-13 은 오류 | `telegraph_required = { hp_pct 0.25, reach_over_contact 30, area }`, 경고 | `{ min_damage 10, min_time 0.4, melee_reach_over_contact 50, heavy_melee_damage 25, heavy_melee_windup 0.35 }`, 부품 종류로 판정, 오류 | 6.5·6.10·6.14·12.1·WP1b #7 |
+| 최종 크기 | 8.1·9.1·9.2: 정의 × 등급을 1.6 으로 자름, 반경도 자른 크기로. 13.5-14 경고 | `max_scale` 선택(값 없음), 반경은 정의 반경 × 등급 | `rules.ranks.max_scale: 1.6`, 반경 = `round(base_radius × 최종 크기)`(우두머리 썩은 시체 22), 경고 기준을 13.5-14 대로 | 4.3·6.5·6.7·6.10·6.14·WP1b #7 |
+| 조명 값 | 10.3~10.5: S1 어둠 0.5·빛 420, S2 0.6·380·11:30 0.7, 하한 0.6 | 예: 어둠 0.6·빛 300, `light_change` 0.8 | 예를 기획 값으로 | 6.12 |
+| 밝기 하한 대상 | 10.5: 주인공·적·시체·획득물 | 주인공·적 | 시체·획득물 더함 | 6.12·7.7·10.2 |
+| 벽 가림 | 10.2: 앞 벽이 주인공 그림과 겹치거나 **주인공 빛 반경 안**이면 반투명(모든 맵) | `wall_fade` 기본 `hero`, `radius` 는 "그 원 안 유닛을 가리는 벽" 만 | 기본 `light` = 두 규칙, `hero` 는 비교용, `radius` 는 반경 덮어쓰기 | 6.11·7.3·7.6·10.2·12.1·WP1b #4 |
+| 앞 문 진입점 | 10.1: `N − 6`(34) — 벽 안쪽 면에서 3.5칸 | 예 값 35(2.5칸) | 34 | 6.11 |
+| 목표 문 행진 | 10.3: 목표 문 진입점에 닿으면 직진 시간이 남아도 보통 행동 | 직진 시간까지 | `MoveOrder.Target`, 48px 안 또는 지나치면 풀림 | 6.6·6.12·12.1·WP4 |
+| 주인공 맞음 소리 | 4.0·12.7: 맞음 `mage69`·`mage69b`, 죽음 `mage71` | 맞음 목록에 `mage71` | 맞음에서 빼고 죽음 소리로 | 6.15 |
+| 핀드·둘레 벽 문구 | 8.3: 안쪽 장애물만 무시, 둘레 벽과 맵 바깥은 막힘 | "맵 경계(둘레 벽)만 막힘" 인용 | 인용을 v0.5 문구로 | 4.2 |
+| 오라 대상 | 8.2: 지휘 오라는 해골 4종과 다른 대장만 | 기본값을 "기획이 확정" | 지휘 오라는 확정으로, 함성만 열린 질문 | 6.5·12.1 |
+
+기획서 쪽(v0.5.1)에서 고친 것: 10.2 벽 정렬 문구(v0.3 키 → 설계 7.4 의 세 무리), 10.5 `unit_light_floor` → `unit_min_light`(설계 필드 이름), 15절 `--sound`(null 장치)와 `--sound-device default`,
+19.1 저장소에 들어가는 것 표에 아치 덧그림 번호표, 21절 "설계서 다음 판" 이 정할 것 → 설계 v0.4 가 정한 자리, 열린 질문 21(함성 대상) 추가.
+13.5 표의 I13 행 "진입점 35" 는 v0.4 기록이라 그대로 두었다.
+
+**남은 열린 질문**
+1. 전투 함성(`war_cry`·`buff_area`)이 중간 보스·보스 본체에 걸리는가(기획 열린 질문 21, 설계 기본 `include_bosses: false`).
+2. 원본 유래 수치(DevilutionX 를 보고 안 SOL 보정 칸·아치 덧그림 번호표·재생 간격·타격 프레임)를 공개 저장소에 손으로 적어도 되는가 — 사용자 확인(기획 열린 질문 19). 안 되면 그 값은 가져오기 도구가 사용자 PC 에서 원본으로 확인·추정한다.
+
+### 13.7 v0.4.2 — WP1b 구현 리뷰 반영
+
+WP1b 코드 리뷰(검증·설계 담당) 중 문서를 고친 것만 적는다. 코드만 고친 것(중복 키 오류, 해시 문화권, 표 해시 대상, 사전 키 순서, `art` 검사 등)은 코드·시험이 정본이다.
+
+| 지적 | 처리 | 내용 / 자리 |
+|---|---|---|
+| 중간 `Sim/GameModules.cs` 가 `Core.Audio` 를 참조 → WP8 의 "`Sim/` 소스가 `Core.Audio` 를 참조하지 않음" 시험과 충돌 | 반영(코드 옮김) | Core `Modules/GameModules.cs`(namespace `Core.Modules`)로 옮김. 1.1 트리·WP1b #16·11.4 |
+| 중간 `AudioServices.Create` 가 던져 단계 1 의 WP7·WP6 이 부를 수 없음 | 반영 | WP8 전까지 무음 무동작 구현을 돌려줌(WP1b #18) |
+| 중간 걷기 재생 배율을 묶음마다 따로 계산 | 반영 | `FacingMath.GroundSpeed`·`AnimClock.WalkRate` 한 곳(4.1·WP1b #11) |
+| 낮음 `ArenaCollision.Build` 시그니처·`CollisionShape` 소유 | 반영 | `Build(ArenaGrid) → IReadOnlyList<CollisionShape>`, `CollisionShape` = WP1b 계약 형(4.2·WP1b #15·WP2 계약) |
+| 낮음 성질 표 키 검사 기준이 문서("쓰는 메가타일")와 코드("이름 붙인 번호")가 다름 | 반영(코드 쪽으로) | 키 = 타일셋이 이름 붙인 번호, 번호 ≥ 0(6.11·6.14 13.5-4·13.5-12·WP0a) |
+| 낮음 `MapDataReader` 시그니처·문법 오류 범위 | 반영 | `MapDataResult`·요소 오버로드, 문법 오류·중복 키 파일은 다른 묶음 파일이어도 오류(1.4·WP1b #9) |
+| 낮음 `GameSettings` 음량 기본값이 두 곳 | 반영(코드) | 음량 `float?`(null = `rules.audio.defaults`)(8.3) |
+| 낮음 `ground_hazard` 매개변수 모양이 두 벌이 될 수 있음 | 반영 | 11.3 예외: `GroundHazardDef` 를 쓰거나 같은 키 이름 |
+| 낮음 11.4 `CorpseSpawned`·1.4 `icons.json` `palette` 가 낡음 | 반영 | 11.4·1.4 |
+| 낮음 `.gitignore` 원작 확장자가 소문자뿐 | 반영 | 대소문자 무관 패턴(WP1b #19). `*.wav` 는 넣지 않음 — 자체 소리 계획과 함께 정할 일(R24, 설계 담당) |
 
 ---
 

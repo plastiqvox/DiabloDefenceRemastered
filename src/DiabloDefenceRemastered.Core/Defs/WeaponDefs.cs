@@ -13,6 +13,8 @@ public sealed record WeaponDef : IDef
     public required string Id { get; init; }
     public string Name { get; init; } = "";
     public IconDef? Icon { get; init; }
+    /// <summary>발동할 때 주인공이 재생할 시전 그림(기획 5.1). cast_fire / cast_lightning / cast_magic.</summary>
+    public ClipKind CastClip { get; init; } = ClipKind.CastMagic;
     /// <summary>
     /// 발사 패턴 type(<see cref="PartKind.FirePattern"/> 등록 이름). 진화 무기는 비워 재료 무기 것을 쓴다.
     /// 로더는 등록 여부만 검사하고, 레벨 표 키·단조성(13.5-2)은 WP3 검사기가 본다.

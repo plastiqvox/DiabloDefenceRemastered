@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- 그래픽 없는 순수 로직: 데이터·길찾기·시뮬레이션·틱 누적기·장애물 굽기. MonoGame 을 참조하지 않는다 (설계서 1.2) -->
+  <!-- 그래픽 없는 순수 로직: 데이터·타일 배치 풀기·길찾기·시뮬레이션·틱 누적기·소리 고르기 규칙. MonoGame 을 참조하지 않는다 (설계서 1.2) -->
   <PropertyGroup>
     <RootNamespace>DiabloDefenceRemastered.Core</RootNamespace>
   </PropertyGroup>
@@ -14,6 +14,7 @@
     <Using Include="System.Numerics" />
     <Using Include="DiabloDefenceRemastered.Core.Common" />
     <Using Include="DiabloDefenceRemastered.Core.Defs" />
+    <Using Include="DiabloDefenceRemastered.Core.Map" />
     <Using Include="DiabloDefenceRemastered.Core.Data.Registry" />
     <Using Include="DiabloDefenceRemastered.Core.Sim" />
     <Using Include="DiabloDefenceRemastered.Core.Sim.Contracts" />

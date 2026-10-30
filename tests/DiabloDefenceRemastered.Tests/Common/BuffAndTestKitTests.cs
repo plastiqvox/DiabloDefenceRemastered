@@ -93,9 +93,16 @@ public class TestKitTests
     [Fact]
     public void Builder_PlacesHeroAtMapStart_AndSetsServices()
     {
-        var t = new TestWorldBuilder().WithMapSize(800, 600).Build();
-        Assert.Equal(new Vector2(400, 300), t.Hero.Pos);
-        Assert.Equal(new Vector2(800, 600), t.World.MapSize);
+        var t = new TestWorldBuilder().WithMegaTiles(10).Build();
+        // N = 20, 맵 중심 칸 (9.5, 9.5) → 월드 (640, 128 + 16·19 + 16) = (640, 448), 외곽 상자 1280 × (640 + 128)
+        Assert.Equal(new Vector2(640, 448), t.Hero.Pos);
+        Assert.Equal(new Vector2(1280, 768), t.World.MapSize);
+        Assert.NotNull(t.World.Arena);
+        Assert.Equal(20, t.World.Arena!.Size);
+        Assert.Equal(t.Hero.Pos, t.World.Resolved!.HeroStart);
+        Assert.Equal(FacingMath.ToVector(Compass.South), t.Hero.Facing);
+        Assert.True(t.World.Nav.IsInsideMap(t.Hero.Pos));
+        Assert.False(t.World.Nav.IsInsideMap(new Vector2(10, 10)));   // 상자 왼쪽 위 모서리는 마름모 밖
         Assert.NotNull(t.World.Nav);
         Assert.NotNull(t.World.Spatial);
         Assert.Same(t.Simulation, t.World.Simulation);
@@ -116,31 +123,36 @@ public class TestKitTests
     }
 
     [Fact]
-    public void Lighting_LoadsKindLightsWithOverrides()
+    public void Lighting_LoadsPointLights_ResolvedToWorld()
     {
-        var kinds = new DefTable<ObstacleKindDef>(
-        [
-            new ObstacleKindDef { Id = "brazier", Light = new ObstacleLightDef { Color = new Rgb(255, 170, 80), Radius = 140, Flicker = 0.08f } },
-            new ObstacleKindDef { Id = "pillar" },
-        ]);
         var lighting = new LightingDef
         {
             Ambient = new Rgb(215, 225, 200),
-            Darkness = 0.35f,
-            KindLights = new Dictionary<string, KindLightDef>
-            {
-                ["pillar"] = new() { Color = new Rgb(255, 60, 40), Radius = 120, Pulse = new PulseDef { Period = 2, Amount = 0.15f } },
-                ["brazier"] = new() { Flicker = 0.1f },
-            },
+            Darkness = 0.5f,
+            UnitMinLight = 0.6f,
+            HeroLight = new HeroLightDef { Color = new Rgb(255, 240, 220), Radius = 420 },
+            Lights =
+            [
+                new PointLightDef { Id = "altar", AtTile = new TileOrAnchor("center"), Color = new Rgb(255, 60, 40), Radius = 120,
+                                    Pulse = new PulseDef { Period = 2, Amount = 0.15f } },
+                new PointLightDef { Id = "torch", AtTile = new TileOrAnchor(new TileCoord(4, 4)), Radius = 140, Flicker = 0.1f },
+            ],
         };
-        var state = new LightingState();
-        state.Load(lighting, kinds);
-        Assert.Equal(0.35f, state.Darkness);
-        Assert.True(state.TryGetKind("pillar", out var pillar));
-        Assert.Equal(120f, pillar.Radius);
-        Assert.Equal(2f, pillar.PulsePeriod);
-        Assert.True(state.TryGetKind("brazier", out var brazier));
-        Assert.Equal(140f, brazier.Radius);
-        Assert.Equal(0.1f, brazier.Flicker);
+        var t = new TestWorldBuilder().WithDefs(TestDefs.Basic(10, lighting: lighting)).Build();
+        var state = t.World.Lighting;
+        Assert.Equal(0.5f, state.Darkness);
+        Assert.Equal(0.6f, state.UnitMinLight);
+        Assert.Equal(420f, state.HeroLightRadius);
+        Assert.Equal(["altar", "torch"], state.Lights.Select(l => l.Id));   // 정의 순서
+        Assert.True(state.TryGetLight("altar", out var altar));
+        Assert.Equal(t.World.Resolved!.Anchor("center"), altar.Pos);          // 기준점 ID → 월드 px
+        Assert.Equal(2f, altar.PulsePeriod);
+        Assert.True(state.TryGetLight("torch", out var torch));
+        Assert.Equal(t.World.Arena!.Iso.CellCenter(4, 4), torch.Pos);       // [tx,ty] → 월드 px
+
+        Assert.True(state.SetLight("torch", torch with { Radius = 200 }));
+        Assert.True(state.TryGetLight("torch", out torch));
+        Assert.Equal(200f, torch.Radius);
+        Assert.False(state.SetLight("nope", torch));
     }
 }

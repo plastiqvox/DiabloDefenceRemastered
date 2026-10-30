@@ -2,23 +2,38 @@ namespace DiabloDefenceRemastered.Tests.TestKit;
 
 /// <summary>
 /// 코드로 만드는 작은 정의 (설계서 10.1 — 실제 데이터에 기대는 시험과 분리). 참조는 모두 연결된 상태로 만든다.
+/// 합성 타일셋은 <b>번호는 가짜, 성질만</b> 원작을 닮게 둔다: 뒷벽은 칸의 반만 막힘(L1 1·2), 앞둘레는 두 줄 두께 <c>X</c>(L1 18·19·20·24),
+/// 기둥은 위-왼 한 칸(L1 15). 실제 MVP 맵에 없는 <c>W</c>(걷기만)·<c>M</c>(투사체만) 조각도 둔다 — 그 경우를 시험하려고.
 /// </summary>
 public static class TestDefs
 {
     public const string MapId = "test_map";
+    public const string TilesetId = "test_tiles";
     public const string StageId = "test_stage";
     public const string SpriteId = "TestSprite";
     public const string SpriteSetId = "set_test";
     public const string EnemyId = "test_enemy";
+    public const string Border = "wall";
 
-    public static SpriteDef Sprite(string id = SpriteId, int dirs = 12, int frames = 8) => new()
+    /// <summary>기본 맵 메가타일 수(N = 24, 외곽 상자 1536×896).</summary>
+    public const int DefaultMegaTiles = 12;
+
+    // 합성 메가타일 번호(가짜)
+    public const int Floor1 = 1, Floor2 = 2, GateOpen = 3;
+    public const int CornerN = 11, EdgeNe = 12, CornerE = 13, EdgeSe = 14, CornerS = 15, EdgeSw = 16, CornerW = 17, EdgeNw = 18;
+    public const int GateEnd = 20;
+    public const int Pillar = 30, LowWall = 31, Glass = 32;
+
+    public static SpriteDef Sprite(string id = SpriteId, int dirs = 8, int frames = 8) => new()
     {
         Id = id,
+        Source = SpriteSource.Grid,
         File = id + ".png",
         Frame = new Int2(96, 96),
         Sheet = new Int2(96 * dirs, 96 * frames),
         Directions = dirs,
         Frames = frames,
+        ColorKey = Rgb.Black,
         Origin = new Vector2(48, 84),
     };
 
@@ -49,36 +64,109 @@ public static class TestDefs
         Radius = radius,
     };
 
-    public static MapDef Map(Vector2 size, string id = MapId) => new()
+    /// <summary>합성 타일셋. 문은 네 변 모두(열린 칸 "...." + 끝 조각 "XXXX").</summary>
+    public static TilesetDef Tileset(string id = TilesetId)
     {
-        Id = id,
-        Image = id + ".png",
-        Size = new Int2((int)size.X, (int)size.Y),
-        HeroStart = new HeroStartDef { Pos = size * 0.5f, Facing = Compass.South },
-        TextureSource = new RectI(0, 0, 64, 64),
-    };
+        var gate = new GateTilesDef { Open = GateOpen, EndA = GateEnd, EndB = GateEnd };
+        return new TilesetDef
+        {
+            Id = id,
+            ColumnHeight = 160,
+            Floor = [Floor1, Floor2],
+            Borders = new Dictionary<string, BorderTilesDef>
+            {
+                [Border] = new()
+                {
+                    CornerN = CornerN, EdgeNe = EdgeNe, CornerE = CornerE, EdgeSe = EdgeSe,
+                    CornerS = CornerS, EdgeSw = EdgeSw, CornerW = CornerW, EdgeNw = EdgeNw,
+                },
+            },
+            Gates = new Dictionary<string, GateSetDef> { [Border] = new() { Nw = gate, Ne = gate, Se = gate, Sw = gate } },
+            Pieces = new Dictionary<string, int> { ["pillar"] = Pillar, ["low_wall"] = LowWall, ["glass"] = Glass },
+            Props = new Dictionary<int, string>
+            {
+                [Floor1] = "....", [Floor2] = "....", [GateOpen] = "....",
+                [CornerN] = "XXX.",                 // 맨 위 모서리: 뒤쪽 두 변
+                [EdgeNe] = "XX..",                  // 윗줄 뒷벽 — 칸의 반만(L1 2 처럼)
+                [EdgeNw] = "X.X.",                  // 왼쪽 열 뒷벽 — 칸의 반만(L1 1 처럼)
+                [CornerE] = "XXXX", [EdgeSe] = "XXXX", [CornerS] = "XXXX", [EdgeSw] = "XXXX", [CornerW] = "XXXX",   // 앞둘레 두 줄 두께
+                [GateEnd] = "XXXX",
+                [Pillar] = "X...",                  // 기둥: 위-왼 한 칸(L1 15 처럼)
+                [LowWall] = "WW..",                 // 걷기만 막힘(합성)
+                [Glass] = "MM..",                   // 투사체만 막힘(합성)
+            },
+        };
+    }
 
-    public static StageDef Stage(MapDef map, string id = StageId, VictoryDef? victory = null) => new()
+    /// <summary>기본 기둥 자리(M ≥ 8 일 때 네 개).</summary>
+    public static IReadOnlyList<PiecePlacementDef> DefaultPlace(int megaTiles) =>
+        megaTiles >= 8
+            ? [new PiecePlacementDef { Piece = "pillar", At = [new(3, 3), new(megaTiles - 4, 3), new(3, megaTiles - 4), new(megaTiles - 4, megaTiles - 4)] }]
+            : [];
+
+    /// <summary>
+    /// 합성 맵: 네 변 가운데에 문(입구 ID = 문 ID), 진입점은 뒤 문 4·앞 문 N−6, 바깥 시작점 −4·N+3(6.11 규칙), 주인공 시작·기준점 center = 맵 중심.
+    /// </summary>
+    public static MapDef Map(int megaTiles = DefaultMegaTiles, string id = MapId, TilesetDef? tileset = null,
+                             IReadOnlyList<PiecePlacementDef>? place = null)
+    {
+        var ts = tileset ?? Tileset();
+        var n = megaTiles * 2;
+        var c = (n - 1) / 2f;
+        return new MapDef
+        {
+            Id = id,
+            Tileset = DefRef<TilesetDef>.To(ts),
+            Palette = "test_pal",
+            Size = megaTiles,
+            Layout = new ArenaLayoutDef
+            {
+                Border = Border,
+                Gates =
+                [
+                    new() { Id = "gate_nw", Side = GateSide.Nw }, new() { Id = "gate_ne", Side = GateSide.Ne },
+                    new() { Id = "gate_se", Side = GateSide.Se }, new() { Id = "gate_sw", Side = GateSide.Sw },
+                ],
+                Place = place ?? DefaultPlace(megaTiles),
+            },
+            Entries =
+            [
+                new() { Id = "gate_nw", OutsideTile = new(-4, c), InsideTile = new(4, c) },
+                new() { Id = "gate_ne", OutsideTile = new(c, -4), InsideTile = new(c, 4) },
+                new() { Id = "gate_se", OutsideTile = new(n + 3, c), InsideTile = new(n - 6, c) },
+                new() { Id = "gate_sw", OutsideTile = new(c, n + 3), InsideTile = new(c, n - 6) },
+            ],
+            HeroStart = new HeroStartDef { Tile = new TileCoord(c, c), Facing = Compass.South },
+            AnchorsTile = new Dictionary<string, TileCoord> { ["center"] = new(c, c) },
+            Art = "d1/maps/" + id,
+        };
+    }
+
+    public static StageDef Stage(MapDef map, string id = StageId, VictoryDef? victory = null, LightingDef? lighting = null) => new()
     {
         Id = id,
         Name = id,
         Map = DefRef<MapDef>.To(map),
         Victory = victory ?? new VictoryDef { Type = VictoryKind.Boss },
+        Lighting = lighting ?? new LightingDef(),
     };
 
-    /// <summary>맵·스테이지·그림 하나·적 정의들로 된 정의 묶음.</summary>
-    public static GameDefs Basic(Vector2 mapSize, VictoryDef? victory = null, IEnumerable<EnemyDef>? extraEnemies = null)
+    /// <summary>타일셋·맵·스테이지·그림 하나·적 정의들로 된 정의 묶음.</summary>
+    public static GameDefs Basic(int megaTiles = DefaultMegaTiles, VictoryDef? victory = null, IEnumerable<EnemyDef>? extraEnemies = null,
+                                 LightingDef? lighting = null)
     {
         var sprite = Sprite();
         var set = SpriteSet(sprite);
-        var map = Map(mapSize);
-        var stage = Stage(map, victory: victory);
+        var tileset = Tileset();
+        var map = Map(megaTiles, tileset: tileset);
+        var stage = Stage(map, victory: victory, lighting: lighting);
         var enemies = new List<EnemyDef> { Enemy(set) };
         if (extraEnemies is not null) enemies.AddRange(extraEnemies);
         return new GameDefs
         {
             Sprites = new DefTable<SpriteDef>([sprite]),
             SpriteSets = new DefTable<SpriteSetDef>([set]),
+            Tilesets = new DefTable<TilesetDef>([tileset]),
             Maps = new DefTable<MapDef>([map]),
             Stages = new DefTable<StageDef>([stage]),
             Enemies = new DefTable<EnemyDef>(enemies),

@@ -22,9 +22,10 @@
     <ProjectReference Include="..\..\src\DiabloDefenceRemastered.Core\DiabloDefenceRemastered.Core.csproj" />
   </ItemGroup>
 
-  <!-- 실제 정의 JSON 을 링크로 출력 Data\ 에 복사한다 → 실제 데이터 시험이 그림 없이 돈다 -->
+  <!-- 실제 정의 JSON·가져오기 표를 링크로 출력 Data\·ImportTable\ 에 복사한다 → 실제 데이터 시험·이름 대조(13.5-10)가 자원 없이 돈다 -->
   <ItemGroup>
     <None Include="..\..\src\DiabloDefenceRemastered\Data\**\*.json" LinkBase="Data" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\tools\DiabloAssetImporter\Table\*.json" Link="ImportTable\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
@@ -32,6 +33,7 @@
     <Using Include="System.Numerics" />
     <Using Include="DiabloDefenceRemastered.Core.Common" />
     <Using Include="DiabloDefenceRemastered.Core.Defs" />
+    <Using Include="DiabloDefenceRemastered.Core.Map" />
     <Using Include="DiabloDefenceRemastered.Core.Data.Registry" />
     <Using Include="DiabloDefenceRemastered.Core.Sim" />
     <Using Include="DiabloDefenceRemastered.Core.Sim.Contracts" />

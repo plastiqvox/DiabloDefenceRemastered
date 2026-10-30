@@ -1,7 +1,7 @@
 namespace DiabloDefenceRemastered.Core.Sim.Contracts;
 
 /// <summary>
-/// 내비 질의 (WP1 계약, WP2 구현 <c>NavWorld.Build(MapDef, StageDef)</c>, 시험용 <c>TestKit/StraightNav</c>).
+/// 내비 질의 (WP1 계약, WP2 구현 <c>NavWorld.Build(World)</c> — 외곽 상자 격자·바깥 마름모 경계, 시험용 <c>TestKit/StraightNav</c>).
 /// </summary>
 public interface INavWorld
 {
@@ -14,7 +14,7 @@ public interface INavWorld
     /// <summary>투사체가 a→b 를 지나갈 수 있나(정확한 도형, blocks_projectiles 만). 원거리 적의 "쏠 수 있나" 도 이것.</summary>
     bool ProjectileLineClear(Vector2 a, Vector2 b);
 
-    /// <summary>맵 안인가.</summary>
+    /// <summary>맵 안인가(바깥 마름모 안, 4.1).</summary>
     bool IsInsideMap(Vector2 p);
 }
 

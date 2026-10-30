@@ -60,7 +60,7 @@ public class AnimClockTests
     public void EventFrameOne_FiresOnFirstAdvance()
     {
         var clock = new AnimClock();
-        clock.Play(ClipKind.Cast, loop: false);
+        clock.Play(ClipKind.Special, loop: false);
         var (events, first, _) = Run(ref clock, 0.06f, 8, 1, 60);
         Assert.Equal(1, events);
         Assert.Equal(0, first);
@@ -72,7 +72,7 @@ public class AnimClockTests
     public void EventFrameOutOfRange_NeverFires(int eventFrame1)
     {
         var clock = new AnimClock();
-        clock.Play(ClipKind.Cast, loop: false);
+        clock.Play(ClipKind.Special, loop: false);
         var (events, _, finished) = Run(ref clock, 0.06f, 8, eventFrame1, 60);
         Assert.Equal(0, events);
         Assert.True(finished >= 0);

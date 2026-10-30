@@ -1,3 +1,5 @@
+using DiabloDefenceRemastered.Core.Modules;
+
 namespace DiabloDefenceRemastered.Tests.Common;
 
 public class DefRefTests
@@ -61,15 +63,8 @@ public class DefTableTests
 
 public class DefJsonShapeTests
 {
-    // 로더(WP7)와 같은 기본 설정: snake_case, 모르는 속성은 오류, 열거형은 snake_case 문자열
-    private static readonly System.Text.Json.JsonSerializerOptions Options = new()
-    {
-        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower,
-        UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow,
-        ReadCommentHandling = System.Text.Json.JsonCommentHandling.Skip,
-        AllowTrailingCommas = true,
-        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter(System.Text.Json.JsonNamingPolicy.SnakeCaseLower) },
-    };
+    // 로더(WP7)·MapDataReader·ImportTable 이 같이 쓰는 공용 설정(WP1b Data/Json/DefJson): snake_case, 모르는 속성은 오류, 열거형은 snake_case 문자열
+    private static readonly System.Text.Json.JsonSerializerOptions Options = DiabloDefenceRemastered.Core.Data.Json.DefJson.Options;
 
     [Fact]
     public void Rules_WithoutReferences_DeserializeFromDocumentShape()
@@ -116,11 +111,97 @@ public class DefJsonShapeTests
     [Fact]
     public void Enums_UseSnakeCaseNames()
     {
-        var kind = System.Text.Json.JsonSerializer.Deserialize<ObstacleKindDef>("""{ "id": "x", "decor": "round_ends", "draw": false }""", Options)!;
-        Assert.Equal(DecorKind.RoundEnds, kind.Decor);
-        Assert.False(kind.Draw);
+        var weapon = System.Text.Json.JsonSerializer.Deserialize<WeaponDef>("""{ "id": "fireball", "cast_clip": "cast_fire" }""", Options)!;
+        Assert.Equal(ClipKind.CastFire, weapon.CastClip);
+        Assert.Equal(ClipKind.CastMagic, System.Text.Json.JsonSerializer.Deserialize<WeaponDef>("""{ "id": "mm" }""", Options)!.CastClip);
         Assert.Equal(Compass.SouthWest, System.Text.Json.JsonSerializer.Deserialize<Compass>("\"south_west\"", Options));
-        Assert.Equal(DeathStyle.KnightFade, System.Text.Json.JsonSerializer.Deserialize<DeathStyle>("\"knight_fade\"", Options));
+        Assert.Equal(DeathStyle.Anim, System.Text.Json.JsonSerializer.Deserialize<DeathStyle>("\"anim\"", Options));
+        Assert.Equal(GateSide.Nw, System.Text.Json.JsonSerializer.Deserialize<GateSide>("\"nw\"", Options));
+        Assert.Equal(SpriteSource.Atlas, System.Text.Json.JsonSerializer.Deserialize<SpriteSource>("\"atlas\"", Options));
+        // v0.2 의 knight_fade 는 없앴다, 숫자 열거값은 받지 않는다
+        Assert.Throws<System.Text.Json.JsonException>(() => System.Text.Json.JsonSerializer.Deserialize<DeathStyle>("\"knight_fade\"", Options));
+        Assert.Throws<System.Text.Json.JsonException>(() => System.Text.Json.JsonSerializer.Deserialize<Compass>("1", Options));
+    }
+
+    [Fact]
+    public void StatKeyDictionaries_StillUseJsonNames_WithCommonOptions()
+    {
+        var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<StatKey, float>>("""{ "max_hp": 20, "move_pct": 0.08 }""", Options)!;
+        Assert.Equal(20f, dict[StatKey.MaxHp]);
+        Assert.Equal(0.08f, dict[StatKey.MovePct]);
+    }
+
+    [Fact]
+    public void Rules_V03Keys_Deserialize()
+    {
+        const string json = """
+        {
+          "ranks": { "elite": { "hp": 3.5 }, "unique": { "hp": 8 }, "pack": { "pack_size": [3, 5] }, "max_scale": 1.6 },
+          "enemies": { "telegraph_required": { "min_damage": 10, "min_time": 0.4, "melee_reach_over_contact": 50,
+                                               "heavy_melee_damage": 25, "heavy_melee_windup": 0.35 } },
+          "audio": { "voices": 24, "same_sound": 3, "min_interval": 0.05, "monster_hit_interval": 0.08,
+                     "monster_death": { "voices": 4, "same_kind_interval": 0.1 }, "offscreen_margin": 100, "pan": 0.5,
+                     "defaults": { "master": 0.8, "sfx": 0.8, "music": 0.6 }, "music_fade": 0.5,
+                     "voice_duck": { "to": 0.5, "time": 2.0 }, "pause_music": 0.5,
+                     "categories": [ { "id": "boss_voice", "volume": 1.0, "offscreen": true }, { "id": "monster_hit", "volume": 0.5, "offscreen": false } ] }
+        }
+        """;
+        var rules = System.Text.Json.JsonSerializer.Deserialize<RulesDef>(json, Options)!;
+        Assert.Equal(1.6f, rules.Ranks!.MaxScale);
+        Assert.Equal(0.35f, rules.Enemies!.TelegraphRequired.HeavyMeleeWindup);
+        Assert.Equal(24, rules.Audio!.Voices);
+        Assert.Equal(0.1f, rules.Audio.MonsterDeath.SameKindInterval);
+        Assert.Equal(["boss_voice", "monster_hit"], rules.Audio.Categories.Select(c => c.Id));
+        Assert.False(rules.Audio.Categories[1].Offscreen);
+        Assert.Equal(1.6f, new RanksDef { Elite = new(), Unique = new(), Pack = new() }.MaxScale);   // 기본 1.6(6.10)
+    }
+
+    [Fact]
+    public void SpriteAndEffect_V03Shapes_Deserialize()
+    {
+        var sprite = System.Text.Json.JsonSerializer.Deserialize<SpriteDef>("""
+            { "id": "zombie_walk", "source": "atlas", "file": "d1/monsters/zombie.png", "action": "walk",
+              "frame": [128, 96], "directions": 8, "frames": 24, "origin": [64, 80] }
+            """, Options)!;
+        Assert.Equal(SpriteSource.Atlas, sprite.Source);
+        Assert.Equal("walk", sprite.Action);
+        Assert.Equal(new Int2(128, 96), sprite.Frame);
+        Assert.Null(sprite.ColorKey);   // "없음 → 검정" 은 로더 몫(6.3)
+
+        var icon = System.Text.Json.JsonSerializer.Deserialize<SpriteDef>("""
+            { "id": "icon", "source": "grid", "file": "d1/icons/magic_missile.png", "sheet": [48, 48], "frame": [48, 48], "color_key": null }
+            """, Options)!;
+        Assert.Null(icon.ColorKey);
+        var gold = System.Text.Json.JsonSerializer.Deserialize<SpriteDef>("""
+            { "id": "Gold", "source": "grid", "file": "Gold.png", "sheet": [96, 1600], "frame": [96, 160], "color_key": [0, 0, 0] }
+            """, Options)!;
+        Assert.Equal(Rgb.Black, gold.ColorKey);
+
+        var clips = System.Text.Json.JsonSerializer.Deserialize<ClipSetDef>("""{ "special": null, "cast_lightning": null }""", Options)!;
+        Assert.Null(clips.Get(ClipKind.Special));
+        Assert.Throws<System.Text.Json.JsonException>(() => System.Text.Json.JsonSerializer.Deserialize<ClipSetDef>("""{ "cast": null }""", Options));
+
+        var fx = System.Text.Json.JsonSerializer.Deserialize<EffectDef>("""
+            { "id": "fx_hellfire_pool", "scatter": { "per_radius": 20, "min": 3, "center": true }, "loop": true }
+            """, Options)!;
+        Assert.Equal(20f, fx.Scatter!.PerRadius);
+        Assert.True(fx.Scatter.Center);
+
+        var enemy = System.Text.Json.JsonSerializer.Deserialize<PhaseDef>("""{ "id": "p2", "hp_below": 0.5, "voice": true }""", Options)!;
+        Assert.True(enemy.Voice);
+    }
+
+    [Fact]
+    public void Audio_SoundAndMusic_Deserialize()
+    {
+        var snd = System.Text.Json.JsonSerializer.Deserialize<SoundDef>("""
+            { "id": "snd_gem", "files": ["d1/sound/sfx/items/invgrab.wav"], "category": "pickup", "volume": 0.4, "min_interval": 0.06 }
+            """, Options)!;
+        Assert.Equal("pickup", snd.Category);
+        Assert.Equal(0.06f, snd.MinInterval);
+        Assert.Null(snd.MaxInstances);
+        var mus = System.Text.Json.JsonSerializer.Deserialize<MusicDef>("""{ "id": "mus_title", "file": "d1/sound/music/dintro.wav" }""", Options)!;
+        Assert.True(mus.Loop);
     }
 }
 
@@ -231,6 +312,6 @@ public class PartRegistryTests
     {
         var ctx = GameModules.CreateContext();
         Assert.NotNull(ctx.Parts);
-        Assert.Equal(5, GameModules.Create().Count);
+        Assert.Equal(6, GameModules.Create().Count);   // + AudioModule(WP1b)
     }
 }

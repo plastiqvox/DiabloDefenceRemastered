@@ -1,6 +1,6 @@
 namespace DiabloDefenceRemastered.Core.Sim.Contracts;
 
-/// <summary>묶음 모듈. <see cref="GameModules"/> 가 목록을 가지고 순서대로 <see cref="Register"/> 를 부른다.</summary>
+/// <summary>묶음 모듈. <see cref="Modules.GameModules"/> 가 목록을 가지고 순서대로 <see cref="Register"/> 를 부른다.</summary>
 public interface IGameModule
 {
     void Register(ModuleContext ctx);

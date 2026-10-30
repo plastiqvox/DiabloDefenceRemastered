@@ -2,7 +2,8 @@ namespace DiabloDefenceRemastered.Core.Defs;
 
 /// <summary>
 /// <c>rules</c>(객체 하나). 여러 파일에서 하위 키 단위로 합친다(같은 하위 키가 두 파일에 있으면 오류, 설계서 6.1).
-/// WP3 <c>rules/hero.json</c> = hero·xp_curve·level_up·level_up_push, WP4 <c>rules/enemies.json</c> = ranks·caps·spawn.
+/// WP3 <c>rules/hero.json</c> = hero·xp_curve·level_up·level_up_push, WP4 <c>rules/enemies.json</c> = ranks·enemies·caps·spawn,
+/// WP8 <c>rules/audio.json</c> = audio.
 /// </summary>
 public sealed record RulesDef
 {
@@ -11,8 +12,31 @@ public sealed record RulesDef
     public LevelUpRulesDef? LevelUp { get; init; }
     public LevelUpPushDef? LevelUpPush { get; init; }
     public RanksDef? Ranks { get; init; }
+    /// <summary>적 정의 검사 기준(예고 필수 판정, 6.5·6.14 의 13.5-13).</summary>
+    public EnemyRulesDef? Enemies { get; init; }
     public CapsDef? Caps { get; init; }
     public SpawnRulesDef? Spawn { get; init; }
+    public AudioRulesDef? Audio { get; init; }
+}
+
+public sealed record EnemyRulesDef
+{
+    public TelegraphRequiredDef TelegraphRequired { get; init; } = new();
+}
+
+/// <summary>
+/// 예고가 꼭 필요한 "큰 피해" 기준(기획 12.6, 판정 설계서 6.5). 피해는 기본 피해(정의 값, 배율 전).
+/// 범위 즉발·돌진이 기본 피해 ≥ <see cref="MinDamage"/> 면 예고 ≥ <see cref="MinTime"/>.
+/// 근접 단일 대상(닿는 거리 ≤ 두 반경 + <see cref="MeleeReachOverContact"/>)은 면제, 단 피해 ≥ <see cref="HeavyMeleeDamage"/> 면
+/// 타격 프레임까지 ≥ <see cref="HeavyMeleeWindup"/>.
+/// </summary>
+public sealed record TelegraphRequiredDef
+{
+    public float MinDamage { get; init; } = 10f;
+    public float MinTime { get; init; } = 0.4f;
+    public float MeleeReachOverContact { get; init; } = 50f;
+    public float HeavyMeleeDamage { get; init; } = 25f;
+    public float HeavyMeleeWindup { get; init; } = 0.35f;
 }
 
 public sealed record HeroRulesDef
@@ -94,6 +118,8 @@ public sealed record RanksDef
     public required RankDef Elite { get; init; }
     public required RankDef Unique { get; init; }
     public required PackDef Pack { get; init; }
+    /// <summary>생성 때 최종 크기(정의 scale × 등급 배율)의 상한(기획 8.1). 넘으면 자르고 몸 반경도 자른 크기로 센다(6.5).</summary>
+    public float MaxScale { get; init; } = 1.6f;
 }
 
 /// <summary>정예·우두머리 배율(설계서 6.7·6.10).</summary>
