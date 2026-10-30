@@ -17,7 +17,7 @@ public class MapDataReaderTests
               "pieces":  { "pillar": 15 },
               "props": {
                 "13": "....", "162": "....",
-                "15": "X...",                       // 기둥
+                "15": "x...",                       // 기둥(걷기·투사체, 시야 통과 — SOL 13)
                 "1": "X.X.", "2": "XX..",            // 뒷벽: 칸의 반만
                 "4": "XXX.", "23": "XXXX", "18": "XXXX", "19": "XXXX", "20": "XXXX", "24": "XXXX", "25": "XXXX",
               },

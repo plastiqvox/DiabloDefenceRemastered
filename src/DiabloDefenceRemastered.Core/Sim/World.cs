@@ -38,6 +38,9 @@ public sealed partial class World
         }
         else Hero.Pos = Hero.PrevPos = MapSize * 0.5f;
         ViewRect = CameraMath.ViewRect(Hero.Pos, MapSize, ViewSize);
+
+        // 시야는 늘 있다(꺼지면 Enabled = false). 계산은 첫 BeginTick 이 한다 — 생성 뒤 주인공을 옮기는 설정이 있어서(4.11 "시작")
+        Visibility = new VisibilityField(this);
     }
 
     // ── 정의·시계·난수 ──────────────────────────────────────────────
@@ -122,6 +125,17 @@ public sealed partial class World
     public LightingState Lighting { get; } = new();
     public List<BossBar> BossBars { get; } = [];
     public BannerState Banner;
+
+    // ── 시야 (v0.5, 4.11) ─────────────────────────────────────────────
+
+    /// <summary>
+    /// 전장의 안개 시야. 쓰기 BeginTick 만(<see cref="VisibilityField"/> 구현 WP1c, 그 뒤 WP2 소유).
+    /// 읽기 WP4(사격·돌진), WP3(공정성 수 세기만), WP5(안개), WP6(미니맵), WP7(해시). WP3 조준·WP8 소리·자동 조작은 읽지 않는다.
+    /// </summary>
+    public VisibilityField Visibility { get; }
+
+    /// <summary>공정성 계측 누적 수(v0.5.1, 10.1). 쓰기 WP3·WP4, 읽기 WP2 <c>InvariantChecker</c>·WP7 로그.</summary>
+    public FairnessCounters Fairness { get; } = new();
 
     // ── 도우미 ────────────────────────────────────────────────────────
 

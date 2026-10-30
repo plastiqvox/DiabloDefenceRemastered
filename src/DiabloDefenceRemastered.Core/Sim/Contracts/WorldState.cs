@@ -105,3 +105,21 @@ public struct BannerState
         EndTick = tick + Math.Max(1, (int)MathF.Round(seconds * World.TicksPerSecond));
     }
 }
+
+/// <summary>
+/// 공정성 계측 누적 수 (<c>World.Fairness</c>, v0.5.1, 설계서 10.1 공정성 열 — 기획 10.7 공정성 1~5). 판이 끝나면 월드와 함께 버린다.
+/// 쓰기: WP3(<see cref="UnseenShots"/>·<see cref="HiddenHits"/>), WP4(<see cref="UnseenCharges"/>·<see cref="KiteSwitches"/>).
+/// 읽기: WP2 <c>InvariantChecker</c>(열 <c>unseen_shots</c>·<c>unseen_charges</c>·<c>hidden_hits</c>·<c>kite_switches</c>), WP7 로그.
+/// 기준은 앞 셋이 0, <c>kite_switches</c> 는 살아 있는 <c>kite</c> 적 하나당 초당 1 이하.
+/// </summary>
+public sealed class FairnessCounters
+{
+    /// <summary>적 진영 투사체를 만드는 순간 쏜 적(보스·중간 보스 제외)이 또렷이 보이지 않았던 수.</summary>
+    public int UnseenShots { get; set; }
+    /// <summary>돌진을 시작하는 순간 같은 조건이었던 수.</summary>
+    public int UnseenCharges { get; set; }
+    /// <summary>적 본체(근접·자폭·돌진, 보스·중간 보스 제외)가 주인공을 때린 순간 <c>FogMath.EnemyAlpha</c>(틱 값)가 0 이었던 수.</summary>
+    public int HiddenHits { get; set; }
+    /// <summary><c>kite</c> 상태(다가감·물러남·쏨) 전환 수.</summary>
+    public int KiteSwitches { get; set; }
+}

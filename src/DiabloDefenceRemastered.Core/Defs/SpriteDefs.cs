@@ -47,6 +47,11 @@ public sealed record SpriteSetDef : IDef
     public float BaseSpeed { get; init; }
     /// <summary>크기 배율 1 일 때 몸 반경. 적 정의가 radius 를 생략하면 round(base_radius × scale).</summary>
     public float BaseRadius { get; init; }
+    /// <summary>
+    /// 크기 배율 1 일 때 발에서 머리 위 끝까지 px(대략 60~90, v0.5.1 필수). "또렷이 보임" 의 화면 위쪽 한계와 <c>kite</c> 띠 당기기가 쓴다
+    /// (<c>Enemy.BodyTop</c> = 이 값 × 최종 크기, 4.11·6.3).
+    /// </summary>
+    public required float BodyHeight { get; init; }
     public float FrameTime { get; init; } = 0.06f;
     /// <summary>이 묶음에 쓰는 원작 TRN 변종 이름(<c>""</c> = 원색). 적 정의의 <c>variant</c> 는 이 안에 있어야 한다.</summary>
     public IReadOnlyList<string> Variants { get; init; } = [""];

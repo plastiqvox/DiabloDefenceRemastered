@@ -36,8 +36,13 @@ public static class Immunities
 /// <summary>
 /// 표시 상태 (설계서 6.6, 계약). EnemyThink 8번에서 정의·등급·접두사·버프·부품이 쓰고, 렌더(WP5)는 이것만 읽는다.
 /// 맞을 때 흰 번쩍임은 따로(<c>HitFlashTime</c>, WP3).
+/// <c>ForceShown</c>(v0.5.1): 안개와 상관없이 그린다(자폭 점화 중, 7.10 — <c>FogMath.EnemyAlpha</c> 가 1).
 /// </summary>
-public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public Rgb FlashColor; public float FlashAlpha; public float AlphaMul; public Rgb FootRingColor; public float FootRingAlpha; }
+public struct EnemyVisual
+{
+    public Rgb GlowColor; public float GlowAlpha; public Rgb FlashColor; public float FlashAlpha; public float AlphaMul; public Rgb FootRingColor; public float FootRingAlpha;
+    public bool ForceShown;
+}
 
 /// <summary>생성 출처. 상한 정리 우선순위: 일반(Interval) → 이벤트 → 분열·소환. Stress 는 상한 검사를 건너뛴다.</summary>
 public enum SpawnSource : byte { Interval, ElitePack, Ring, March, Escort, EscortMember, Miniboss, Boss, EventOther, Split, Summon, Stress }

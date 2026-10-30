@@ -1,6 +1,6 @@
 # Diablo Defence Remastered — 설계서 (Architecture)
 
-- 상태: v0.4.2 (설계 담당).
+- 상태: v0.5.2 (설계 담당).
   - v0.1: 첫 판.
   - v0.2: 세 리뷰(`docs/reviews/architecture-planner.md`, `architecture-implementer.md`, `architecture-verifier.md`)를 반영했다 — 지적별 처리는 13.1~13.3.
   - v0.3: 기획서 v0.4 의 **디아블로 1 원본 자원 사용**(사용자 요구 10)을 받았다 — 자원 가져오기 도구(1.4), 등각 아레나 좌표·타일 충돌(4.1·4.2),
@@ -11,7 +11,14 @@
   - v0.4.1: 기획서 v0.5 와 맞췄다 — 13.5 의 열린 질문 중 기획서가 답한 것(큰 피해 기준 `telegraph_required`, 조명 판독성 값과 `unit_min_light` 대상, 최종 크기 자르기 `max_scale` 1.6,
     벽 가림 `wall_fade` 기본, 앞둘레 턱 문구)을 설계 값·규칙에 옮기고, 그 밖에 두 문서가 다르게 적은 곳(진입점 `N−6`, 목표 문 행진 끝, 주인공 맞음 소리, 검증 13.5-12~14)을 맞췄다. 처리 목록은 13.6.
   - v0.4.2: WP1b 구현 리뷰를 반영했다 — `GameModules` 위치, 무음 `AudioServices`, 걷기 재생 배율 함수, 시그니처를 코드에 맞춤. 처리 목록은 13.7.
-  기준 기획서: `docs/gdd.md` v0.5.1(설계에 넘긴 목록은 기획서 20절 끝, v0.5 처리는 21절). 출발점: `docs/brief.md`.
+  - v0.5: 기획서 v0.6 의 **전장의 안개**(사용자 요구 11, 기획 10.7)를 받았다 — Core 시야 `VisibilityField`(4.11), 성질 표의 시야 막힘 글자(6.11), 원거리·돌진·생성의 시야 조건(6.5·6.6),
+    안개 그리기(7.10)·미니맵 기억(8.2), `rules.sight`(6.10), 검증 13.5-15, `--reveal`·`--debug-nav sight`(9절), 계약 갱신 묶음 **WP1c**(11절).
+    사용자 결정으로 원본 유래 수치 범위(기획 열린 질문 19)와 함성 대상(21, `include_bosses: false`)을 닫았다. 처리 목록은 13.8.
+  - v0.5.1: 안개 설계 리뷰(`docs/reviews/architecture-v05-fog-review.md`, 구현·검증·기획 담당 지적 30개)를 반영했다 — 안개 값을 **알파 채널**로 옮기는 혼합 방식(7.7·7.10),
+    두 줄 벽 함께 보임·칸 바뀜 값 잇기(4.11), 몸 높이까지 보는 "또렷이 보임"과 `kite` 띠 당기기(4.11·6.3·6.6 — 기획 v0.6.1 값), 공정성 계측(10.1), 고정 안개 장면 `--preview fog`(9절·10.2),
+    보이는 생성 후보 버림 규칙 뺌(6.12), `FogMath` 소유 WP5. 처리 목록은 13.9.
+  - v0.5.2: WP1c 구현(시야 계약·`VisibilityField`·`FogMath`)이 문서와 다르게·더 정한 것을 옮겼다. 처리 목록은 13.10.
+  기준 기획서: `docs/gdd.md` v0.6.1(설계에 넘긴 목록은 기획서 23·24절 끝). 출발점: `docs/brief.md`.
 - 이 문서는 **코드 구조·형식·알고리즘·작업 나누기**를 정한다. 수치·규칙은 기획서가 정하고, 여기서는 그것을 어디에 어떻게 담는지만 정한다.
   기획서와 다르게 해석한 곳은 그 자리에 `[해석]` 으로 표시하고 12.1 에 모았다.
 - 코드 조각은 인터페이스 시그니처 수준이다. 이름은 구현 때 바뀔 수 있지만 **11절 작업 묶음 사이의 계약**(굵게 표시한 형)은 WP1·WP1b 가 정한 뒤 고치려면 관련 묶음 담당과 합의한다.
@@ -21,6 +28,9 @@
 - 사용자 요구 10 "디아블로 1 원본 자원을 쓸 것" 은 1.4·4.2·6.3·6.11·6.15·7.5·7.6·7.9 에 답한다: 원본(`diabdat.mpq`)에서 뽑은 그림·소리·타일 그림은
   저장소에 넣지 않고 가져오기 도구가 사용자 PC 의 `Assets/d1/` 에 쓴다. 저장소에는 도구·가져오기 표·타일 배치·정의 JSON 만 있고, **자원 파일이 없어도 Core 시험(실제 데이터 검사·길 검사·시나리오)은 모두 돈다.**
   단, 원본으로 확인해야 하는 숫자(타일 번호·성질 표, 단계 1 그림 묶음의 프레임 수)는 WP0a 가 이 PC 에서 먼저 읽어 저장소 데이터로 넣는다(11절).
+- 사용자 요구 11 "전장의 안개(원작식 시야)" 는 4.11·6.11·6.5·7.10·8.2 에 답한다: 시야는 **시뮬레이션 상태**(Core `VisibilityField`, 하위 타일 칸 단위, 성질 표의 시야 막힘 칸)라
+  원거리 적의 사격·돌진이 같은 씨앗이면 같고, 그리기(`--reveal` 포함)는 그것을 읽기만 한다.
+- 이 문서에서 **"시야"** 는 주인공 시야(안개)만 뜻한다. 카메라가 보는 사각형은 **화면 사각형**(`World.ViewRect`), 길찾기의 선분 검사(`HasClearLine`)는 **길 트임**이라 부른다(v0.5, 4.5).
 
 ## 0. 핵심 결정 한눈에
 
@@ -34,9 +44,10 @@
 | 루프 | 고정 60Hz 틱 + 보간 렌더. 모든 시간(메뉴·연출·표시 이펙트·흔들림 포함)은 틱으로 센다 → `--seed` 재현, 캡처 시각 정확, 같은 명령이면 같은 PNG |
 | 길찾기 | 16px 격자(외곽 상자 전체, 마름모 밖은 맵 밖) + 장애물까지 거리(clearance) 장. 무리 = 몸 크기 2등급 플로우 필드, 보스·중간 보스 = A*(이진 힙, 8방향, 코너 자르기 금지, 끈 당기기). 적 부품은 **이동 의도**만 내고 길은 내비가 정한다 |
 | 충돌 | **저장소의 타일 배치 + 타일 성질 표**에서 만든 평행사변형이 정본(가져오기 도구가 원작 SOL 과 대조). 정확한 도형 밀어내기 + 원-원 해소(겹친 점은 결정적 방향), 이웃 질의는 32px 공간 해시 |
+| 시야 (v0.5) | Core `VisibilityField`: **하위 타일 칸** 단위, 주인공 칸 중심 → 칸 중심 정수 선분이 시야 막힘 칸(성질 표 대문자, 원작 SOL bit1)을 지나지 않으면 보임, 반경 = 주인공 빛 반경, 두 줄 벽은 같은 메가타일의 벽 칸이 함께 보임. 주인공 칸·반경이 바뀐 틱에 다시 계산(`BeginTick`), 가 본 칸 비트맵. 질의 `IsClearlyVisible`(몸 위 끝까지 화면 안)을 원거리·돌진 규칙이 쓴다. 그리기는 이것을 읽어 안개(보임·기억·검정)를 빛 지도에 합친다(값은 알파 채널, 7.10) |
 | 렌더 | 960×540 월드 렌더 타깃 → 정수배 점 확대 후 선형 축소(레터박스). 바닥은 구운 조각 텍스처, 뒷둘레 벽은 바닥 바로 뒤·앞둘레 턱은 유닛 뒤 단계, 안쪽 벽 기둥만 유닛과 y 정렬, 주인공을 가리는 벽은 반투명. 원작 시트는 (그림 묶음 × 변종)마다 모든 동작 프레임을 잘라 한 페이지에 묶은 아틀라스, TRN 변종은 파일. 빛은 곱하기 빛 지도 |
 | 소리 | 시뮬레이션은 소리를 모르고 신호(`CueEvent`)·표시 이벤트만 낸다. 게임 `AudioSystem` 이 연결 표(`sound_bindings`)로 소리를 고르고 동시 재생 제한·우선순위를 적용한다(7.9). 소리 길이는 자원 색인에서 읽어 무음·소리 켬이 같은 수를 센다. 개발 옵션 실행은 OpenAL 을 출력 없는 장치(`ALSOFT_DRIVERS=null`)로 열고 기본 무음 |
-| 검증 | `--autoplay --seed --capture --capture-at --quit-after --stage --debug-nav --preview --log-ticks --log-hash --check --stress --exit-on-result --mute --sound --sound-device`. 창을 앞으로 끌어오지 않고, 개발 옵션 실행은 사용자 저장 파일을 **읽지도 쓰지도 않으며** 스피커로 소리를 내지 않는다(`--sound-device default` 를 줄 때만, 사용자 동의) |
+| 검증 | `--autoplay --seed --capture --capture-at --quit-after --stage --debug-nav --preview --log-ticks --log-hash --check --stress --exit-on-result --mute --sound --sound-device --reveal`. 창을 앞으로 끌어오지 않고, 개발 옵션 실행은 사용자 저장 파일을 **읽지도 쓰지도 않으며** 스피커로 소리를 내지 않는다(`--sound-device default` 를 줄 때만, 사용자 동의) |
 
 ---
 
@@ -82,6 +93,7 @@ DiabloDefenceRemastered/
 │  │  │  ├─ Entities/   Enemy, Hero, Projectile, Hazard, Telegraph, Pickup 의 공통 조각(partial, WP1)
 │  │  │  ├─ Movement/   이동 의도 → 조향·적분·충돌 해소, Enemy.Nav.cs(조각), Invariants/(불변식 계측)
 │  │  │  ├─ Hero/  Combat/  Weapons/  Projectiles/  Hazards/  Pickups/  Progression/
+│  │  │  ├─ Visibility/ VisibilityField(주인공 시야·가 본 칸, 4.11), FogMath(안개 알파·칸 바뀜, 7.10)        (계약·구현 WP1c, 그 뒤 VisibilityField 는 WP2·FogMath 는 WP5)
 │  │  │  ├─ Enemies/    EnemySystem, 생애 상태, Parts/(행동 부품·적 동작), Ranks/(정예·우두머리·접두사), Buffs/
 │  │  │  ├─ Director/   생성 누적기, 시간표 이벤트, 상한 정리, 생성 출처·우선순위
 │  │  │  └─ Autoplay/   자동 조작 정책(이동·카드 고르기)
@@ -98,7 +110,7 @@ DiabloDefenceRemastered/
 │     ├─ Data/          정의 JSON (git 포함)
 │     ├─ Loading/       TextureStore(아틀라스·변종·색 키, 스테이지별 미리 읽기), CursorLoader(.cur), FontProvider
 │     ├─ Rendering/     RenderServices, VirtualScreen, Camera, WorldRenderer, ArenaRenderer(바닥 조각·벽 기둥·가림), Layers, SpriteDraw,
-│     │                 Lighting, FxSystem(표시 이펙트), CorpseLayer, DamageNumbers, DebugNavOverlay
+│     │                 Lighting, FogRenderer(안개, 7.10), FxSystem(표시 이펙트), CorpseLayer, DamageNumbers, DebugNavOverlay
 │     ├─ Audio/         AudioServices(연결 파일), AudioSystem(신호 → 소리), SoundBank(WAV 읽기), MusicPlayer(페이드·덕킹)
 │     ├─ Input/         KeyboardMouseSource, InputMap
 │     ├─ Scenes/        SceneFactory, Title, StageSelect, Play, Result, DataError, Preview, Overlays/(LevelUp, Chest, Pause, Settings), AutoplayDriver
@@ -107,7 +119,7 @@ DiabloDefenceRemastered/
    ├─ DiabloDefenceRemastered.Tests/           xunit.v3. Core 만 참조
    │  ├─ TestKit/       TestWorldBuilder, BruteForceSpatial, StraightNav, TestDefs(작은 타일셋·맵 포함), TestCategories
    │  ├─ Fixtures/      data/(로더 시험용 작은·고장 난 JSON), variants/(코드 없이 만든 변형 적), perf_scenario.json
-   │  └─ Common/ Data/ Map/ Assets/ Geometry/ Nav/ Spatial/ Movement/ Invariants/ Combat/ Weapons/ Hero/ Progression/
+   │  └─ Common/ Data/ Map/ Assets/ Geometry/ Nav/ Visibility/ Spatial/ Movement/ Invariants/ Combat/ Weapons/ Hero/ Progression/
    │     Enemies/ Director/ Audio/ Art/ Dev/ Save/ Sim/
    └─ DiabloAssetImporter.Tests/               xunit.v3. 가져오기 도구만 참조. 작은 바이트(CL2·TIL·SOL·WAV)와 시험이 만든 작은 MPQ 로 — 원작 자원 없이 돈다.
                                                바이트는 시험 코드의 인코더가 만든다(원본에서 잘라 낸 바이트를 픽스처로 넣지 않는다, R24)
@@ -267,6 +279,9 @@ dotnet run --project tools/DiabloAssetImporter -- audit [--out <Assets 폴더>] 
 - **원본에서 온 수치**(R24): 저장소에 들어가는 원본 유래 숫자는 **사실 수치만 손으로** 적는다 — 경로·칸 폭·프레임 범위(이 표), 타일 번호·성질·SOL 보정 칸(6.11),
   아치 덧그림 번호표(위 `overlay`), 동작별 프레임 시간·타격 프레임(그림 묶음 클립, 6.3). DevilutionX 의 파일·표 구조·주석·코드는 옮기지 않는다.
   값마다 출처를 JSON 주석으로 남긴다: `// 출처: 원본 확인`(이 PC 의 diabdat 를 읽어 확인) 또는 `// 출처: DevilutionX 참고`(원본 파일에 없는 게임 동작 값). 둘 곳은 위에 적은 한 곳뿐이다.
+  JSON 주석은 로더가 버리므로 원문 문자열 시험이 주석이 있는지 본다(6.14 13.5-16, v0.5.1).
+  이 범위는 **사용자가 확인했다**(v0.5, 기획 열린 질문 19 닫힘·기획 19.1): DevilutionX(Sustainable Use License) 소스를 보고 안 사실 수치는 출처 주석을 달아 공개 저장소에 손으로 적어도 되고,
+  `*.tsv`·코드·DUN 파일 자체와 표 구조·주석은 옮기지 않는다. 그래서 "안 되면 도구가 사용자 PC 에서 추정" 하는 대체 길(v0.4.1 13.6)은 만들지 않는다. 배포할 일이 생기면 다시 정한다(R24).
 - 맵 그림은 표에 없다: 도구가 게임 정의 `Data/tilesets/*.json`·`Data/maps/*.json`(6.11)을 **Core `Map/MapDataReader.Read(dataDir)`** 로 읽어 `ArenaLayout.Expand` 로 펼친다.
   `MapDataReader` 는 `tilesets`·`maps` 두 종류만 읽고(다른 종류·부품 등록·다른 묶음의 데이터 오류와 무관), 공용 STJ 옵션·변환기(Core `Data/Json`)를 쓰고, `MapDef.Tileset` 을 ID 로 연결한다.
   결과는 `MapDataResult(Maps, Tilesets, Errors)`, 로더용 오버로드 `Read(IEnumerable<MapDataElement>)`(파일·JSON 경로를 그대로 넘김)가 있다.
@@ -302,8 +317,8 @@ Assets/
 | 마법 | 방향 있는 것은 파일 16개(뼈 영혼 8개)를 방향 0..15 로(1번 파일 = 아래 = 방향 0, 시계 방향 — brief 4절 각도 순서와 같다). `arrows` 는 프레임 n → 방향 n−1, 프레임 1개. 방향 없는 것은 방향 1 |
 | 주인공 | 마법사 `slt` 의 `as`·`aw`·`fm`·`lm`·`qm`, 죽기 `sln\slndt`(기획 4.0) |
 | 아이콘 | 표 `layers` 의 (방향, 프레임)을 차례로 겹쳐(`rotate` 는 가장 가까운 픽셀 회전, `offset` 은 정수 이동) 48×48 어두운 칸 가운데에 맞춰 줄인다(정수 상자 평균 — 결정적, 기획 5.9) |
-| 아레나 | `MapDataReader` → `ArenaLayout.Expand`(6.11) → 메가타일 격자 → TIL → MIN(위 단부터 저장 — 뒤집어 읽음) → 레벨 CEL 조각(종류 = MIN 값 비트 12~14, 삼각형 패딩) + 맵 팔레트(`Table/tilesets.json` 의 `palettes`). 바닥 칸(성질 `.`) → 512×512 바닥 조각, 그 밖의 칸 → 하위 타일 기둥 그림(64×160) 아틀라스(같은 그림은 한 프레임), L1 아치 덧그림(`overlay`), 칸 목록 `arena.json`(Core `Assets/ArenaArt`), 미니맵(외곽 상자 1/16). **바닥 조각 이름 규칙**(자원 없이 계산, Core `ArenaArt.FloorChunks(ArenaGrid, IsoMath)`): 조각 (cx, cy) 는 성질 `.` 인 칸의 마름모 상자 `[C.x−32, C.x+32) × [C.y−16, C.y+16)` 가 하나라도 `[512cx, 512cx+512) × [512cy, 512cy+512)` 와 겹치면 있다 → `floor_<cx>_<cy>.png`. 픽셀이 모두 투명이어도 규칙이 있다고 하면 쓴다. 자세한 것은 7.6 |
-| 성질 대조 | 타일셋의 성질 표(6.11)를 쓰는 메가타일에 대해 원본 SOL 과 비교한다. 비교는 **두 비트만**: `W` = bit0(Solid)만, `M` = bit2(BlockMissile)만, `X` = 둘 다, `.` = 둘 다 아님. 다른 비트(BlockLight·Transparent·TransLeft/Right·Trap 128)는 무시한다(바이트를 그대로 비교하면 SOL 159/175/191 같은 벽 조각에서 거짓 실패). 다르면 그 칸이 표의 `sol_known_diffs` 에 있어야 하고, 없으면 실패: `타일셋 l1 메가타일 15 하위 칸 3: 표 'X', SOL '.'` |
+| 아레나 | `MapDataReader` → `ArenaLayout.Expand`(6.11) → 메가타일 격자 → TIL → MIN(위 단부터 저장 — 뒤집어 읽음) → 레벨 CEL 조각(종류 = MIN 값 비트 12~14, 삼각형 패딩) + 맵 팔레트(`Table/tilesets.json` 의 `palettes`). 바닥 칸(걷기·투사체 막힘이 없는 칸 — 성질 `.`·`L`, 원작 바닥 판정 A.4) → 512×512 바닥 조각, 그 밖의 칸 → 하위 타일 기둥 그림(64×160) 아틀라스(같은 그림은 한 프레임), L1 아치 덧그림(`overlay`), 칸 목록 `arena.json`(Core `Assets/ArenaArt`), 미니맵(외곽 상자 1/16). **바닥 조각 이름 규칙**(자원 없이 계산, Core `ArenaArt.FloorChunks(ArenaGrid, IsoMath)`): 조각 (cx, cy) 는 바닥 칸(`.`·`L`)의 마름모 상자 `[C.x−32, C.x+32) × [C.y−16, C.y+16)` 가 하나라도 `[512cx, 512cx+512) × [512cy, 512cy+512)` 와 겹치면 있다 → `floor_<cx>_<cy>.png`. 픽셀이 모두 투명이어도 규칙이 있다고 하면 쓴다. 자세한 것은 7.6 |
+| 성질 대조 | 타일셋의 성질 표(6.11)를 쓰는 메가타일에 대해 원본 SOL 과 비교한다. 비교는 **세 비트만**(v0.5: bit1 추가): bit0(Solid) = 걷기, bit1(BlockLight) = 시야, bit2(BlockMissile) = 투사체 — `sol & 7` 을 6.11 의 글자 하나로 바꿔 표 글자와 같은지 본다(`x` = 걷기·투사체, `X` = 셋 다 …). 다른 비트(Transparent·TransLeft/Right·Trap 128)는 무시한다(바이트를 그대로 비교하면 SOL 159/175/191 같은 벽 조각에서 거짓 실패). 다르면 그 칸이 표의 `sol_known_diffs`(또는 `design_diffs`)에 그 원본 글자로 있어야 하고, 없으면 실패: `타일셋 l1 메가타일 15 하위 칸 0: 표 'X', SOL 'x'(시야 막힘 다름)` |
 | 소리 | RIFF 해석. PCM 8비트(부호 없음) → 16비트 `(b − 128) << 8`, 16비트는 그대로. 채널·표본율 그대로, 표준 44바이트 머리로 다시 쓴다(다른 덩어리는 버림). 형식 ≠ PCM, 길이 0 이면 실패. 음악도 같은 함수(이미 16비트) |
 
 **결정론** — 같은 원본 + 같은 표 + 같은 맵·타일셋 정의 + 같은 도구 판 → 같은 바이트.
@@ -376,7 +391,7 @@ Assets/
 | 커스텀 셰이더(.fx) | MGCB 를 안 쓰므로 효과 파일 컴파일 도구(mgfxc)가 따로 필요하다. 번쩍임·실루엣·빛은 혼합 상태만으로 만든다(7절). 필요해지면 위험 R6 대응으로 다시 본다 |
 | 멀티스레드 시뮬레이션 | 목표 규모(적 500)에서 한 스레드로 틱 예산 안에 든다(4.8). 결정성을 잃을 위험만 커진다. 그림 PNG 읽기도 주 스레드에서 차례로 한다(7.5) |
 | 실행 중 TRN 색 바꾸기(색인 텍스처 + 팔레트) | 셰이더 없이는 CPU 로 텍스처를 한 벌 더 만드는 것과 같아 그림 메모리 이득이 없고, 색인 형식 해독기·팔레트를 게임에 따로 둬야 한다. 가져올 때 변종 파일로 굽는다(7.5) |
-| 원작 무작위 층 생성기·DUN 방 그대로 쓰기 | 생존 액션에는 넓은 방 하나가 맞고(기획 10.1), DevilutionX 의 생성 결과 DUN 은 사용 조건 확인 전이라 쓰지 않는다. 우리가 쓴 배치 데이터로 만든다(6.11) |
+| 원작 무작위 층 생성기·DUN 방 그대로 쓰기 | 생존 액션에는 넓은 방 하나가 맞고(기획 10.1), DUN 파일 자체는 옮기지 않는다(사용자 결정 — 기획 23절 B: 사실 수치만 손으로 적고 표·코드·DUN 은 옮기지 않음, R24). 우리가 쓴 배치 데이터로 만든다(6.11) |
 | 원작 SOL·마름모 격자로 직접 길찾기 | 칸 하나가 화면 64×32 라 반경 9~34 몸 크기를 나누기에 거칠고, 마름모 격자용 플로우·A*·clearance 를 새로 짜야 한다. 16px 격자 + 평행사변형 도형이면 v0.2 의 4.2~4.4 가 그대로다(4.2) |
 
 ---
@@ -447,7 +462,7 @@ Draw:
 
 | 표시 요소 | 시계 |
 |---|---|
-| 월드 안 이펙트·시체·피해 숫자·흔들림·점 빛 깜빡임·맥동·정예 맥동·발광 번쩍임·광폭화 맥동·장판 조각 | 스테이지 틱(멈추면 같이 멈춘다) |
+| 월드 안 이펙트·시체·피해 숫자·흔들림·점 빛 깜빡임·맥동·정예 맥동·발광 번쩍임·광폭화 맥동·장판 조각, 안개 칸 바뀜 0.15s(7.10) | 스테이지 틱(멈추면 같이 멈춘다) |
 | 주인공을 가리는 벽 반투명(7.6) | 그 프레임의 보간된 주인공 위치 |
 | 타이틀 로고·메뉴·오버레이 애니메이션(레벨업 카드 올라옴, 빛 기둥), 음악 페이드·덕킹 | 앱 틱 |
 | 마우스 커서 위치 | 실제 입력(캡처에는 그리지 않는다) |
@@ -457,7 +472,8 @@ Draw:
 - 시뮬레이션에서 `Dictionary`/`HashSet` 순회 결과에 의존하지 않는다(저장소는 배열 순서, 사전은 찾기에만). `Parallel`·스레드 없음. 벽시계 읽지 않음.
 - 같은 PC·같은 빌드 구성에서 같은 씨앗이면 같은 결과를 보장한다(다른 CPU 간, Debug↔Release 간 부동소수 일치는 보장하지 않는다 — 해시 비교는 같은 구성끼리만).
 - 재현 정보는 로그 첫 줄에 모은다: `seed=… config=Release|Debug commit=<있으면> data=<Data 내용 해시> args="<전체 명령줄>"`. `--seed` 가 없으면 시각에서 씨앗을 만들어 여기 적는다.
-- 확인 수단: Core 의 상태 해시(`StateHasher`: 위치·HP·처치·레벨·난수 흐름 상태·개체 수)를 시험과 게임(`--log-hash`)이 같이 쓴다. 자동 조작의 레벨업 선택은 Core `AutoplayPolicy` 하나라
+- 확인 수단: Core 의 상태 해시(`StateHasher`: 위치·HP·처치·레벨·난수 흐름 상태·개체 수·**가 본 칸**(v0.5.1 — `VisibilityField.ExploredHash`, 비트맵 1,600~1,936비트의 `StableHash`))를 시험과 게임(`--log-hash`)이 같이 쓴다.
+  가 본 칸은 개수가 아니라 집합을 넣는다(개수가 같고 집합이 다른 경우를 잡게). 시야 안 칸(`InSight`)은 넣지 않는다 — 해시된 주인공 위치·빛 반경과 맵에서 다시 나오는 값이다(4.11). 자동 조작의 레벨업 선택은 Core `AutoplayPolicy` 하나라
   Core 시나리오 시험의 해시와 게임 실행의 해시를 같은 스테이지 틱에서 비교할 수 있다.
 
 ### 3.5 시스템 실행 순서 (스테이지 틱 하나)
@@ -466,11 +482,11 @@ Draw:
 
 | # | 단계 `SimPhase` | 하는 일 | 담당 |
 |---|---|---|---|
-| 1 | `BeginTick` | `PrevPos ← Pos`, 틱 이벤트 큐 바꿔 끼우기(아래), 시계 진행, 버프·무적·번쩍임 타이머 감소 | WP1 |
+| 1 | `BeginTick` | `PrevPos ← Pos`, 틱 이벤트 큐 바꿔 끼우기(아래), 시계 진행, 버프·무적·번쩍임 타이머 감소, 화면 사각형(`ViewRect`), **시야 갱신**(`VisibilityField.Update`, 4.11 — v0.5) | WP1(시야는 WP1c) |
 | 2 | `Director` | 시간표 이벤트, 일반 생성 누적기, 정예 판정(60s), 상한 정리(먼 적 `Culled`). `World.Outcome` 이 `Running` 이 아니면 아무것도 안 함 | WP4 |
 | 3 | `HeroControl` | 명령 → 주인공 이동 의도·바라보는 방향, 체력 재생, 애니메이션, 레벨업 밀어내기 요청 | WP3 |
 | 4 | `Navigation` | 플로우 필드 갱신(분산), A* 요청 처리(틱당 최대 2건) | WP2 |
-| 5 | `EnemyThink` | 생애 상태, 이동 지시, 부품(오라·능력·위치 잡기) → **이동 의도**·독점 행동, 애니메이션, 타격·발사 프레임 → 피해 요청·투사체 생성, 표시 상태(`Visual`) | WP4 |
+| 5 | `EnemyThink` | 생애 상태, 이동 지시, 부품(오라·능력·위치 잡기 — 원거리·돌진은 **또렷이 보일 때만**, 6.6) → **이동 의도**·독점 행동, 애니메이션, 타격·발사 프레임 → 피해 요청·투사체 생성, 표시 상태(`Visual`) | WP4 |
 | 6 | `Locomotion` | 공간 해시 짓기 → 이동 의도를 희망 속도로(`Navigator`) → 분리 조향 → 속도 적분(넉백 포함) | WP2 |
 | 7 | `Collision` | 적-적 원 해소(2회), 주인공-적 규칙(닿은 수), 장애물·맵 경계 밀어내기 | WP2 |
 | 8 | `SpatialRebuild` | 이동이 끝난 위치로 해시 다시 짓기(무기 조준·맞음 판정용), 60틱마다 불변식 계측(`--check`·시나리오, 10.1) | WP2 |
@@ -506,7 +522,7 @@ Draw:
 - 월드 좌표 = **아레나 그림의 화면 픽셀**(`float`, 기획 10.1 — 조사 문서의 안 A). 유닛 위치 = **발 위치**(기획 8.1). 속도 px/s 는 화면 어느 방향이든 같고,
   몸 충돌 원은 화면에서 동그라미다. 각도는 데이터에서 도(°), 로딩 때 라디안.
 - 이유: v0.2 설계(AABB 카메라·생성 띠·원 충돌·16px 격자·"도형이 정본")가 그대로 서고, 바뀌는 것은 맵을 만드는 곳뿐이다.
-  직교 타일 좌표(안 B)는 카메라 시야가 회전한 사각형이 되어 `CameraMath`·생성 띠·화면→월드 변환을 다시 짜야 하고, 얻는 것은 "세로가 느린 원작 느낌" 뿐이다.
+  직교 타일 좌표(안 B)는 화면 사각형이 회전한 사각형이 되어 `CameraMath`·생성 띠·화면→월드 변환을 다시 짜야 하고, 얻는 것은 "세로가 느린 원작 느낌" 뿐이다.
 - **`IsoMath`**(Core `Map/`, WP1b 계약) 한 곳에서만 바꾼다. N = 하위 타일 수(메가타일 수 × 2), Hc = 그 층의 벽 기둥 높이(L1·L2 160), H = Hc − 32.
 
 | 무엇 | 식 |
@@ -547,16 +563,17 @@ Draw:
   (기획 20절이 넘긴 질문). 성질 표는 우리가 쓰는 메가타일 십여 개의 "어느 하위 칸이 막혔나" 라는 사실만 담고(그림·소리 바이트 없음), 원본과 다르면 가져오기가 실패하므로
   두 길의 결과는 같다. `[해석]`
 - **도형 만들기**(`Nav/ArenaCollision`, WP2):
-  1. 막힘 종류마다(걷기: `W`·`X`, 투사체: `M`·`X`, 6.11) 하위 타일 칸을 타일 공간에서 **탐욕 직사각형**으로 묶는다(행 우선, 결정적).
+  1. 막힘 종류마다(걷기: `w`·`W`·`x`·`X`, 투사체: `m`·`M`·`x`·`X`, 6.11 — v0.5 글자) 하위 타일 칸을 타일 공간에서 **탐욕 직사각형**으로 묶는다(행 우선, 결정적).
   2. 타일 공간 직사각형은 등각 변환(아핀)으로 화면의 **평행사변형** = 볼록 다각형 하나가 된다. 둘레 벽은 문 틈을 포함해 십여 개, 기둥은 하나씩.
-  3. 도형마다 `BlocksWalk`·`BlocksProjectiles`·`IsBoundary`. 걷기만 막는 칸(`W`)은 `BlocksWalk` 만, 투사체만 막는 칸(`M`)은 `BlocksProjectiles` 만.
-     **원본 사실**(v0.4, diabdat 직접 확인): L1 앞둘레 턱 메가타일 18·19·20·24 는 하위 칸 4개가 모두 SOL 15(Solid·BlockLight·BlockMissile·Transparent) = `X` 다 — 걷기도 투사체도 막는
-     하위 칸 두 줄 두께의 벽이다. 뒷벽(메가타일 1·2)은 한 줄만 막히고 나머지 반은 바닥이다. 그래서 MVP 맵에는 `W` 칸이 없다. "낮은 턱은 투사체 통과" 는 원본과 다르므로 쓰지 않는다
+  3. 도형마다 `BlocksWalk`·`BlocksProjectiles`·`IsBoundary`. 걷기만 막는 칸(`w`·`W`)은 `BlocksWalk` 만, 투사체만 막는 칸(`m`·`M`)은 `BlocksProjectiles` 만.
+     **원본 사실**(v0.4, diabdat 직접 확인): L1 앞둘레 턱 메가타일 18·19·20·24 는 하위 칸 4개가 모두 SOL 15(Solid·BlockLight·BlockMissile·Transparent) = `X` 다 — 걷기도 투사체도(시야도) 막는
+     하위 칸 두 줄 두께의 벽이다. 뒷벽(메가타일 1·2)은 한 줄만 막히고 나머지 반은 바닥이다. 그래서 MVP 맵에는 걷기만 막는 칸(`w`·`W`)이 없다. "낮은 턱은 투사체 통과" 는 원본과 다르므로 쓰지 않는다
      (기획 v0.5 10.1·10.2 도 같은 사실로 고쳤다 — 앞 턱은 보기에만 낮은 두 줄 두께 벽, 기획 의도 차이는 MVP 에 없음). 투사체가 앞둘레를 넘어야 할 기획 이유가 생기면 그때 성질 표에 `design_diffs`(이유 필수, `sol_known_diffs` 와 따로)를 더한다(6.11).
   4. 맵 경계 = 바깥 마름모(4.1). 밖은 맵 밖이고 입장 중인 유닛만 지나간다(기획 2.4).
      **둘레 도형**: 타일셋 `borders` 와 문 끝 조각(`end_a`/`end_b`)에서 온 막힌 칸의 도형은 `IsBoundary = true` 다. 장애물 통과 유닛(`phase_through`)도 이 도형에는 막힌다(4.7-3).
      → 핀드가 기획 8.3 "안쪽 장애물만 무시, 둘레 벽(타일 테두리 칸 전부)과 맵 바깥은 막힘" 대로 둘레 벽 칸 안으로 들어가지 않는다(벽 기둥에 가려 안 보이고 투사체로 못 맞히는 자리에서 주인공을 때리는 일을 막는다).
   - 같은 목록에서 ① 충돌 해소(정확한 도형) ② 내비 격자 clearance ③ 투사체 막음 ④ `--debug-nav shapes` 를 만든다. 그림은 이 목록으로 만들지 않는다(가져오기 도구가 같은 배치로 굽는다).
+  - 시야 막힘(성질 대문자, v0.5)은 도형을 만들지 않는다. 시야는 하위 칸 단위로 보므로 `VisibilityField` 가 `ArenaGrid.BlocksSight` 를 칸 그대로 읽는다(4.11). `ArenaCollision` 은 바뀌지 않는다.
 - 흙처럼 그림이 32px 떠 보이는 막힌 칸도 충돌은 그 칸 자리다(기획 10.1, 보이는 것과 32px 어긋나는 것이 정상).
 - 원작의 "대각선 걸음은 두 옆 칸이 비어야 함" 은 두지 않는다 — 다각형 충돌과 격자의 코너 자르기 금지가 대신한다(기획 10.1).
 - **격자**: 칸 16px, **외곽 상자 전체**. 스테이지 1 160×88 = 14,080칸(통과 약 5,400), 스테이지 2 176×96 = 16,896칸(통과 약 6,500).
@@ -586,7 +603,7 @@ Draw:
   계산은 한 틱 안에서 동기로 끝나므로 **필드 한 벌을 제자리에서** 다시 쓴다(읽는 쪽이 반쯤 된 필드를 볼 일이 없다). **범위는 맵 전체**: 통과 칸이 5~7천이라 범위를 자를 이유가 없다.
 - **방향 읽기**: 유닛 위치를 둘러싼 4칸의 `dist` 를 이중선형 보간해 기울기를 구한다(격자 계단 모양 없이 부드러운 흐름). 4칸 중 못 가는 칸이 섞이면 자기 칸의 `dir` 을 쓴다.
   못 가는 칸(dist 65535)에 있으면 clearance 기울기로 빠져나온다.
-- **가까우면 직진**: 주인공까지 200px 안이고 시야가 트이면(4.5 시야 검사, 자기 반경) 필드 대신 주인공 쪽으로 곧장 간다. 시야 검사는 비싸므로 적마다 6틱에 한 번(`id % 6` 으로 분산), 결과를 `NavAgentState` 에 저장해 둔다.
+- **가까우면 직진**: 주인공까지 200px 안이고 길이 트이면(4.5 길 트임 검사, 자기 반경) 필드 대신 주인공 쪽으로 곧장 간다. 길 트임 검사는 비싸므로 적마다 6틱에 한 번(`id % 6` 으로 분산), 결과를 `NavAgentState` 에 저장해 둔다.
 - **끼임 감지**: 쫓는 중인데 1초 동안 4px 도 못 움직였고 공격 사거리 밖이면, 0.5초 동안 진행 방향의 옆(왼쪽/오른쪽은 `Ai` 난수)으로 비켜 간다.
 - 위 규칙은 전부 WP2 의 `Navigator`(4.4 끝) 안에 있다. 적 부품은 "주인공 쪽으로" 라는 의도만 낸다.
 
@@ -599,8 +616,8 @@ Draw:
   `stamp` 가 다르면 "아직 안 봄" 으로 친다 → 탐색마다 배열을 지우지 않는다. 할당 0.
 - **시작·목표가 막혔을 때**: 시작 칸이 막혀 있으면(밀려 들어감) 반경 3칸 안 가장 가까운 통과 칸에서 시작한다. 3칸 안에도 없으면 경로 없이 clearance 기울기로 0.25s 움직인 뒤 다시 요청한다.
   목표 칸에 못 들어가면(주인공이 큰 몸이 못 가는 틈에 있음) 탐색 중 h 가 가장 작았던 칸까지의 경로를 돌려준다(갈 수 있는 가장 가까운 곳).
-- **경로 다듬기**: 끈 당기기(string pulling). 현재 점에서 시야 검사(4.5, 자기 반경)가 통과하는 가장 먼 경유점으로 건너뛴다. 결과는 꼭짓점 몇 개짜리 꺾은선.
-- **따라가기·재계획**: 경유점 8px 안이면 다음으로. 재계획 조건: 0.5s 지남, 목표가 마지막 목표에서 32px 넘게 움직임, 끼임 감지. 목표가 시야에 있으면 A* 없이 곧장 간다.
+- **경로 다듬기**: 끈 당기기(string pulling). 현재 점에서 길 트임 검사(4.5, 자기 반경)가 통과하는 가장 먼 경유점으로 건너뛴다. 결과는 꼭짓점 몇 개짜리 꺾은선.
+- **따라가기·재계획**: 경유점 8px 안이면 다음으로. 재계획 조건: 0.5s 지남, 목표가 마지막 목표에서 32px 넘게 움직임, 끼임 감지. 목표까지 길이 트였으면 A* 없이 곧장 간다.
   요청은 `Navigator` 가 내비 안 줄에 세우고 `Navigation` 단계가 틱당 최대 2건 처리한다. 결과는 그 적의 `NavAgentState` 안 **고정 길이 경유점 배열**(`InlineArray(16)`, 넘치면 앞 16개 + 끝에서 재계획)에 바로 쓴다.
   결과가 오기 전에는 직전 경로나 직진을 쓴다.
 
@@ -622,14 +639,18 @@ public struct MoveIntent
 // Away: 기준점 반대로 + 미끄러짐. Heading: 방향 고정 + 미끄러짐. Straight: 미끄러짐 없는 직선(입장·돌진. 막히면 충돌 단계가 멈춘다)
 ```
 
-- `Navigator` 가 적마다 쓰는 상태(`NavAgentState`: 시야 캐시, 끼임 타이머·비켜 가기 방향, 경로 경유점·번호·재계획 시각, 막힘 타이머)는 WP2 조각 파일 `Enemy.Nav.cs` 에 둔다.
+- `Navigator` 가 적마다 쓰는 상태(`NavAgentState`: 길 트임 캐시, 끼임 타이머·비켜 가기 방향, 경로 경유점·번호·재계획 시각, 막힘 타이머)는 WP2 조각 파일 `Enemy.Nav.cs` 에 둔다.
 - `Navigator` 는 "희망 방향으로 실제 이동이 0.5s 넘게 막힘" 을 공통 필드 `Enemy.MoveBlockedTime` 에 적는다. `kite` 가 물러날 수 없을 때 제자리에서 쏘는 판정(기획 8.3), 돌진이 장애물에 닿아 끝나는 판정에 쓴다.
 
-### 4.5 시야·선분 검사
+### 4.5 선분 검사 — 길 트임·투사체 길
 
-- `INavWorld.HasClearLine(a, b, radius)`: 선분을 4px 간격으로 걸으며 그 점의 clearance(이중선형) ≥ radius 인지 본다. 플로우 직진 판단·A* 다듬기·돌진 시작 조건·분열체 튕김에 쓴다.
+v0.4 까지 "시야 검사" 라 부르던 것이다. 주인공 시야(안개, 4.11)와 헷갈리지 않게 v0.5 에서 **길 트임**으로 이름을 바꿨다(기획 10.7 "용어" — 시야는 시야 막힘 칸 기준, 길 트임은 걷기 clearance 기준). 함수 이름은 그대로다.
+
+- `INavWorld.HasClearLine(a, b, radius)`(길 트임): 선분을 4px 간격으로 걸으며 그 점의 clearance(이중선형) ≥ radius 인지 본다. 플로우 직진 판단·A* 다듬기·돌진 시작 조건·분열체 튕김에 쓴다.
 - 투사체 막음은 격자가 아니라 **정확한 도형**으로 한다: `ObstacleIndex`(64px 칸마다 걸치는 도형 번호 목록)로 후보를 고르고 선분-도형 교차 검사. 대상은 `blocks_projectiles` 도형만.
-  원거리 적의 "쏠 수 있나" 도 같은 함수(`INavWorld.ProjectileLineClear(a, b)`)로 본다.
+  원거리 적의 "쏠 수 있나" 도 같은 함수(`INavWorld.ProjectileLineClear(a, b)`)로 본다. v0.5: 쏘려면 이것에 더해 주인공에게 **또렷이 보여야** 한다(4.11·6.6).
+- 셋(길 트임·투사체 길·시야)은 서로 다른 성질을 본다: 길 트임 = 걷기 막힘 도형의 clearance, 투사체 길 = 투사체 막힘 도형, 시야 = 시야 막힘 칸(성질 표 대문자, 4.11).
+  L1 기둥은 앞 둘을 막고 시야는 막지 않는다(원본 SOL 13).
 
 ### 4.6 조향·적분
 
@@ -702,7 +723,8 @@ public interface ISpatialQuery
 
 - `perf_scenario.json` 은 씨앗·적 구성(스테이지 2 의 10:00 구간 가중치)·무기(4종 Lv8)·주인공 정지·틱 수를 고정한다. 구성을 바꾸면 숫자를 비교할 수 없으므로 바꿀 때는 기준값도 다시 잰다.
 - 대략 계산: 분리·충돌은 적 1마리당 이웃 ~8개 → 500 × 8 × 2회 = 8,000 쌍 계산, 1ms 미만. 투사체 600 × 해시 질의 ~4칸 → 0.3ms.
-- 틀린 예상이면 10.3 측정으로 찾아 4.3 의 시야 검사 주기·이웃 수 상한부터 줄인다.
+- 틀린 예상이면 10.3 측정으로 찾아 4.3 의 길 트임 검사 주기·이웃 수 상한부터 줄인다.
+- 시야 다시 계산(4.11)은 주인공이 다른 칸에 들어선 틱에만 돌아 1초에 서너 번이고, 한 번에 칸 700개 안팎 × 정수 선분 — 수십 µs 로 본다. 위 틱 예산 안에 든다(WP1c 가 `Perf` 로 잰다).
 
 ### 4.10 놓을 자리 찾기 `PlacementResolver`
 
@@ -718,6 +740,106 @@ public static Vector2 Throw(INavWorld nav, Vector2 from, Vector2 dir, float dist
 
 - 포위 고리(기획 10.3 "반경 20px 씩 줄여 R/2 까지")가 이 규칙의 원형이다. 보스가 기둥 옆·맵 모서리에서 소환해도 밀어내기(원 중심 문제·오목 다각형)에 기대지 않는다.
 - "맵 안" 은 바깥 마름모 안이다(4.1). 마름모 아레나에서는 주인공이 모서리 쪽에 있으면 고리의 상당 부분이 맵 밖이라 반경 줄이기가 자주 일어난다 — 그래도 규칙은 같다(기획 2.4).
+
+### 4.11 시야(전장의 안개) `VisibilityField` (v0.5, 기획 10.7, 사용자 요구 11)
+
+시야는 원거리 적의 사격·돌진 시작을 정하므로 **시뮬레이션 상태**다(Core `Sim/Visibility/VisibilityField`, `World.Visibility`). 그리기(7.10)·미니맵(8.2)은 읽기만 하고,
+자동 조작은 읽지 않는다(봇은 안개를 무시, 기획 15절). 그래서 같은 씨앗이면 `--reveal`·`--time-scale`·소리와 상관없이 결과가 같다.
+
+**격자 — 하위 타일 칸** (16px 내비 격자가 아니다)
+
+1. 시야 막힘은 원본 SOL 의 하위 타일 성질(bit1 BlockLight)이다. 칸이 같으면 옮김 오차가 없다 — 16px 사각 격자는 마름모 칸을 근사해 벽 모서리에서 칸 조각만큼 새거나 막힌다.
+2. 칸 중심이 정수 타일 좌표(4.1)라 "주인공 칸 중심 → 칸 중심" 선분의 끝점이 정수다 → 지나는 칸을 **정수만으로** 센다. 부동소수가 없어 구성(Debug/Release)에 따라 달라질 일도 없다.
+3. 칸 수가 1,600(스테이지 1)·1,936(스테이지 2)으로 16px 격자(1.4만~1.7만)의 약 1/9 이고, 가 본 칸 비트맵이 구운 미니맵(칸 하나 = 4×2px)과 같은 단위로 맞물린다.
+4. 칸 경계의 계단은 그리기의 이중선형·경계 흐림(7.10)이 지우고, 반경은 칸이 아니라 실제 px 거리로 잰다 — 16px 정밀도는 화면에서 이득이 없다.
+
+- 범위: 맵 N×N 둘레에 **P = 20칸 띠를 더한 확장 격자**(스테이지 1 80×80, 스테이지 2 84×84). 맵 밖 칸은 시야를 막지 않으므로(기획 10.7) 문 틈 밖에서 걸어 들어오는 적도 같은 규칙으로 보인다.
+  칸 (dx, dy) 만큼 떨어진 칸의 화면 거리 `|(32(dx − dy), 16(dx + dy))|` 는 max(|dx|, |dy|) = k 일 때 최소 약 28.6k px 다. 주인공은 늘 둘레 벽 안쪽(맵 가장자리에서 2칸 이상)이라
+  확장 격자 밖 칸은 k ≥ 22, 화면 거리 ≥ 630px 로 반경 상한 480(13.5-15) + 64 보다 멀다. 확장 격자 밖 자리는 "안 보임".
+- 가 본 칸 비트맵은 N×N 만이다(맵 밖은 가 본 곳이 되지 않는다 — 기획 10.7).
+- 시야 막힘 칸 = `ArenaGrid.BlocksSight(tx, ty)`(성질 표 대문자 글자, 6.11). 격자 밖(`Outside`)은 걷기·투사체는 막아도 시야는 막지 않는다.
+
+**선 — 주인공 칸 중심에서 칸 중심까지 정수 선분**
+
+- 칸 c 가 시야 안(`InSight`) = 주인공 발이 있는 칸 h 의 중심에서 c 의 중심까지 선분이 지나는 칸 가운데 시야 막힘 칸이 없다. h 와 c 자신은 세지 않는다(막힘 칸도 선이 닿으면 보인다 — 벽 면, 기획 10.7).
+- 지나는 칸 = 선분 내부가 지나는 칸 전부(supercover). 선분이 **칸 꼭짓점을 정확히 지나면** 그 꼭짓점 양옆 두 칸이 **둘 다** 막힘일 때만 막힌다 —
+  꼭짓점끼리 붙어 대각선으로 이어진 벽은 새지 않고, 기둥 하나의 모서리를 스치는 선은 막히지 않는다. `[해석]`(기획은 꼭짓점 규칙을 정하지 않았다)
+- **두 줄 벽은 함께 보인다**(v0.5.1): 걷기·시야를 둘 다 막는 칸(`W`·`X`)은, **같은 메가타일**(4.1 — 하위 칸 (tx, ty) 의 메가타일 = (tx >> 1, ty >> 1))의 `W`·`X` 칸 하나가
+  위 선 규칙으로 `InSight` 이면 함께 `InSight` 다. 한 번만 적용하고 옆 메가타일로 퍼지지 않는다. 가 본 칸 표시(아래)도 같은 규칙을 따른다. `[해석]`
+  - 이유: 앞 턱 18·19·20·24 와 모서리·문 끝 조각(`XXXX`·`XXX.`), 스테이지 2 의 두 줄 협로 벽은 바깥 줄로 가는 선이 반드시 안쪽 줄(시야 막힘, 끝점이 아님)을 지나고
+    꼭짓점을 지나도 양옆이 둘 다 막힘이라, 선 규칙만으로는 바깥 줄이 영원히 안 보인다 — 그림에서 벽 하나가 밝은 반·검은 반으로 갈리고 미니맵에서 그 줄이 빠진다(7.10).
+  - 막힌 칸에는 적이 서지 않으므로(`phase_through` 의 핀드도 근접이라 시야 질의를 쓰지 않는다, 6.6) 이 규칙이 바꾸는 것은 그리기·기억·미니맵뿐이다.
+    시야만 막는 `L`·`M`(걸을 수 있음 — 아치 밑 보정 칸)은 넣지 않는다 — 그 칸에 선 원거리 적이 옆 칸 덕에 "보임" 이 되면 안 된다.
+- 그림자 던지기(recursive shadowcasting)를 쓰지 않는다. 기획의 정의("칸의 중심까지 가는 선")를 그대로 옮기면 선분 검사이고, 그림자 던지기는 경계 칸 판정이 이 정의와 달라진다. 비용은 아래처럼 작다.
+- 계산하는 칸: 주인공 칸 중심에서 그 칸 중심까지 거리 ≤ R + 64 인 칸(발과 발의 칸 중심, 대상 자리와 그 칸 중심이 각각 최대 32px 어긋나므로 R 안의 모든 자리를 덮는다). R 420 이면 700개 안팎, 선 하나는 십여 칸.
+  칸마다 `InSight` 와 그 값이 바뀐 스테이지 틱 `ChangedTick` 을 둔다(그리기의 0.15s 바뀜 — 표시 시간은 틱으로 센다, 3.4). 배열은 갱신 번호(stamp)로 지우지 않는다. 할당 0.
+  계산 범위 밖으로 나간 칸은 그 틱에 `InSight` 가 거짓으로 바뀐 것으로 친다(범위 안이던 칸 목록을 한 벌 들고 있다가 비교).
+- **바뀜 값 잇기**(v0.5.1): F = `round(rules.sight.fade × 60)`(9틱). 칸 값이 틱 t 에 바뀔 때 지난 바뀜에서 지난 틱 수 a = t − `ChangedTick` 이 F 보다 작으면(아직 바뀌는 중)
+  `ChangedTick ← t − (F − a)`, 아니면 `t`. → `CellLevel`(아래)이 지금 보이는 값에서 반대로 움직이고 0 이나 1 로 튀지 않는다(int 하나로 됨).
+  주인공이 하위 칸 경계에서 적에게 밀려 1px 씩 오가며 벽 그림자 경계 칸의 `InSight` 가 매 틱 뒤집혀도, 그림은 깜빡이지 않고 중간 값 근처에 머문다.
+- 선 걷기: 끝점이 정수인 선분이라 두 배 좌표의 정수 걸음(Bresenham 꼴 supercover)으로 칸을 차례로 낸다. 꼭짓점 통과는 걸음의 오차 항이 0 인 자리라 정수로 바로 안다.
+  시험은 이 구현을 "칸 사각형 ∩ 선분" 을 유리수로 푼 느린 기준 구현과 무작위 격자에서 비교한다(10.1 `Visibility`).
+
+**갱신 — `BeginTick` 안, 화면 사각형 다음** (3.5 1단계)
+
+- 매 틱: 주인공 위치(`HeroPos`), 반경(`Radius` = `World.Lighting.HeroLightRadius` — `light_change` 의 `hero_light.radius` 가 바꾼다, 기획 10.7), 화면 사각형을 받아 둔다. 질의의 거리는 이 값으로 잰다.
+  `light_change` 는 2단계(`Director`)에서 반경을 바꾸므로 시야는 **다음 틱부터** 새 반경이다(그 틱의 질의는 옛 반경 — v0.5.1). 그리기(7.10)의 경계 흐림도 `Visibility.Radius` 를 쓴다.
+- 선 다시 계산: 첫 틱, 주인공 칸이 바뀐 틱, 반경이 바뀐 틱. 선 결과는 주인공 칸과 반경에만 기대므로 이것으로 정확하다 — 기획의 "늦어도 6틱" 보다 늘 최신이다.
+- 가 본 칸 표시: 선을 다시 계산한 틱과 `Tick % rules.sight.refresh_ticks == 0`(6틱)에, N×N 안이고 `InSight` 이고 칸 중심이 `HeroPos` 에서 R 안인 칸을 가 본 칸으로 한다
+  (두 줄 벽 규칙: 같은 메가타일의 `W`·`X` 칸 하나가 가 본 칸이 되면 그 메가타일의 `W`·`X` 칸 모두). 새 칸이 생기면 `ExploredVersion` 을 올린다(미니맵이 가림을 다시 굽는 신호, 8.2).
+- 시작(v0.5.1): `World` 생성자는 계산하지 않는다 — `IRunSetup`·`TestWorldBuilder.Setup` 이 생성 뒤에 주인공을 옮기므로, 생성자에서 표시하면 원래 시작 자리 둘레가 가 본 칸으로 남는다.
+  **첫 `BeginTick`(Tick 0)** 이 첫 계산과 가 본 칸 표시를 한다(첫 틱의 시야만 열림. `--start-at` 도 그 자리부터). 첫 틱 전에 그리는 프레임이 있으면 안개는 전부 검정이다.
+  이 첫 계산의 `ChangedTick` 은 `−F` 로 둬 첫 화면이 0.15s 에 걸쳐 밝아지지 않게 한다(7.10).
+  판이 끝나면 `World` 를 버리므로 기억도 없어진다(결과 화면·다시 하기·스테이지 바꾸기, 저장 안 함 — 기획 10.7).
+- 1단계에 두는 이유: 생성(2)·적 생각(5)이 같은 틱에 같은 시야를 본다. 시야는 주인공 위치와 맵에만 기대고 적 위치와 무관해 틱 시작 값 하나로 그 틱 규칙이 모두 맞는다.
+  새 `SimPhase` 를 더하지 않는다(WP1 순서표 그대로, `BeginTickSystem` 이 부른다).
+
+**질의** — 시뮬레이션 규칙과 그리기가 같은 뜻으로 쓴다(기획 10.7 "용어").
+
+```csharp
+public sealed class VisibilityField              // Core Sim/Visibility (계약·구현 WP1c, 그 뒤 WP2 소유) — World.Visibility
+{
+    public bool Enabled { get; }                  // 맵(World.Arena)·주인공 빛(반경 > 0)·rules.sight 가 다 있을 때. 거짓은 맵 없는 시험 월드뿐이다
+                                                  //   (스테이지가 있는 데이터는 빛 없음·반경 < 380 을 13.5-15 가, rules.sight 를 6.14 가 막는다). 꺼지면 질의는 늘 true, ClearReach 는 +∞
+    public float Radius { get; }   public Vector2 HeroPos { get; }   public int Margin { get; }   // Margin = P(20)
+    public SightRulesDef? Rules { get; }   public int FadeTicks { get; }  // rules.sight(6.10, 없으면 null — Enabled 거짓), F = round(fade × 60)
+    public RectF ViewRect { get; }   public Int2 CellOf(Vector2 pos);       // 틱 시작 화면 사각형, 자리 → 칸(v0.5.2, WP1c 코드)
+    public bool IsVisible(Vector2 pos);           // 보임: |pos − HeroPos| ≤ R 이고 pos 의 칸이 InSight
+    public bool IsClearlyVisible(Vector2 pos, float top);   // 또렷이 보임: 보임 + |pos − HeroPos| ≤ R − rules.sight.edge(40)
+                                                  //   + 발 pos 와 몸 위 끝 (pos.x, pos.y − top) 이 둘 다 ViewRect 를 rules.sight.view_inset(16)만큼 줄인 사각형 안. top = 몸 높이(BodyTop, 아래)
+    public float ClearReach(Vector2 dir, float top);        // L: HeroPos 에서 방향 dir 로 "또렷이 보임" 의 거리·화면 조건(벽 가림 제외)을 지키는 가장 먼 거리
+                                                  //   = min(R − edge, 그 방향 반직선이 위 안쪽 사각형(위 변은 top 만큼 아래로)을 나가는 거리). kite 띠 당기기(6.6)
+    public bool InSight(int tx, int ty);   public int ChangedTick(int tx, int ty);              // 확장 격자(맵 밖 포함) — 그리기·디버그
+    public bool IsExplored(int tx, int ty);   public int ExploredCount { get; }   public ulong ExploredHash { get; }   public int ExploredVersion { get; }   // N×N 만
+    internal void Update(World world);            // BeginTick
+}
+
+public static class FogMath                       // Core Sim/Visibility (구현 WP1c, 그 뒤 WP5 소유 — 그리기 규칙) — 그리기·HUD·공정성 계측이 같이 쓰는 안개 알파(7.10)
+{
+    public static float CellLevel(VisibilityField f, int tx, int ty, int stageTick);   // 0..1, 칸 보임이 바뀐 뒤 F 틱에 걸쳐 바뀜(바뀜 값 잇기는 ChangedTick 이 함)
+    public static float PosAlpha(VisibilityField f, Vector2 pos, int stageTick);       // CellLevel(pos 의 칸) × clamp((R − |pos − HeroPos|) / edge, 0, 1)
+    public static float PosAlpha(VisibilityField f, Vector2 pos, int stageTick, Vector2 heroPos);   // 그리기용: 보간된 주인공·대상 위치(아래)
+    public static float EnemyAlpha(World w, Enemy e, int stageTick);                   // 1 = 중간 보스·보스, 닿은 적(두 반경 + e.TouchReach), e.Visual.ForceShown. 그 밖 PosAlpha(e.Pos)
+    public static float EnemyAlpha(World w, Enemy e, int stageTick, Vector2 heroPos, Vector2 drawPos);   // 그리기용
+}
+```
+
+- 자리 → 칸은 `IsoMath` 역변환의 반올림(4.1). 질의는 할당 없이 O(1).
+- **또렷이 보임의 화면 조건은 몸 위 끝까지 본다**(v0.5.1, 기획 v0.6.1 10.7): 발만 화면 안쪽 16px 이면 화면 위쪽에 선 궁수는 몸(60~90px)이 거의 화면 밖인 채 쏜다.
+  그래서 발과 몸 위 끝(발 + 몸 높이)이 둘 다 안쪽 사각형 안이어야 한다. `top` 은 적마다 `Enemy.BodyTop` = 그림 묶음 `body_height`(6.3, 발에서 머리 위 끝까지 px, 미리보기로 맞춤) × 최종 크기(생성 때 WP4 가 씀).
+  화면 위아래 한계는 위쪽 270 − 16 − `top`(약 164~194), 아래쪽 254 다. 위쪽 한계가 거리 유지 최소(200~240)보다 작아지므로 `kite` 는 띠를 당긴다(6.6 — `ClearReach`).
+- **그리기용 오버로드**(v0.5.1): 빛 원과 카메라는 보간된 주인공 위치를 쓰는데 `HeroPos` 는 틱 시작 값이라 이동 속도 × 1틱(2~3px)만큼 어긋난다.
+  그리기는 보간된 주인공 위치와 대상의 그리는 위치를 받는 오버로드를 쓴다(칸 값 `CellLevel` 은 그대로). 시뮬레이션·계측은 틱 값 오버로드를 쓴다.
+- `FogMath` 를 Core 에 두는 이유: 그리기(WP5)·미니맵 점(WP6)·공정성 계측(10.1 `InvariantChecker`)이 같은 "보이는가" 를 쓰고, 그래픽 없이 시험할 수 있다. `Enabled` 가 거짓이면 모든 알파가 1 이다.
+  소유는 WP5 다(그리기 규칙 — 보스는 늘 보임·닿은 거리·흐림 띠). 시그니처를 바꾸면 계약 변경(11.3).
+- **쓰는 곳**: 원거리 사격·`kite`·돌진 시작(또렷이 보임, 6.6), 그리기(7.10)·미니맵 점(8.2), 공정성 계측(10.1), `--debug-nav sight`(9절).
+  **쓰지 않는 곳**: 일반 생성 자리(v0.5.1 에서 뺌 — 6.12), 주인공 무기 조준(기획 5.1 — 시야와 상관없음, 열린 질문 23), 상한 정리(화면 밖 기준 그대로, 기획 2.3), 소리(7.9), 자동 조작 `AutoplayPolicy`(봇은 안개 무시), `--stress` 채우기(개발 옵션).
+  조준을 "보임" 인 적으로 줄이기로 하면(기획 열린 질문 23) WP3 의 조준 후보 거르기에 `IsVisible` 하나를 더한다.
+- 중간 보스·보스, 주인공에 닿은 적, 자폭 점화 중인 적이 "늘 보임" 인 것은 **그리기 규칙**이다(7.10). 시야 질의는 등급을 모른다 — 보스 패턴에 시야 조건이 없는 것은 부품 쪽 규칙이다(6.6).
+  "닿은 거리" 는 적마다 `Enemy.TouchReach`(두 반경에 더하는 값 = max(`rules.sight.touch_margin`, 그 적의 단일 대상 근접 사거리 여분 + 타격 여유 10), 생성 때 WP4)다 —
+  근접 사거리가 몸 반경 합 + 6 보다 긴 적(13.5-13 은 + 50 까지 허용)이 1칸 벽(두께 약 28.6px) 너머에서 숨은 채 때리지 않게(v0.5.1).
+- 결정성: 정수 선분·고정 순회 순서, 사전 없음. `StateHasher`(3.4)에 `ExploredHash`(가 본 칸 비트맵의 `StableHash`)를 넣는다(WP7) — 시야가 실행마다 달라지면 해시가 갈린다.
+  `InSight` 는 넣지 않는다(해시된 주인공 위치·반경과 맵의 순수 함수). 그리기 옵션(`--reveal`)은 이 객체를 바꾸지 않는다.
 
 ---
 
@@ -818,7 +940,7 @@ public interface ITargeting   // nearest / random_in_radius / facing / densest /
 - **맞은 적 목록**: 고정 크기 16칸 인라인 배열(`InlineArray`)의 `EntityId`. 관통·튕김이 같은 적을 두 번 때리지 않게 한다(영혼 사냥꾼 최대 12 포함). 넘치면 가장 오래된 것부터 덮는다.
 - **맞음 판정**: `ISpatialQuery.QueryCapsule(이동 전, 이동 후, 투사체 반경 + 최대 적 반경)` → 선분-원 최소 거리 ≤ 투사체 반경 + 적 반경. 빠른 투사체(520px/s = 틱당 8.7px)도 건너뛰지 않는다.
   같은 틱에 여러 적이 걸리면 선분 시작에서 가까운 순으로 관통 수만큼.
-- **장애물**: `blocked_by_obstacles` 이면 같은 선분으로 `ObstacleIndex` 검사(투사체 막힘 도형만 — `W` 칸은 넘어감. MVP 맵의 둘레 턱은 `X` 라 막힌다, 4.2) → 닿으면 폭발/사라짐.
+- **장애물**: `blocked_by_obstacles` 이면 같은 선분으로 `ObstacleIndex` 검사(투사체 막힘 도형만 — 걷기만 막는 `w`·`W` 칸은 넘어감, 시야 막힘은 상관없음. MVP 맵의 둘레 턱은 `X` 라 막힌다, 4.2) → 닿으면 폭발/사라짐.
 - **끝날 때 장판**(`on_end`, 6.4): 맞음·사거리 끝·장애물 어느 쪽으로 끝나도 그 자리에 장판 하나(산성 침 웅덩이). 피해는 발사 순간에 굳힌 값.
 - **그림 방향**: `Vel` 의 방향으로 시트 열을 고른다(4.1, 16방향). 도는 구체는 접선 방향을 `Vel` 에 쓴다(기획 5.2).
 - **적 투사체**: 적대 진영 대상(MVP 는 주인공 하나)과 원-선분 검사. 렌더는 진영을 보고 적 투사체에 붉은 테 빛을 더한다(기획 5.1, 7.5).
@@ -959,7 +1081,7 @@ public interface IDataValidator { string Name { get; } void Validate(GameDefs de
       "directions": 1, "frames": 15, "color_key": [0, 255, 0], "origin": [275, 108] }
   ],
   "sprite_sets": [
-    { "id": "set_zombie", "base_speed": 40, "base_radius": 14, "frame_time": 0.05,
+    { "id": "set_zombie", "base_speed": 40, "base_radius": 14, "body_height": 72, "frame_time": 0.05,
       "variants": ["", "bluered", "grey", "yellow", "eth"],
       "clips": {
         "idle":    { "sprite": "zombie_idle", "frame_time": 0.2 },
@@ -967,7 +1089,7 @@ public interface IDataValidator { string Name { get; } void Validate(GameDefs de
         "attack":  { "sprite": "zombie_attack", "event_frame": 8 },
         "special": { "sprite": "zombie_special" },
         "die":     { "sprite": "zombie_die" } } },
-    { "id": "set_sorcerer", "base_speed": 95, "base_radius": 14, "frame_time": 0.05,
+    { "id": "set_sorcerer", "base_speed": 95, "base_radius": 14, "body_height": 76, "frame_time": 0.05,
       "variants": [""],
       "clips": { "idle": { "sprite": "slt_idle" }, "walk": { "sprite": "slt_walk" },
                  "cast_fire": { "sprite": "slt_cast_fire", "event_frame": 8 }, "cast_lightning": { "sprite": "slt_cast_lightning", "event_frame": 8 },
@@ -1003,6 +1125,7 @@ public interface IDataValidator { string Name { get; } void Validate(GameDefs de
   맞기(h)는 쓰지 않는다(기획 8.1). 클립 `frame_time` = 원작 동작별 재생 간격 × 50ms, 없으면 묶음 `frame_time`. `event_frame` = 타격·발사 프레임 기본값(1부터, 적 정의·부품이 덮어씀).
 - `base_speed` = 걷기 재생 속도 기준(재생 배율 = 땅 기준 속도 `|(vx, 2·vy)|` / base_speed — 4.1. 화면 가로로 걸을 때 실제 속도 / base_speed 와 같다). `base_radius` = 크기 배율 1 일 때 몸 반경(기획 8.1 표: 해골 12, 좀비 14, 폴른 원 10, 핀드 10, 염소인간 14,
   염소인간 활 13, 산성 짐승 14, 오버로드 16, 도살자 20, 해골왕 30) — 적 정의가 `radius` 를 생략하면 `round(base_radius × scale)`(6.5).
+- `body_height`(v0.5.1, 필수 — 기획 v0.6.1 13.1) = 크기 배율 1 일 때 발에서 머리 위 끝까지 px(대략 60~90). "또렷이 보임" 의 화면 위쪽 한계(4.11)와 `kite` 띠 당기기(6.6)가 쓴다. 첫 값은 WP0a 가 단계 1 묶음에 어림으로 적고 WP5 가 `--preview enemies` 로 맞춘다(기획 열린 질문 7). 계약 `SpriteSetDef.BodyHeight`(WP1c #11).
 - 클립 진행(프레임 시간·재생 배율·이벤트 프레임을 이번 틱에 넘었나)은 Core `AnimClock` 한 곳이 계산한다. 주인공·적·미리보기·시체가 같은 함수를 써서 타격 프레임과 그림이 어긋나지 않는다.
 - 소리는 그림 묶음에 두지 않는다. 소리 연결 표(6.15)가 그림 묶음 ID 로 가리킨다.
 
@@ -1118,6 +1241,8 @@ public interface IDataValidator { string Name { get; } void Validate(GameDefs de
 ```
 
 (`skeleton_archer` 는 `set_skelbow` · `white`. 불타는 해골 궁수는 같은 묶음의 원색이라 무기 그림(활)과 색으로 해골 궁수와 구별된다 — 기획 8.2.)
+(v0.5) `shoot_projectile` 은 거리·쿨·투사체 길에 더해 **주인공에게 또렷이 보일 때만** 쏘고, `kite` 는 띠 안이어도 또렷이 보이지 않으면 다가간다(6.6, 기획 8.1·8.3).
+매개변수로 두지 않고 부품 규칙으로 고정한다 — 데이터로 끌 수 있으면 "보이지 않는 곳에서 맞지 않음"(기획 10.7 공정성)이 조용히 깨진다. `range_band` 최대 + 60 ≤ 빛 반경은 13.5-15 가 본다.
 
 **지휘 + 호위, 분열, 죽은 자리 장판, 돌진, 동료 죽음 공포, 날기** (부품만 발췌)
 
@@ -1137,7 +1262,8 @@ public interface IDataValidator { string Name { get; } void Validate(GameDefs de
 - **오라·함성·범위 버프는 보스를 거르지 않으면 보스에게도 걸린다**: `command_aura`·`war_cry`·`buff_area` 는 매개변수 `include_bosses`(기본 `false`)를 가진다.
   `false` 면 정의 `rank` 가 `miniboss`·`boss` 인 적에게는 걸지 않는다(대장 오라가 해골왕의 내려치기를 30 → 37.5 로 바꾸는 일을 막는다). 정예·우두머리(생성 등급)는 받는다.
   지휘 오라는 기획 8.2 가 대상 종(해골·해골 궁수·불타는 해골·불타는 해골 궁수·다른 해골 대장)을 정해 보스·중간 보스 본체에 걸리지 않는 것이 확정이다.
-  전투 함성(`war_cry`, 오버로드 반경 250)·스틸메이스 함성(`buff_area`, 반경 300)이 중간 보스·보스 본체에 걸리는지는 기획서에 아직 없다 — 그때까지 `false` 가 설계 기본이다(기획 열린 질문 21, 13.6). `[해석]`
+  전투 함성(`war_cry`, 오버로드 반경 250)·스틸메이스 함성(`buff_area`, 반경 300)도 중간 보스·보스 본체에 걸리지 않는다 — 사용자 결정으로 확정(v0.5, 기획 4.2·8.3·9.4, 열린 질문 21 닫힘).
+  스틸메이스는 `rank: miniboss` 라 자기 함성도 자신에게 걸리지 않는다(같은 규칙). MVP 데이터에는 `include_bosses: true` 가 없다. 매개변수는 E 단계용으로 남긴다.
 - 공포는 `escort` 부품의 규칙이다: 대장이 죽으면 **그 대장을 `Leader` 로 가진 적만** `fear_on_leader_death` 초 동안 도망간다(기획 8.3). 오라 반경 안의 다른 해골이나, 호위 없이 나온 대장 주변의 적은 영향이 없다.
 - `panic_on_ally_death`(기획 v0.4 새 부품, 폴른 원, WP4): 지난 틱 `EnemyKilled`(`Cause == Damage`) 중 같은 정의·반경 안이 있으면 `Order = Flee(fear)`, 다시 겁먹기까지 `rearm`. 정예·우두머리는 겁먹지 않는다.
   공포 동작은 호위 공포와 같은 `Flee` 지시다(6.6).
@@ -1223,7 +1349,7 @@ public interface IDataValidator { string Name { get; } void Validate(GameDefs de
 public interface IEnemyBehavior { }
 public interface IAbilityPart : IEnemyBehavior
 {
-    bool TryBegin(in EnemyCtx ctx, ref PartSlot slot, ref ActionState action);     // 조건(거리·쿨·시야·HP 문턱) 확인 후 시작
+    bool TryBegin(in EnemyCtx ctx, ref PartSlot slot, ref ActionState action);     // 조건(거리·쿨·길 트임·또렷이 보임·HP 문턱) 확인 후 시작
     ActionStatus Tick(in EnemyCtx ctx, ref PartSlot slot, ref ActionState action);  // Running / Done
     void Interrupt(in EnemyCtx ctx, ref PartSlot slot, ref ActionState action, InterruptReason why) { }
 }
@@ -1248,8 +1374,22 @@ public interface IEnemyAction
 [InlineArray(12)] public struct PartSlots { private PartSlot _e0; }
 public struct PartSlot    { public float Cooldown, Timer; public int Counter; public bool Fired; public EntityId Ref; }
 public struct ActionState { public sbyte PartIndex, ActionIndex; public byte Stage; public float T; public Vector2 Dir, Point; public EntityId Target; }
-public readonly struct EnemyCtx(World world, Enemy self) { /* 거리·시야·난수(Ai)·적대 대상 질의·ICombatSpawner·피해 요청·버프 붙이기·PlacementResolver 도우미 */ }
+public readonly struct EnemyCtx(World world, Enemy self) { /* 거리·길 트임·SeenClearly·난수(Ai)·적대 대상 질의·ICombatSpawner·피해 요청·버프 붙이기·PlacementResolver 도우미 */ }
 ```
+
+- **시야 조건**(v0.5, 기획 10.7 공정성): `EnemyCtx.SeenClearly` = 정의 `rank` 가 `miniboss`·`boss` 면 늘 참, 아니면 `World.Visibility.IsClearlyVisible(self.Pos, self.BodyTop)`(4.11 — v0.5.1: 몸 위 끝까지). 이것을 쓰는 곳은 셋이다.
+  - `shoot_projectile.TryBegin`: 거리·쿨·`ProjectileLineClear` 에 더해 `SeenClearly`.
+  - `kite.TryPosition`(v0.5.1 — 기획 v0.6.1 8.3 "띠 당기기", 떨림 막기 R29): L = `World.Visibility.ClearReach(normalize(self.Pos − HeroPos), self.BodyTop)`(그 방향으로 또렷이 보이는 가장 먼 거리, 벽 제외).
+    쓰는 띠 = 최대' = min(최대, L − 10), 최소' = min(최소, 최대' − 40). ① `SeenClearly` 가 거짓이거나 거리 > 최대' → `SeekHero`(다가감). ② 거리 < 최소' → 물러남. ③ 그 밖 → 멈추고 쏨.
+    띠 폭이 늘 40 이상이라 주인공이 조금 움직여도 쏘기·이동을 오가지 않는다. 양옆은 L = R − 40 ≥ 최대 + 20 이라 띠가 그대로이고, 화면 위아래 쪽에서만 당겨진다(위쪽 한계 약 164~194 가 띠 최소보다 작아도 쏠 자리가 있다).
+    L 은 틱마다 그 적 방향으로 한 번(사각형 네 변과 원 하나의 교점 — 할당 없음). 물러날 수 없을 때(0.5s 못 움직임) 제자리 사격은 그대로이고 `shoot_projectile` 쪽 조건을 탄다.
+    `kite` 상태가 바뀔 때마다 `World.Fairness.KiteSwitches` 를 1 늘린다(계측, 10.1).
+  - `charge.TryBegin`: 길 트임(`HasClearLine`)·거리 ≤ 260 에 더해 `SeenClearly`. 돌진 중에 안 보이게 되어도 끊지 않는다(시작 조건일 뿐).
+  보스 패턴(`PatternAbility`)·근접(`chase_melee`·`melee_slam`)·`self_destruct`·오라·함성에는 시야 조건이 없다(기획 9.5 — 보스는 늘 보이고, 근접·자폭은 닿아야 맞는다).
+  대신 그리기가 닿는 적을 늘 보인다: 근접은 `Enemy.TouchReach`(4.11), 자폭은 **점화 중 `Visual.ForceShown = true`**(v0.5.1 — 점화 뒤 주인공이 벽 모서리를 돌아도 반경 60 폭발 전에 번쩍임 예고가 보인다, 기획 12.6).
+  E 단계에 멀리서 때리는 새 부품을 만들면 같은 `SeenClearly` 를 쓴다(6.13 "새 부품" 규칙). 시험은 10.1 `Enemies`, 전체 계측은 10.1 `InvariantChecker` 의 공정성 열.
+- **`Enemy.BodyTop`·`Enemy.TouchReach`**(v0.5.1): 생성 때 한 번 쓴다(WP4). `BodyTop` = 그림 묶음 `body_height`(6.3) × 최종 크기(px, Core 정의만으로 계산 — 그림 파일 없이 됨).
+  `TouchReach` = max(`rules.sight.touch_margin`, 능력 부품 중 단일 대상 근접(`chase_melee`, `radius` 없는 `melee_slam`)의 사거리 − 두 반경 + 10)(기획 v0.6.1 "닿는 거리"). 보스·중간 보스는 늘 보이므로 계산만 하고 쓰지 않는다.
 
 - **훅 어댑터**: `behaviors` 원소에 `trigger` 가 있으면 그 `type` 을 `EnemyAction` 에서 찾아 `TriggeredAction` 으로 감싼다.
   `on_death` → `IDeathHookPart`, `on_spawn` → `ISpawnHookPart`, `cooldown` → 클립 없는 `IAbilityPart`. 접두사 `fire_enchanted` 의 `telegraphed_blast`, `black_death` 의 `ground_hazard` 가 보스와 같은 동작 코드를 탄다.
@@ -1297,13 +1437,14 @@ public struct MoveOrder { public OrderKind Kind; public Vector2 Dir; public Enti
 **표시 상태 `EnemyVisual`** (기획 8.3 번쩍임·알파, 9.1~9.3 발광)
 
 ```csharp
-public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public Rgb FlashColor; public float FlashAlpha; public float AlphaMul; public Rgb FootRingColor; public float FootRingAlpha; }
+public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public Rgb FlashColor; public float FlashAlpha; public float AlphaMul; public Rgb FootRingColor; public float FootRingAlpha;
+                            public bool ForceShown; }   // v0.5.1: 안개와 상관없이 그림(자폭 점화 중, 7.10)
 ```
 
 - `EnemyThink` 8번에서 정의·등급·접두사·버프·부품이 여기에 쓴다. 렌더(WP5)는 이것만 읽고 부품 종류나 `ActionState` 를 해석하지 않는다 → 새 부품이 렌더 코드를 바꾸지 않는다.
   - 기본: 정의 `glow`·`alpha`. 등급: 정예 파랑 맥동(1.2s, 알파 0.25~0.45 — 스테이지 틱으로 계산), 우두머리 금색.
   - 겹칠 때: **접두사 발광 색 > 등급 발광 색, 맥동 주기는 등급 것**.
-  - 부품: `self_destruct` 점화 중 발광 알파 0.35↔0.9, `charge` 예고 중 붉은 `Flash`, `phase_through` 가 장애물 위(`Clearance < 0`)면 `AlphaMul` = `alpha_over`(기본 0.3, 핀드 1.0), 오라를 받는 적은 발밑 원(버프 정의의 `foot_ring`).
+  - 부품: `self_destruct` 점화 중 발광 알파 0.35↔0.9·`ForceShown`, `charge` 예고 중 붉은 `Flash`, `phase_through` 가 장애물 위(`Clearance < 0`)면 `AlphaMul` = `alpha_over`(기본 0.3, 핀드 1.0), 오라를 받는 적은 발밑 원(버프 정의의 `foot_ring`).
 - 맞을 때 흰 번쩍임은 WP3 가 쓰는 공통 필드 `HitFlashTime` 이고, 렌더가 `Visual` 위에 더한다. 시체에는 `CorpseSpawned` 가 그 순간의 색조·알파·발광을 복사해 간다.
 
 ### 6.7 등급·접두사 `affixes`, 버프 `buffs`
@@ -1418,7 +1559,7 @@ public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public
 - 능력치 키는 `StatKey` 열거형(기획 4.1 표 그대로, JSON 이름 = 키). 패시브 `per_level` 의 키가 열거형에 없으면 오류(13.5-9).
 - 경험치 보석은 드롭 표가 아니라 규칙이다(죽으면 항상 1개, 값 = 적 경험치). 보석 색은 값 범위로 `pickups` 에서 고른다.
 
-### 6.10 레벨업 선택지·규칙 — `rules/hero.json`, `rules/enemies.json`
+### 6.10 레벨업 선택지·규칙 — `rules/hero.json`, `rules/enemies.json`, `rules/sight.json`
 
 레벨업 카드는 따로 정의하지 않는다. 무기·패시브 정의에서 **만든다**. 규칙과 채움 카드만 `rules` 에 둔다. `rules` 는 두 파일에서 하위 키 단위로 합친다(6.1).
 
@@ -1469,6 +1610,31 @@ public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public
 - `level_up_push`: 선택 창이 닫힌 다음 스테이지 틱에 주인공 반경 150 안 적을 80px 밀어낸다(피해 0, 기획 12.6).
 - `ranks.max_scale`: 생성 때 최종 크기(정의 크기 × 등급 배율) 상한(기획 8.1, 6.5). `enemies.telegraph_required`: 예고가 꼭 필요한 "큰 피해" 기준(기획 12.6, 판정은 6.5, 검사는 6.14 의 13.5-13).
 
+```json
+// rules/sight.json (v0.5 — 첫 판 WP0a, 그 뒤 키별 소유는 아래. 기획 10.7·23절 "정한 수치")
+{
+  "rules": {
+    "sight": { "edge": 40, "memory_ratio": 0.5, "fade": 0.15, "refresh_ticks": 6,
+               "view_inset": 16, "touch_margin": 16, "ranged_margin": 20 }
+  }
+}
+```
+
+- 시야 반경은 여기 두지 않는다 — 스테이지 조명의 `hero_light.radius` 가 곧 시야 반경이다(기획 10.7, 6.12). 값이 한 곳이라 "밝은 곳 = 보이는 곳" 이 어긋날 수 없다.
+- 안개 값은 **모든 스테이지 공통**으로 한 번만 둔다(기획 13.1 "모든 스테이지 같은 값이면 공통 규칙에 한 번"). 스테이지마다 달라야 할 이유가 생기면 그때 스테이지 `lighting.fog` 덮어쓰기를 더한다.
+- `edge`: 경계 흐림 폭 px(그리기의 알파·땅 밝기 띠, "또렷이 보임" 의 R − edge). `memory_ratio`: 가 본 곳 밝기 = 빛 없는 바닥 밝기(`ambient × (1 − darkness)`) × 이 값.
+  `fade`: 칸 보임이 바뀔 때 그림이 바뀌는 시간(s, 그림만 — 규칙은 바로 바뀐 값). `refresh_ticks`: 가 본 칸 표시 주기(4.11). `view_inset`: "또렷이 보임" 의 화면 사각형 안쪽 여백 px.
+  `touch_margin`: 주인공에 닿은 적을 시야와 상관없이 그리는 거리의 최솟값(몸 반경 합 + 이 값 — 적마다 `TouchReach` 로 늘 수 있음, 4.11·7.10). `ranged_margin`: 13.5-15 의 여유(빛 반경 ≥ 원거리 최대 + `edge` + 이 값 = + 60).
+- 기본값을 코드에 두지 않는다(`RulesDef.Sight` 는 `SightRulesDef?`, 그 안의 일곱 필드는 `required`) — 스테이지가 있는 데이터에 `rules.sight` 가 없으면 로딩 오류(WP7). 값은 이 파일 한 곳이다(기획 열린 질문 20 으로 고를 때도 여기만 고친다).
+  시험 월드는 `TestDefs.Sight`(같은 값)를 쓴다(WP1c). 쓰는 곳: `refresh_ticks`·`edge`·`view_inset`·`fade`(바뀜 값 잇기) = `VisibilityField`(시뮬레이션), `edge`·`fade`·`touch_margin` = `FogMath`(그리기·HUD·계측),
+  `touch_margin` = `TouchReach`(WP4, 생성 때), `memory_ratio` = `FogRenderer`(7.10), `edge`·`ranged_margin` = 검사 13.5-15.
+- **키별 소유**(v0.5.1): 한 파일 안에 시뮬레이션 값과 그림 값이 섞여 있다.
+  - **시뮬레이션 값** `edge`·`view_inset`·`refresh_ticks`·`ranged_margin` — 쏘기·돌진 거리(R − `edge`), 화면 위아래 한계, 가 본 칸(해시), 13.5-15 가 읽는다.
+    바꾸면 같은 씨앗의 해시와 궁수 쏘기 거리가 바뀌고 13.5-15 가 WP4 쪽에서 실패할 수 있으므로 **메인 세션이 WP4 와 합의해 바꾼다**(11.3). 바꾼 뒤 WP4 `Scenario`·13.5-15 를 다시 돌린다.
+  - **그림 값** `memory_ratio`·`fade`·`touch_margin` — WP5 가 미리보기 캡처로 고른다(기획 열린 질문 20). `fade` 는 바뀜 값 잇기로 시뮬레이션에도 들어가지만 `InSight`·질의를 바꾸지 않아 해시에 영향이 없다.
+    `touch_margin` 은 그리기·계측만 바꾼다.
+  - 기획이 흐림 띠와 또렷이 보임 경계를 같은 40 으로 묶었으므로 키를 둘로 나누지는 않는다. 파일 자체는 WP5 가 쓰고, 시뮬레이션 값 줄만 위 합의를 거친다. `rules` 하위 키 `sight` 는 이 파일에만 있다(6.1, 11.3).
+
 ### 6.11 타일셋 `tilesets`, 맵 `maps` (v0.3: 원작 타일 아레나, 기획 10.1)
 
 v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds`·스테이지 `obstacles`(코드로 굽는 장애물)는 없앴다(기획 10.2 "MVP 에서 쓰지 않는다").
@@ -1485,18 +1651,40 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
       "pieces":  { "pillar": 15 },
       "props": {                                     // 메가타일 → 하위 칸 4개 (위-왼, 위-오른, 아래-왼, 아래-오른). 출처: 원본 확인(probe tiles)
         "13": "....", "162": "....", "163": "....",
-        "15": "X...",                                // 기둥: 막힌 칸은 위-왼 하나(TIL p24, SOL 13). 나머지 셋은 걸을 수 있는 칸의 위 조각
-        "1": "X.X.", "2": "XX..",                    // 뒷벽: 칸의 반만 벽
-        "18": "XXXX", "19": "XXXX", "20": "XXXX", "24": "XXXX"   // 앞둘레 턱: SOL 15 = 걷기·투사체 둘 다 막힘(4.2)
+        "15": "x...",                                // 기둥: 막힌 칸은 위-왼 하나(TIL p24, SOL 13 = 걷기·투사체, 시야 통과). 나머지 셋은 걸을 수 있는 칸의 위 조각
+        "1": "X.X.", "2": "XX..",                    // 뒷벽: 칸의 반만 벽. 시야 비트는 WP0a 가 원본으로 확인(기획 열린 질문 22)
+        "18": "XXXX", "19": "XXXX", "20": "XXXX", "24": "XXXX"   // 앞둘레 턱: SOL 15 = 걷기·시야·투사체 모두 막힘(4.2)
       },
       "sol_known_diffs": [                           // 출처: DevilutionX 참고(원본 SOL 오류 보정 칸, 부록 A.4). 번호와 이유만
-        { "tile": 4, "sub": 1, "sol": ".", "use": "M", "why": "아치 조각 투사체 막힘 보정(원본 SOL 오류)" } ] }
+        { "tile": 4, "sub": 1, "sol": ".", "use": "M", "why": "아치 조각 투사체·시야 막힘 보정(원본 SOL 오류)" } ] }
   ]
 }
 ```
 
-(`props` 의 13·15·1·2·18·19·20·24 는 v0.3 리뷰가 diabdat 를 직접 읽어 확인한 값이다. 모서리(4·23 등)·문 조각의 성질과 `sol_known_diffs` 의 칸은 WP0a 가 `probe tiles` 로 확인해 적는다 —
-위 `sol_known_diffs` 원소는 모양을 보이는 예다. DevilutionX 의 보정 목록은 하위 타일(조각) 번호라, 쓰는 메가타일의 (번호, 하위 칸)으로 바꿔 그 칸만 적는다.)
+(`props` 의 13·15·1·2·18·19·20·24 는 v0.3 리뷰가 diabdat 를 직접 읽어 확인한 값이다(v0.5: 15 의 시야 통과·18~24 의 시야 막힘도 같은 확인 — SOL 13·15). 1·2 의 시야 비트, 모서리(4·23 등)·문 조각의 성질과
+`sol_known_diffs` 의 칸은 WP0a 가 `probe tiles` 로 확인해 적는다 — 위 `sol_known_diffs` 원소는 모양을 보이는 예다. DevilutionX 의 보정 목록은 하위 타일(조각) 번호라, 쓰는 메가타일의 (번호, 하위 칸)으로 바꿔 그 칸만 적는다.)
+
+**성질 글자** (v0.5: 시야 막힘을 더해 8글자. 원본 SOL 의 `sol & 7` 과 1:1)
+
+| 글자 | 걷기 막힘 (bit0) | 시야 막힘 (bit1) | 투사체 막힘 (bit2) | `sol & 7` | 쓰는 곳 |
+|---|---|---|---|---|---|
+| `.` | | | | 0 | 바닥 |
+| `w` | 막힘 | | | 1 | (MVP 맵에 없음, 합성 시험) |
+| `L` | | 막힘 | | 2 | (MVP 맵에 없음, 합성 시험) |
+| `W` | 막힘 | 막힘 | | 3 | (MVP 맵에 없음) |
+| `m` | | | 막힘 | 4 | (MVP 맵에 없음, 합성 시험) |
+| `x` | 막힘 | | 막힘 | 5 | L1 기둥(SOL 13) |
+| `M` | | 막힘 | 막힘 | 6 | L1 아치 보정 칸(`use`) |
+| `X` | 막힘 | 막힘 | 막힘 | 7 | 둘레 벽·앞 턱(SOL 15·159·175·191) |
+
+- 규칙 하나로 읽는다: **대문자 = 시야 막힘**, 소문자 = 시야 통과, 글자(w·m·x) = 걷기·투사체 조합(`L` 은 시야만, `.` 은 아무것도 아님).
+- 글자 하나에 세 비트를 다 담은 이유: 표 한 칸 = 원본 SOL 한 칸이라 대조가 `sol & 7` 하나로 끝나고(1.4), 시야만 적는 두 번째 표를 두면 두 표의 키·길이가 어긋날 수 있다.
+  대소문자로 시야를 가른 것은 v0.4 의 `X`(걷기·투사체)가 둘레 벽에서 원본대로 시야도 막아 그대로 맞기 때문이다 — 바뀌는 글자는 기둥 `X` → `x` 와 v0.4 의 `W`·`M`(걷기만·투사체만) → `w`·`m` 뿐이다(WP1c).
+- **주의**(v0.5.1): `W`·`M` 은 글자는 그대로인데 뜻이 바뀐다(걷기만 → 걷기 + 시야, 투사체만 → 시야 + 투사체). 고치지 않고 남은 옛 글자는 해석 오류 없이 **조용히 시야를 막는다**.
+  그래서 WP1c 는 저장소의 `W`·`M` 성질 글자를 모두 찾아 뜻을 확인하고, 기존 시험을 글자가 아니라 `CellFlags` 값으로 확인하게 바꾼다(11.1 WP1c #8·#9).
+  시제품·도구 출력도 v0.4 의 4글자를 옮겨 적지 않는다 — `sol` 값(또는 `sol & 7`)을 받아 위 표로 바꿔 적는다(WP0a).
+- `ArenaGrid` 는 칸마다 `CellFlags`(`BlocksWalk`·`BlocksProjectiles`·`BlocksSight`·`Boundary`·`Outside`)를 가진다. 격자 밖은 걷기·투사체 막힘이고 시야는 막지 않는다(4.11).
+  `ArenaGrid.Prop(tx, ty)` 는 위 글자(격자 밖 `#`)를 돌려준다(미리보기·로그).
 
 ```json
 // Data/maps/cathedral_arena.json (WP5)
@@ -1524,11 +1712,13 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
   - 테두리 이름은 메가타일 격자 기준이다: `corner_n` = (0,0)(화면 맨 위), `edge_ne` = 윗줄(y = 0), `corner_e`, `edge_se` = 오른쪽 열, `corner_s`, `edge_sw` = 아랫줄, `corner_w`, `edge_nw` = 왼쪽 열.
     L1 번호는 조사 문서의 해골왕 방(`SklKng2.DUN`) 짜임이다.
   - **`props`**(성질 표): 쓰는 메가타일마다 하위 칸 4개(TIL 순서: 위-왼, 위-오른, 아래-왼, 아래-오른 = 하위 타일 (2mx,2my) (2mx+1,2my) (2mx,2my+1) (2mx+1,2my+1)).
-    글자: `.` 바닥, `W` 걷기만 막힘, `M` 투사체만 막힘, `X` 둘 다(원본 SOL 의 bit0·bit2 와 대응, 1.4 성질 대조). 지금 MVP 맵에 `W` 칸은 없다 — 앞둘레 턱도 `X` 다(4.2).
+    글자는 위 표 8개(원본 SOL 의 bit0·bit1·bit2 와 대응, 1.4 성질 대조 — v0.4 까지는 bit0·bit2 의 4글자). 지금 MVP 맵에 걷기만 막는 칸(`w`·`W`)은 없다 — 앞둘레 턱도 `X` 다(4.2).
     쓰는 메가타일인데 표에 없으면 로딩 오류. **표에 이름 붙이지 않은 메가타일이 있어도 오류**: `props` 의 키 = 그 타일셋이 이름 붙인 번호(`floor`·`borders`·`gates`·`pieces`)와 같은 집합
     (맵과 무관하게 타일셋만으로 판정, 번호 ≥ 0) → 성질 표가 SOL 전체를 옮긴 덤프로 커지지 않는다(R24). 이름만 붙이고 어느 맵도 안 쓰는 조각은 남을 수 있다.
-  - `sol_known_diffs`: 원본 SOL 과 일부러 다르게 둔 칸 중 **원작 수정판이 고치는 SOL 오류**만(고치지 않으면 아치 밑으로 투사체가 지나감, 기획 10.1). 원소 = 메가타일 번호·하위 칸·원본 글자·쓰는 글자·이유.
-    가져오기 도구가 대조할 때만 쓴다(1.4). 기획 이유로 원본과 다르게 둘 칸이 생기면 따로 `design_diffs`(이유 필수)에 적는다 — 두 목록을 섞지 않는다. 지금은 `design_diffs` 가 없다.
+  - `sol_known_diffs`: 원본 SOL 과 일부러 다르게 둔 칸 중 **원작 수정판이 고치는 SOL 오류**만(고치지 않으면 아치 밑으로 투사체가 지나가고 시야가 샌다, 기획 10.1·10.7). 원소 = 메가타일 번호·하위 칸·원본 글자·쓰는 글자·이유.
+    글자는 위 8글자라 시야 보정도 같은 원소 하나로 적는다(아치: 원본 `.` → `M`). 가져오기 도구가 대조할 때만 쓴다(1.4).
+    기획 이유로 원본과 다르게 둘 칸이 생기면 따로 `design_diffs`(이유 필수)에 적는다 — 두 목록을 섞지 않는다. 지금은 `design_diffs` 가 없다
+    (기둥이 시야를 막게 하기로 하면 `{ "tile": 15, "sub": 0, "sol": "x", "use": "X", "why": "…" }` 가 첫 원소다 — 기획 열린 질문 22).
 - **맵**(`MapDef`, 계약 변경 WP1b): `size` = 메가타일 수 M(정사각, 하위 타일 N = 2M), `tileset`, `palette`(층 팔레트 — 가져오기·그림만 씀, 기획 10.1 "맵마다 고정"), `art` = 가져오기 출력 폴더(7.6).
   v0.2 의 `image`·`minimap`·`size`(px)·`collision`·`texture_source` 는 없앴다. 월드 크기는 `IsoMath` 가 N 과 기둥 높이로 계산한다(4.1).
 - **배치 풀기** `ArenaLayout.Expand(MapDef, TilesetDef) → ArenaGrid`(Core `Map/`, WP1b, 결정적):
@@ -1538,7 +1728,8 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
   4. `place`: 조각 이름 → 번호를 `at` 목록의 [mx, my] 에, 또는 `line: [[mx0,my0],[mx1,my1]]`(가로·세로 줄 — 스테이지 2 의 짧은 벽).
   5. 결과: 메가타일 번호 M×M + 하위 타일 성질 N×N(`props` 로) + 하위 칸 **둘레 표시**(2·3단계 테두리·문 끝 조각에서 온 칸 — 4.2-4 `IsBoundary`)
      + `LayoutHash`(번호 격자·타일셋 ID·팔레트 + **타일셋 정의 전체**(`props`·`sol_known_diffs`·`design_diffs`·이름 → 번호)를 정해진 순서로 이은 `StableHash` — 그림이 낡았는지 보는 값, 1.4).
-     성질 표나 보정 목록을 고치면 바닥/벽 나눔이 바뀔 수 있으므로 해시도 바뀐다.
+     성질 표나 보정 목록을 고치면 바닥/벽 나눔이 바뀔 수 있으므로 해시도 바뀐다. 시야 글자만 바꿔도(`x` ↔ `X`) 해시가 바뀐다 — 성질 글자를 그대로 잇기 때문이다(v0.5, 식은 그대로).
+     그래서 WP1c 가 합성·실제 표의 글자를 바꾸면 그 전에 구운 맵 그림은 낡음이 된다(1.4 시작 검사 ⑤, 다시 가져오기).
 - 위치(`entries` 의 `outside`/`inside`, `hero_start.tile`, `anchors`)는 **하위 타일 좌표(실수, 칸 중심 = 정수)**, 형은 `TileCoord`(4.1). 입구 ID 는 문 ID 와 같게 둔다(`entry:gate_ne`, 기획 10.1).
   기획 10.1 의 진입점 값은 첫 값이고 `--debug-nav entries,tiles` 로 맞춘다(기획 열린 질문 7). 위 예는 문 틈 중심(19.5)에 맞췄다 — 20 이면 문 틈 중심에서 0.5칸(약 14px) 비켜 행진이 한쪽 문설주로 몰린다.
   진입점은 기획 10.1 표 그대로 뒤 문 `4`, 앞 문 `N − 6`(N 40 → 34), 바깥 시작점 `−4`·`N + 3` 이다 — 뒤 벽은 한 줄, 앞 턱은 두 줄 두께라 둘 다 벽 안쪽 면에서 3.5칸(약 100px) 떨어진다.
@@ -1548,7 +1739,7 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
   `radius`(선택, px)를 적으면 ② 에 빛 반경 대신 그 값을 쓴다. v0.4 의 `radius` 모드("그 원 안 유닛을 가리는 벽만")는 기획이 유닛 조건 없이 정해 없앴다.
 - 스테이지 2(`catacombs_arena`, L2, M = 22): L2 테두리·문·벽 조각 번호가 아직 없다(기획 열린 질문 15). WP0 이 단계 3 전에 `tilesets/l2.json` 을 채운다.
   앞쪽 둘레·협로 벽은 보기에 낮은 조각을 먼저 찾고(기획 10.4), L2 에 없으면 높은 벽을 쓰고 가림 규칙(7.6, `wall_fade` 기본 `light`)에 맡긴다. 협로 벽은 `place` 의 `line`. L2 조각의 성질도 원본 SOL 로 확인한다 —
-  "낮은 턱이라 투사체 통과" 를 미리 가정하지 않는다(L1 앞둘레 턱은 `X` 였다).
+  "낮은 턱이라 투사체 통과" 를 미리 가정하지 않는다(L1 앞둘레 턱은 `X` 였다). v0.5: 협로 벽의 **시야 막힘**도 원본대로 적는다 — 그 값에 따라 앞쪽 길목에서 안개가 하는 일이 달라진다(기획 10.7·열린 질문 15).
 
 ### 6.12 스테이지 `stages`
 
@@ -1593,8 +1784,15 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 - **조명**(계약 변경 WP1b): v0.2 의 `kind_lights`(장애물 종류별 빛)는 장애물 종류와 함께 없앴다. 대신 `lights: [{ "id", "at": 기준점 ID 또는 [tx,ty], "color", "radius", "flicker", "pulse": { "period", "amount" } }]`
   (점 빛, MVP 두 스테이지는 비어 있음 — 기획 10.3·10.4 "화로·기둥 빛 없앰"). `[tx,ty]` 는 `TileCoord` 이고 `World.Lighting` 은 로딩 때 월드 px 로 바꾼 값을 가진다(4.1 `ResolvedMap`).
 - `unit_min_light`(선택, 기본 0 = 끔): 주인공·적·시체·획득물이 받는 빛의 하한(0~1, 기획 10.5 의 "유닛 밝기 하한"). 바닥·벽은 원작처럼 어둡게 두고 이것들만 어둠에서 읽히게 한다(7.7).
-  값은 기획 10.3~10.5(v0.5): 두 스테이지 모두 0.6, 어둠 스테이지 1 0.5·스테이지 2 0.6·스테이지 2 11:30 부터 0.7(상한 0.7), 주인공 빛 반경 420·380(380~480 안).
-  `light_change` 의 경로에도 들어간다.
+  값은 기획 10.3~10.5(v0.5): 두 스테이지 모두 0.6, 어둠 스테이지 1 0.5·스테이지 2 0.6·스테이지 2 11:30 부터 0.7(상한 0.7), 주인공 빛 반경 420·400(380~480 안 — v0.5.1: 기획 v0.6.1 이 스테이지 2 를 380 → 400).
+  `light_change` 의 경로에도 들어간다. v0.5: 하한은 **그리는 대상**(안개 알파 > 0 — 시야 안, 또는 늘 보이는 보스·닿은 적)에만 쓴다(7.7·7.10, 기획 10.5).
+- **`hero_light.radius` = 시야 반경**(v0.5, 기획 10.7): `VisibilityField.Radius` 는 틱마다 `World.Lighting.HeroLightRadius` 를 읽는다(4.11). 시야 반경을 따로 적는 칸은 없다.
+  `light_change` 로 `hero_light.radius` 를 바꾸면 **다음 틱부터** 시야도 바뀐다(감독이 2단계에서 바꾸고 시야는 1단계에서 읽는다, 4.11 — MVP 두 스테이지에는 없음).
+  범위는 13.5-15(380 ≤ R ≤ 480, 원거리 띠 최대 + 60 ≤ R).
+- **일반 생성 자리**(v0.5.1): v0.5 의 "보이는 생성 후보 버림"(기획 2.4·10.7 v0.6)은 **뺐다**(기획 리뷰 (가) — 기획 v0.6.1 도 뺐다). 생성 띠는 늘 화면 밖이라 거기 선 적은 안개와 무관하게 안 보이고,
+  위아래에서 오는 적은 화면 가장자리(270 < R − 40)에서 이미 시야 안이라 어디서 생기든 빛 속에서 들어온다 — 규칙의 실제 효과가 생성 분포를 양옆으로 미는 것뿐이었다.
+  게다가 시야가 꺼진 월드에서 "보이면 버림" 이 후보 12개를 모두 버리는 뒤집힘(구현·검증 리뷰)과 R23 비율을 부풀리는 값이 따라왔다. 생성은 v0.4 그대로(띠·걸을 수 있음·여유 거리, 12번 → 먼 입구)다.
+  나중에 비슷한 규칙(생성 후보를 시야로 거르기)을 다시 넣으면 질의는 `HiddenForSpawn(pos)` = `!Enabled || !IsVisible(pos)` 꼴로 둔다 — 꺼진 월드에서 아무것도 버리지 않는 쪽이 기본값이어야 한다(구현·검증 리뷰).
 - `light_change` 이벤트는 바꿀 곳을 경로로 고른다: `{ "at": "11:30", "type": "light_change", "set": { "darkness": 0.7 } }`(스테이지 2). 받는 경로: `ambient`, `darkness`, `unit_min_light`, `hero_light.*`, `lights.<id>.*`.
   감독(WP4)이 `World.Lighting` 을 바꾸고 렌더(WP5)가 읽는다.
 - 이벤트가 적 정의를 덮어쓰는 매개변수: `escort` 의 `escorts`(호위 수, 0 포함), `march` 의 방향·`straight`, `boss`/`miniboss` 의 `enrage`·`arrival`. 호위 수는 `SpawnContext.EscortCount` 로 넘기고(생성 훅이 읽음), 행진 지시·광폭화·등장 연출은 이벤트가 생성 직후 그 적에 직접 건다(6.6).
@@ -1637,6 +1835,7 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 - 기획 v0.3(설계 v0.2)의 `skeleton_mage`·`wraith`·`goatman_shaman`·`plague_zombie`·`fallen_knight`·`bone_brute`·`hell_goat`·`rotting_hulk`·`blood_king` 과 그 투사체는 없앤다(기획 8.2 "v0.3 에서 바뀐 것").
 - **확장 후보(E, 기획 8.4)의 비용**: 대부분 "가져오기 표 한 줄 + 정의 1개". 새 부품이 필요한 것만: `scavenger`(`eat_corpse`), `hidden`·`counselor`(`blink`, 자리는 `PlacementResolver`),
   `gargoyle`(`stone_form`), `blood_knight`(`lifesteal` — 접두사 `vampiric` 과 공유, `HitLanded` 사용).
+  멀리서 피해를 주는 새 부품(투사체·원거리 즉발·돌진류)은 시작 조건에 `EnemyCtx.SeenClearly` 를 넣는다(v0.5, 6.6 — 보이지 않는 곳에서 맞지 않음).
 
 **"새 적 = JSON 1개" 를 자동으로 확인하는 시험** (WP4, 10.1 `Enemies`)
 
@@ -1664,12 +1863,15 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 | 13.5-9 | 패시브 키 ∈ `StatKey`, 접두사·버프 키 ∈ `EnemyStatKey` | Data |
 | 13.5-10 | 정의가 가리키는 파일 이름(atlas 페이지 × 변종, 메타, grid PNG, 맵 `art` 폴더의 파일 — `arena.json`·`columns.*`·`minimap.png`·바닥 조각 이름 규칙(1.4)으로 계산한 `floor_*`, 소리·음악 파일, 소리 색인) ⊂ **가져오기 표가 만드는 이름 + `Table/exe.json`** — 자원 없이 돈다(기획 13.5-10). 두 쪽으로 나눈다: ① 표 → 이름 목록(`ImportTable`, 기본 분류) ② 정의 → 이름 추출과 대조(실제 `Data/` 를 WP7 로더로 읽으므로 `Integration`) | 시험 `tests/…/Assets/` (WP0 작성, ② 는 통합 때 기본으로) |
 | 13.5-11 | 아래 "추가(경고)" 의 구별 경고(기획 13.5-11) | Data |
-| 13.5-12 | 성질 표의 키 = 타일셋이 이름 붙인 번호(`floor`·`borders`·`gates`·`pieces`, 번호 ≥ 0 — `ArenaLayout.ValidateTileset`), `sol_known_diffs`·`design_diffs` 원소의 메가타일이 성질 표에 있음, `why` 가 비면 오류 | Map(WP1b `MapDataReader`) — 늘 돈다 |
+| 13.5-12 | 성질 표의 키 = 타일셋이 이름 붙인 번호(`floor`·`borders`·`gates`·`pieces`, 번호 ≥ 0 — `ArenaLayout.ValidateTileset`), 성질·`sol`·`use` 글자가 8글자(`.wLWmxMX`, 6.11 — v0.5) 안, `sol_known_diffs`·`design_diffs` 원소의 메가타일이 성질 표에 있음, `why` 가 비면 오류 | Map(WP1b `MapDataReader`, 글자 WP1c) — 늘 돈다 |
 | 13.5-13 | 큰 피해 패턴·부품의 예고(6.5 판정, `rules.enemies.telegraph_required`): 예고 필수인데 없거나 `min_time` 보다 짧으면 **오류**, 무거운 근접 단일 대상의 타격 프레임까지 시간이 `heavy_melee_windup` 미만이면 **오류** | Data + 부품(WP4 매개변수 검사) |
 | 13.5-14 | 정의 `scale` 이 0.65~1.6 밖, 또는 정의 `scale` × 받을 수 있는 가장 큰 등급 배율 > `rules.ranks.max_scale` 이면 경고(넘는 쪽은 생성 때 잘림, 6.5) | Data |
+| 13.5-15 (v0.5) | 스테이지마다 주인공 빛 반경(= 시야 반경 — 정의 값과 그 스테이지 `light_change` 가 넣는 `hero_light.radius` 값 모두)이 **380 이상(기획 10.5-3 하한 — v0.5.1, 원거리 적이 없는 스테이지에도) 화면 가로 반폭(`ViewSize.X / 2` = 480) 이하**이고, **그 스테이지에 나오는 적**(구간 가중치·이벤트·소환·분열·호위 — 6.14 "안 나오는 적" 과 같은 계산) 중 `kite` 를 가진 적의 `range_band` 최대 + `rules.sight.edge` + `rules.sight.ranged_margin`(40 + 20 = 60) **이상**. 어기면 오류: `stage_catacombs: 빛 반경 360 < burning_archer 거리 유지 최대 340 + 60`. 주인공 빛(`hero_light`)이 없거나 반경 0 이하면 같은 오류다 — 그래서 `VisibilityField.Enabled` 가 거짓인 것은 맵 없는 시험 월드뿐이다(4.11) | Data(380·반폭) + WP4 검사기(`kite` 매개변수를 읽음) |
+| 13.5-16 (v0.5.1) | **원본 유래 값의 출처 주석**(오류)(사용자 결정 B 의 조건, 1.4): JSON 주석은 로더가 버리므로 원문 문자열로 본다. `Data/tilesets/*.json` 의 `props`·`sol_known_diffs`, `Data/sprites/*.json` 의 `frame_time`·`event_frame`, 가져오기 표 `Table/tilesets.json` 의 `overlay` 가 있는 줄마다, 그 줄 끝 또는 그 줄을 담은 객체·배열을 여는 줄 끝에 `// 출처: 원본 확인` 또는 `// 출처: DevilutionX 참고` 가 있다(줄 단위 + 괄호 깊이 추적) | 시험 `Data/SourceCommentTests`(기본 분류, WP0a 작성 — 실제 `Data/`·가져오기 표 원문만 읽음) |
 | 소리 | 소리 연결 표의 대상(무기·투사체·이펙트·그림 묶음·적·획득물·스테이지)과 소리 ID 가 있음, 분류가 `rules.audio` 에 있음, 소리 파일 ≥ 1 | Audio (WP8) |
+| 추가(오류, v0.5) | 스테이지가 있는데 `rules.sight` 가 없음(6.10) | Data (WP7) |
 | 추가(오류) | `extends` 순환·없는 부모, `abstract` 정의를 생성에 씀, 부품 `(종류, type)` 미등록, 부품 매개변수 검사, `*_patch` 의 없는 id, 클립·이벤트 프레임 범위, 큰 피해 패턴의 예고 필수(13.5-13), 참조 쪽 덮어쓰기는 색조·크기만, 부품 슬롯 > 12, 여러 틱 동작이 `actions` 마지막이 아님, `rules` 하위 키 중복, atlas 그림에 `sheet`·`color_key`·`slack` 속성, 쓰는 클립(`special`·`cast_*`)이 그림 묶음에 없음, `tilesets`·`maps` 에 `extends`·`*_add`·`*_patch` | Data + 부품 |
-| 추가(경고) | flow 유닛 반경 > 26, 명시한 `radius` 가 `round(base_radius × scale)` 와 2 넘게 다름, 크기 범위(13.5-14), 사거리가 몸 반경 합 + `melee_reach_over_contact` 를 넘는 단일 대상 근접(6.5), **생성 가능한 적인데 어느 스테이지에서도 나오지 않음**, **같은 스테이지에 나오는 두 적이 같은 그림 묶음 + 같은 변종이고 색조 거리(RGB 유클리드) < 60, 크기 차 < 0.15, 알파·발광도 같음**, 소리 연결이 없는 그림 묶음을 쓰는 생성 가능한 적(소리 없는 적, WP8) | Data |
+| 추가(경고) | flow 유닛 반경 > 26, 명시한 `radius` 가 `round(base_radius × scale)` 와 2 넘게 다름, 크기 범위(13.5-14), 사거리가 몸 반경 합 + `melee_reach_over_contact` 를 넘는 단일 대상 근접(6.5), **생성 가능한 적인데 어느 스테이지에서도 나오지 않음**, **같은 스테이지에 나오는 두 적이 같은 그림 묶음 + 같은 변종이고 색조 거리(RGB 유클리드) < 60, 크기 차 < 0.15, 알파·발광도 같음**, 소리 연결이 없는 그림 묶음을 쓰는 생성 가능한 적(소리 없는 적, WP8), **13.5-17 `include_bosses: true` 인 오라·함성·범위 버프**(v0.5.1 — MVP 데이터에는 없어야 함, 결정 C. WP4 매개변수 검사) | Data + 부품 |
 
 - 구별 경고는 변종이 다르면 구별되는 것으로 본다(원작 TRN 은 색이 크게 다르다 — 기획 8.2). 기준값(60·0.15)은 설계 제안이고 최종 판정은 `--preview enemies` 캡처를 사람이 본다.
 - v0.2 에서 "그림이 있을 때만" 이던 기하 검사(13.5-4~6)는 v0.3 에서 **늘 돈다**(충돌을 저장소 데이터로 만들므로, 4.2). 기획 13.5-4 의 "다각형이 없으면 건너뜀" 은 필요 없어졌다. `[해석]`
@@ -1764,7 +1966,7 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 
 ### 7.2 카메라
 
-- 카메라 중심 = 보간된 주인공 위치, **외곽 상자**(4.1, 스테이지 1 2560×1408)에 맞춰 자름. **따라가기 지연 없음**: 시뮬레이션의 생성 띠(카메라 시야 바깥 40~200px)와
+- 카메라 중심 = 보간된 주인공 위치, **외곽 상자**(4.1, 스테이지 1 2560×1408)에 맞춰 자름. **따라가기 지연 없음**: 시뮬레이션의 생성 띠(화면 사각형 바깥 40~200px)와
   보이는 화면이 정확히 같아야 하고, 지연이 있으면 화면 안에서 적이 생기는 일이 생긴다. 시뮬레이션(`World.ViewRect`)과 렌더 카메라가 **같은 함수** Core `CameraMath.ViewRect(heroPos, mapSize, viewSize)` 를 쓴다.
   맵이 마름모라 화면 모서리 쪽은 맵 밖(어둠)이 보인다 — 원작과 같다(기획 1절).
 - 그릴 때 카메라 위치를 정수 픽셀로 내린다(픽셀 그림 떨림 방지). 개체 위치도 그리기 직전에 반올림.
@@ -1782,13 +1984,16 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 | 3 | 획득물 | 보석·금화·물약·상자(빛 기둥은 7층) | 알파 |
 | 4 | 유닛·벽 | 주인공·적·**안쪽 벽 기둥·바닥 위 조각·아치 덧그림**(7.6) | **y 정렬**(7.4), 주인공 앞 벽 반투명, 알파(+발광은 7층에서 가산 두 번째 그리기) |
 | 5 | 앞둘레 턱 | **앞에 걸을 수 있는 칸이 하나도 없는 막힌 칸**(앞둘레 턱 줄)의 기둥·덧그림. 그다음 맵 밖 앞쪽(se·sw 변 바깥)의 입장 중 유닛 | 칸 줄 순. 주인공 가림 반투명 판정 대상(7.6) |
-| 6 | 빛 | 빛 지도 곱하기(7.7) | 곱하기 |
+| 6 | 빛·안개 | 빛 지도에 안개(보임·기억·검정)를 합친 뒤 곱하기(7.7·7.10, v0.5) | 곱하기 |
 | 7 | 발광 | 투사체, 폭발·맞음 이펙트, 장판 이펙트의 빛 부분, 보석 빛, 정예 발광·번쩍임 덧그림, **예고(원·선)의 테두리를 한 번 더** | 이펙트 정의의 `blend`(기본 보통), 주인공 투사체는 가산 한 겹 더, 적 투사체는 붉은 테(7.5), 예고 테두리는 알파 0.6 의 2px 선 |
 | 8 | 화면 효과 | 낮은 체력 붉은 비네트, 광폭화 맥동 | 알파 |
 | 9 | 월드 UI | 이름(정예·우두머리), 주인공 발밑 체력 막대, 보스 아래 표시, 피해 숫자 | `PresentRT` 해상도로(글자 선명) |
 | 10 | HUD·오버레이 | 8절 | `PresentRT` 해상도 |
 
 - 투사체·폭발을 빛 **뒤에** 그리는 이유: 어둠에 묻히지 않게(빛을 내는 것은 빛 영향을 받지 않음). 원작 마법 그림은 보통 혼합으로도 빛 뒤라 밝게 보인다.
+  7층 중 **적 투사체·예고 테두리·주인공 마법·폭발 이펙트는 안개에 가리지 않는다** — 시야 밖에서도 보인다(기획 10.7 "늘 그린다, 안개 위에").
+  **적 발광·번쩍임·보석 빛은 그 대상의 안개 알파를 따른다**(시야 밖 적·보석이면 그리지 않음 — 아래, 7.10 표). v0.5.1 에서 문구를 나눴다.
+- **안개 숨김**(v0.5, 7.10): 층을 따로 두지 않는다. 1~5·7·9층의 각 대상이 그릴 때 안개 알파(`FogMath`)를 곱하고, 0 이면 그 대상의 모든 그리기를 건너뛴다(그림·그림자·발광·번쩍임·이름·발밑 원).
 - 9~10층은 가상 좌표(960×540)로 배치하고 `UiCanvas` 가 창 배율로 바꿔 그린다. 글꼴은 크기 × 배율로 요청해 늘 선명하다(FontStashSharp 는 크기별로 그림을 굽는다).
 - v0.2 의 "장애물 그림자"(1층)와 "가려진 주인공 실루엣"(7층)은 없앴다 — 원작 타일 그림에 그림자가 있고, 가리는 벽은 반투명으로 그린다(7.6).
 - **예고를 두 번 그리는 이유**(기획 12.6 "예고 없이 큰 피해 없음"): 1층 예고(채움)는 4층의 160px 벽 기둥 아래에 깔려, 벽 뒤(화면 위쪽)에 생긴 피의 땅·폭발·강타 예고의 바깥 부분이 가려진다.
@@ -1858,7 +2063,7 @@ v0.2 의 `ObstacleBaker`(맵 질감으로 장애물 몸체·옆면·그림자를
 
 - `floor` 의 파일 이름·`pos` 는 1.4 의 **바닥 조각 이름 규칙**(`ArenaArt.FloorChunks`) 그대로다 — `pos = (512cx, 512cy)` 월드 px. 시작 검사와 13.5-10 이 자원 없이 같은 목록을 계산한다.
   `cells` 는 (ty, tx, kind) 순 정렬. 같은 칸에 kind 1 과 2 가 같이 있을 수 있다. 칸의 무리(뒷둘레·앞둘레·안쪽, 7.4)는 파일에 적지 않고 게임이 `ArenaGrid` 로 계산한다.
-- **바닥(0층)**: 바닥 칸(성질 `.`)의 바닥 삼각형 두 조각을 모두 구운 512×512 조각들. 화면에 걸친 조각만 그린다. 한 장으로 구우면 텍스처 한도를 넘는다(기획 10.2).
+- **바닥(0층)**: 바닥 칸(성질 `.`·`L`)의 바닥 삼각형 두 조각을 모두 구운 512×512 조각들. 화면에 걸친 조각만 그린다. 한 장으로 구우면 텍스처 한도를 넘는다(기획 10.2).
   원작 "바닥 먼저 전부, 그다음 벽" 순서가 이것으로 지켜진다(한 번에 그리면 앞 칸 바닥이 뒤 칸 벽 밑동을 덮는다).
 - **벽 기둥(0b·4·5층)**: 하위 타일마다 64×160 기둥 그림 한 장(같은 그림은 아틀라스에서 한 프레임). 시제품 기준 마름모는 `C.y − 15 .. C.y + 15` 의 31줄이고(맨 위 1줄 빔, 부록 A.3),
   기둥 그림의 마지막 픽셀 줄은 `C.y + 15` 에 온다. 식으로: **기둥 그림 왼쪽 위 = `(C.x − 32, C.y + 16 − Hc)`**(Hc = 160 → 그림 줄 0..159 가 `C.y − 144 .. C.y + 15`).
@@ -1869,10 +2074,10 @@ v0.2 의 `ObstacleBaker`(맵 질감으로 장애물 몸체·옆면·그림자를
   — 협로 벽·앞쪽 높은 벽 너머로 다가오는 무리가 통째로 가려지지 않게. 맵 `wall_fade.mode = "hero"` 면 ① 만(비교용, 6.11). 주인공보다 뒤의 벽이 그 뒤 적을 가리는 것은 그대로다.
   원작의 구역 표(TransList)는 옮기지 않는다. 판정은 4·5층 벽 항목을 모을 때 칸마다 한 번(주인공 발과의 y·거리 비교, 할당 0). 0b 층 뒷둘레 벽은 늘 주인공 뒤라 판정하지 않는다.
 - **빛**: 바닥·벽도 유닛과 같이 빛 지도(7.7)가 곱해진다. 원작의 거리별 어두움(16단계 빛 표)은 쓰지 않는다(기획 10.2).
-- **맵 밖**: 마름모 바깥은 그리지 않는다(검정). 빛 지도의 어둠이 원작처럼 바깥을 덮는다.
-- **미니맵**: 가져오기가 구운 `minimap.png`(외곽 상자 1/16 — 스테이지 1 은 160×88, 바닥 밝게·막힌 칸 어둡게)를 HUD 가 그린다(기획 12.1).
+- **맵 밖**: 마름모 바깥은 그리지 않는다(검정). 빛 지도의 어둠이 원작처럼 바깥을 덮는다. v0.5: 안 가 본 칸도 안개로 검정이 된다(7.10).
+- **미니맵**: 가져오기가 구운 `minimap.png`(외곽 상자 1/16 — 스테이지 1 은 160×88, 바닥 밝게·막힌 칸 어둡게)를 HUD 가 가 본 칸만 보이게 가려 그린다(8.2, 기획 12.1). 구운 그림은 바뀌지 않는다.
 - **낡은 그림**: 그릴 때 `arena.json` 의 `layout_hash` 를 Core 가 같은 배치로 계산한 값과 비교한다. 다르면 시작 검사(1.4 끝)가 이미 막았어야 하므로, 여기서 다르면 예외(버그).
-- **`--preview tiles`**: 맵마다 외곽 상자를 줄여 그린 화면 + 하위 칸 성질 겹침(`W`·`M`·`X` 색) + 입구·기준점·충돌 도형. 가져온 그림과 충돌(성질 표)이 맞는지 사람이 본다.
+- **`--preview tiles`**: 맵마다 외곽 상자를 줄여 그린 화면 + 하위 칸 성질 겹침(걷기·투사체·시야 막힘을 세 색으로 겹침 — 8글자, 6.11) + 입구·기준점·충돌 도형. 안개는 그리지 않는다. 가져온 그림과 충돌(성질 표)이 맞는지 사람이 본다.
 - **하지 않는 것(MVP, 기획 10.2)**: 맵 장식 물체(`objects\`), 문 열림·닫힘, 색 순환(L3·L4), 원작 자동 지도, 원작 빛 표.
 
 ### 7.7 조명
@@ -1883,12 +2088,25 @@ v0.2 의 `ObstacleBaker`(맵 질감으로 장애물 몸체·옆면·그림자를
 - `WorldRT` 위에 `LightRT` 를 **곱하기 혼합**(`ColorSourceBlend = DestinationColor, ColorDestinationBlend = Zero`)으로 늘려 그린다.
   → 주변광 곱하기와 어둠 뚫기가 한 번에 된다(기획 10.5 의 두 단계와 같은 결과, 단 빛이 겹쳐도 1 을 넘지 않음). 마름모 바깥도 같이 어두워진다.
 - 빛 상한 64: 주인공·점 빛을 먼저, 남는 자리를 짧은 빛(폭발) 중 주인공에게 가까운 순으로.
-- **유닛 최소 밝기**(`lighting.unit_min_light` > 0, 6.12): 빛을 다 그린 `LightRT` 에, 화면 안 주인공·적·시체(2층)·획득물(3층)(기획 10.5 "유닛 밝기 하한" 의 대상)의 현재 프레임을 절반 크기로 `(m, m, m)` 색, **최댓값 혼합**
-  (`BlendState { ColorBlendFunction = BlendFunction.Max, ColorSourceBlend = One, ColorDestinationBlend = One }`, 알파 0 픽셀은 그리지 않게 알파 기준으로 자름)으로 한 번 더 그린다.
-  → 곱하기 뒤 유닛 몸통은 밝기 ≥ m, 바닥·벽은 원작처럼 어둡다(기획 10.5 의 판독성). 적 투사체·발광은 이미 7층(빛 뒤)이라 영향 없다.
-  시체(최대 150)·획득물(보석 최대 300)도 같은 목록에 넣는다 — 절반 해상도에 작은 그림이라 채움 비용이 작고, 같은 텍스처끼리 모으면 호출도 몇 번이다.
+- **`LightRT` 를 만드는 순서**(v0.5): ① 바탕(`주변광 × (1 − 어둠)`)으로 지움 → ② 빛 가산 → ③ **안개 합치기**(7.10: 보이는 정도로 곱하고 기억 밝기를 더함) → ④ 유닛 최소 밝기(아래) → `WorldRT` 에 곱하기.
+  ③ 이 ② 뒤라 폭발·장판 빛도 보이는 정도로 잘린다 — 시야 밖 땅을 밝히지 않는다(기획 10.7). ④ 가 ③ 뒤라 시야 경계·기억 칸에 선 대상도 하한을 받는다. `--reveal` 이면 ③ 을 건너뛴다.
+- **혼합 상태 규칙**(v0.5.1): 셰이더가 없으므로 SpriteBatch 기본 효과의 결과는 **텍스처 색 × 틴트**이고, 최댓값 혼합(`BlendFunction.Max`)은 혼합 계수를 무시한다.
+  그래서 "그림 모양을 값 g 로 찍기" 를 색 채널로 하면 들어가는 값이 g 가 아니라 **그림 색 × g** 다(어두운 벽·적 픽셀일수록 값이 작아짐). 값은 늘 **알파 채널**에 담는다 —
+  틴트 (255,255,255,g) 의 결과 알파는 그림 알파 × g 로 그림 색과 무관하다. 쓰는 혼합 상태는 7.10 표(`FogBlend`)에 모았다.
+- **유닛 최소 밝기**(`lighting.unit_min_light` = m > 0, 6.12, v0.5.1 다시 씀): 안개까지 합친 `LightRT`(L) 에서, **그리는**(안개 알파 > 0) 주인공·적·시체(2층)·획득물(3층)(기획 10.5 "유닛 밝기 하한" 의 대상)
+  모양 안만 max(L, m) 으로 올린다. 보조 렌더 타깃(`MemRT` 를 다시 씀 — 7.10 ③ 뒤라 비어 있음)으로 네 번 그린다.
+  1. 보조 RT 를 (0,0,0,0) 으로 지우고 `LightRT` 를 색만 복사(`CopyRgb`).
+  2. 1px 흰 텍스처를 화면 전체에 틴트 (m,m,m,1) 로 `MaxRgb` → 보조 RT 의 색 = max(L, m).
+  3. 대상들의 현재 프레임을 절반 크기로, 틴트 (255,255,255, a) 로 `MaxA` → 보조 RT 의 알파 = 그림 알파 × a. a = **안개 알파 × 그림 알파**(`AlphaMul`·등장·사라짐).
+  4. 보조 RT 를 `LightRT` 에 `LerpRgbBySrcA`(SourceAlpha / InverseSourceAlpha) → `LightRT` = max(L, m)·a + L·(1 − a).
+  → 불투명한 대상 픽셀은 그림 색과 상관없이 빛 ≥ m 이다(색 채널에 찍던 v0.5 방식은 어두운 픽셀에서 하한이 m × 색으로 떨어졌다). 바닥·벽은 원작처럼 어둡다(기획 10.5 의 판독성).
+  흐림 띠·0.15s 바뀜 중인 적(a 작음)은 둘레 땅보다 a 만큼만 밝아진다 — v0.5 처럼 m 을 그대로 쓰면 반투명한 적의 실루엣 안 **바닥까지** m 을 받아, 거의 투명한 적 자리에
+  둘레보다 2~3배 밝은 바닥 모양이 먼저 드러났다(기획 리뷰). 그림 알파도 같은 이유로 곱한다(`phase_through` 0.3, 등장 연출). 그림자 픽셀(알파 0.5)은 반만 오르지만 색이 검정이라 보이지 않는다.
+  적 투사체·발광은 이미 7층(빛 뒤)이라 영향 없다. 시체(최대 150)·획득물(보석 최대 300)도 같은 목록에 넣는다 — 절반 해상도에 작은 그림이라 채움 비용이 작고, 같은 텍스처끼리 모으면 호출도 몇 번이다.
   대가: 유닛 앞에 안쪽 벽 기둥·앞둘레 턱이 겹치면 그 벽 위에 유닛 모양으로 밝은 자리가 생긴다 — 가림 판정과 같은 사각형 검사로 **앞 벽이 겹친 유닛은 건너뛴다**(7.4 발광과 같은 처리).
   `LightRT` 가 절반 해상도라 테두리 1px 정도가 바닥에 번진다(부드러운 테로 허용). 값이 0 이면 이 단계 전체를 건너뛴다.
+  시야 밖이라 그리지 않는 대상은 이 목록에도 넣지 않는다(기획 10.5 "하한은 시야 안에서만"). 늘 보이는 중간 보스·보스·닿은 적·점화 중 자폭 적은 a = 1 로 늘 넣는다.
+  확인은 10.2 "안개 고정 장면" 의 빛 지도 PNG(대상 모양 안 값 ≥ m)다.
 
 ### 7.8 손맛
 
@@ -1945,7 +2163,9 @@ public readonly record struct CueEvent(int Tick, CueKind Kind, Vector2 Pos, IDef
 - 버리는 규칙(기획 12.7 표, 값은 `rules.audio`): 같은 소리 ID 최소 간격 0.05s, 같은 소리 동시 3(정의 `max_instances`), 몬스터 맞음 전체 0.08s 에 한 번, 몬스터 죽음 동시 4·같은 종 0.1s,
   보석 0.06s, **전체 동시 24 — 자리가 없으면 새 소리를 버린다**(이미 나는 소리는 끊지 않음, 기획 12.7).
 - 화면 밖: 그 분류가 `offscreen: false` 이면 `ViewRect` 를 `offscreen_margin`(100px)만큼 넓힌 사각형 밖에서 난 소리를 버린다(보스·중간 보스·이벤트는 늘 냄).
-- 좌우: `(x − 시야 가운데 x) / (시야 폭 / 2) × pan(0.5)`, 높낮이: ± `pitch_jitter`. 무작위는 게임 쪽 난수(시뮬레이션 `SimRandom` 과 따로 — 기획 12.7, 15절).
+  **안개와 무관**(v0.5, 기획 10.7·12.7): 기준은 화면 사각형뿐이라 화면 안이면 시야 밖(안개 속) 적의 소리도 낸다 — 어둠 속 적의 단서다. `AudioSystem`·`SoundMixer` 는 `World.Visibility` 를 읽지 않는다.
+  그래서 "그리지 않는 적의 소리" 가 정상이다. `--reveal` 은 소리 수를 바꾸지 않는다(`AUDIO` 수 같음).
+- 좌우: `(x − 화면 가운데 x) / (화면 폭 / 2) × pan(0.5)`, 높낮이: ± `pitch_jitter`. 무작위는 게임 쪽 난수(시뮬레이션 `SimRandom` 과 따로 — 기획 12.7, 15절).
 - **자리가 비는 시각은 소리 길이로 센다**: 동시 재생 수(전체 24·같은 소리 3·몬스터 죽음 4)를 세려면 이미 나는 소리가 언제 끝나는지 알아야 한다.
   길이 = `d1/sound/index.json`(1.4, `SoundIndex`)의 표본 수 / 표본율 ÷ 높낮이 배율을 앱 틱으로 올림한 값. 고른 소리는 (끝 앱 틱)을 기록하고, 그 틱이 지나면 자리를 비운다. 반복 소리는 끌 때까지.
   `SoundEffectInstance.State` 는 고르기에 **쓰지 않는다**(장치 지연·벽시계에 따라 달라 로그 수 재현이 깨진다). 재생 칸이 실제로 아직 소리를 내고 있으면 그 칸만 다음 프레임에 다시 본다(고르기 결과와 무관).
@@ -1983,6 +2203,87 @@ public interface IAudioServices            // 게임 App/Contracts (계약 WP1b,
     void Update(AppTick now);                              // 앱 틱마다: 페이드·덕킹
 }
 ```
+
+### 7.10 안개 그리기 `FogRenderer` (v0.5, WP5, 기획 10.7)
+
+시야(4.11)를 읽어 땅을 **보이는 곳 / 가 본 곳(기억) / 안 가 본 곳(검정)** 셋으로 그리고, 시야 밖 대상을 숨긴다. 셰이더 없이(2.2) SpriteBatch 혼합 상태와 반해상도 렌더 타깃만 쓴다.
+`--reveal`(`AppOptions.Reveal`, 9절)이거나 `World.Visibility.Enabled` 가 거짓이면 이 절 전체를 건너뛴다(땅은 7.7 빛 지도만, 모든 대상 알파 1, 미니맵 전체).
+
+**값은 알파 채널에 담는다**(v0.5.1, 7.7 "혼합 상태 규칙"): SpriteBatch 기본 효과의 결과는 텍스처 색 × 틴트이고 최댓값 혼합은 혼합 계수를 무시하므로,
+v0.5 처럼 "벽·대상 모양을 값 g 의 회색으로 최댓값 혼합" 하면 들어가는 값이 g 가 아니라 **벽·적 그림의 색 × g** 다. 그러면 보이는 뒷벽 윗부분이 검정 대신 색² 밝기로 어둡게 남고(R28 이 막으려던 결과),
+시야 밖에서 늘 그리는 보스·닿은 적도 색² 로 어두워진다. 그래서 `FogRT`·`MemRT` 의 값은 알파에 두고, 색은 합치기에서만 쓴다.
+
+**혼합 상태 `FogBlend`**(정적 객체로 한 번 만든다. "A 만" = `ColorWriteChannels = Alpha`, "RGB 만" = `Red | Green | Blue`)
+
+| 이름 | 설정 | 결과 |
+|---|---|---|
+| `WriteA` | A 만, Alpha Add, One / Zero | dst.a = src.a |
+| `MaxA` | A 만, `AlphaBlendFunction = Max` | dst.a = max(dst.a, 그림 알파 × 틴트 알파) |
+| `MulA` | A 만, Alpha Add, `AlphaSourceBlend = Zero`, `AlphaDestinationBlend = SourceAlpha` | dst.a ×= src.a |
+| `MulInvA` | A 만, Alpha Add, Zero / `InverseSourceAlpha` | dst.a ×= 1 − src.a |
+| `MulRgbBySrcA` | RGB 만, Color Add, `ColorSourceBlend = Zero`, `ColorDestinationBlend = SourceAlpha` | dst.rgb ×= src.a |
+| `AddRgbBySrcA` | RGB 만, Color Add, SourceAlpha / One | dst.rgb += src.rgb × src.a |
+| `LerpRgbBySrcA` | RGB 만, Color Add, SourceAlpha / InverseSourceAlpha | dst.rgb = src.rgb·src.a + dst.rgb·(1 − src.a) (7.7 ④) |
+| `MaxRgb` | RGB 만, `ColorBlendFunction = Max` | dst.rgb = max(dst.rgb, src.rgb) (7.7 ④) |
+| `CopyRgb` | RGB 만, Color Add, One / Zero | dst.rgb = src.rgb (7.7 ④) |
+
+**칸 값 텍스처** (CPU, 프레임마다)
+
+- `SightTex`(확장 격자 크기, 스테이지 1 80×80): 칸마다 색 흰색, **알파** = `FogMath.CellLevel`(4.11 — 보임 0/1 을 칸이 바뀐 뒤 F = 9틱에 걸쳐 잇는 값, 스테이지 틱 시계 3.4).
+  `ExploredTex`(N×N): 알파 = 가 본 칸 1. 둘 다 배열을 다시 쓰지 않고 채워 `SetData`(합쳐 30KB 안팎). `ExploredTex` 는 `ExploredVersion` 이 바뀐 프레임에만.
+- **땅 위 투영**: 두 텍스처를 `SpriteBatch.Begin(transformMatrix: 칸 좌표 → LightRT 화면 좌표, blend: WriteA)` 로 한 장씩 그린다. 등각 변환(4.1 `IsoMath`)이 아핀이라 행렬 하나로 텍셀 = 칸 마름모가 되고(텍셀 중심 = 칸 중심),
+  `LinearClamp` 이중선형이 칸 중심 사이 알파를 이어 벽 그림자 경계가 칸 반 폭쯤(기획 10.7 "약 32px") 부드러워진다. 칸 모양 계단이 드러나지 않는다.
+
+**보이는 정도 `FogRT`**(480×270, `LightRT` 와 같은 크기, `SurfaceFormat.Color`) — 값 V ∈ [0, 1] = 알파
+
+1. (0,0,0,0) 으로 지우고 `SightTex` 를 투영한다(`WriteA`).
+2. **경계 흐림**: 보간된 주인공 발(그리기 위치 — `FogMath` 그리기용 오버로드와 같은 값, 4.11)에 둥근 띠 텍스처(코드로 생성 — 알파가 반경 `R − edge` 안 1, `R` 에서 0, R 밖 0. R = `Visibility.Radius`)를
+   `MulA` 로 그린다. 띠 사각형은 반경 R + 64(시야 계산 범위)까지 덮는다 — 그보다 먼 칸은 `SightTex` 가 이미 0 이다. → 거리 R − 40 … R 에서 땅이 보이는 밝기에서 기억 밝기로 바뀐다(기획 10.7).
+3. **벽 기둥은 자기 칸 값**: 화면 안 막힌 칸(0b·4·5층 벽 항목, 7.4)의 기둥 그림을 틴트 (255,255,255, `그 칸 CellLevel × 칸 중심의 경계 흐림 값`) 로 `MaxA` 덧그린다.
+   벽 그림은 칸 위로 144px 솟아 화면에서 뒤 칸(맵 밖·벽 너머 안 보이는 칸) 자리에 걸치므로, 땅 투영만 쓰면 보이는 뒷벽의 윗부분이 검게 잘린다. 원작도 벽 조각은 그 칸의 빛을 받았다.
+   두 줄 벽(앞 턱·모서리·스테이지 2 협로)의 바깥 줄은 4.11 의 "두 줄 벽은 함께 보인다" 로 안쪽 줄과 같은 값을 받는다 — 벽 하나가 밝은 반·검은 반으로 갈리지 않는다.
+4. **그리는 대상의 모양**(필요한 것만, v0.5.1): 그리는 유닛(안개 알파 > 0)·장판·예고 채움 중 ① 그림 사각형이 시야 원 `R − edge` 밖에 걸치거나 ② 사각형 네 귀퉁이·발의 칸 중 `CellLevel < 1` 인 칸이 있는 것,
+   그리고 ③ 늘 그리는 중간 보스·보스·닿은 적·점화 중 자폭 적을, 틴트 (255,255,255, 안개 알파 × 그림 알파 — 장판·예고는 1) 로 `MaxA`.
+   그 밖의 대상은 그 자리 `FogRT` 가 이미 1 이라 빼도 같다(--stress 300 에서 유닛을 한 번 더 300개 넘게 내지 않게). → 머리가 뒤 칸 화면 자리에 걸친 적, 시야 밖에 선 보스, 안개 속 적 장판도 빛 지도를 그대로 받는다(밝기 하한이 꺼진 맵에서도).
+
+**기억 정도 `MemRT`**(480×270) — 값 (1 − V)·E = 알파
+
+1. **(255,255,255,0)** 으로 지우고(색 흰색) `ExploredTex` 를 투영(`WriteA`) → 2. 가 본 벽 칸의 기둥 그림을 틴트 알파 1 로 `MaxA`(3번과 같은 이유) →
+3. `FogRT` 를 `MulInvA` 로 그려 알파에 (1 − V) 를 곱한다.
+
+**`LightRT` 에 합치기** (7.7 순서 ③ — 빛 가산 뒤, 유닛 최소 밝기 앞)
+
+- `FogRT` 를 흰 틴트로 `MulRgbBySrcA` → `LightRT` = L × V. 이어서 `MemRT` 를 틴트 (M, 1) 로 `AddRgbBySrcA` → `LightRT` += M × (1 − V)·E(`MemRT` 색이 흰색이라 src.rgb = M).
+  M = `주변광 × (1 − 어둠) × rules.sight.memory_ratio`(스테이지 1 약 0.2, 스테이지 2 약 0.14, 기획 10.7).
+- 결과 = **V·L + (1 − V)·E·M** (L = 빛 지도). 보이는 곳은 지금까지와 같고, 가 본 곳은 빛 없는 바닥보다 한 단 어두운 고정 밝기, 안 가 본 곳은 0(검정)이다.
+  L 은 V 로 잘리므로 폭발·장판의 빛이 벽 너머·시야 밖 땅을 밝히지 않는다. 어둠이 `light_change` 로 바뀌면 M 도 같은 프레임에 따른다. 맵 밖은 바닥을 그리지 않아 원래 검정이다.
+  벽·적 그림의 색은 이 값에 들어가지 않는다 — 색은 `WorldRT` 에 곱할 때 한 번만 곱해진다.
+- 기억 칸에서는 적·시체·획득물을 그리지 않으므로(아래) 지형만 남는다.
+- **남는 한계**: 최댓값은 "자기 칸 값 > 땅 값" 인 경우만 고친다. 다른 시야 막힘 벽 뒤에 숨은 벽이 **보이는 벽·땅의 화면 자리 앞으로** 솟는 배치(앞쪽 벽 두 개가 겹친 협로 등 — 두 줄 벽 규칙이 덮지 않는 것)는
+  그 숨은 벽 그림이 밝게 남을 수 있다. MVP 스테이지 1 에는 없다(시야를 막는 것이 둘레 벽뿐). 스테이지 2 캡처에서 보이면 벽 항목만 그리는 순서대로 "지우기(`MulInvA`, 알파 1) + 더하기(Alpha One/One, 자기 값)" 두 번 그리기로
+  자기 칸 값으로 덮어쓴다(벽 항목만 묶음이 끊김, R28).
+
+**대상 숨기기 — 안개 알파** (`FogMath`, 4.11)
+
+| 대상 | 안개 알파 |
+|---|---|
+| 일반·정예·우두머리 적(그림·그림자·발광·번쩍임·발밑 원·이름·등장 연출) | `EnemyAlpha` = `PosAlpha(발)` = 칸 값 × `clamp((R − d) / edge, 0, 1)`(d = 보간된 주인공과 그리는 발 위치의 거리) |
+| 중간 보스·보스, 주인공 몸에 닿은 적(거리 ≤ 두 반경 + `TouchReach` — 최소 `touch_margin` 16, 4.11), 점화 중 자폭 적(`Visual.ForceShown`, v0.5.1) | 1(늘 그림, 밝기 하한도 늘 — 기획 10.7) |
+| 시체(`CorpseLayer`), 획득물(보석·금화·물약·룬·상자 그림, 보석 빛) | `PosAlpha(자리)` |
+| 피해 숫자 | 대상이 주인공이면 1, 적이면 그 적의 `EnemyAlpha`(대상이 없어졌으면 생긴 자리의 `PosAlpha`) |
+| 주인공과 그 무기의 투사체·이펙트·장판, 적 투사체, 위험 예고(1층 채움·7층 테두리), 적 장판, 정예 상자 빛 기둥·레벨업 빛 기둥, 표시 이펙트(`FxSystem`) | 1(늘 그림 — 위험은 안개에 가리지 않는다, 기획 10.7·12.6). 장판·예고는 `FogRT` 4단계로 빛도 받는다 |
+
+- 알파 0 이면 그 대상의 그리기 항목을 아예 모으지 않는다(4층 정렬 배열·7층 발광 목록·최소 밝기 목록에서 빠짐 — 그리기 호출도 준다).
+- 표시 이펙트를 늘 그리는 이유: 적 쪽 이펙트는 위험(폭발·강타)이고 주인공 쪽은 기획 10.7 이 늘 그리라고 했다. 예외는 적 등장 연출(어두운 원·솟음)과 죽는 그림·시체 — 위 표대로 숨긴다.
+- 0.15s 바뀜은 칸 값(`CellLevel`)에만 있다. 벽 모서리를 돌 때 땅과 그 칸의 적이 같이 서서히 나타난다. 바뀌는 중에 다시 바뀌면 지금 값에서 되돌아간다(4.11 "바뀜 값 잇기").
+  규칙(사격·돌진)은 바뀐 틱의 값을 바로 쓴다(4.11).
+
+**비용과 확인**
+
+- 반해상도 렌더 타깃 두 장(각 0.5MB — `MemRT` 는 7.7 ④ 의 보조 RT 로 다시 씀), 그리기 호출 + 14 안팎(투영 3·띠 1·`MulInvA` 1·합치기 2·최소 밝기 4·나머지 상태 전환) + **벽·대상 모양 묶음**
+  (텍스처마다 끊김 — 대상은 4단계 조건으로 줄인 목록, 벽은 화면 안 벽 항목). 4.9 렌더 예산 안에서 잰다(WP5, 10.3 — 단계별 시간 열 `fog_ms`).
+- 확인: `--debug-nav sight`(칸 보임·가 본 칸·시야 막힘 칸, 9절), 10.2 "안개 고정 장면"(`--preview fog` — 자리 고정 캡처 + 빛 지도 PNG 의 값 대조)·"안개 흐름" 행. `--reveal` 캡처와 나란히 놓아 숨김·기억 밝기를 본다.
+- 하지 않는 것(MVP): 원작 자동 지도(AMP) 선 그리기, 기억에 적의 마지막 자리 남기기, 화면 가장자리 화살표(기획 10.7), 셰이더 안개.
 
 ---
 
@@ -2029,6 +2330,11 @@ public interface IAutoplayDriver { AppTick Now { get; } bool Ready(IScene scene)
 - 체력 구슬은 코드로: 원 마스크 텍스처(생성) + 붉은 채움 사각형을 비율만큼(원 안만 보이게 그리기 순서로) + 돌 테(코드로 만든 회색 고리 그라데이션).
   v0.2 의 "맵 질감으로 구운 테" 는 장애물 굽기와 함께 없앴다. 원작 UI 그림(`ctrlpan\*.cel`)으로 바꿀지는 기획 열린 질문 17.
 - 미니맵: 가져오기 도구가 구운 맵의 `minimap.png`(외곽 상자 1/16, 마름모, 막힌 곳 어둡게 — 7.6)를 알파 0.75 로. 점은 1px 텍스처 늘이기, 좌표는 월드 ÷ 16.
+  - **가 본 곳만**(v0.5, 기획 12.1·10.7): 읽을 때 픽셀을 CPU 배열로 한 벌 둔다(160×88 안팎). `World.Visibility.ExploredVersion` 이 바뀐 프레임에 픽셀 (x, y) 마다
+    월드 점 `(16x + 8, 16y + 8)` 의 칸(`IsoMath` 역변환)이 가 본 칸이면 원래 색, 아니면 투명(0)으로 표시용 배열을 채워 `SetData`(1.4만 픽셀, 1초에 몇 번).
+    셰이더·렌더 타깃 가림을 쓰지 않는 이유: 그림이 작고 바뀌는 때가 드물어 CPU 가 가장 단순하고, 같은 가 본 칸이면 같은 픽셀이다. 칸 하나가 4×2px 라 경계 계단은 미니맵 크기에서 문제가 없다.
+    `--reveal` 이면 원래 그림 그대로. 원작 자동 지도처럼 벽 선을 따로 그리지 않는다(기획 10.2).
+  - **점 규칙**: 주인공 흰색, 중간 보스·보스 큰 빨강, 정예 상자 금색은 늘. 정예·우두머리 파랑은 `FogMath.EnemyAlpha > 0` 일 때만(그 적이 화면에 그려질 때와 같은 판정). 일반 적은 그리지 않는다.
 - 위젯: `Label`, `Button`, `Card`, `Bar`, `IconSlot` — 즉시 모드에 가까운 작은 클래스. 마우스 올림·방향키 선택·Enter 를 같은 "포커스" 개념으로.
 - 글꼴: `C:\Windows\Fonts\malgun.ttf` → `malgunbd.ttf` 순으로 찾고, 모두 없으면 `arial.ttf` + 로그 경고(한글이 네모로 보임).
   `gulim.ttc` 같은 글꼴 묶음(.ttc)은 `FontSystem.AddFont(byte[])` 에 몇 번째 글꼴인지 고를 인자가 없어 목록에서 뺐다. 실제로 넣어 보고 되면 다시 넣는다.
@@ -2050,12 +2356,12 @@ public interface IAutoplayDriver { AppTick Now { get; } bool Ready(IScene scene)
 | 옵션 | 뜻 |
 |---|---|
 | `--seed <n>` | 시뮬레이션 씨앗. 없으면 시각에서 만들고 로그 첫 줄에 적음 |
-| `--autoplay` | 자동 조작(기획 15절). 메뉴도 넘김(각 화면 0.5s 뒤). `--background` 를 함께 켬. 실제 키보드·마우스는 읽지 않음 |
+| `--autoplay` | 자동 조작(기획 15절). 메뉴도 넘김(각 화면 0.5s 뒤). `--background` 를 함께 켬. 실제 키보드·마우스는 읽지 않음. **안개를 무시한다**(v0.5): `AutoplayPolicy` 는 `World.Visibility` 를 읽지 않고 월드 전체로 판단한다(기획 10.7·15절) — 봇 판단이 그리기 상태에 묶이지 않고, 적 규칙의 시야 조건은 봇이든 사람이든 같다 |
 | `--stage <id>` | 타이틀·선택을 건너뛰고 바로 시작(잠금 무시). `stage_cathedral`, `stage_catacombs` |
-| `--start-at <mm:ss>` | 그 시각부터. 지난 이벤트는 건너뜀, 구간·배율은 그 시각 값. **보스 시각 이후면 보스를 바로 내보내고 보스 시계(광폭화)를 (시작 시각 − 보스 시각)으로 맞춘다**. 중간 보스는 건너뜀 |
+| `--start-at <mm:ss>` | 그 시각부터. 지난 이벤트는 건너뜀 — 단 **상태형 이벤트(`light_change`)는 그 시각 이전 것을 시간 순서로 차례로 적용한 뒤 시작**(v0.5.1 — 12:00 에서 시작한 스테이지 2 의 어둠·기억 밝기·시야 반경이 보통 판과 같게), 구간·배율은 그 시각 값. **보스 시각 이후면 보스를 바로 내보내고 보스 시계(광폭화)를 (시작 시각 − 보스 시각)으로 맞춘다**. 중간 보스는 건너뜀 |
 | `--time-scale <n>` | 실제 시간 n 배속. 결과는 n 과 상관없이 같다(3.4) `[해석]` |
 | `--god`, `--level <n>`, `--weapons <id:lv,…>`, `--passives <id:lv,…>` | 기획 15절 |
-| `--stress <적 수>[,<투사체 수>]` | 상한을 그 값으로 올리고 스테이지 구성 가중치대로 맵 전체·시야 띠에 즉시 채운다(`--god` 함께 켬, 생성 출처 `Stress`). 투사체 수를 주면 그 수를 유지하는 시험용 발사를 더함 |
+| `--stress <적 수>[,<투사체 수>]` | 상한을 그 값으로 올리고 스테이지 구성 가중치대로 맵 전체·생성 띠에 즉시 채운다(`--god` 함께 켬, 생성 출처 `Stress`). 투사체 수를 주면 그 수를 유지하는 시험용 발사를 더함 |
 | `--freeze-ai` | 적 생각·이동을 멈춘다(렌더 정적 장면, `--stress` 와 함께) |
 | `--capture <png>` | 캡처 파일 경로. 상대 경로는 현재 폴더 기준. 원작 그림이 찍히므로 **저장소 밖**(스크래치·임시 폴더)에 둔다(R24 — 저장소의 `out/`·`logs/` 는 `.gitignore` 로 막지만 다른 곳은 못 막는다) |
 | `--capture-at <초[,초…]>` | 앱 시간(초) 기준. 여러 개면 파일명 뒤에 `_<초>` 를 붙인다. 그 틱에 정확히 멈춰 보간 없이(alpha = 1) 그린 화면 |
@@ -2069,8 +2375,9 @@ public interface IAutoplayDriver { AppTick Now { get; } bool Ready(IScene scene)
 | `--mute` (v0.3) | 소리를 재생하지 않고 효과음 파일도 읽지 않는다(길이 색인만 읽어 고르기 수는 그대로 센다, 7.9). **개발 옵션 실행의 기본값**이다. 장치 자체는 MonoGame 이 열므로, 개발 옵션 실행은 늘 `ALSOFT_DRIVERS=null`(출력 없는 장치)로 연다(7.9) `[해석]` |
 | `--sound` (v0.3) | 개발 옵션 실행에서 재생 경로를 켠다 — 장치는 여전히 null("No Output")이라 스피커로는 나지 않는다. WAV 읽기·재생·제한 확인용. `--mute` 와 같이 주면 옵션 오류 |
 | `--sound-device default` (v0.4) | 개발 옵션 실행에서도 실제 기본 장치를 연다(`ALSOFT_DRIVERS` 를 두지 않음, `--sound` 를 함께 켬). 사용자 스피커로 소리가 나므로 **사용자 동의를 받고만** 쓴다 |
-| `--debug-nav [grid,flow,astar,shapes,entries,tiles]` | 격자·막힌 칸(S/M 등급 색)·clearance 열지도·플로우 필드 화살표·A* 원 경로와 다듬은 경로·충돌 원·충돌 도형(평행사변형)·입구(시작점→진입점)·기준점 ID·**하위 칸 성질(`W`/`M`/`X` 색)** 을 덮어 그림. 층은 옵션 값으로 고른다(기본 전부). 키 입력으로 바꾸지 않는다 |
-| `--preview <sprites\|enemies\|effects\|tiles\|blend>` | 개발 화면. 그림 + 발 기준점 십자 + ID. 배치는 고정(6.13): 정의마다 한 행, 방향·프레임 고정 칸 + 방향을 도는 칸 하나. `tiles` = 맵 전체 축소 + 성질 겹침(7.6), `blend` = 무기 투사체·이펙트를 보통/가산 두 칸으로(기획 열린 질문 10). v0.2 의 `obstacles` 는 없앴다 |
+| `--debug-nav [grid,flow,astar,shapes,entries,tiles,sight]` | 격자·막힌 칸(S/M 등급 색)·clearance 열지도·플로우 필드 화살표·A* 원 경로와 다듬은 경로·충돌 원·충돌 도형(평행사변형)·입구(시작점→진입점)·기준점 ID·**하위 칸 성질(걷기·투사체·시야 막힘 세 색, 8글자 6.11)** 을 덮어 그림. **`sight`**(v0.5): 시야 안 칸(초록 마름모, `ChangedTick` 이 9틱 안이면 밝게)·가 본 칸(회색)·시야 막힘 칸(테두리)·주인공 칸, 반경 R 과 R − edge 원, 화면 사각형을 `view_inset` 만큼 줄인 사각형, 또렷이 보이는 원거리 적에 점. 층은 옵션 값으로 고른다(기본 전부). 키 입력으로 바꾸지 않는다 |
+| `--reveal` (v0.5) | 안개를 **그리기에서만** 끈다(`AppOptions.Reveal` — `RunOptions` 가 아니라 Core 는 이 값을 모른다): 땅은 빛 지도만, 시야 밖 대상도 그림, 미니맵 전체(7.10·8.2). `World.Visibility` 와 그것을 쓰는 규칙(원거리·돌진)은 그대로라 같은 씨앗이면 `--log-hash` 가 같다(10.2 "재현"). 같은 뜻의 다른 이름(`--no-fog`)은 두지 않는다(기획 15절 이름 그대로). **개발 옵션 판정(저장 보호)에 든다**(v0.5.1 — 안개 없는 판의 해금·기록이 사용자 저장에 남지 않게, 기획 15절) |
+| `--preview <sprites\|enemies\|effects\|tiles\|blend\|fog>` | 개발 화면. 그림 + 발 기준점 십자 + ID. 배치는 고정(6.13): 정의마다 한 행, 방향·프레임 고정 칸 + 방향을 도는 칸 하나. `tiles` = 맵 전체 축소 + 성질 겹침(7.6), `blend` = 무기 투사체·이펙트를 보통/가산 두 칸으로(기획 열린 질문 10). v0.2 의 `obstacles` 는 없앴다. **`fog`**(v0.5.1, WP5): `--stage` 의 실제 맵에 **장면 여섯 개를 1초(60틱)씩 차례로** 놓는다 — 주인공 자리와 적 배치·동작 프레임을 코드에 고정하고 적 생각·이동은 멈춤(시야는 매 틱 계산, 바뀜 9틱이 장면 안에 끝남). ① 뒷벽 앞(벽 윗부분이 뒤 칸 자리에 걸침) ② 문 앞(문 틈 밖 입장 중 궁수 하나, 둘레 벽 뒤 맵 밖 적 하나) ③ 기둥 옆(기둥 뒤 적) ④ 시야 경계(머리가 R 에 걸친 적, 흐림 띠 안 적, 닿은 거리 안 적) ⑤ 앞 턱 앞(두 줄 턱 바깥 줄·모서리) ⑥ 어두운 바닥의 적·시체·보석(최소 밝기). 장면 k 는 앱 시간 k 초에 캡처하면 늘 같은 그림이다. 캡처마다 `FOG` 로그 줄을 쓰고, `--capture` 파일 옆에 그 프레임의 `LightRT`(7.7 ④ 뒤)를 `<이름>_light.png`(480×270)로 쓴다 — 빛 값을 그림 색 없이 대조한다(10.2) |
 | `--check` | 불변식 계측(10.1)을 켠다(`RunOptions.Check`). `--log-ticks` 에 열로, 종료 요약에 최댓값 |
 | `--validate-data` | 창 없이 데이터 검사만, 종료 코드 0/2(자원은 보지 않는다) |
 | `--log <파일>` | 로그 파일. 기본: 개발 옵션 실행이면 **현재 폴더** `logs\`, 아니면 저장 폴더 `logs\`. 저장소 뿌리에서 돌리면 `logs\` 가 생기므로 `.gitignore` 에 `logs/` 를 둔다(WP1b) |
@@ -2078,13 +2385,14 @@ public interface IAutoplayDriver { AppTick Now { get; } bool Ready(IScene scene)
 | `--log-hash <csv>` | 스테이지 틱 60마다 `app_tick, stage_tick, hash`(3.4 `StateHasher`) |
 | `--save-dir <폴더>` | 8.3 |
 
-- **사용자 데이터 보호**(brief 7절): 개발 옵션(`--autoplay`·`--stage`·`--capture*`·`--preview`·`--validate-data`·`--stress` 중 하나라도)이 있고 `--save-dir` 가 없으면
+- **사용자 데이터 보호**(brief 7절): 개발 옵션(`--autoplay`·`--stage`·`--capture*`·`--preview`·`--validate-data`·`--stress`·`--reveal`·`--god`·`--level`·`--weapons`·`--passives` 중 하나라도 — v0.5.1 에 뒤의 다섯을 더함)이 있고 `--save-dir` 가 없으면
   저장 파일을 **읽지도 쓰지도 않고** 기본값으로 시작한다(창 모드, 해금 = 스테이지 1 만, 기록 없음). `--window` 는 저장된 전체 화면 설정보다 늘 우선한다. 같은 조건이면 소리도 기본 무음이다.
 - 자동 실행에서 데이터 오류가 나면 DataError 화면을 띄우지 않고 종료 코드 2 로 끝난다(입력을 기다리며 멈추지 않게). 자원이 없거나 낡았으면 종료 코드 5(1.4 끝 — `--autoplay` 없이 캡처만 주면 안내 화면을 캡처한 뒤 5).
 - 개발 옵션 실행은 `new GameApp()` 전에 환경 변수 `SDL_WINDOW_NO_ACTIVATION_WHEN_SHOWN=1`(`--background`)과 `ALSOFT_DRIVERS=null`(`--sound-device default` 가 없을 때, 7.9)을 둔다.
 - 종료 코드: 0 정상, 1 처리 안 된 예외(로그에 스택), 2 데이터 오류, 3 요청한 캡처가 하나라도 안 생김, 4 벽시계 시간 초과, 5 자원 없음·낡음, 64 옵션 오류.
 - 고정 로그 문장(판정용): 첫 줄 재현 정보(3.4), `ASSETS manifest=… format=… stage=… textures=… vram_mb=…`, `SCENE <이름> app_tick=…`, `RESULT stage=… outcome=victory|defeat stage_time=… level=… kills=… seed=…`,
-  `AUDIO device="…"`, `AUDIO muted=… requested=… played=… dropped_cap=… dropped_interval=… dropped_offscreen=…`, 끝 줄 `EXIT code=…`.
+  `AUDIO device="…"`, `AUDIO muted=… requested=… played=… dropped_cap=… dropped_interval=… dropped_offscreen=…`,
+  `FOG stage_tick=… in_sight=… explored=… enemies_drawn=… enemies_hidden=… reveal=0|1`(v0.5.1 — 캡처마다, 그 프레임의 시야 안 칸·가 본 칸·그린 적·숨긴 적 수. `--reveal` 이면 `enemies_hidden=0`), 끝 줄 `EXIT code=…`.
 - 실행 파일은 WinExe 다. **Windows GUI 실행 파일은 셸이 끝나기를 기다리지 않으므로** 종료 코드는 아래처럼 받고, 판정 근거는 로그 파일로 한다.
   데이터 검사의 1차 판정은 창이 필요 없는 `dotnet test` 의 실제 데이터 시험이다.
 - 검증 담당의 실행 예(PowerShell, 사용자 화면·입력·저장·스피커를 건드리지 않음). 결과 폴더 `$o` 는 **저장소 밖**(스크래치)이다 — 캡처에 원작 그림이 찍힌다(R24):
@@ -2107,29 +2415,30 @@ $p.ExitCode
 | 폴더 | 무엇을 | 담당 |
 |---|---|---|
 | `Common` | `FacingMath.ToColumn`(8방향: 남 0, 서 2, 북 4, 동 6 / 16방향 / **등각 보정: 화면 (−32, 16) → 8방향 열 1**, 보정 끔이면 45° 열), **`FromColumn` 왕복 8·12·16방향(등각 보정 포함)**, **`ToVector(SouthWest)` → 8방향 열 1·16방향 열 2**, `SimRandom` 재현, `StableHash`, `EntityStore` 핸들(지운 뒤 낡은 핸들은 무효)·압축, 풀 재사용, `AnimClock`(이벤트 프레임 1부터·넘김, 재생 배율), `CameraMath`, `TickAccumulator`(틱 상한·버린 틱·캡처 멈춤, `--time-scale` 1 과 8 이 같은 앱 틱 열), `DefRef` 한 번만 채움, `StageStepper`(히트 스톱·늘임·`AwaitingChoice`) | WP1, WP1b |
-| `Map` | `IsoMath` 칸 중심 ↔ 칸 번호 왕복, 외곽 상자(N 40 → 2560×1408, N 44 → 2816×1536), 바깥 마름모 안/밖, `ArenaLayout.Expand`(합성 타일셋: 테두리 여덟 자리·문 2칸 + 끝 조각·`place`·`line`·바닥 섞기 결정적·둘레 표시), 성질 → 하위 칸, `LayoutHash` 가 배치가 같으면 같고 기둥 하나 옮기면·성질 표 한 칸 바꾸면 다름, 성질 표에 없는 메가타일 오류·쓰지 않는 메가타일이 표에 있으면 오류, `MapDataReader`(작은 JSON: 두 종류만 읽음·다른 종류의 오류와 무관·타일셋 연결·`extends` 오류), `ResolvedMap`(타일 → 월드 px, 입구·기준점·시작) | WP1b |
+| `Map` | `IsoMath` 칸 중심 ↔ 칸 번호 왕복, 외곽 상자(N 40 → 2560×1408, N 44 → 2816×1536), 바깥 마름모 안/밖, `ArenaLayout.Expand`(합성 타일셋: 테두리 여덟 자리·문 2칸 + 끝 조각·`place`·`line`·바닥 섞기 결정적·둘레 표시), 성질 → 하위 칸(**v0.5: 8글자 → 걷기·시야·투사체 비트, 격자 밖은 시야를 막지 않음, `Prop` 왕복**), `LayoutHash` 가 배치가 같으면 같고 기둥 하나 옮기면·성질 표 한 칸 바꾸면(**시야 글자만 `x` → `X` 여도**) 다름, 성질 표에 없는 메가타일 오류·쓰지 않는 메가타일이 표에 있으면 오류, `MapDataReader`(작은 JSON: 두 종류만 읽음·다른 종류의 오류와 무관·타일셋 연결·`extends` 오류), `ResolvedMap`(타일 → 월드 px, 입구·기준점·시작) | WP1b |
 | `Assets` | `SpriteMeta` 읽기·검사(사각형이 페이지 밖·개수 ≠ 방향 × 프레임·없는 페이지 번호면 오류), `ImportTable`(표 8개 엄격 읽기·모르는 속성 오류, 이름 목록: 묶음 × 변종 페이지, 마법 방향 묶기, 아이콘, 소리 `vars` 펼치기 → `d1/sound/…`, 동작별 `width`·`shadow_alpha` 덮어쓰기 순서), `ArenaArt`(바닥 조각 이름 규칙 — 합성 배치에서 손으로 센 조각 목록과 같음, `cells` frame 1부터), manifest 판 대조. **13.5-10**: ① 표 → 이름 목록(기본) ② 실제 정의가 가리키는 이름 ⊂ 표가 만드는 이름 + `exe.json`(`Integration`, WP7 로더 필요). **도구 경로와 게임 경로의 `LayoutHash` 가 같음**(실제 `Data/`, `Integration`). 자원이 있으면(`DDR_ASSETS`) manifest·메타·PNG IHDR 를 정의와 대조, 없으면 건너뜀 표시, 판·표 해시가 다르면 "낡음" 건너뜀 표시(1.3) | WP1b(형), WP0(이름 대조) |
 | `Data` | 규칙별 고장 난 작은 JSON(`Fixtures/`)으로 각 오류가 정확한 파일·경로로 나오는지. `extends` 병합·순환, `*_add`·`*_patch`, **페이즈 누적 풀기(patch → add → remove, 같은 ID 자리 지킴)**, 모르는 속성, 비슷한 ID 제안, 항목마다 오류 모음, `rules` 하위 키 합치기·중복, **파일 목록을 뒤섞어 읽어도 `GameDefs` 해시가 같다**, 가중치가 JSON 순서 배열, 변종이 그림 묶음에 없으면 오류 | WP7 |
 | `Data`(실제, `Integration`) | 실제 `Data/` 를 엄격 모드로 읽어 오류 0(모든 모듈 검사기 포함 — 길 검사·소리 연결 표). 모든 모듈 등록이 필요하므로 통합 때 기본으로 옮김 | WP7 작성, WP6 통합 |
 | `Geometry` | 원·사각형·다각형(오목 포함) 부호 거리, 밀어내기 방향, 선분 교차, 원 중심에 놓인 점 | WP2 |
-| `Nav` | `ArenaCollision`: 평행사변형 합집합 = 막힌 칸 합집합(점 표본 1만 개), `W` 칸은 걷기만·투사체 통과(**합성 타일셋 시험** — 실제 MVP 맵에는 `W` 칸이 없다, 4.2), 둘레 도형 `IsBoundary` 는 `phase_through` 도 막음. clearance 알려진 점 값(바깥 마름모 경계 포함), 작은 손 격자에서 플로우 방향, A* 최적성(무작위 격자 200개에서 다익스트라와 비교 — **끈 당기기 전** 경로), 코너 자르기 없음, 다듬은 경로가 막힌 곳을 지나지 않음, 목표 못 갈 때 가장 가까운 곳, 시작이 3칸 밖까지 막힘. **두 스테이지 실제 맵 전수(자원 없이)**: (a) 모든 통과 칸에서 `dir` 을 따라가면 칸 수 이하 걸음에 시작점(고리 없음) (b) 모든 통과 칸 중심의 점 유닛이 이중선형 방향으로 10초 안에 주인공 120px 안 (c) 마름모 네 꼭짓점 쪽·기둥 옆·(스테이지 2) 협로 안에 주인공을 둬도 `S`·`M` 필드가 모든 통과 칸에서 dist < 65535 (d) 13.5-4~6 | WP2 |
+| `Visibility` (v0.5) | `VisibilityField`(합성 맵): 빈 방에서 반경 안 칸 모두 보임·`R + 64` 밖 안 보임, 시야 막힘 벽 뒤 칸 가림·벽 칸 자신은 보임, **꼭짓점 규칙**(대각선으로 이은 벽 새지 않음·기둥 하나 모서리 스침은 안 막음), `x` 기둥 뒤 보임·`X` 기둥 뒤 가림, 맵 밖 칸은 문 틈으로만 보임(둘레 벽 뒤 맵 밖 안 보임), **선 걷기 = 느린 기준 구현**(무작위 격자 200개 × 모든 칸), 같은 칸 안 이동은 다시 계산 안 함(횟수 계측)·칸·반경 바뀜은 다시, 계산 범위 밖으로 나간 칸 `InSight` 거짓, 가 본 칸 N×N 만·단조 증가·6틱 주기·`ExploredVersion`·`ExploredHash`(같은 집합 같은 값, 개수가 같고 집합이 다르면 다른 값), **두 줄 벽(v0.5.1)**: 합성 `XXXX` 메가타일 두 줄 벽에서 안쪽 줄이 보이면 바깥 줄도 보임·가 본 칸, 옆 메가타일로 퍼지지 않음, `L`·`M` 칸은 함께 보임에 들지 않음, `IsClearlyVisible` 경계(R − 40, 화면 안쪽 16px — 아래 254, **위는 몸 위 끝** `pos.y − top`, top 0 이면 254)·`ClearReach`(양옆 = R − 40, 정위 = 254 − top, 대각선은 사각형·원 교점), `Enabled` 거짓이면 질의 늘 참·`ClearReach` +∞, **반경 바뀜은 다음 틱부터**(`light_change` 가 바꾼 틱의 질의는 옛 반경, 다음 틱 새 반경), **첫 계산은 첫 `BeginTick`**(생성자 뒤 `Setup` 이 주인공을 옮기면 옮긴 자리 둘레만 가 본 칸), 첫 계산 `ChangedTick = −9`, **바뀜 값 잇기**(9틱 안에 왕복하면 `ChangedTick = t − (9 − a)`), 할당 0(`Update` 1,000번), `Perf`: 스테이지 1 크기 다시 계산 1회 ≤ 0.1ms. `FogMath`: 칸 바뀜 9틱 경사, **9틱 안 왕복 시 `CellLevel` 연속**(바뀐 틱 앞뒤 차이 ≤ 1/9, 매 틱 뒤집혀도 0·1 로 튀지 않음), 경계 흐림 알파, 그리기용 오버로드(주인공 위치를 바꾸면 알파가 그 위치 기준), 보스·닿은 적(`TouchReach` 가 `touch_margin` 보다 큰 적은 그 거리까지)·`ForceShown` 1, 꺼짐 1 | WP1c |
+| `Nav` | `ArenaCollision`: 평행사변형 합집합 = 막힌 칸 합집합(점 표본 1만 개), `w` 칸은 걷기만·투사체 통과, 시야 글자는 도형에 영향 없음(**합성 타일셋 시험** — 실제 MVP 맵에는 걷기만 막는 칸이 없다, 4.2), 둘레 도형 `IsBoundary` 는 `phase_through` 도 막음. clearance 알려진 점 값(바깥 마름모 경계 포함), 작은 손 격자에서 플로우 방향, A* 최적성(무작위 격자 200개에서 다익스트라와 비교 — **끈 당기기 전** 경로), 코너 자르기 없음, 다듬은 경로가 막힌 곳을 지나지 않음, 목표 못 갈 때 가장 가까운 곳, 시작이 3칸 밖까지 막힘. **두 스테이지 실제 맵 전수(자원 없이)**: (a) 모든 통과 칸에서 `dir` 을 따라가면 칸 수 이하 걸음에 시작점(고리 없음) (b) 모든 통과 칸 중심의 점 유닛이 이중선형 방향으로 10초 안에 주인공 120px 안 (c) 마름모 네 꼭짓점 쪽·기둥 옆·(스테이지 2) 협로 안에 주인공을 둬도 `S`·`M` 필드가 모든 통과 칸에서 dist < 65535 (d) 13.5-4~6 | WP2 |
 | `Spatial` | 무작위 점 집합에서 해시 질의 = 전수 비교 결과(거리로 거른 정확한 집합), 결과 순서 결정적, **한 칸에 200개 몰아 넣었을 때 넘침 규칙**(돌려준 개수·반경 줄여 다시) = 전수 | WP2 |
 | `Movement` | 두 적 같은 좌표 → 1틱 뒤 둘 다 유한·떨어짐, 20마리 같은 점 행진 → 진입 2초 뒤 모두 유한·겹침 해소, 기둥(평행사변형) 중심 소환 → 밖으로 나옴, 입장 중 적은 해시·분리에서 빠짐, 이동 의도 6종, `PlacementResolver`(마름모 모서리·기둥 옆 소환 → 모두 통과 칸, 생략 수 결정적) | WP2 |
 | `Invariants` | 계측기가 일부러 만든 NaN·맵 밖(바깥 마름모)·장애물 안·멈춘 적을 센다 | WP2 |
 | `Combat` | `DamageMath` — 기획 4.2 예(오라+함성 = ×1.55, 반올림 마지막, 방어 후 최소 1, 치명), `damage_pct` 한 번만, 발사 시점 고정, 시간 배율 제외 대상, 등급 배율, 피격 무적, `--god`, 승리 대기 중 주인공 피해 무시, 입장 중 적만 있는 월드에서 매직 미사일이 쏘지 않음·장판 위를 지나도 HP 그대로, **투사체 `on_end` 장판(맞음·사거리 끝·장애물)**, 신호(`WeaponFired` 발동당 하나, 피격 무적 중 `HeroHurt` 없음) | WP3 |
 | `Weapons` | `WeaponStats.Resolve`(count+projectile_count, area_pct 는 선언된 키에만, 쿨 상한 0.6/마력 폭주 0.8, **damage 는 damage_pct 와 무관**, `null` = 상시), 조준 5종, 패턴별 발사 결과(발 수·퍼짐각·궤도 위치·접선 `Vel`), 관통·튕김이 같은 적을 두 번 안 때림, 적별 타격 간격 | WP3 |
 | `Progression` | 경험치 곡선(1→5, 2→15, 19→185, 20→198, 40→461), 레벨업 후보(가중치·칸 참·초반 보장·채움·3장 미만), 재추첨 수, 상자(진화 우선·중간 보스 3회·강화 없으면 금화), 레벨업 밀어내기(반경 150, 80px) | WP3 |
-| `Enemies` | **전수 연기 시험**(6.13), 점화 중 죽으면 폭발 없음, 분열 3마리 일반 등급·튕김 80px(장애물에서 멈춤)·0.3s 대기, 대장 죽음 → **그 대장의 호위만** 공포 1.5s, 호위 없는 대장 죽음 → 주변 해골 공포 없음, **`panic_on_ally_death`(반경 150 안 같은 종 죽음 → 0.8s 도망, 1.5s 안에 다시 안 겁먹음, 정예는 안 겁먹음, `Collapse`·`Culled` 로는 안 겁먹음)**, `escort` 대형 120·풀림 250·출처별 호위 수(이벤트 값 / 기본 8 / 구간 0), 행진 직진 시간 뒤 보통 행동(`toward`·`toward_entry`), `kite` 거리 띠·물러날 수 없으면 제자리 사격, `shoot_projectile` 가리면 안 쏨, 돌진 예고·시간, `ground_hazard` 동시 20 상한, `war_cry` 겹치지 않음(큰 값 하나), 버프 면역(`slow`), `phase_through` 경계만 막힘·`alpha_over`, `heavy_strike` 넉백, `summon` 상한 30·절대 상한 360, 보스 페이즈 50% 1회·패턴 덮어쓰기·쿨다운이 같은 패턴에 남음·`voice` 신호, 패턴 `actions` 두 개가 같은 프레임, 접두사 합치기·제외 조건, `attack_cooldown_pct` 가 모든 능력 쿨에, 승리 때 `Collapse`(분열·폭발·드롭 없음) | WP4 |
-| `Director` | 누적기(무리 1~3, `spawn_group`, 최대 수에서 3 고정), 생성 위치가 시야 띠 안·걸을 수 있음·여유 거리, 12번 실패 → 먼 입구, **마름모 모서리 주인공에서 입구 대체 비율 기록**(R23), 상한 300/360 과 출처별 막는 순서·지우는 순서(`Culled` 는 보상·시체 없음), 포위 고리 반경 줄이기·생략(마름모 밖 자리), 정예 종류 뽑기에서 `elite_eligible: false` 제외, `--start-at` 이 지난 이벤트 건너뜀·보스 시각 이후면 보스 바로, **생성 수**: 상한 무한·처치 없음 월드에서 구간마다 `floor(초당 × 구간 길이)` ± 3 | WP4 |
+| `Enemies` | **전수 연기 시험**(6.13), 점화 중 죽으면 폭발 없음, 분열 3마리 일반 등급·튕김 80px(장애물에서 멈춤)·0.3s 대기, 대장 죽음 → **그 대장의 호위만** 공포 1.5s, 호위 없는 대장 죽음 → 주변 해골 공포 없음, **`panic_on_ally_death`(반경 150 안 같은 종 죽음 → 0.8s 도망, 1.5s 안에 다시 안 겁먹음, 정예는 안 겁먹음, `Collapse`·`Culled` 로는 안 겁먹음)**, `escort` 대형 120·풀림 250·출처별 호위 수(이벤트 값 / 기본 8 / 구간 0), 행진 직진 시간 뒤 보통 행동(`toward`·`toward_entry`), `kite` 거리 띠·물러날 수 없으면 제자리 사격, `shoot_projectile` 가리면 안 쏨, **시야 조건(v0.5): 또렷이 보이지 않는 궁수는 쏘지 않고 다가옴(시야 막힘 벽 뒤·R − 40 밖·화면 위아래 밖 세 경우), 보이게 되면 그 틱부터 쏨, 돌진은 또렷이 보일 때만 시작·돌진 중 안 보여도 안 끊김, 보스 패턴·근접·자폭은 시야 무관**. v0.5.1 — 시야 조건이 판정을 바꾸는지 드러나게 짠다: 벽 뒤 경우는 **시야만 막는 `L` 줄**(걷기·투사체는 트임) 뒤에 궁수·돌진 적을 둔다(`X` 벽이면 `ProjectileLineClear`·`HasClearLine` 이 먼저 막아 `SeenClearly` 를 빼먹어도 통과한다). R − 40 밖 경우는 `TestWorldBuilder` 로 빛 반경을 띠 최대 + 20 쯤으로 낮춘다(13.5-15 를 거치지 않음). 화면 위 경우는 몸 위 끝이 화면 안쪽 16px 밖이고 발은 안인 자리. **각 시험은 같은 배치에서 시야를 끈 월드(`Enabled = false`)로 쏘거나 돌진하는지 대조군을 같이 본다**. **떨림(R29)**: 주인공 바로 위에 궁수를 두고 ① 주인공이 위로 다가갈 때 ② 멈춰 있을 때 10초 동안 `kite` 상태(다가감·물러남·쏨) 전환 수 ≤ 6, ③ 주인공이 아래로 물러날 때 궁수가 따라옴, 위쪽 궁수가 그 자리에서 쏨(위쪽 한계가 띠 최소보다 작아도). **자폭 점화 중 `ForceShown`**, 생성 때 `BodyTop`·`TouchReach`(사거리 여분 + 10 이 16 을 넘는 합성 근접 적). **함성 대상(결정 C)**: `buff_area` 를 쓰는 `rank: miniboss` 적이 자기 자신과 반경 안 다른 중간 보스·보스에게 버프를 걸지 않음, 오버로드 정예 함성 반경 안 도살자의 식칼 피해가 35 그대로(`DamageMath` 까지 통과한 값), 돌진 예고·시간, `ground_hazard` 동시 20 상한, `war_cry` 겹치지 않음(큰 값 하나), 버프 면역(`slow`), `phase_through` 경계만 막힘·`alpha_over`, `heavy_strike` 넉백, `summon` 상한 30·절대 상한 360, 보스 페이즈 50% 1회·패턴 덮어쓰기·쿨다운이 같은 패턴에 남음·`voice` 신호, 패턴 `actions` 두 개가 같은 프레임, 접두사 합치기·제외 조건, `attack_cooldown_pct` 가 모든 능력 쿨에, 승리 때 `Collapse`(분열·폭발·드롭 없음) | WP4 |
+| `Director` | 누적기(무리 1~3, `spawn_group`, 최대 수에서 3 고정), 생성 위치가 생성 띠 안·걸을 수 있음·여유 거리(v0.5 의 "보이지 않음" 조건은 v0.5.1 에서 뺌 — 6.12), 12번 실패 → 먼 입구, **마름모 모서리 주인공에서 입구 대체 비율 기록**(R23), 상한 300/360 과 출처별 막는 순서·지우는 순서(`Culled` 는 보상·시체 없음), 포위 고리 반경 줄이기·생략(마름모 밖 자리), 정예 종류 뽑기에서 `elite_eligible: false` 제외, `--start-at` 이 지난 이벤트 건너뜀·**지난 `light_change` 는 차례로 적용**(12:00 시작 스테이지 2 의 `World.Lighting` = 처음부터 돈 판의 12:00 값)·보스 시각 이후면 보스 바로, **생성 수**: 상한 무한·처치 없음 월드에서 구간마다 `floor(초당 × 구간 길이)` ± 3 | WP4 |
 | `Audio` | `SoundMixer`: 전체 24·같은 소리 3·최소 간격 0.05·몬스터 맞음 0.08s 한 번·죽음 4·같은 종 0.1s·보석 0.06s, 자리가 없으면 새 소리를 버리고 높은 우선순위가 먼저 자리를 얻음, **자리는 길이 색인의 끝 틱에 빔(높낮이 배율 반영)**, 화면 밖 버림(분류별), 좌우 값, 같은 입력 같은 결과, **같은 신호 열 → 무음과 소리 켬의 `AUDIO` 수가 같음**. 연결 표 검사기(없는 대상·없는 소리·없는 분류 → 오류, 소리 없는 그림 묶음 → 경고). **`Sim/` 소스 파일이 `Core.Audio` 를 참조하지 않음**(저장소 소스 문자열 검사) | WP8 |
 | `Art` | 아틀라스 메타·PNG 대조 검사기(자원 있을 때만), PNG IHDR 읽기 | WP5 |
-| `Dev`·`Save` | `DevOptions` 파싱(값 형식, 여러 캡처 시각, 오류 메시지, 개발 옵션이면 저장 안 읽음·기본 무음 판정, `--sound`/`--mute`), `StateHasher` 가 같은 상태에 같은 값, 저장 직렬화·버전(음량 셋 포함) | WP7 |
-| `Sim` | **결정성**: 같은 씨앗·자동 조작으로 30초(기본) / 3분(`Scenario`) 두 번의 상태 해시 열이 같다. **묶음 독립성**: `TickAccumulator` 로 프레임당 1틱 / 4틱으로 묶어 `StageStepper` 를 돌려도 해시 열이 같다(레벨업 오버레이 흉내 포함). **표시 이벤트 켬/끔**(`Presentation.Enabled`)과 상관없이 해시 같음. **할당**: 정상 상태 틱 1,000번 동안 증가 0. `Scenario`: `stage_cathedral` 10분(자동 조작 + `--god`, 예외 없음, 불변식 기준 통과). `Perf`: 4.9 표 | WP4 |
+| `Dev`·`Save` | `DevOptions` 파싱(값 형식, 여러 캡처 시각, 오류 메시지, 개발 옵션이면 저장 안 읽음·기본 무음 판정 — **`--reveal`·`--god`·`--level`·`--weapons`·`--passives` 하나만 줘도 개발 옵션**(v0.5.1), `--sound`/`--mute`, `--preview fog`), `StateHasher` 가 같은 상태에 같은 값·가 본 칸 집합만 다르면 다른 값, 저장 직렬화·버전(음량 셋 포함) | WP7 |
+| `Sim` | **결정성**: 같은 씨앗·자동 조작으로 30초(기본) / 3분(`Scenario`) 두 번의 상태 해시 열이 같다. **묶음 독립성**: `TickAccumulator` 로 프레임당 1틱 / 4틱으로 묶어 `StageStepper` 를 돌려도 해시 열이 같다(레벨업 오버레이 흉내 포함). **표시 이벤트 켬/끔**(`Presentation.Enabled`)과 상관없이 해시 같음. **시야(v0.5)**: 같은 씨앗 두 번의 가 본 칸 수 열이 같음, `Sim/Autoplay/` 소스가 `Visibility` 를 참조하지 않음(소스 문자열 검사 — 봇은 안개 무시). **할당**: 정상 상태 틱 1,000번 동안 증가 0. `Scenario`: `stage_cathedral` 10분(자동 조작 + `--god`, 예외 없음, 불변식 기준 통과 — 공정성 열 포함). **공정성 합성 맵**(v0.5.1, `Scenario`): 안쪽 `L`·`X` 벽과 문 틈이 있는 `TestDefs` 합성 맵 + 궁수·돌진·자폭·근접 섞은 구간표로 자동 조작 + `--god` 3분, 공정성 세 열 0·`kite_switches` 기준(아래). `Perf`: 4.9 표 | WP4 |
 
 | 프로젝트 `DiabloAssetImporter.Tests` | 무엇을 | 담당 |
 |---|---|---|
-| `Formats` | 시험 인코더로 만든 CL2: 그룹/평면 판별(그룹 머리가 평면 표로도 읽히는 경우), RLE 세 종류, 32줄 건너뛰기 표로 폭 추정(표 `width` 와 다르면 종료 코드 4 경로), 줄이 넘어가는 런. 레벨 CEL 조각 여섯 종류(삼각형 패딩 앞/뒤), MIN 뒤집기, TIL 펴기(0 기반), SOL 두 비트 대조(다른 비트·함정 128 무시), TRN → PAL 순서, 색인 0 → 그림자 알파(값이 없는 표는 검정 그대로), WAV 8비트 → 16비트 값·머리·소리 색인 값 | WP0 |
-| `Bake` | 잘라 묶기: 겹침 없음·페이지 안·순서 고정·빈 프레임·**그림자만 있는 줄이 사각형 안에 남음(알파 > 0 기준)**·페이지 넘침 → 다음 페이지, 변종끼리 메타 같음, 마법 16파일 → 방향, `arrows` 프레임 → 방향, 아이콘 겹침, 아레나 바닥 조각 경계·이름 = `ArenaArt.FloorChunks`·기둥 중복 제거, **`IsoMath` 로 놓은 기둥 아래 줄과 구운 바닥 마름모가 같은 줄에서 맞닿음(1px 틈·겹침 없음)**, 성질 대조(표 ≠ SOL → 실패, `sol_known_diffs` 면 통과) | WP0 |
+| `Formats` | 시험 인코더로 만든 CL2: 그룹/평면 판별(그룹 머리가 평면 표로도 읽히는 경우), RLE 세 종류, 32줄 건너뛰기 표로 폭 추정(표 `width` 와 다르면 종료 코드 4 경로), 줄이 넘어가는 런. 레벨 CEL 조각 여섯 종류(삼각형 패딩 앞/뒤), MIN 뒤집기, TIL 펴기(0 기반), SOL 세 비트 대조(`sol & 7` → 8글자, v0.5 — 다른 비트·함정 128 무시, SOL 13 → `x`·15 → `X`·159/175/191 → `X`), TRN → PAL 순서, 색인 0 → 그림자 알파(값이 없는 표는 검정 그대로), WAV 8비트 → 16비트 값·머리·소리 색인 값 | WP0 |
+| `Bake` | 잘라 묶기: 겹침 없음·페이지 안·순서 고정·빈 프레임·**그림자만 있는 줄이 사각형 안에 남음(알파 > 0 기준)**·페이지 넘침 → 다음 페이지, 변종끼리 메타 같음, 마법 16파일 → 방향, `arrows` 프레임 → 방향, 아이콘 겹침, 아레나 바닥 조각 경계·이름 = `ArenaArt.FloorChunks`·기둥 중복 제거, **`IsoMath` 로 놓은 기둥 아래 줄과 구운 바닥 마름모가 같은 줄에서 맞닿음(1px 틈·겹침 없음)**, 성질 대조(표 ≠ SOL → 실패, `sol_known_diffs` 면 통과, **시야 비트만 다른 칸도 실패**) | WP0 |
 | `Pipeline` | 시험이 만든 작은 MPQ(War3Net 으로 생성)로 전체 실행: 두 번 = manifest 같음, **`--jobs 1` = `--jobs 8`**, 캐시 적중 결과 = 새로 만든 결과, `--force`, **표에 있는데 원본에 없는 항목 → 종료 코드 3·manifest 없음·없는 목록 전부 보고**, 원본에 표 밖 파일이 많아도 성공, `d1/` 밖 파일 안 건드림, 원본 MPQ 파일 바이트·시각 그대로, **다른 현재 폴더에서 실행해도 저장소 뿌리 기준 `--out`**, 저장소 안 무시되지 않는 `--out` 거절. **실제 표 전체 경우**: 실제 `Table/*.json` 이 펼치는 모든 원본 경로에 합성 파일(프레임 수는 정의 JSON 값, TRN 256바이트, TIL 은 쓰는 메가타일 번호보다 크게)을 넣은 MPQ + 실제 `Data/maps`·`tilesets` 로 종료 코드 0, 만든 이름 = 13.5-10 이름 목록. 합성 MPQ 는 War3Net 이 쓸 수 있는 범위에서 원본과 같은 플래그(암호화·파일 이름 키 fix key·PKWARE implode)로 만든다 — 못 쓰는 플래그(파형 압축 등)는 "실제 원본 실행에서만 확인"(WP0 완료 기준) | WP0 |
 | `RealMpq`(선택) | 환경 변수 `DDR_DIABDAT` 가 있을 때만 돈다(없으면 건너뜀 표시): 표의 원본 항목이 모두 열리고 머리(CL2 그룹 수·WAV RIFF·SOL 크기)가 맞음, 출력은 임시 폴더. 원본 바이트는 시험 출력에 남기지 않는다 | WP0 |
 
@@ -2139,6 +2448,13 @@ $p.ExitCode
 - **불변식 계측 `InvariantChecker`**(Core, WP2): WP2 가 `SpatialRebuild` 안에서 60틱(1초)마다 부른다 — `nan`(유한하지 않은 위치), `out_of_map`(입장 중이 아닌데 바깥 마름모 밖), `in_obstacle`(통과·입장 중이 아닌데 걷기 막힘 도형 부호 거리 < −2px),
   `stuck`(입장·공포·기절·`Hold`·독점 행동이 아니고 주인공까지 거리 > 공격 사거리 + 32 인데 3초 동안 8px 미만 이동), `over_cap`(상한 초과).
   기준: `nan = out_of_map = over_cap = 0`, `in_obstacle` 이 같은 적에서 1초 넘게 이어지지 않음, `stuck` 최댓값 ≤ 살아 있는 적의 2%. 시나리오 시험은 늘 켜고, 게임은 `--check`(`RunOptions.Check`)로 켠다.
+- **공정성 열**(v0.5.1, 기획 10.7 공정성 1~5 — 부품마다 단위 시험만으로는 새 부품·접두사·소환 경로에서 깨져도 못 잡는다). `World.Fairness`(계약 WP1c, 누적 수)를 쓰는 곳이 세고 `InvariantChecker` 가 열로 낸다. 기준은 셋 다 **0**.
+  - `unseen_shots`: 적 진영 투사체를 만드는 순간(`ICombatSpawner` 한 곳, WP3) 쏜 적이 보스·중간 보스가 아니고 `IsClearlyVisible(발, BodyTop)` 이 거짓.
+  - `unseen_charges`: 돌진(`charge`)을 시작하는 순간(WP4) 같은 조건.
+  - `hidden_hits`: `DamageResolve`(WP3)가 주인공 피해를 적용할 때(`--god`·피격 무적으로 피해를 버리기 전에 센다 — `--god` 시나리오에서도 셈) 원인이 적 본체(근접·자폭·돌진 — 적 투사체·장판·예고 패턴은 뺌)이고 보스·중간 보스가 아니며 그 순간 `FogMath.EnemyAlpha`(틱 값) = 0.
+    자폭은 점화 중 `ForceShown` 이라 폭발 순간 1 이다 — 점화를 시야 밖에서 시작해도 번쩍임이 보이므로 맞다.
+  - `kite_switches`: `kite` 상태 전환 수(6.6). 기준은 살아 있는 `kite` 적 하나당 초당 ≤ 1(떨림이면 수십). 10.2 "안개 흐름" 실행의 `--log-ticks` 에서도 숫자로 본다.
+  - 이 열은 `stage_cathedral` 10분 `Scenario`, 공정성 합성 맵 3분 `Scenario`(`Sim` 행), 10.2 "길찾기" 실행에 들어간다. 합성 맵에는 `L` 벽 모서리 + 자폭 적 배치를 넣어 `hidden_hits` 가 그 경우를 실제로 잡는지 확인한다(점화 중 `ForceShown` 을 쓰지 않는 시험 전용 자폭 부품으로 바꿔 등록하면 > 0).
 
 ### 10.2 실행 캡처로 확인하는 것 (게임 실행, 검증 담당 — 자원이 있어야 한다)
 
@@ -2155,7 +2471,11 @@ $p.ExitCode
 | 타일 아레나 | `--preview tiles` + `--stage stage_cathedral --capture-at 3` | 벽·아치·기둥이 원작처럼 맞물림, 성질 겹침이 벽 줄·기둥 칸과 맞음, 바닥 조각 경계에 틈 없음, 마름모 밖은 어둠 |
 | 벽 가림·정렬 | `--stage stage_cathedral --start-at 00:00 --autoplay --god --capture-at 5,10,15,20` (자동 조작이 기둥 둘레를 지남) | 기둥 뒤 주인공 위 벽이 반투명, 주인공보다 앞이고 빛 반경 안인 벽·앞 턱도 반투명(뒤쪽 벽은 불투명), 기둥 앞 유닛이 기둥 위에 그려짐, 기둥 오른쪽 아래에 붙은 유닛이 벽 뒤로 들어가지 않음 |
 | 뒷벽·앞 턱·아치 | `--stage stage_cathedral --start-at 04:00 --autoplay --god --capture-at 10,30,60`(무리가 뒷벽을 타고 돎) + `--debug-nav entries` | **뒷벽에 붙어 선 적의 무기·팔이 다음 벽 칸에 잘리지 않음**, 앞둘레 턱이 그 앞 유닛을 덮음(주인공이면 반투명), 아치 문 아래 유닛은 아치 앞면에 덮이고 문 앞 칸 유닛은 아치 위에 그려짐, 뒤쪽 문으로 들어오는 적이 뒷벽 위에 떠 보이지 않음 |
-| 예고·빛 | `--stage stage_cathedral --start-at 07:00 --autoplay --god --capture-at 5,15` | 벽 뒤쪽에 생긴 예고의 테두리가 벽 위로 보임(7층), `unit_min_light` 0.6(두 스테이지 모두)으로 화면 가장자리 적의 몸통·시체·보석이 보이고 바닥은 어두움 |
+| 예고·빛 | `--stage stage_cathedral --start-at 07:00 --autoplay --god --capture-at 5,15` | 벽 뒤쪽에 생긴 예고의 테두리가 벽 위로 보임(7층), `unit_min_light` 0.6(두 스테이지 모두)으로 시야 안 가장자리 적의 몸통·시체·보석이 보이고 바닥은 어두움 |
+| 안개 고정 장면 (v0.5.1) | `--preview fog --stage stage_cathedral --capture <png> --capture-at 1,2,3,4,5,6` 과 같은 명령에 `--reveal` 을 더한 실행(장면 ①~⑥, 9절) | 그림과 `FOG` 줄·`_light.png` 를 같이 본다. ① **보이는 뒷벽 윗부분이 검게도 어둡게도 잘리지 않음**: `_light.png` 에서 그 벽 그림 자리의 빛 값 = `--reveal` 실행의 같은 자리 값(±2/255 — 벽이 시야 원 R − 40 안이면 V = 1 이라 같아야 한다. 벽 그림 색과 무관) ② 문 틈 밖 입장 중 궁수는 보이고 둘레 벽 뒤 맵 밖 적은 안 보임(`enemies_hidden` = 1) ③ 기둥(`x`) 뒤 적이 보임 ④ 머리가 R 에 걸친 적이 검게 잘리지 않음, 흐림 띠 적 둘레에 **밝은 바닥 실루엣이 없음**(`_light.png` 에서 그 적 모양 안 값 ≤ 둘레 땅 + 안개 알파 × (m − 둘레) + 2/255), 닿은 거리 안 적은 시야와 상관없이 보임 ⑤ **앞 턱 바깥 줄·모서리가 검게 잘리지 않음**(바깥 줄 그림 자리 빛 값 = `--reveal` 실행의 같은 자리 값, ±2/255) ⑥ **어두운 그림 픽셀도 하한**: `_light.png` 에서 적·시체·보석 모양 안 값 ≥ m(0.6, −2/255) — 그림의 어두운 픽셀 자리 포함. `--reveal` 캡처는 안개 없음·`enemies_hidden=0`, 두 실행의 `FOG` 줄 `in_sight`·`explored` 같음 |
+| 안개 흐름 (v0.5.1) | `--stage stage_cathedral --autoplay --god --seed 7 --check --log-ticks <csv> --capture-at 1,20,60` 과 같은 명령에 `--reveal` 을 더한 실행 + `--debug-nav sight` 한 장 | 1초: 방 가운데 원만 보이고 둘레가 검정. 20·60초: 지나온 자리가 흐린 기억(바닥·벽만, 적·시체·보석 없음), 보이는 곳 경계가 칸 계단 없이 부드러움, 예고·적 투사체·적 장판이 안개 위에 보임. 숨김이 맞는지는 그림 대신 `FOG` 줄로 대조(그린 적 + 숨긴 적 = `--reveal` 실행의 그린 적). `--log-ticks` 의 공정성 열 0·`kite_switches` 기준(10.1). `--reveal` 캡처는 안개 없음 |
+| 안개 재현 | 위 두 실행(`--reveal` 유무)의 `--log-hash`·`AUDIO` 줄 | CSV 같음, `AUDIO` 수 같음(안개는 그리기만 바꾼다) |
+| 미니맵 기억 (v0.5.1, WP6·단계 2) | "안개 흐름" 과 같은 명령, `--capture-at 20,60` | 미니맵이 가 본 곳만(앞 턱 바깥 줄 포함 — 두 줄 벽 규칙), `--reveal` 이면 전체. 점 규칙(8.2) |
 | 혼합 비교 | `--preview blend` | 무기마다 보통/가산 두 칸이 나란히 보임 — 판정은 기획 담당(열린 질문 10) |
 | 길찾기 | `--stage stage_catacombs --start-at 07:00 --stress 180 --debug-nav flow,shapes --god --check --capture-at 5,20` | 앞쪽 협로로 몰리는 흐름, 큰 유닛 우회, 로그의 `stuck`·`in_obstacle` 기준(10.1) 통과 |
 | 전투·손맛 | `--start-at 04:00 --level 15 --weapons …` | 투사체(원작 마법 그림·16방향)·폭발·피해 숫자·번쩍임이 보임 |
@@ -2163,24 +2483,27 @@ $p.ExitCode
 | 보스 | 기획 15절 예 | 패턴 예고·보스 막대·페이즈 |
 | 결과 | `--capture-on result --exit-on-result` | 무기별 피해 표, `RESULT` 로그 줄 |
 | 소리 고르기 | `--sound --autoplay --god --stage stage_cathedral --start-at 07:00 --quit-after 60 --seed 3` (null 장치 — 스피커로 나지 않음, 동의 필요 없음) | 오류 없이 끝남, `AUDIO device="No Output"`, `AUDIO` 줄의 `played` 가 초당 기준 안(전체 24 동시), 같은 씨앗의 `--mute` 실행과 `requested`·`played`·`dropped_*` 가 같음 |
-| 재현 | 같은 명령 두 번(한 번은 `--time-scale 8`). 그리고 같은 명령을 `--mute` 와 null 장치 `--sound` 로 한 번씩 | 두 `--log-hash` CSV 같음, 같은 `--capture-at` PNG 바이트 같음, `--mute` 와 `--sound` 의 `--log-hash` CSV 같음 |
+| 재현 | 같은 명령 두 번(한 번은 `--time-scale 8`). 그리고 같은 명령을 `--mute` 와 null 장치 `--sound` 로 한 번씩 | 두 `--log-hash` CSV 같음, 같은 `--capture-at` PNG 바이트 같음(안개 0.15s 바뀜도 스테이지 틱이라 같음), `--mute` 와 `--sound` 의 `--log-hash` CSV 같음 |
 | 실제 스피커 | `--sound-device default …`(**사용자 동의를 받고만**) | 판정 못 함(귀로 들은 확인은 사용자 몫) |
 | 단계 끝 | `--autoplay --god --seed 1..5 --stage stage_cathedral --exit-on-result` | 단계 1: 다섯 번 모두 `RESULT outcome=victory` 가 10:00 에(생존 승리). 단계 2: `outcome=victory`, `stage_time ≤ 16:00` |
 
 ### 10.3 성능 측정
 
 - `TickProfiler`(Core): 시스템 단계별 `Stopwatch` 누적. `--log-ticks perf.csv` 는 1초마다 한 줄:
-  `app_s, stage_s, enemies, hero_proj, enemy_proj, hazards, tick_avg_ms, tick_max_ms, <단계별 평균 ms…>, draw_ms, frame_ms, slow_frames, draw_calls, alloc_bytes, dropped_ticks, <--check 열…>`.
+  `app_s, stage_s, enemies, hero_proj, enemy_proj, hazards, tick_avg_ms, tick_max_ms, <단계별 평균 ms…>, draw_ms, fog_ms, frame_ms, slow_frames, draw_calls, alloc_bytes, dropped_ticks, <--check 열…>`
+  (`fog_ms` = `FogRenderer` 와 7.7 ④ 의 CPU 시간, v0.5.1).
   `draw_ms` = `Draw` 시작부터 `Present` 직전까지 CPU 시간, `slow_frames` = 16.7ms 넘은 프레임 수. 종료 때 첫 5초를 뺀 p50/p95/p99/max 를 로그에 요약한다. `draw_calls` 는 `GraphicsDevice.Metrics.DrawCount`.
 - 렌더 측정: `--stage stage_catacombs --stress 300 --freeze-ai --vsync off --window 1280x720 --quit-after 30 --log-ticks perf.csv`. 결과에 "백그라운드 창에서 잼" 을 적는다.
   단계 1 에는 스테이지 2 맵이 없으므로 `--stage stage_cathedral` 로 같은 측정을 한다. `draw_calls` p99 ≤ 600(4.9 표)은 **단계 1 완료 조건**이다(WP5).
+- 안개(v0.5.1): 안개를 켠 `--stress` 장면은 시야 밖 적을 그리지 않아 오히려 가벼워 최악이 재지지 않는다. 그래서 같은 명령을 `--reveal`(모든 적을 그림, 안개 단계 없음)과 안개 켬으로 두 번 재고,
+  **최악 추정 = `--reveal` 실행의 p99 + 안개 켬 실행의 `fog_ms` p99**, 호출 수도 `--reveal` 의 `draw_calls` + 안개 켬과 `--reveal` 의 차이로 4.9 기준과 비교한다.
 - 그래픽 없는 기준 측정과 합격 기준은 4.9 표 하나다.
 
 ---
 
 ## 11. 구현 작업 묶음 (Work Package)
 
-- 순서: **WP1(끝남, 커밋 `ec851d6`) → WP1b(계약 갱신, 혼자) → WP0a(최소 실제 데이터, 짧게) → WP0·WP2~WP8 이 서로 파일이 겹치지 않고 동시에**. 통합(실제 데이터 엄격 시험, `PlayScene` 완성, 단계 끝 실행)은 WP6 이 맡는다.
+- 순서: **WP1(끝남, 커밋 `ec851d6`) → WP1b(계약 갱신, 끝남, 커밋 `02c3b8b`) → WP1c(시야 계약 갱신, 혼자, 짧게 — v0.5) → WP0a(최소 실제 데이터, 짧게) → WP0·WP2~WP8 이 서로 파일이 겹치지 않고 동시에**. 통합(실제 데이터 엄격 시험, `PlayScene` 완성, 단계 끝 실행)은 WP6 이 맡는다.
 - **자원 파일이 없어도 Core 시험은 모두 돈다**(실제 데이터 검사·길 검사·시나리오·성능 포함, 4.2·6.14). 자원이 필요한 것은 게임 실행 확인(캡처)과 자원 대조 검사(13.5-7 실제 쪽)뿐이다.
   다만 실제 맵 길 검사·단계 1 시나리오가 쓰는 **데이터**는 세 묶음에 나뉘어 있고(타일 번호·성질 = 원본 SOL 을 봐야 채움, 맵 배치, 그림 묶음의 프레임 수), 그중 원본으로 확인해야 하는 값이 있다.
   그래서 그 최소분을 **WP0a** 가 먼저 저장소에 넣는다. WP0a 뒤에는 WP0(가져오기 도구 본체)이 늦어도 WP2·WP3·WP4·WP7·WP8 의 Core 쪽은 막히지 않는다. WP5·WP6 의 화면 확인은 WP0 의 단계별 출력을 기다린다.
@@ -2190,14 +2513,14 @@ $p.ExitCode
 - 맡는 파일은 "맡는 것" 이 전부다. 다른 묶음의 파일을 고쳐야 하면 그 묶음 담당에게 요청한다. 계약(WP1·WP1b 파일) 변경은 11.3.
 
 ```
-WP1 (끝남) ── WP1b 계약 갱신 ── WP0a 최소 실제 데이터 ──┬── WP0 가져오기 도구·가져오기 표·타일셋 ────────┐   (자원: 게임 화면 확인에 필요)
-                                                        ├── WP2 내비·충돌(타일 충돌 포함)·공간 ──────────┤
-                                                        ├── WP3 주인공·전투·무기·성장 ───────────────────┤
-                                                        ├── WP4 적·감독·자동 조작 ────────────────────────┼── 통합(WP6) ── 검증
-                                                        ├── WP5 렌더(아틀라스·타일 아레나)·미리보기 ──────┤
-                                                        ├── WP6 화면·UI·입력 ─────────────────────────────┤
-                                                        ├── WP7 앱 셸·데이터 로더·개발 도구·자원 검사 ────┤
-                                                        └── WP8 소리 ─────────────────────────────────────┘
+WP1 (끝남) ── WP1b (끝남) ── WP1c 시야 계약 ── WP0a 최소 실제 데이터 ──┬── WP0 가져오기 도구·가져오기 표·타일셋 ────────┐   (자원: 게임 화면 확인에 필요)
+                                                                      ├── WP2 내비·충돌(타일 충돌 포함)·공간·시야 ─────┤
+                                                                      ├── WP3 주인공·전투·무기·성장 ───────────────────┤
+                                                                      ├── WP4 적·감독·자동 조작 ────────────────────────┼── 통합(WP6) ── 검증
+                                                                      ├── WP5 렌더(아틀라스·타일 아레나·안개)·미리보기 ┤
+                                                                      ├── WP6 화면·UI·입력 ─────────────────────────────┤
+                                                                      ├── WP7 앱 셸·데이터 로더·개발 도구·자원 검사 ────┤
+                                                                      └── WP8 소리 ─────────────────────────────────────┘
 ```
 
 ### 11.1 묶음별 맡는 것·계약·완료 기준
@@ -2211,7 +2534,7 @@ WP1 (끝남) ── WP1b 계약 갱신 ── WP0a 최소 실제 데이터 ─�
   `Scenes/SceneFactory.cs` (→ WP6), `Data/Loading/LoadingModule.cs` (→ WP7). 만든 뒤 소유는 해당 묶음이다.
 - 문서와 다르게 정한 것은 11.4 에 옮겼다(코드가 정본).
 
-#### WP1b — 계약 갱신 (WP0a·WP0·WP2~WP8 앞, 혼자)
+#### WP1b — 계약 갱신 (끝남, 커밋 `02c3b8b`)
 
 v0.3 결정 때문에 바뀌는 **계약 변경** 전부를 한 묶음에 모은다. 실제 `Data/` 는 쓰지 않는다(11.3).
 
@@ -2226,7 +2549,7 @@ v0.3 결정 때문에 바뀌는 **계약 변경** 전부를 한 묶음에 모은
 | 7 | 새 `Defs/AudioDefs.cs`, `RulesDefs.cs` | `SoundDef`·`MusicDef`·`SoundBindingsDef`, `RulesDef.Audio`(`AudioRulesDef`). `RanksDef.MaxScale`(기본 1.6), `RulesDef.Enemies`(`EnemyRulesDef.TelegraphRequired` — 6.10 의 다섯 값) | 소리 데이터(6.15). 최종 크기 자르기·큰 피해 기준(기획 v0.5 8.1·12.6, 6.5) | WP4·WP7·WP8 |
 | 8 | `Data/Registry/GameDefs.cs` | `Kinds` 에 `tilesets`·`sounds`·`music`·`sound_bindings` 추가, `obstacle_kinds` 삭제, 테이블 추가·삭제 | 위 정의 | WP7 |
 | 9 | 새 `Map/IsoMath.cs`·`TileCoord.cs`·`ArenaLayout.cs`·`ArenaGrid.cs`·`ResolvedMap.cs`·`MapDataReader.cs` | 4.1 식, 배치 풀기(6.11 1~5단계), 하위 칸 성질·둘레 표시·`LayoutHash`(타일셋 정의 포함), 타일 → 월드 풀기, `MapDataReader.Read(dataDir) → MapDataResult(Maps, Tilesets, Errors)`와 로더용 `Read(IEnumerable<MapDataElement>)`(두 종류만, 타일셋 ID 연결, `extends` 금지, 중복 키 오류) — **구현과 시험까지** | WP0(그림)과 WP2(충돌)가 같은 풀기, 도구와 WP7 로더가 같은 읽기를 써야 함(1.4·6.2) | WP0·WP2·WP5·WP7 |
-| 10 | 새 `Assets/AssetFormat.cs`·`AssetManifest.cs`·`ImportTable.cs`·`SpriteMeta.cs`·`ArenaArt.cs`·`SoundIndex.cs` | 판 번호, manifest 모양(표 해시·파일 크기), **가져오기 표 8개의 모양(1.4 예 전부 — 동작별 `width`·`shadow_alpha` 덮어쓰기, 아이콘 `layers`, 소리 `vars`, `optional`, `tilesets.json`)과 "만들 이름 목록"**, 아틀라스 메타(페이지 여럿·동작별) 읽기·검사, `arena.json` record(`cells` frame 1부터)·바닥 조각 이름 규칙 `FloorChunks`, 소리 색인 — 구현과 시험까지 | 도구(쓰기)와 게임·시험(읽기)의 약속. 표 모양을 WP1b 가 다 정해야 WP0 이 곧바로 형을 바꾸러 오지 않는다(WP1c) | WP0·WP5·WP7·WP8 |
+| 10 | 새 `Assets/AssetFormat.cs`·`AssetManifest.cs`·`ImportTable.cs`·`SpriteMeta.cs`·`ArenaArt.cs`·`SoundIndex.cs` | 판 번호, manifest 모양(표 해시·파일 크기), **가져오기 표 8개의 모양(1.4 예 전부 — 동작별 `width`·`shadow_alpha` 덮어쓰기, 아이콘 `layers`, 소리 `vars`, `optional`, `tilesets.json`)과 "만들 이름 목록"**, 아틀라스 메타(페이지 여럿·동작별) 읽기·검사, `arena.json` record(`cells` frame 1부터)·바닥 조각 이름 규칙 `FloorChunks`, 소리 색인 — 구현과 시험까지 | 도구(쓰기)와 게임·시험(읽기)의 약속. 표 모양을 WP1b 가 다 정해야 WP0 이 곧바로 형을 바꾸러 오지 않는다(다음 갱신 묶음) | WP0·WP5·WP7·WP8 |
 | 11 | `Common/FacingMath.cs` | `IsoYScale = 2`(열 고르기 전 y 2배), `FromColumn` = `normalize(−sin θ, cos θ / IsoYScale)`(ToColumn 의 역), `ToVector(Compass)` 대각선 = `normalize(±2, ±1)`(4.1), 걷기 재생 배율 `FacingMath.GroundSpeed(vel)`·`AnimClock.WalkRate(vel, baseSpeed)`(4.1) | 원작 등각 방향(4.1), `--preview` 방향 돌리기·데이터 방위 | WP3·WP4·WP5 |
 | 12 | `Sim/World.cs` | `Arena`(`ArenaGrid?`), `MapSize` = 외곽 상자(`IsoMath`), **`Resolved`(`ResolvedMap`: 입구·기준점·주인공 시작을 월드 px 로 한 번 풀어 둠)**, 주인공 시작 = `Resolved.HeroStart`, `Lighting.Load(stage.Lighting, Resolved)` | 맵 모양 바뀜, 다른 묶음이 `IsoMath` 를 따로 부르지 않게(4.1) | 모두 |
 | 13 | `Sim/Contracts/WorldState.cs` | `LightingState` 종류별 빛 → 점 빛 목록(ID 로 찾기) | 5번 | WP4·WP5 |
@@ -2245,23 +2568,54 @@ v0.3 결정 때문에 바뀌는 **계약 변경** 전부를 한 묶음에 모은
   `ImportTable` 표 8개 읽기·이름 목록(묶음 × 변종 페이지), `ArenaArt.FloorChunks`, `FacingMath` 등각 열(화면 (−32, 16) → 8방향 열 1)·16방향 왕복·`ToVector(SW)`.
   이 문서(1.4, 4.1, 6.3, 6.11, 6.15, 7.6, 7.9, 11.2)의 시그니처·JSON 모양이 계약 파일에 빠짐없이 있다.
 
-#### WP0a — 최소 실제 데이터 (WP1b 뒤, WP2~WP8 앞, 짧게)
+#### WP1c — 시야 계약 갱신 (v0.5, WP1b 뒤·WP0a 앞, 혼자, 짧게)
+
+기획 v0.6 의 전장의 안개(사용자 요구 11)가 바꾸는 **계약**과, 여러 묶음이 같이 쓰는 **순수 로직**(`VisibilityField`·`FogMath`)을 한 묶음에 모은다.
+시야는 원거리 적(WP4)·생성(WP4)·그리기(WP5)·미니맵(WP6)·해시(WP7)가 다 읽으므로 WP2~WP8 이 시작하기 전에 형과 동작이 서 있어야 한다.
+그래픽·자원·실제 `Data/` 와 무관한 순수 로직이라 **구현과 시험까지** WP1c 에서 끝낸다(WP1b #9·#10 과 같은 방식). WP2 에 미루면 WP4 의 시야 조건 시험이 WP2 를 기다린다. 실제 `Data/` 는 쓰지 않는다(11.3).
+
+| # | 파일·형 | 바꾸는 것 | 이유 | 영향 |
+|---|---|---|---|---|
+| 1 | `Map/ArenaGrid.cs` | `CellFlags.BlocksSight`(새 비트 16 — 1·2·4·8 은 그대로), `BlocksSight(tx, ty)`, 격자 밖(`Outside`)은 시야를 막지 않음(`OutsideFlags` 그대로), `PropChar` 8글자 | 시야 막힘 칸(4.11·6.11) | WP2·WP5 |
+| 2 | `Map/ArenaLayout.cs` | `PropChars = ".wLWmxMX"`, `TryParseProps` 8글자, `sol_known_diffs`·`design_diffs` 의 `sol`·`use` 8글자 검사, 오류 문구. `LayoutHash` 식은 그대로(성질 글자를 이어 시야 글자도 들어감) | 성질 글자(6.11) | WP0·WP5 |
+| 3 | `Defs/RulesDefs.cs` | `RulesDef.Sight`(`SightRulesDef?` — `Edge`·`MemoryRatio`·`Fade`·`RefreshTicks`·`ViewInset`·`TouchMargin`·`RangedMargin`, 모두 `required`), 머리 주석의 파일 소유에 `rules/sight.json` | 안개 값 한 곳(6.10) | WP4·WP5·WP7 |
+| 4 | 새 `Sim/Visibility/VisibilityField.cs`·`FogMath.cs` | 4.11 의 격자·선 걷기·두 줄 벽·바뀜 값 잇기·갱신·질의(`ClearReach` 포함)·가 본 칸(`ExploredHash`), `FogMath` 함수와 그리기용 오버로드 — **구현과 시험까지** | 시야는 시뮬레이션 상태(4.11) | WP2(`VisibilityField` 소유)·WP5(`FogMath` 소유)·WP3·WP4·WP6·WP7 |
+| 5 | `Sim/World.cs` | `World.Visibility`(`VisibilityField`, 늘 있음 — 꺼지면 `Enabled = false`, 생성자는 계산하지 않음), `World.Fairness`(`FairnessCounters`: `UnseenShots`·`UnseenCharges`·`HiddenHits`·`KiteSwitches`, v0.5.1) | 4.11 "시작", 10.1 공정성 열 | 모두 |
+| 6 | `Sim/Core/BeginTickSystem.cs` | `ViewRect` 다음에 `world.Visibility.Update(world)`(첫 틱이 첫 계산). 머리 주석의 "시야 갱신" 이 이것이 됨 | 3.5 1단계 | — |
+| 7 | 게임 `App/Contracts/AppServices.cs` | `AppOptions.Reveal`(bool), `DebugNav` 주석에 `sight`, `AppOptions.Preview` 값에 `fog` | `--reveal`·`--debug-nav sight`·`--preview fog`(9절) — 파싱은 WP7 | WP5·WP6·WP7 |
+| 8 | `TestKit/TestDefs.cs`·`TestWorldBuilder.cs` | 합성 타일셋 글자 바꿈(기둥 `x...`, 걷기만 `LowWall = "ww.."`, 투사체만 `Glass = "mm.."`) + **걷기·시야 `W` 조각과 시야·투사체 `M` 조각을 따로**(두 뜻을 시험이 구별) + 시야만 막는 조각(`L`)·시야 막는 안쪽 벽(`X` 줄)·두 줄 벽(`XXXX`) 하나씩, `TestDefs.Sight`(6.10 값), 시야 켬/끔 월드·빛 반경 바꾸기 | 묶음이 시야를 실제 데이터 없이 시험 | 모두 |
+| 9 | 기존 시험 `Map/`·`Assets/` | 글자 기대값(`MapDataReaderTests` 기둥 `x...`, `ArenaLayoutTests` 의 고장 글자·`LayoutHash` 시야 글자 경우), 주석의 글자. **`Prop` 글자가 아니라 `CellFlags` 값으로 확인하게 바꿈**(`ArenaLayoutTests` 131·134줄: `LowWall` = `BlocksWalk` 만, `Glass` = `BlocksProjectiles` 만 — v0.4 글자가 남으면 실패하게). 8글자 → 플래그 표 전체 왕복(`TryParseProps` ↔ `PropChar`) 시험 | #1·#2, 6.11 "주의" | — |
+| 10 | `Sim/Entities/Enemy.cs`·`EnemyVisual` | `Enemy.TouchReach`(float)·`Enemy.BodyTop`(float) — 쓰기 WP4(생성 때), 읽기 `FogMath`·`SeenClearly`. `EnemyVisual.ForceShown`(bool) | 4.11·6.6·7.10 (v0.5.1) | WP4·WP5 |
+| 11 | `Defs/SpriteDefs.cs` | `SpriteSetDef.BodyHeight`(`body_height`, 필수 — 기존 시험 픽스처의 그림 묶음에 값 채움) | 또렷이 보임의 몸 높이(6.3, 기획 v0.6.1) | WP4·WP5·WP7 |
+
+- 하지 않는 것: `EnemyCtx.SeenClearly`·부품 시야 조건·`kite` 띠 당기기(WP4 소유, 6.6), 공정성 수 세기(WP3·WP4), `FogRenderer`·`--preview fog`(WP5), 미니맵 가림(WP6), `--reveal` 파싱·`StateHasher` 의 `ExploredHash`·`rules.sight` 없음 오류(WP7), 가져오기 도구의 세 비트 대조(WP0). 각 묶음 완료 기준에 넣었다.
+- **완료 기준**: `dotnet build -p:SkipAssetCheck=true` 통과, `dotnet test` 통과. 새 시험: 10.1 `Visibility` 행 전부(선 걷기 = 기준 구현, 꼭짓점 규칙, 두 줄 벽, 맵 밖 문 틈, 다시 계산 시점·반경은 다음 틱, 첫 계산은 첫 `BeginTick`, 가 본 칸·`ExploredHash`, 또렷이 보임 경계(몸 위 끝)·`ClearReach`, `Enabled`, 바뀜 값 잇기, 할당 0)와
+  10.1 `Map` 의 8글자·`BlocksSight`·시야 글자만 바뀐 `LayoutHash`·8글자 왕복. **`Perf` 는 따로 돌려 값을 적는다**: `DDR_RUN=Perf dotnet test --filter Category=Perf`(분류 규칙상 옵션 없는 `dotnet test` 는 건너뜀, 1.3) → 다시 계산 1회 ≤ 0.1ms 와 잰 값을 완료 보고에 적는다.
+  **옛 글자 점검**: `rg -n "\"[.WMX]{4}\"|'W'|'M'" src tests tools Data` 로 저장소의 `W`·`M` 성질 글자를 모두 찾아 줄마다 새 뜻(걷기 + 시야 / 시야 + 투사체)이 맞는지 확인한 결과를 완료 보고에 적는다(6.11 "주의").
+  이 문서(4.11 코드 조각, 6.6 `Enemy` 새 필드, 6.10 `rules.sight`, 6.11 글자 표, 9절 `--reveal`·`--preview fog`)의 시그니처·모양이 계약 파일에 빠짐없이 있다. `git diff` 에 실제 `Data/` 변경 없음.
+
+#### WP0a — 최소 실제 데이터 (WP1c 뒤, WP2~WP8 앞, 짧게)
 
 WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 실제 데이터로 돌게, 원본을 봐야 정할 수 있는 숫자만 먼저 저장소에 넣는다. 이 PC 에서 한다(원본 읽기만).
 
 - **하는 것**: 시제품(`d1map probe`, `d1conv scan` — 스크래치)으로 diabdat 를 읽어 값을 적는다. 도구 본체(WP0)는 아직 없어도 된다 — 나중에 WP0 도구의 성질 대조·메타 대조가 같은 값을 다시 확인한다.
   - `Data/tilesets/l1.json`: 단계 1 맵이 쓰는 메가타일의 번호(`floor`·`borders`·`gates`·`pieces`)와 `props`·`sol_known_diffs`(6.11). 문 끝 조각은 견본 그림으로 고른다.
+    v0.5: 성질은 8글자로 **시야 비트까지** 원본에서 읽어 적는다 — 뒷벽 1·2·모서리·문 끝 조각의 시야 막힘, 아치 보정 칸의 시야(기획 열린 질문 22).
+    v0.5.1: 시제품 `d1map probe` 의 출력은 **`sol` 값(또는 `sol & 7`) 그대로** 받아 6.11 표로 바꿔 적는다 — 시제품이 v0.4 의 4글자(`.WMX`)를 내면 그 글자를 옮기지 않는다(`W`·`M` 뜻이 바뀌어 잘못된 시야 비트가 된다).
+  - `Data/rules/sight.json`(v0.5): 6.10 의 값 그대로(기획 23절 "정한 수치"). 원본 유래 값이 아니고 첫 판일 뿐이다 — 그 뒤 소유는 WP5.
   - `Data/maps/cathedral_arena.json`: 배치·입구·기준점·주인공 시작(6.11 예 값, 칸 중심 규칙).
   - `Data/sprites/monsters.json`·`hero.json` 의 **단계 1 그림 묶음**(기획 14.1 의 단계 1 적 5종 + 주인공): 프레임 수·방향·칸은 `scan` 값, 이벤트 프레임·프레임 시간은 원작 동작 값(출처 주석, 1.4).
 - **소유**: `tilesets/` 는 WP0a 뒤에도 WP0. `maps/`·`sprites/` 는 WP0a 가 첫 판을 쓰고 **WP5 로 넘긴다**(WP5 가 미리보기로 기준점·입구·`origin` 을 맞춘다, 11.3). WP0a 는 한 담당이 혼자 한다(WP0 담당 권장).
-- **완료 기준**: `dotnet test` 통과(`MapDataReader` 로 실제 두 파일을 읽어 오류 0, `Expand` 성공, 13.5-4 배치 검사 통과), 세 파일의 원본 유래 값마다 출처 주석, `git diff` 에 원작 바이트·덤프 없음(성질 표 키 = 타일셋이 이름 붙인 번호, 13.5-12).
+- **완료 기준**: `dotnet test` 통과(`MapDataReader` 로 실제 두 파일을 읽어 오류 0, `Expand` 성공, 13.5-4 배치 검사 통과), 세 파일의 원본 유래 값마다 출처 주석 — **원문 문자열 시험 `Data/SourceCommentTests`(6.14 13.5-16, 기본 분류)를 WP0a 가 써서 통과**,
+  `git diff` 에 원작 바이트·덤프 없음(성질 표 키 = 타일셋이 이름 붙인 번호, 13.5-12).
+  v0.5: 실제 `cathedral_arena` 로 만든 `VisibilityField` 에서 주인공 시작 자리의 시야가 방 안을 덮고 둘레 벽 뒤 맵 밖은 문 틈 쪽만 보임(시험 하나, 기둥이 `x` 면 기둥 뒤도 보임).
   단계 3 의 L2·`catacombs_arena` 는 WP0a 범위가 아니다(그때까지 WP2 는 합성 맵).
 
 #### WP0 — 가져오기 도구 (WP0a 뒤, 다른 묶음과 동시)
 
 - **맡는 것**: `tools/DiabloAssetImporter/**`(`Table/` 포함), `tools/import-all.ps1`, `tests/DiabloAssetImporter.Tests/**`, 테스트 `Assets/ImportNamesTests.cs`(13.5-10 — ① 기본, ② `Integration`),
   `Data/tilesets/*.json`(번호·성질 표 — 원본으로 확인하는 묶음이라), `src/DiabloDefenceRemastered/Assets/README.md`, `README.md` 의 자원 절·제3자 고지. `tools/import-assets.ps1` 은 고치지 않는다.
-- **계약**: 1.4 의 명령·종료 코드·출력 폴더·manifest·메타·소리 색인(Core `Assets/` 형), 13.5-10 을 만족하는 표, 타일셋 성질 표 = 원본 SOL(+ 알려진 차이). 맵 정의는 Core `MapDataReader` 로 읽고
+- **계약**: 1.4 의 명령·종료 코드·출력 폴더·manifest·메타·소리 색인(Core `Assets/` 형), 13.5-10 을 만족하는 표, 타일셋 성질 표 = 원본 SOL(+ 알려진 차이) — **v0.5: bit0·bit1·bit2 세 비트**(1.4 성질 대조), 단계 3 의 L2 협로 벽 시야 비트 포함. 맵 정의는 Core `MapDataReader` 로 읽고
   `ArenaLayout.Expand` 로 펼친다(직접 파싱·펼치기를 하지 않는다). 굽기 결과가 바뀌는 변경은 `AssetFormat.Version` 을 올린다(1.4 캐시). 부록 A 의 형식 규칙을 따른다.
 - **단계**: 1 = 몬스터 5종 묶음·변종, 주인공 한 벌, 무기 3종 마법·아이콘, L1 타일셋·아레나. 2 = 나머지 스테이지 1 몬스터·보스, 무기 3종, 이펙트 전부, **소리·음악**. 3 = L2 타일셋(번호 조사, 기획 열린 질문 15)·지하묘지 몬스터.
 - **완료 기준**: 도구 시험 통과(10.1 `DiabloAssetImporter.Tests` — 합성 바이트·시험이 만든 MPQ, 결정론·캐시·실패 시 manifest 없음).
@@ -2272,8 +2626,9 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 
 #### WP2 — 길찾기·충돌·공간
 
-- **맡는 것**: Core `Geometry/`, `Nav/`(`ArenaCollision`, `Navigator`, `PlacementResolver`, `NavConst`, `Validation/` = 13.5-4(도형 거리 쪽),5,6 검사기, `NavModule.cs`), `Spatial/`, `Sim/Movement/`(+ `Enemy.Nav.cs` 조각, `Invariants/`).
-  테스트 `Geometry/ Nav/ Spatial/ Movement/ Invariants/`.
+- **맡는 것**: Core `Geometry/`, `Nav/`(`ArenaCollision`, `Navigator`, `PlacementResolver`, `NavConst`, `Validation/` = 13.5-4(도형 거리 쪽),5,6 검사기, `NavModule.cs`), `Spatial/`, `Sim/Movement/`(+ `Enemy.Nav.cs` 조각, `Invariants/`),
+  `Sim/Visibility/VisibilityField.cs`(v0.5 — WP1c 가 구현·시험까지 끝낸 뒤 소유만 넘겨받는다. 고칠 일은 성능·버그뿐이고 질의 뜻을 바꾸면 계약 변경, 11.3. 같은 폴더의 `FogMath.cs` 는 WP5 — 그리기 규칙).
+  테스트 `Geometry/ Nav/ Spatial/ Movement/ Invariants/ Visibility/`.
 - **계약**: `ArenaCollision.Build(ArenaGrid) → IReadOnlyList<CollisionShape>`(4.2 — `CollisionShape` 는 WP1b 계약 형, `INavDebugView` 로 WP5 가 읽는다. `Geometry/` 다각형은 이것에서 변환), `NavWorld.Build(World) : INavWorld`(외곽 상자 격자·바깥 마름모 경계), `SpatialHash : ISpatialQuery`, `ObstacleIndex`, `Navigation / Locomotion / Collision / SpatialRebuild` 시스템,
   이동 의도 → 희망 속도(4.4 끝), `Enemy.MoveBlockedTime`·`Hero.TouchingCount` 쓰기, `INavDebugView`(충돌 도형·격자·필드·경로·하위 칸 성질), `InvariantChecker`(`SpatialRebuild` 안에서 60틱마다, 10.1).
 - **완료 기준**: 테스트 통과(무작위 A* 최적성, 해시 = 전수·넘침, **실제 맵의 길 검사·전수 성질 — 자원 없이**(단계 1: WP0a 가 넣은 `cathedral_arena`), 겹친 점, 둘레 도형이 `phase_through` 를 막음, `ArenaCollision` 의 평행사변형 합집합 = 막힌 칸 합집합(점 표본)). 그래픽 없는 측정: 적 500 을 맵에 흩어 플로우로 주인공에게 모으는 3,600틱이
@@ -2287,6 +2642,8 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 - **계약**: 발사 패턴 6종·조준 5종·무기 효과 부품 등록, `DamageMath`, `HeroControl`·`Weapons`·`Projectiles`·`Hazards`·`DamageResolve`·`DeathRewards`·`Pickups` 시스템,
   `ICombatSpawner`·`IProgression`·`IHostileQuery`(MVP: 주인공만) 구현, `RunStats` 채우기, `IRunSetup`(`--god`·`--level`·`--weapons`·`--passives`).
   v0.3: 무기 `cast_clip` 재생, 투사체 `Vel` 에 그림 방향(도는 구체는 접선), **`ProjectileDef.OnEnd` 장판**, 신호 `WeaponFired`·`EnemyHit`·`HeroHurt`·`HeroDied`·`PickupCollected`·`PickupDropped`(7.9).
+  v0.5: 무기 조준은 시야를 보지 않는다(기획 5.1 — 바꾸기로 하면 조준 후보 거르기에 `World.Visibility.IsVisible` 하나, 기획 열린 질문 23).
+  v0.5.1: 공정성 수 세기 — `ICombatSpawner` 의 적 진영 투사체 생성에서 `Fairness.UnseenShots`, `DamageResolve` 의 주인공 피해에서 `Fairness.HiddenHits`(10.1 공정성 열). 피해 요청에 원인 종류(적 본체 / 투사체 / 장판 / 예고 패턴)가 있어야 가른다.
 - **완료 기준**: 테스트 통과. 그래픽 없는 시나리오(`Scenario`): 해골 50 마리 + 매직 미사일 Lv8 로 60초 → 처치·경험치·레벨업 대기가 생김(`TestKit` 공간 질의로 먼저, WP2 가 들어오면 실제 해시로도).
   `on_end` 시험(맞음·사거리 끝·장애물 세 경우 모두 장판 하나), 신호 시험(무기 발동 한 번에 `WeaponFired` 하나, 피격 무적 중 `HeroHurt` 없음).
 
@@ -2298,32 +2655,42 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   `World.ViewRect` 를 쓰는 생성 위치, `AutoplayPolicy`(`Move(World) → Vector2`, `PickCard(offer) → int` — 메뉴 넘김은 WP6), `IRunSetup`(`--start-at`·`--stress`·`--freeze-ai`), `Visual`·`CorpseSpawned` 값 채우기,
   `World.Lighting`·`BossBars`·`Banner` 쓰기.
   v0.3: 적 17종 + 보스 4 데이터(그림 묶음·변종, 6.13), 새 부품 `panic_on_ally_death`, `phase_through.alpha_over`, 신호 `EnemyAttack`·`EnemySpecial`·`EnemyShot`·`BossArrived`·`BossPhase`·`ElitePack`, 단계 1 판 스테이지(6.12).
+  v0.5: `EnemyCtx.SeenClearly` 와 `shoot_projectile`·`kite`·`charge` 의 시야 조건(6.6), 13.5-15 검사기(`kite` 띠 최대, 6.14), `include_bosses: false` 확정(데이터에 `true` 없음 — v0.5.1 경고 검사).
+  v0.5.1: `SeenClearly` 의 몸 위 끝(`Enemy.BodyTop` = `body_height` × 크기), `kite` 띠 당기기(`ClearReach`, 6.6), `Enemy.TouchReach`·자폭 점화 중 `Visual.ForceShown`, `Fairness.UnseenCharges`·`KiteSwitches` 세기,
+  `--start-at` 이 지난 `light_change` 를 차례로 적용. 일반 생성 자리의 "보이는 후보 버림" 은 하지 않는다(6.12).
+  `AutoplayPolicy` 는 `World.Visibility` 를 읽지 않는다(9절).
 - 실제 맵·그림 묶음 정의는 WP0a(타일셋·맵·단계 1 그림 묶음)와 WP5 가 낸다. WP4 는 그 파일을 고치지 않고, 단계 1 판 적 정의는 WP0a 의 그림 묶음 ID 를 가리킨다.
   부품 시험은 처음부터 `TestKit` 합성 맵·합성 그림 묶음으로 한다(실제 데이터를 기다리지 않는다).
 - **완료 기준**: 테스트 통과(부품·생성기·전수 연기 시험·변형 픽스처·결정성 30초, 오라·함성이 `include_bosses: false` 면 보스에 안 걸림,
-  우두머리 썩은 시체 최종 크기 1.6·반경 22(6.5), 실제 적·보스 정의가 13.5-13 예고 기준을 통과 — 기획 12.6 "지금 표의 패턴은 모두 이 기준을 지킨다", 목표 문 행진이 진입점에서 풀림). 단계 1: 적 5종과 `stage_cathedral`(단계 1 판) 시간표가 10분 돈다
-  (`Scenario`: 자동 조작 + `--god`, 예외 없음, 불변식 기준, 상한 무한 월드의 생성 수 기준 — 10.1 `Director`). 마름모 모서리에 주인공을 둔 생성 시험에서 입구 대체 비율을 로그로 낸다(R23).
+  우두머리 썩은 시체 최종 크기 1.6·반경 22(6.5), 실제 적·보스 정의가 13.5-13 예고 기준을 통과 — 기획 12.6 "지금 표의 패턴은 모두 이 기준을 지킨다", 목표 문 행진이 진입점에서 풀림,
+  v0.5: 또렷이 보이지 않는 궁수는 쏘지 않고 다가옴·돌진 시작 조건(10.1 `Enemies` — v0.5.1: `L` 줄·낮춘 반경·대조군으로), 정위 궁수 떨림 시험, 함성 대상 시험, 실제 스테이지가 13.5-15 를 통과). 단계 1: 적 5종과 `stage_cathedral`(단계 1 판) 시간표가 10분 돈다
+  (`Scenario`: 자동 조작 + `--god`, 예외 없음, 불변식 기준·공정성 열 0, 상한 무한 월드의 생성 수 기준 — 10.1 `Director`), 공정성 합성 맵 3분 `Scenario`. 마름모 모서리에 주인공을 둔 생성 시험에서 입구 대체 비율을 로그로 낸다(R23).
+  `rules/sight.json` 의 시뮬레이션 값(`edge`·`view_inset`·`refresh_ticks`·`ranged_margin`)이 바뀌면 `Scenario`·13.5-15 를 다시 돌린다(6.10).
 
 #### WP5 — 렌더·그림·미리보기
 
 - **맡는 것**: Core `Art/`(`PngHeader`, `ArtModule.cs` = 메타·PNG 대조 검사기 등록), 게임 `Loading/`(텍스처·아틀라스·변종·색 키·스테이지별 미리 읽기·커서·글꼴),
-  `Rendering/`(가상 화면·카메라·층·y 정렬·`ArenaRenderer`·빛·표시 이펙트(`intro`·`scatter`)·시체·피해 숫자·`DebugNavOverlay`), `Scenes/PreviewScene.cs`, `Rendering/RenderServices.cs`.
-  Data `sprites/`, `effects/`, `maps/`(좌표·배치 맞추기 포함 — `maps/`·`sprites/` 의 첫 판은 WP0a 가 쓰고 넘긴다). 테스트 `Art/`.
+  `Rendering/`(가상 화면·카메라·층·y 정렬·`ArenaRenderer`·빛·**안개 `FogRenderer`(v0.5, 7.10)**·표시 이펙트(`intro`·`scatter`)·시체·피해 숫자·`DebugNavOverlay`), `Scenes/PreviewScene.cs`, `Rendering/RenderServices.cs`.
+  Core `Sim/Visibility/FogMath.cs`(v0.5.1 — WP1c 가 구현한 뒤 넘겨받는다. 그리기 규칙이라 WP5·WP6 이 바꿀 일이 생기면 여기서. 시그니처는 계약, 11.3), `Scenes/PreviewScene.cs` 의 `fog` 장면.
+  Data `sprites/`, `effects/`, `maps/`(좌표·배치 맞추기 포함 — `maps/`·`sprites/` 의 첫 판은 WP0a 가 쓰고 넘긴다), `rules/sight.json`(v0.5, 첫 판 WP0a — 시뮬레이션 값 줄은 메인 세션 합의, 6.10). 테스트 `Art/`.
 - **계약**: `WorldRenderer.Draw(World, RenderContext, float alpha)`, `FxSystem.Consume(PresentationBuffer, int stageTick)`, `IArtServices.Sprite`·`DrawFrame`(WP1b #17), `UiCanvas`(가상 좌표 → 창 좌표, 글꼴 배율),
   4층·0b·5층 벽 무리 나누기와 정렬 키(7.4), 예고 테두리 두 번 그리기(7.3), 유닛 최소 밝기(7.7), `wall_fade`(7.6),
+  **안개(v0.5)**: `LightRT` 순서 ①~④(7.7 — v0.5.1: 값은 알파 채널, `FogBlend` 표), 칸 값 텍스처·`FogRT`·`MemRT`·합치기, `FogMath` 알파로 대상 숨기기(그리기용 오버로드, 7.10), `--reveal`, `--debug-nav sight`, `--preview fog`·`FOG` 로그 줄·`_light.png`,
   `RenderContext.ScreenToWorld` 구현 — WP6 이 HUD·마우스 이동에 쓴다. 기획 열린 질문 7 의 기준점·입구 칸·크기 배율, 10(혼합), 11(그림자 값 — 표는 WP0 에 요청), 18(늘린 그림)을
   `--preview`·`--debug-nav` 로 맞춰 데이터에 반영.
 - **완료 기준**: `Art` 테스트 통과. `--preview sprites/enemies/effects/tiles/blend` 캡처를 10.2 의 "통과 =" 문장으로 검증 담당이 판정(못 한 것은 "판정 못 함").
   `--stress 300 --freeze-ai` 장면에서 4.9 표의 렌더 기준 — **렌더 CPU p99 와 `draw_calls` ≤ 600 둘 다 단계 1 완료 조건**(단계 1 은 `stage_cathedral`, 10.3). 스테이지 시작 로그의 `vram_mb` 를 R7 에 적는다.
-  10.2 의 "뒷벽·앞 턱·아치"·"예고·빛" 행.
+  10.2 의 "뒷벽·앞 턱·아치"·"예고·빛" 행. v0.5: 10.2 "안개 고정 장면"·"안개 흐름"·"안개 재현" 행(안개는 기획 14.1 단계 1 범위 — 고정 장면의 빛 값 대조 ①·⑤·⑥ 포함),
+  렌더 기준은 `--stress 300 --freeze-ai` 를 `--reveal` 과 안개 켬으로 두 번 재 최악 추정으로(10.3). `rules/sight.json` 의 시뮬레이션 값 줄을 바꾸면 WP4 `Scenario`·13.5-15 를 다시 돌린다(6.10).
 
 #### WP6 — 화면·UI·입력, 통합
 
 - **맡는 것**: 게임 `Scenes/`(Preview 제외, `SceneFactory.cs`·`AutoplayDriver` 포함), `UI/`, `Input/`. 통합 때 `PlayScene` 완성과 `Integration` 시험을 기본 분류로 옮기는 일(시험 파일의 분류 표시만 고침 — 내용은 WP7 과 합의).
-- **계약**: `KeyboardMouseSource : IInputSource`(WASD·방향키·왼쪽 버튼 이동, 기획 3절 키), 씬 9개, HUD(미니맵은 가져온 그림), 레벨업·상자·일시정지·설정(**음량 셋**)·결과, 저장 연동(WP7 `SaveStore`),
+- **계약**: `KeyboardMouseSource : IInputSource`(WASD·방향키·왼쪽 버튼 이동, 기획 3절 키), 씬 9개, HUD(미니맵은 가져온 그림 — v0.5: 가 본 칸만 보이게 가림·점 규칙, 8.2. 기획 14.1 단계 2), 레벨업·상자·일시정지·설정(**음량 셋**)·결과, 저장 연동(WP7 `SaveStore`),
   자동 조작 메뉴 넘김(`AutoStep(IAutoplayDriver)`), `SCENE`·`RESULT` 로그 문장, 레벨업 오버레이를 같은 앱 틱에 올림(3.3).
   v0.3: 씬별 음악·UI 소리(`IAudioServices`), 일시정지에서 `SetPaused`, **`PlayScene` 프레임 끝 소비 순서 `FxSystem.Consume → Audio.Consume → Presentation.Clear`**, 자원 없음 안내 화면(DataError 화면 재사용, 1.4 끝).
 - **완료 기준**: `--autoplay --seed 1 --quit-after 30` 이 타이틀 → 선택 → 플레이까지 사람 입력 없이 감(`SCENE` 로그 세 줄). 캡처 4장(타이틀, 플레이 HUD, 레벨업 창, 결과)을 10.2 문장으로 판정.
+  단계 2: 10.2 "미니맵 기억" 행(v0.5.1 — WP5 의 단계 1 안개 행에서 옮김).
   통합 뒤: 실제 데이터 엄격 시험 통과, 10.2 "단계 끝" 행 통과. 키보드로 한 판(사람)·소리를 귀로 듣기는 "동작 확인 못 함" 으로 따로 적는다.
 
 #### WP7 — 앱 셸·데이터 로더·개발 도구·자원 검사
@@ -2334,6 +2701,8 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 - **계약**: `DataLoader.Load(dir, registry, validators, options) → (GameDefs, errors)`(새 종류 `tilesets`·`sounds`·`music`·`sound_bindings`, `PhaseDef.Patterns` 채우기), `--validate-data`, `FrameLoop`(3.2), `DevRunner`(캡처·`--quit-after`·`--timeout`·`--exit-on-result`·종료 코드),
   9절 옵션 파싱(`--mute`·`--sound`·`--sound-device` 포함), 저장 보호 규칙(9절), 로그 첫 줄·`EXIT` 줄, `GraphicsProfile.HiDef`, SDL·`ALSOFT_DRIVERS` 환경 변수와 장치 초기화 실패 시 다시 만들기(7.9),
   **시작 자원 검사**(1.4 끝 ①~⑤, 종료 코드 5, 캡처만 있으면 안내 화면 캡처), `DataLoader` 가 `tilesets`·`maps` 를 `MapDataReader` 로 받음(6.2), GameApp 이 `AudioServices.Create` 를 부름.
+  v0.5: `--reveal`·`--debug-nav sight` 파싱(`AppOptions.Reveal`), `StateHasher` 에 `Visibility.ExploredHash`(가 본 칸 집합, 3.4·4.11 — v0.5.1), "스테이지가 있는데 `rules.sight` 없음" 오류·13.5-15 의 380·화면 반폭 쪽(6.14).
+  v0.5.1: `--preview fog` 파싱, 저장 보호 판정에 `--reveal`·`--god`·`--level`·`--weapons`·`--passives`(9절), 캡처 때 `FOG` 로그 줄(값은 WP5 렌더가 넘김)과 `_light.png` 저장 경로.
 - **완료 기준**: 테스트 통과(로더 규칙·뒤섞은 파일 순서·옵션 파싱·페이즈 누적 풀기). 게임 실행: 빈 씬으로 창이 뜨고 `--quit-after 2 --capture x.png --capture-at 1` 이 PNG 를 쓰고 종료 코드 0(`Start-Process -Wait -PassThru`),
   가장 큰 텍스처(4096 폭 아틀라스, 550×3240)의 만들기 성공(`HiDef` 확인), 개발 옵션 실행 전후 사용자 `save.json` 시각 같음, `--background` 실행 전후 포그라운드 창 같음,
   `-p:DdrAssetDir=<빈 폴더> -p:SkipAssetCheck=true -o <임시>` 로 만든 exe 의 자동 실행이 종료 코드 5 와 없는 파일 목록 로그, 같은 exe 의 캡처만 준 실행이 안내 화면 PNG + 종료 코드 5(10.2),
@@ -2364,7 +2733,8 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 | | `Intent`(`MoveIntent`), `MoveSpeed`, `PassThroughObstacles` | WP4 | WP2 | 〃 |
 | | `MoveBlockedTime` | WP2 | WP4 | 〃 |
 | | `KnockbackVel`, `KnockbackTime`, `HitFlashTime` | WP3 | WP2(적분), WP5 | 〃 |
-| | `Facing`, `Anim`(`AnimClock` 상태), `Visual`(`EnemyVisual`) | WP4 | WP5 | 〃 |
+| | `Facing`, `Anim`(`AnimClock` 상태), `Visual`(`EnemyVisual` — v0.5.1 `ForceShown`) | WP4 | WP5, `FogMath` | 〃 |
+| | `BodyTop`, `TouchReach`(v0.5.1, 6.6) | WP4(생성 때) | WP4(`SeenClearly`), `FogMath`(WP5·WP6·계측) | 〃 (WP1c) |
 | | `Buffs`(`BuffSlots`) | WP3(장판 둔화), WP4(오라·함성) — 공통 도우미로만 | WP4 | 〃 |
 | | `Nav`(`NavAgentState`) | WP2 | — | `Sim/Movement/Enemy.Nav.cs` |
 | | `NextHitBySlot[4]` | WP3 | — | `Sim/Combat/Enemy.Combat.cs` |
@@ -2384,7 +2754,9 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 | | `Options`(`RunOptions`) | `ModuleContext.ApplyRunSetups` | 모두(`--god` 등) | 〃 |
 | | `Nav : INavWorld`, `Spatial : ISpatialQuery` | WP2(모듈이 넣음) | 모두 | 〃 |
 | | `Hostiles : IHostileQuery`, `Spawner : ICombatSpawner`, `Progression : IProgression?`, `RunStats` | WP3(모듈이 넣음) | WP4, WP6 | 〃 |
-| | `Lighting`(`LightingState`: 주변광·어둠·주인공 빛·점 빛), `BossBars`, `Banner`(`BannerState`) | WP4 | WP5, WP6(`Banner` 는 HUD 문구의 유일한 출처) | 〃 |
+| | `Lighting`(`LightingState`: 주변광·어둠·주인공 빛·점 빛), `BossBars`, `Banner`(`BannerState`) | WP4 | WP5, WP6(`Banner` 는 HUD 문구의 유일한 출처), `Visibility`(반경) | 〃 |
+| | `Visibility`(`VisibilityField`, v0.5 — 4.11) | `BeginTick` 만(WP1c 구현, 그 뒤 WP2) | WP4(사격·돌진), WP3(공정성 수 세기만), WP5(안개), WP6(미니맵), WP7(해시). WP3 조준·WP8 소리·`AutoplayPolicy` 는 읽지 않음 | 〃 (형은 `Sim/Visibility/`) |
+| | `Fairness`(`FairnessCounters`, v0.5.1 — 10.1 공정성 열) | WP3(`UnseenShots`·`HiddenHits`), WP4(`UnseenCharges`·`KiteSwitches`) | WP2(`InvariantChecker` 가 열로 냄), WP7(로그) | 〃 (WP1c) |
 | | `Presentation.Cues`(`CueEvent`, 7.9) | WP3, WP4(신호를 내는 단계) | WP8 | `Sim/Contracts/Presentation.cs` (WP1b) |
 | | 감독 상태(누적기·다음 무리·정예 판정·이벤트 위치) | WP4 | — | `Sim/Director/World.Director.cs` |
 | | 무기·성장 내부 상태 | WP3 | — | `Sim/Weapons/World.Combat.cs` |
@@ -2393,14 +2765,17 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 
 - WP1b 가 끝나기 전에는 다른 묶음이 코드를 쓰지 않는다. WP1b 는 계약을 이 문서 그대로 적는다. 이 문서에 없는 한 묶음 상태는 그 묶음이 자기 조각에 둔다.
 - 계약(WP1·WP1b 파일) 형을 바꿔야 하면 메인 세션이 바꾸고 알린다. 다른 묶음은 계약 파일을 직접 고치지 않는다. 자기 조각 파일에 필드를 더하는 것은 자유다.
-  WP2~WP8 진행 중에 생기는 계약 변경은 모아서 다음 갱신 묶음(WP1c)으로 낸다 — 한 번에 하나씩 흩어 고치지 않는다.
+  WP2~WP8 진행 중에 생기는 계약 변경은 모아서 다음 갱신 묶음(WP1d)으로 낸다 — 한 번에 하나씩 흩어 고치지 않는다.
+  (v0.5 의 WP1c 는 기획 v0.6 의 시야 계약을 WP2~WP8 시작 전에 넣는 묶음이다. WP1b 와 같은 규칙으로 혼자 하고, 끝나기 전에는 다른 묶음이 코드를 쓰지 않는다.)
 - 한 묶음만 구현·사용하는 형은 그 묶음 소유다(`IFirePattern`·`ITargeting`·`WeaponStats` → WP3, 부품 계약·`PartSlot`·`ActionState`·`MoveOrder` → WP4, `Navigator`·`NavAgentState` → WP2,
   `SoundMixer` → WP8). WP1 은 레지스트리 등록 지점만 가진다.
 - 부품 매개변수 record 와 그 JSON 이름은 부품을 만드는 묶음이 정하고, 같은 묶음이 그 데이터 파일을 쓴다. WP1·WP1b 는 실제 `Data/` 를 쓰지 않는다.
   예외 하나: `ground_hazard` 부품 매개변수는 Defs 의 `GroundHazardDef`(투사체 `on_end` 와 같은 모양, WP1b)를 그대로 쓰거나 같은 키 이름을 쓴다(WP4) — 같은 장판이 두 모양이 되지 않게.
   그래서 다른 묶음이 정한 매개변수 이름과 데이터가 어긋나 `Disallow` 오류가 한꺼번에 터지는 일이 없다.
-- `rules` 는 파일을 나눠 쓴다(6.1): WP3 `rules/hero.json`, WP4 `rules/enemies.json`, WP8 `rules/audio.json`. 데이터 파일 하나를 두 묶음이 고치는 일이 없다.
-- **최소 실제 데이터 선행**(v0.4): `tilesets/l1.json`·`maps/cathedral_arena.json`·단계 1 그림 묶음은 WP0a 가 WP2~WP8 시작 전에 낸다(11.1). 그 뒤 소유는 아래 그대로다.
+- `rules` 는 파일을 나눠 쓴다(6.1): WP3 `rules/hero.json`, WP4 `rules/enemies.json`, WP5 `rules/sight.json`(v0.5, 첫 판 WP0a), WP8 `rules/audio.json`. 데이터 파일 하나를 두 묶음이 고치는 일이 없다.
+  단 `rules/sight.json` 의 **시뮬레이션 값 줄**(`edge`·`view_inset`·`refresh_ticks`·`ranged_margin`)은 WP4 규칙·해시·13.5-15 를 바꾸므로 메인 세션이 WP4 와 합의해 바꾼다(6.10 키별 소유, v0.5.1).
+- `FogMath`(v0.5.1): 구현은 WP1c, 소유는 WP5(그리기 규칙). 함수 시그니처는 WP3·WP4(계측)·WP6 이 부르므로 계약으로 보고 바꿀 때 이 절 규칙(메인 세션)을 따른다. 안의 값(보스 늘 보임·닿은 거리·흐림 띠)을 바꾸는 것은 WP5 가 한다.
+- **최소 실제 데이터 선행**(v0.4): `tilesets/l1.json`·`maps/cathedral_arena.json`·단계 1 그림 묶음(v0.5: + `rules/sight.json`)은 WP0a 가 WP2~WP8 시작 전에 낸다(11.1). 그 뒤 소유는 아래 그대로다.
   다른 묶음이 기다리지 않으려고 남의 소유 파일에 임시 맵·그림 정의를 만들지 않는다 — 실제 데이터가 아직 없는 시험은 `TestKit` 합성 정의로 한다.
 - 데이터 파일 소유(v0.3): 타일셋 `tilesets/` = WP0(번호·성질은 원본으로 확인), 맵 `maps/` = WP5(배치·입구·기준점은 미리보기로 맞춤), 그림·이펙트 `sprites/`·`effects/` = WP5,
   소리 `audio/`·`rules/audio.json` = WP8(연결 표가 다른 종류의 ID 를 가리키지만 그 파일들은 고치지 않는다), 가져오기 표 `Table/` = WP0.
@@ -2504,10 +2879,12 @@ AppServices.Render (RenderContext?)    // GameApp 이 그래픽 장치 뒤에 �
 | R21 | 소리 장치 없음·8비트 WAV·긴 음악 메모리·MonoGame 이 늘 장치를 엶 | 시작 실패·소리 없음·검증 실행이 스피커를 씀 | 가져오기에서 16비트로 변환(7.9), 개발 옵션 실행은 `ALSOFT_DRIVERS=null`, 장치 초기화 예외는 null 드라이버로 다시 만들기, 못 열면 무음으로 계속 + 로그, 음악은 두 곡까지·읽기는 작업 스레드 |
 | R22 | 자원이 낡음(형식 판 올림, 가져오기 표 바뀜, 굽기 코드 바뀜, 가져오기 중간 실패 뒤 섞인 출력) | 낡은 `Assets` 로 조용히 이상하게 그려짐 | 캐시 키 = 도구·Core 어셈블리 해시, 굽기 결과가 바뀌면 `AssetFormat.Version` 올림(WP0 규칙), 시작 검사 ①~⑤(판·표 해시·이름·파일 크기·`layout_hash`(타일셋 포함)) → 안내 화면, 원본 manifest 가 없으면 빌드가 출력 manifest 를 지움(1.3·1.4) |
 | R23 | 마름모 맵에서 생성 띠의 큰 부분이 맵 밖 | 주인공이 모서리에 있으면 12번 시도가 자주 실패 → 입구로만 들어와 흐름이 바뀜 | WP4 가 모서리 주인공 시험에서 입구 대체 비율을 잼. 높으면 띠 후보를 "띠 ∩ 맵 경계 상자" 에서만 뽑거나 시도 수를 늘린다(`rules.spawn.tries`) |
-| R24 | 저작물·사용 조건(Blizzard 자원, DevilutionX "Sustainable Use License") | 공개 저장소에 올라가면 문제 | ① 자원: `.gitignore`(`Assets/*`, `out/`, `logs/`, 원작 형식 확장자), 도구 출력 경로가 저장소 안 무시되지 않는 곳이면 거절(1.4), 캡처·견본·로그는 저장소 밖에(9절·10.2, `docs/media` 포함), 도구 시험 픽스처는 시험 인코더가 만듦(원본에서 자른 바이트 금지), `audit` 명령(추적 파일 해시를 출력·원본 항목 해시와 대조 + 확장자 목록)을 WP0 완료 기준에. ② DevilutionX: 도구·게임이 `*.tsv`·DUN 을 읽거나 저장소에 넣지 않는다. **원작 게임 동작을 재현하는 사실 수치만**(칸 폭·프레임 간격·타격 프레임·SOL 보정 칸·아치 덧그림 번호표) 우리가 확인해 손으로 적고, 파일·코드·표 구조·주석은 옮기지 않으며, 값마다 출처 주석(`원본 확인`/`DevilutionX 참고`)을 남긴다(1.4). 성질 표 키 ⊆ 쓰는 메가타일 검사가 SOL 덤프를 막는다(6.11). 수치 사실을 옮기는 범위의 최종 판단은 사용자(기획 열린 질문 19). 배포할 일이 생기면 다시 정함 |
+| R24 | 저작물·사용 조건(Blizzard 자원, DevilutionX "Sustainable Use License") | 공개 저장소에 올라가면 문제 | ① 자원: `.gitignore`(`Assets/*`, `out/`, `logs/`, 원작 형식 확장자), 도구 출력 경로가 저장소 안 무시되지 않는 곳이면 거절(1.4), 캡처·견본·로그는 저장소 밖에(9절·10.2, `docs/media` 포함), 도구 시험 픽스처는 시험 인코더가 만듦(원본에서 자른 바이트 금지), `audit` 명령(추적 파일 해시를 출력·원본 항목 해시와 대조 + 확장자 목록)을 WP0 완료 기준에. ② DevilutionX: 도구·게임이 `*.tsv`·DUN 을 읽거나 저장소에 넣지 않는다. **원작 게임 동작을 재현하는 사실 수치만**(칸 폭·프레임 간격·타격 프레임·SOL 보정 칸·아치 덧그림 번호표) 우리가 확인해 손으로 적고, 파일·코드·표 구조·주석은 옮기지 않으며, 값마다 출처 주석(`원본 확인`/`DevilutionX 참고`)을 남긴다(1.4). 성질 표 키 ⊆ 쓰는 메가타일 검사가 SOL 덤프를 막는다(6.11). 수치 사실을 이 범위로 옮기는 것은 **사용자가 확인했다**(v0.5, 기획 열린 질문 19 닫힘·기획 19.1). 배포할 일이 생기면 다시 정함 |
 | R25 | `Assets` 복사 양(출력 폴더마다) | 빌드가 느림·디스크 | `PreserveNewest`. 느리면 하드 링크 복사를 켬(1.3). 다른 출력 폴더(`-o`) 빌드가 잦으면 잰 뒤 판단 |
 | R26 | MPQ 를 여러 스레드가 같이 읽음 | 바이트가 섞여 그림·소리가 깨지거나 실행마다 다름(캐시 키도 깨진 바이트로) | 원본 읽기는 주 스레드에서 차례로 `byte[]`, 병렬은 해독·굽기·압축만(1.4), 시험 `--jobs 1` = `--jobs 8` |
 | R27 | 핀드(장애물 통과)가 둘레 벽 칸 안으로 들어감 | 벽에 가려 안 보이고 투사체로 못 맞히는 자리에서 공격 | 둘레 도형 `IsBoundary` 는 통과 유닛도 막음(4.2·4.7) |
+| R28 | 안개를 화면 공간 가림(반해상도 `FogRT`)으로 합침(v0.5) | 벽 윗부분·유닛 머리가 뒤 칸의 화면 자리에 걸쳐 검게 잘림, 경계가 번지거나 칸 계단이 보임 | 벽은 자기 칸 값, 그리는 대상은 자기 알파로 최댓값 덧그림(7.10 3·4단계) — v0.5.1: 값은 **알파 채널**에(색 채널이면 벽·적 그림 색이 곱해져 색² 로 어두워짐), 두 줄 벽은 함께 보임(4.11). 10.2 "안개 고정 장면" 의 빛 값 대조를 단계 1 완료 조건에(WP5). 남는 경우(숨은 벽이 앞으로 솟는 겹벽)는 벽 항목만 "지우기 + 더하기" 로 덮어씀(7.10). 그래도 어긋나면 원작처럼 **그리기 항목마다 자기 칸 값을 틴트로 곱하는** 길로 바꾼다(셰이더 없이 되고 땅만 투영이 남음) |
+| R29 | 시야 조건 경계에서 원거리 적이 쏘기·다가가기를 오감(띠 끝·벽 모서리·화면 위아래) | 궁수가 떨며 제자리걸음, 쏘는 수가 기획과 다름 | 빛 반경 ≥ 띠 최대 + 60(13.5-15)으로 띠 끝에서 늘 또렷이 보이게. v0.5.1: 화면 위아래는 v0.5 의 "254 > 띠 최소" 로는 정위에서 14px 창뿐이었고 몸 위 끝까지 보면 창이 없다 → `kite` 띠 당기기(기획 v0.6.1: 최대' = min(최대, L − 10), 최소' = min(최소, 최대' − 40), 띠 폭 ≥ 40 — 6.6). 시험(10.1 `Enemies` 정위 궁수 전환 수)·`kite_switches` 열(10.1)·`--debug-nav sight` 캡처로 확인 |
 
 ### 12.1 기획서와 다르게 해석·보탠 것
 
@@ -2533,16 +2910,26 @@ AppServices.Render (RenderContext?)    // GameApp 이 그래픽 장치 뒤에 �
 | 8.1·4.0 방향 | brief 4절 45° 단위 열 | 같은 열 순서, 열을 고르기 전에 화면 y 를 2배(등각 보정) | 원작 그림의 대각선은 화면 (−32, 16) 쪽이다(4.1). 미리보기로 확인, 상수 하나로 끌 수 있음 |
 | 12.7·13.1 소리 ID 자리 | 정의(무기·투사체·이펙트·그림 묶음·적·획득물)에 소리 ID | 소리 연결 표 한 곳(`sound_bindings`) + 시뮬레이션은 신호만 | 시뮬레이션이 소리를 모르게, WP8 이 다른 묶음 파일을 고치지 않게(6.15) |
 | 12.7·15 `--mute` | 개발 실행에서도 소리를 냄 / `--mute` 를 기본으로 켜는 것을 권함 | 개발 옵션 실행은 기본 무음 + 늘 출력 없는 장치(`ALSOFT_DRIVERS=null`), `--sound` 는 그 장치로 재생 경로만 켬, 실제 스피커는 `--sound-device default`(동의). 보통 실행은 소리 냄, `--mute` 로 끔 | 검증 실행이 사용자 스피커로 소리를 내지 않게(brief 7절 취지). MonoGame 이 장치를 늘 열어 "장치를 열지 않음" 은 지킬 수 없다. 무음에서도 길이 색인으로 고르기 수는 같게 센다(7.9) |
-| 10.1·10.2 낮은 턱 | 앞쪽 둘레는 낮은 턱 — 걷기만 막고 투사체는 넘어감(`blocks_projectiles: false`) | 원본 SOL 대로 앞둘레 턱도 `X`(걷기·투사체 둘 다 막힘). `W` 칸은 MVP 맵에 없음. 의도한 차이가 필요하면 `design_diffs` | diabdat 직접 확인: 메가타일 18·19·20·24 = SOL 15(4.2). 문서대로 두면 가져오기 성질 대조가 실패한다 — 기획 v0.5 10.1·10.2 가 같은 사실로 고쳤다(차이 없음) |
-| 8.2·9.5 오라·함성 대상 | 대장 오라는 해골 4종과 다른 대장에만, "다른 종에는 걸리지 않음". 보스 본체 언급 없음 | `command_aura`·`war_cry`·`buff_area` 의 `include_bosses` 기본 `false`(정의 `rank` 가 miniboss·boss 면 안 걸림), 해골왕에 `skeleton` 태그를 달지 않음 | 9:00 호위 대장 오라가 10:00 해골왕의 이동·피해를 경고 없이 올리는 일을 막음(6.5). 지휘 오라는 기획 8.2 대로 확정, 함성(`war_cry`·`buff_area`)이 보스 본체에 걸리는지는 기획 열린 질문 21 |
+| 10.1·10.2 낮은 턱 | 앞쪽 둘레는 낮은 턱 — 걷기만 막고 투사체는 넘어감(`blocks_projectiles: false`) | 원본 SOL 대로 앞둘레 턱도 `X`(걷기·투사체 둘 다 막힘 — v0.5 글자로는 시야까지 셋 다). 걷기만 막는 칸은 MVP 맵에 없음. 의도한 차이가 필요하면 `design_diffs` | diabdat 직접 확인: 메가타일 18·19·20·24 = SOL 15(4.2). 문서대로 두면 가져오기 성질 대조가 실패한다 — 기획 v0.5 10.1·10.2 가 같은 사실로 고쳤다(차이 없음) |
+| 8.2·9.5 오라·함성 대상 | 대장 오라는 해골 4종과 다른 대장에만, "다른 종에는 걸리지 않음". 보스 본체 언급 없음 | `command_aura`·`war_cry`·`buff_area` 의 `include_bosses` 기본 `false`(정의 `rank` 가 miniboss·boss 면 안 걸림), 해골왕에 `skeleton` 태그를 달지 않음 | 9:00 호위 대장 오라가 10:00 해골왕의 이동·피해를 경고 없이 올리는 일을 막음(6.5). 지휘 오라는 기획 8.2 대로 확정. 함성(`war_cry`·`buff_area`)도 보스 본체에 안 걸림 — v0.5 에 사용자 결정으로 확정(기획 4.2·열린 질문 21 닫힘, 기획 v0.6 이 같은 문구라 이제 차이 없음) |
 | 4.1·8.1 걷기 재생 배율 | 실제 속도 / 기준 속도 | 땅 기준 속도(`vx`, `2·vy` 벡터의 길이) / 기준 속도 | 원작 걷기 그림은 땅 위 걸음 기준이라 화면 세로 이동에서 발이 미끄러짐(4.1). `--preview` 로 확인 |
 | 12.6 큰 피해 | (v0.4) "예고 없이 큰 피해 없음"(기준값 없음). v0.5: 범위 즉발·돌진 + 기본 피해 ≥ 10 → 예고 ≥ 0.4s, 근접 단일(사거리 ≤ 몸 반경 합 + 50)은 면제·피해 ≥ 25 면 타격까지 ≥ 0.35s, 투사체·장판 틱 면제 | 기준값을 `rules.enemies.telegraph_required` 한 곳에 두고 **부품 종류**로 범위·돌진·근접·투사체·장판을 가른다(6.5). 오류. 단일 대상인데 사거리가 기준을 넘는 근접은 경고 | 기획 기준을 그대로 담음. 두 갈래에 들지 않는 경우만 설계가 경고로 보탬 |
-| 10.5 조명 판독성 | (v0.4) 빛 밖은 거의 보이지 않음. v0.5: 유닛 밝기 하한 0.6(주인공·적·시체·획득물), 어둠 ≤ 0.7, 빛 반경 380~480, 그리는 방법은 설계 | `unit_min_light` = 빛 지도에 대상 모양을 하한값으로 최댓값 혼합, 앞 벽이 겹친 대상은 건너뜀(7.7). 값은 기획서 그대로(6.12) | 값은 기획, 그리는 방법은 설계(기획 10.5) |
+| 10.5 조명 판독성 | (v0.4) 빛 밖은 거의 보이지 않음. v0.5: 유닛 밝기 하한 0.6(주인공·적·시체·획득물), 어둠 ≤ 0.7, 빛 반경 380~480, 그리는 방법은 설계 | `unit_min_light` = 빛 지도에서 대상 모양 안만 max(L, m) 으로 올림(모양은 알파 채널, 안개 알파 × 그림 알파만큼 — v0.5.1), 앞 벽이 겹친 대상은 건너뜀(7.7). 값은 기획서 그대로(6.12) | 값은 기획, 그리는 방법은 설계(기획 10.5) |
 | 10.2 가림 ② | 주인공보다 앞이고 "주인공 빛 반경 안" 의 벽 | 벽 칸 마름모 중심과 주인공 발의 거리 ≤ 현재 주인공 빛 반경. `wall_fade.mode = "hero"` 로 ① 만 쓸 수 있음(비교용) | 판정을 칸마다 한 번의 거리 비교로(7.6) |
 | 10.3 목표 문 행진 | 목표 문의 진입점에 "닿으면" 보통 행동 | 진입점에서 48px 안 또는 진입점을 지나치면(`MoveOrder.Target`, 6.6) | 20마리 무리는 분리에 밀려 모두 그 점을 밟지 못한다 |
 | 19.2 프레임 수 | 도구가 원본 파일에서 읽음 | 도구가 읽고, 정의에도 적어 자원이 있을 때 대조 | 자원 없이 이벤트 프레임 범위를 검사하려면 정의에 수가 있어야 함(6.3) |
 | 19.2 PNG 묶는 방식 | 첫 단계는 고정 칸 시트(단순) | 처음부터 프레임을 잘라 묶은 아틀라스 | TRN 변종마다 시트가 한 벌씩이라 고정 칸이면 스테이지 1 만 300MB 를 넘음(7.5). 렌더 쪽 복잡도는 사각형 하나 더 읽는 정도 |
 | 10.4 단계 1 구간표 | "1단계용 구간표를 따로 둔다 — 설계" | 단계 1 에는 단계 1 판 스테이지 파일만 두고 단계 2 에서 바꿈(두 판을 같이 두지 않음) | 같은 ID 두 판은 검증·자동 조작 명령을 헷갈리게 함(6.12) |
+| 10.7 선이 칸 꼭짓점을 지날 때 (v0.5) | "칸의 중심까지 가는 선이 시야 막힘 칸을 지나지 않으면 보임"(꼭짓점은 정하지 않음) | 꼭짓점 양옆 두 칸이 **둘 다** 막힘일 때만 막힘 | 꼭짓점끼리 이은 대각선 벽으로 시야가 새지 않고, 기둥 하나의 모서리를 스치는 선은 막히지 않는다(4.11) `[해석]` |
+| 10.7 시야 갱신 주기 | 늦어도 6틱마다 + 주인공이 다른 칸에 들어선 틱 | 선 계산은 주인공 칸·반경이 바뀐 틱에만(그 사이 결과가 같다), 가 본 칸 표시는 6틱마다 + 그 틱 | 같은 결과에 계산이 적다. 규칙은 늘 최신 시야를 본다(4.11) |
+| 10.7 맵 밖 칸 범위 | 맵 밖 칸은 시야를 막지 않음 | 맵 둘레 20칸까지만 계산(확장 격자), 그 밖은 "안 보임" | 반경 상한 480 + 64 보다 늘 멀어 결과가 같다(4.11) |
+| 10.7 경계 흐림·벽 | 벽 그림자 경계는 칸 반 폭쯤 흐림, 그리는 방법은 설계 | 칸 값 텍스처의 이중선형 투영 + 벽 기둥은 자기 칸 값 + 그리는 대상은 자기 알파(최댓값, 값은 알파 채널 — v0.5.1) | 셰이더 없이 같은 모양. 화면 공간 가림만 쓰면 보이는 벽 윗부분이 검게 잘림(7.10, R28) |
+| 10.7 두 줄 벽 (v0.5.1) | 칸의 중심까지 가는 선이 시야 막힘 칸을 지나지 않으면 보임(벽 칸 자신은 선이 닿으면 보임) | 걷기·시야를 둘 다 막는 칸은 같은 메가타일의 그런 칸 하나가 보이면 함께 보임(가 본 칸도) | 두 줄 벽(앞 턱·모서리·협로)의 바깥 줄은 선이 안쪽 줄을 지나 영원히 안 보여, 벽 하나가 밝은 반·검은 반으로 갈리고 미니맵에서 빠진다. 막힌 칸에는 적이 서지 않아 규칙(사격·돌진)은 바뀌지 않는다(4.11) `[해석]` |
+| 10.7 바뀜 0.15s (v0.5.1) | 칸이 보이게·안 보이게 될 때 0.15s 에 걸쳐 바뀜 | 바뀌는 중에 다시 바뀌면 지금 값에서 되돌아감(`ChangedTick` 당김) | 경계에서 1px 씩 밀리며 매 틱 뒤집히는 칸이 0·1 로 깜빡이지 않게(4.11) |
+| 10.7 또렷이 보임·8.3 `kite` (v0.5.1) | v0.6.1: 발과 몸 위 끝이 안쪽 16px 안, `kite` 띠 당기기(L = 그 방향 또렷이 보이는 가장 먼 거리, 벽 제외) | 몸 높이 = 그림 묶음 `body_height` × 최종 크기(`Enemy.BodyTop`), L = `VisibilityField.ClearReach(방향, BodyTop)` 를 틱마다 적 방향으로 한 번 | 기획 값 그대로 담음 — 차이 없음(이름·자리만 설계, 기획 24절 넘긴 것 1) |
+| 13.1 안개 값 자리 | 스테이지마다 또는 모든 스테이지 같은 값이면 공통 규칙에 한 번 | 공통 `rules.sight` 한 곳(+ 시야 쪽 값 `refresh_ticks`·`view_inset`·`touch_margin`·`ranged_margin`), 키별 소유(시뮬레이션 값은 메인 세션 합의, v0.5.1) | 두 스테이지 값이 같다. 달라질 때 스테이지 `lighting.fog` 덮어쓰기를 더한다(6.10) |
+| 10.7·12.6 닿은 적·자폭 (v0.5.1) | 주인공에 닿은 적은 늘 보임, 근접·자폭은 닿아야 맞음 | 닿은 거리는 적마다 `TouchReach`(최소 `touch_margin`, 근접 사거리 여분 + 10 까지), 자폭 점화 중 적은 늘 그림 | 근접 사거리가 긴 적이 1칸 벽 너머에서, 점화한 자폭 적이 벽 모서리 너머에서 숨은 채 때리지 않게(공정성 3·5) |
+| 10.7 피해 숫자·표시 이펙트 | 피해 숫자는 시야 밖 적이면 숨김, 주인공 무기 이펙트는 늘 | 피해 숫자는 대상의 안개 알파, 표시 이펙트(`FxSystem`)는 적 쪽도 늘 그림(적 등장 연출·죽는 그림·시체만 숨김) | 적 쪽 이펙트는 위험(폭발·강타)이라 안개에 가리지 않는 쪽이 공정성(기획 10.7)에 맞다. `FxSystem` 이 이펙트 주인을 몰라도 된다(7.10) |
 
 ---
 
@@ -2550,6 +2937,7 @@ AppServices.Render (RenderContext?)    // GameApp 이 그래픽 장치 뒤에 �
 
 13.1~13.3 은 v0.2 의 세 리뷰 지적마다 처리를 한 줄로 적은 것이다(높음·중간은 모두 반영, 일부만 반영하거나 보류한 것은 이유). 당시 이름(`bone_brute`, `kind_lights` 등)은 기록으로 그대로 둔다.
 13.4 는 v0.3 변경(기획서 v0.4·WP1 구현)의 처리다. 13.5 는 v0.3 리뷰(구현·검증·기획 담당 합본)의 처리다.
+13.6 은 기획서 v0.5 와 맞춘 것, 13.7 은 WP1b 구현 리뷰, 13.8 은 기획서 v0.6(전장의 안개)과 사용자 결정의 처리다. 13.9 는 그 안개 설계의 리뷰 처리다.
 
 ### 13.1 기획 담당 (`docs/reviews/architecture-planner.md`)
 
@@ -2780,6 +3168,88 @@ WP1b 코드 리뷰(검증·설계 담당) 중 문서를 고친 것만 적는다.
 | 낮음 11.4 `CorpseSpawned`·1.4 `icons.json` `palette` 가 낡음 | 반영 | 11.4·1.4 |
 | 낮음 `.gitignore` 원작 확장자가 소문자뿐 | 반영 | 대소문자 무관 패턴(WP1b #19). `*.wav` 는 넣지 않음 — 자체 소리 계획과 함께 정할 일(R24, 설계 담당) |
 
+### 13.8 v0.5 — 기획서 v0.6(전장의 안개)과 사용자 결정 반영
+
+사용자 결정 세 가지(기획 23절 A·B·C)를 받았다. A = 원작식 시야(사용자 요구 11), B = DevilutionX 소스를 보고 안 사실 수치를 출처 주석과 함께 손으로 적어도 됨, C = 함성 버프는 보스 본체에 안 걸림.
+기획 23절 "설계에 넘기는 것" 의 처리:
+
+| # | 넘긴 것 | 처리 | 자리 |
+|---|---|---|---|
+| 1 | Core 시야와 기억, 질의 "보임"·"또렷이 보임", `HasClearLine` 과 이름 나누기 | `VisibilityField`(하위 타일 칸 격자 + 맵 둘레 20칸, 칸 중심 정수 선분 supercover, 꼭짓점 규칙, 칸·반경이 바뀐 틱에 다시 계산, 가 본 칸 6틱), `IsVisible`·`IsClearlyVisible`, `BeginTick` 안. 4.5 의 선분 검사는 **길 트임**으로 부름(함수 이름 그대로), "시야" 는 안개 시야만 | 0·4.5·4.11·3.5 |
+| 2 | 성질 표의 시야 막힘 표기·가져오기 대조·보정·`LayoutHash` | 8글자(대문자 = 시야 막힘, `sol & 7` 과 1:1), 대조 세 비트, 보정은 같은 원소(아치 `.` → `M`), 해시는 글자를 이어 저절로 포함. 기둥 `X` → `x` | 1.4·4.2·6.11·6.14·A.4 |
+| 3 | 적 규칙(`shoot_projectile`·`kite`·`charge`)과 생성 후보 | `EnemyCtx.SeenClearly`(보스·중간 보스는 참), 세 부품의 시작 조건. 감독은 보이는 후보를 버리고 12번에 같이 셈(이벤트·보스·소환 제외) | 6.5·6.6·6.12·6.13 |
+| 4 | 렌더(세 상태·흐림·숨김·늘 그림·폭발 빛·층·`unit_min_light`) | `FogRenderer`: 칸 값 텍스처 투영, `FogRT`·`MemRT`, `LightRT` = V·L + (1 − V)·E·M, 벽·대상 모양 최댓값, `FogMath` 알파로 숨김, 6층 "빛·안개", 하한은 그리는 대상에만 | 7.3·7.7·7.10 |
+| 5 | 미니맵 | 구운 그림을 CPU 로 가 본 칸만 남겨 다시 올림(`ExploredVersion`), 점 규칙 | 7.6·8.2 |
+| 6 | 안개 값 자리·검증 15 | 공통 `rules/sight.json`(일곱 값, 코드 기본값 없음), 13.5-15 = 빛 반경 ≤ 480 이고 ≥ `kite` 띠 최대 + 60 | 6.10·6.12·6.14 |
+| 7 | `--reveal`·디버그 보기·봇·시험 | `--reveal`(`AppOptions` — Core 가 모름), `--debug-nav sight`, `AutoplayPolicy` 는 시야를 읽지 않음(소스 검사), 시험 `Visibility`·`Enemies`·`Director`·`Sim`, 실행 확인 "안개"·"안개 재현" | 9·10.1·10.2 |
+| 8 | 결정 B·C | B: R24·1.4 "원본에서 온 수치" 에 사용자 확인을 적고 v0.4.1 의 "안 되면 도구가 추정" 대체 길을 없앰. C: `include_bosses: false` 확정(스틸메이스 자신 포함), 12.1 표 차이 없음 | 1.4·6.5·12·12.1 |
+| — | 소리 | 화면 기준 그대로, 안개 속 적 소리도 냄(`AudioSystem` 은 시야를 읽지 않음) | 7.9 |
+| — | 작업 묶음 | **WP1c**(시야 계약 + `VisibilityField`·`FogMath` 구현·시험, WP0a 앞). 다음 계약 갱신은 WP1d. 렌더는 WP5, 미니맵은 WP6, 파싱·해시는 WP7, 세 비트 대조는 WP0 | 11·11.1·11.2·11.3 |
+
+13.6 의 남은 열린 질문 1(함성 대상)·2(원본 유래 수치)는 결정 C·B 로 닫혔다. 13.5 의 열린 질문 6 도 같다(기록은 그대로 둔다).
+
+**남은 열린 질문**
+1. 안개 값(`edge` 40·`memory_ratio` 0.5·`fade` 0.15)과 빛 반경 R — 미리보기·10.2 "안개" 캡처로 고른다(기획 열린 질문 20). 양옆 압박이 거칠면 R 을 올린다(상한 480, 13.5-15 가 하한을 지킴). 값은 `rules/sight.json`·스테이지 조명 두 곳만 고친다.
+2. L2 조각, 특히 스테이지 2 협로 벽의 시야 비트(기획 열린 질문 15) — WP0 단계 3 이 원본으로 확인한다.
+3. 기둥이 시야를 막게 할지(기획 열린 질문 22) — 바꾸면 `design_diffs` 에 기둥 칸 `x` → `X` 한 원소(6.11). L1 뒷벽 1·2·모서리·문 끝 조각·아치 보정 칸의 시야 비트는 WP0a 가 원본으로 확인한다.
+4. 무기가 시야 밖·벽 너머 적을 조준할지(기획 열린 질문 23) — 바꾸면 WP3 조준 후보에 `IsVisible` 하나(4.11).
+5. (설계) 7.10 의 화면 공간 합성(벽·대상 모양 최댓값)이 캡처에서 맞는지 — WP5 첫 캡처로 본다. 어긋나면 R28 의 대체 길.
+6. (설계) 꼭짓점 규칙(12.1 `[해석]`)을 기획이 받는지 — 원작의 시야 계산과 경계 칸 몇 개가 다를 수 있다(원작 방식은 확인하지 않았다). 기획 확인을 기다린다.
+
+### 13.9 v0.5.1 — 안개 설계 리뷰 반영 (`docs/reviews/architecture-v05-fog-review.md`)
+
+구현(I)·검증(V)·기획(P) 담당 지적 30개. 높음·중간은 모두 반영했고, 낮음도 모두 반영했다(일부는 다른 지적과 합침). 기획 쪽 고침이 필요한 "둘 다" 지적은 이 문서 쪽만 고쳤다 — 기획서는 기획 담당이 같은 지적으로 고친다.
+지적 원문과 줄별 처리는 리뷰 파일에 있다. 여기는 요약이다.
+
+| 지적 | 처리 | 내용 | 자리 |
+|---|---|---|---|
+| 높음 I1 회색 최댓값 혼합이 SpriteBatch 로는 색 × g | 반영 | 값을 **알파 채널**에(틴트 (255,255,255,g) → 그림 알파 × g), 혼합 상태 표 `FogBlend`, `MemRT` 흰색 + 알파, 합치기 `MulRgbBySrcA`·`AddRgbBySrcA`, 최소 밝기 = 보조 RT 에 max(L, m) → 모양 알파 → `LerpRgbBySrcA`. 10.2 고정 장면의 `_light.png` 값 대조(≥ m, 벽 = `--reveal` 값) | 7.7·7.10·9·10.2·R28 |
+| 중간 I2·V1 `Enabled` 거짓이면 생성 후보가 모두 버려짐 | 반영(규칙을 뺌) | 기획 리뷰 P3 의 (가)를 따라(기획 v0.6.1 도 뺌) "보이는 생성 후보 버림" 을 뺐다 — 뒤집힘이 생길 자리가 없어짐. 비슷한 규칙을 다시 넣으면 `HiddenForSpawn(pos) = !Enabled \|\| !IsVisible(pos)` 꼴(꺼진 월드 = 아무것도 안 버림). V1 의 13.5-15 하한(반경 > 0)은 P5 와 합쳐 380 | 6.12·4.11·6.14 |
+| 중간 I3 두꺼운 벽 바깥 줄이 영원히 안 보임 | 반영 | `W`·`X` 칸은 같은 메가타일의 `W`·`X` 칸 하나가 보이면 함께 보임·가 본 칸(한 번만, `L`·`M` 제외). 12.1 `[해석]`, 10.1 두 줄 벽 시험, 10.2 장면 ⑤. 남는 겹벽 경우는 "지우기 + 더하기" 덮어쓰기 길(7.10) | 4.11·7.10·10.1·10.2·12.1 |
+| 중간 I4 0.15s 바뀜 중 다시 바뀌면 값이 처음부터 | 반영 | `ChangedTick ← t − (F − a)`(a < F 일 때), 10.1 "9틱 안 왕복 시 값 연속" | 4.11·7.10·10.1 |
+| 중간 I5·V10 `W`·`M` 뜻이 바뀌어도 오류가 안 남 | 반영 | 6.11 "주의", WP1c #8(`W`·`M` 조각 따로)·#9(`CellFlags` 로 확인, 8글자 왕복), 완료 기준에 `rg` 점검 결과, WP0a 는 `sol` 값으로 받아 바꿔 적음 | 6.11·WP1c·WP0a |
+| 중간 I6 `rules/sight.json` 에 소유가 다른 값이 섞임 | 반영 | 키별 소유: 시뮬레이션 값(`edge`·`view_inset`·`refresh_ticks`·`ranged_margin`)은 메인 세션이 WP4 와 합의, 그림 값(`memory_ratio`·`fade`·`touch_margin`)은 WP5. 바꾸면 WP4 `Scenario`·13.5-15 다시. 키는 나누지 않음 | 6.10·11.3·WP4·WP5 |
+| 낮음 I7 `FogMath` 소유가 WP2 | 반영 | `FogMath.cs` = WP5 소유(시그니처는 계약), `VisibilityField` 만 WP2 | 1.1·4.11·WP2·WP5·11.3 |
+| 낮음 I8 생성자에서 첫 계산 → 옮긴 시작 자리 둘레가 가 본 칸으로 남음 | 반영 | 첫 계산은 첫 `BeginTick`. 그 전 프레임은 안개 검정 | 4.11·WP1c #5·#6·10.1 |
+| 낮음 I9 `FogRT` 4단계가 유닛을 다시 다 냄, 안개 켠 스트레스가 최악이 아님 | 반영 | 4단계 대상을 흐림 띠·`CellLevel < 1` 에 걸친 것 + 늘 보이는 것으로 줄임, 렌더 기준은 `--reveal` + 안개 켬 두 번 재 최악 추정(`fog_ms` 열) | 7.10·10.3·WP5 |
+| 낮음 I10 빛 원과 안개 원이 1틱 어긋남 | 반영 | `FogMath` 그리기용 오버로드(보간된 주인공·그리는 위치), 띠도 보간 위치 | 4.11·7.10 |
+| 중간 V2 시야 조건 시험이 다른 조건에 먼저 막혀 통과 | 반영 | 벽 뒤는 `L` 줄, R − 40 밖은 반경을 낮춘 시험 월드, 화면 위는 몸 위 끝 경우, 각 시험에 시야 끈 대조군 | 10.1 `Enemies` |
+| 중간 V3 피해 전체를 보는 공정성 계측이 없음 | 반영 | `World.Fairness` + `InvariantChecker` 열 `unseen_shots`·`unseen_charges`·`hidden_hits`(기준 0), 공정성 합성 맵 3분 `Scenario`, 기존 10분·길찾기 실행에도 | 10.1·11.2·WP1c #5·WP3·WP4 |
+| 중간 V4 자폭 예고가 안개에 숨음, 근접 사거리 긴 적 | 반영 | 자폭 점화 중 `Visual.ForceShown`, 닿은 거리 = 적마다 `TouchReach`(근접 여분 + 10 까지). 합성 맵 `L` 모서리 + 자폭으로 `hidden_hits` 확인 | 4.11·6.6·7.10·10.1·12.1 |
+| 중간 V5 R29 떨림 시험이 없음 | 반영 | 정위 궁수 전환 수 시험, `kite_switches` 열, `kite` 띠 당기기(띠 폭 ≥ 40 — P1 과 합침) | 6.6·10.1·R29 |
+| 중간 V6 10.2 안개 판정 항목이 그 시각에 화면에 있다는 보장이 없음 | 반영 | `--preview fog` 고정 장면 여섯 개(자리·적 고정, 앱 k 초 = 장면 k — 스테이지 시각과 무관), 캡처마다 `FOG` 줄, 미니맵은 WP6 행으로. 150초 행진 캡처는 장면 ② 로 바꿈 | 9·10.2·WP5·WP6·WP7 |
+| 낮음 V7 해시에 가 본 칸 개수만 | 반영 | `ExploredHash`(비트맵 `StableHash`), `InSight` 를 넣지 않는 이유 | 3.4·4.11·WP7 |
+| 낮음 V8 반경 바뀜이 "그 틱부터" 가 아님 | 반영 | "다음 틱부터", 그리기도 `Visibility.Radius`, 10.1 기대값 | 4.11·6.12·7.10·10.1 |
+| 낮음 V9 `Perf` 가 `dotnet test` 로는 안 돎 | 반영 | WP1c 완료 기준에 `DDR_RUN=Perf dotnet test --filter Category=Perf` 와 잰 값 기록 | WP1c |
+| 낮음 V11 출처 주석을 시험이 못 봄 | 반영 | 원문 문자열 시험 `Data/SourceCommentTests`(기본 분류, WP0a) | 6.14·WP0a |
+| 낮음 V12 결정 C 를 기계적으로 보는 시험이 없음 | 반영 | 중간 보스 `buff_area` 가 자신·다른 보스에 안 걸림, 오버로드 함성 + 도살자 35 그대로, `include_bosses: true` 경고 | 6.14·10.1·WP4 |
+| 낮음 V13 `--start-at` 이 지난 `light_change` 를 건너뜀 | 반영 | 상태형 이벤트는 차례로 적용한 뒤 시작, 10.1 `Director` | 9·10.1 |
+| 중간 P1 또렷이 보임이 발만 봄·정위 14px 창 | 반영(설계 쪽, 기획 v0.6.1 값) | `IsClearlyVisible(pos, top)`(발과 몸 위 끝), 그림 묶음 `body_height` → `Enemy.BodyTop`, `kite` 띠 당기기(`ClearReach` 로 L, 최대' = min(최대, L − 10), 최소' = min(최소, 최대' − 40)). 13.5-15 의 "띠 최소 ≤ 위아래 한계" 검사는 규칙 변경으로 필요 없음 | 4.11·6.3·6.6·10.1·12.1·WP1c #11 |
+| 중간 P2 최소 밝기가 흐림 띠 적 자리 바닥을 m 으로 올림 | 반영 | 모양 알파 = 안개 알파 × 그림 알파(I1 의 새 방식에서 max(L, m)·a + L·(1 − a)), 10.2 "밝은 바닥 실루엣 없음" | 7.7·10.2 |
+| 낮음 P3 보이는 생성 후보 버림이 화면에 차이를 만들지 않음 | 반영 (가) | 규칙을 뺌(6.12), 10.1 `Director`·WP4·3.5·0절·4.11 "쓰는 곳"·9절에서 지움. 13.8 표의 기록은 그대로 | 6.12 외 |
+| 낮음 P4 `--reveal` 이 저장 보호에 안 듦 | 반영 | 저장 보호 판정에 `--reveal`·`--god`·`--level`·`--weapons`·`--passives` | 9·10.1·WP7 |
+| 낮음 P5 13.5-15 에 하한이 없음 | 반영 | 380 ≤ R(원거리 적 없는 스테이지에도), 0 이하도 같은 오류 → `Enabled` 거짓은 맵 없는 시험 월드뿐 | 4.11·6.12·6.14 |
+| 낮음 P6 "7층은 안개에 가리지 않는다" 문구 | 반영 | 7층 중 적 투사체·예고 테두리·주인공 마법·폭발은 늘, 적 발광·번쩍임·보석 빛은 대상의 안개 알파 | 7.3 |
+| 낮음 P7 DUN 근거가 "사용 조건 확인 전" | 반영 | 사용자 결정(기획 23절 B) — DUN 파일 자체는 옮기지 않음 | 2.2 |
+
+**남은 열린 질문**(13.8 의 1~5 는 그대로 열려 있다. 6 꼭짓점 규칙은 기획 v0.6.1 이 받아 닫혔다 — 기획 24절 "설계 v0.5 의 `[해석]` 받기". 아래는 이번에 생긴 것)
+7. 그림 묶음마다 `body_height`(대략 60~90px) 값 — WP0a 가 어림으로 넣고 WP5 가 `--preview enemies`·`--debug-nav sight` 로 맞춘다(기획 열린 질문 7, v0.6.1 추가분).
+8. (설계) 겹벽(숨은 벽이 보이는 벽 앞으로 솟음)이 스테이지 2 협로에서 생기는지 — 단계 3 캡처로 보고, 생기면 벽 항목 덮어쓰기(7.10 "남는 한계").
+
+기획서 v0.6.1(같은 리뷰를 기획 쪽에서 반영 — `docs/reviews/gdd-v06-fog-review.md`)과 맞춘 것: 또렷이 보임의 몸 높이(그림 묶음 값)와 `kite` 띠 당기기(기획 값 그대로 — 설계가 처음 적은 "경계 안쪽 10px 에서 물러남 멈춤" 은 기획이 띠 폭 40 을 붙여 정한 규칙으로 바꿈),
+닿는 거리 = 두 반경 + max(16, 근접 사거리 여유 + 10), 점화 중 자폭 적 늘 보임, 스테이지 2 빛 반경 400, 13.5-15 하한 380·빛 없음 오류, 13.5-16(출처 주석)·13.5-17(`include_bosses: true` 경고) 번호, 일반 생성의 시야 조건 뺌(기획도 (가)), 저장 보호 다섯 옵션.
+
+### 13.10 v0.5.2 — WP1c 구현이 정한 것
+
+WP1c(커밋 전) 코드가 문서와 다르게 또는 더 정한 것. 코드가 정본이다(11.4 와 같은 규칙).
+
+| 자리 | 문서 | 코드 | 이유 |
+|---|---|---|---|
+| 4.11 `VisibilityField`·`FogMath` namespace | 폴더 `Sim/Visibility/` | 폴더는 그대로, namespace 는 `Core.Sim`(`Sim/Entities/` 와 같은 방식) | 모든 묶음이 쓰는 공용 형이라 전역 using 하나로 보이게. `Core.Sim.Visibility` 로 두면 `World.Visibility` 속성과 이름이 겹친다 |
+| 4.11 `Rules`·더한 멤버 | `SightRulesDef Rules` | `SightRulesDef? Rules`(없으면 `Enabled` 거짓), `ViewRect`(틱 시작 화면 사각형)·`CellOf(pos)`·`Size`, 시험용 `internal` `RecomputeCount`·`LineClear` | 규칙이 없는 시험 월드도 늘 `Visibility` 를 가짐. 그리기·디버그가 같은 칸 변환·사각형을 쓰게 |
+| 4.11 경계 처리 | 정하지 않음 | "또렷이 보임" 의 안쪽 사각형은 경계 포함(`ClearReach` 끝 자리도 또렷이 보임), `ClearReach` 는 0 이상·방향 0 이면 R − edge, `EnemyAlpha` 틱 값은 `Visibility.HeroPos`·두 반경은 `Enemy.Radius + Hero.Radius`, `ExploredHash` 는 두 사슬로 64비트 | 시험이 경계 값을 그대로 확인(10.1) |
+| 4.11 계산 범위 안 선 걷기 | 칸마다 선 걷기 | 주인공 칸과 그 칸을 잇는 상자에 시야 막힘 칸이 없으면 걷지 않음(누적합, 결과 같음 — 기준 구현 비교 시험) | 다시 계산 1회 Debug 0.09ms → 0.05ms(`Perf`, N 40·R 420·벽 줄) |
+
 ---
 
 ## 부록 A. 원작 형식 규칙 (조사 문서·시제품에서 옮김)
@@ -2836,8 +3306,9 @@ WP1b 코드 리뷰(검증·설계 담당) 중 문서를 고친 것만 적는다.
 하위 타일마다 1바이트. 비트: 0 Solid(걷기 막힘), 1 BlockLight, 2 BlockMissile(투사체 막힘), 3 Transparent, 4 TransparentLeft, 5 TransparentRight, 7 Trap(128).
 
 - 원작의 "바닥" 판정 = Solid 도 BlockMissile 도 아님. 바닥 칸은 바닥 단을 먼저 그리고, 아니면 벽 단계에서 그린다 → 이 게임의 성질 `.` = 바닥 조각, 그 밖 = 기둥 그림(1.4 아레나).
-- 성질 대조는 bit0·bit2 만 본다(1.4). 다른 비트가 섞인 값(159·175·191 등)이 흔하다.
-- **원본 SOL 오류**(DevilutionX 참고): L1 아치 조각 일부에 시야·투사체 막힘이 빠져 있다(고치지 않으면 아치 밑으로 투사체가 지나감). 쓰는 메가타일의 칸만 `sol_known_diffs` 에 번호와 이유로 적는다(6.11).
+- 성질 대조는 bit0·bit1·bit2 를 본다(v0.5 — v0.4 까지는 bit0·bit2, 1.4). `sol & 7` 이 6.11 의 8글자와 1:1 이다(13 → `x`, 15·159·175·191 → `X`). 다른 비트가 섞인 값이 흔하다.
+  원작에서 bit1 은 빛·시야를 막는 비트다(이 게임의 시야 막힘, 4.11).
+- **원본 SOL 오류**(DevilutionX 참고): L1 아치 조각 일부에 시야·투사체 막힘이 빠져 있다(고치지 않으면 아치 밑으로 투사체가 지나가고 시야가 샌다). 쓰는 메가타일의 칸만 `sol_known_diffs` 에 번호와 이유로 적는다(6.11).
   L3·L4 에도 같은 종류의 오류가 있다 — 그 층을 쓸 때 확인한다.
 - 원작에는 SOL 말고도 "대각선 걸음은 두 옆 칸이 비어야 함"(코너 자르기 금지)이 있다 — 이 게임은 격자의 코너 자르기 금지가 대신한다(4.2).
 

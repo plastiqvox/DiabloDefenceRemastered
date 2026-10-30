@@ -157,6 +157,27 @@ public class DefJsonShapeTests
     }
 
     [Fact]
+    public void Rules_Sight_DocShape_AllKeysRequired()
+    {
+        // 6.10 rules/sight.json 모양 그대로
+        const string json = """
+        { "sight": { "edge": 40, "memory_ratio": 0.5, "fade": 0.15, "refresh_ticks": 6,
+                     "view_inset": 16, "touch_margin": 16, "ranged_margin": 20 } }
+        """;
+        var sight = System.Text.Json.JsonSerializer.Deserialize<RulesDef>(json, Options)!.Sight!;
+        Assert.Equal(TestDefs.Sight, sight);
+        Assert.Null(System.Text.Json.JsonSerializer.Deserialize<RulesDef>("{}", Options)!.Sight);   // 없음 = 시야 꺼짐(실제 데이터는 로더가 오류, WP7)
+        // 기본값을 코드에 두지 않는다 — 키 하나라도 빠지면 오류
+        Assert.Throws<System.Text.Json.JsonException>(() => System.Text.Json.JsonSerializer.Deserialize<RulesDef>(
+            """{ "sight": { "edge": 40, "memory_ratio": 0.5, "fade": 0.15, "refresh_ticks": 6, "view_inset": 16, "touch_margin": 16 } }""", Options));
+        // 그림 묶음 body_height 도 필수(v0.5.1)
+        Assert.Throws<System.Text.Json.JsonException>(() => System.Text.Json.JsonSerializer.Deserialize<SpriteSetDef>(
+            """{ "id": "set_x", "clips": {} }""", Options));
+        Assert.Equal(76f, System.Text.Json.JsonSerializer.Deserialize<SpriteSetDef>(
+            """{ "id": "set_x", "body_height": 76, "clips": {} }""", Options)!.BodyHeight);
+    }
+
+    [Fact]
     public void SpriteAndEffect_V03Shapes_Deserialize()
     {
         var sprite = System.Text.Json.JsonSerializer.Deserialize<SpriteDef>("""

@@ -105,16 +105,21 @@ public interface IAudioServices
 /// </summary>
 public sealed record AppOptions
 {
-    /// <summary>개발 옵션 실행(--autoplay·--stage·--capture*·--preview·--validate-data·--stress 중 하나라도).</summary>
+    /// <summary>개발 옵션 실행(--autoplay·--stage·--capture*·--preview·--validate-data·--stress·--reveal·--god·--level·--weapons·--passives 중 하나라도 — 9절, 판정은 WP7).</summary>
     public bool DevRun { get; init; }
     public bool Autoplay { get; init; }
     public bool Background { get; init; }
     public ulong Seed { get; init; }
     public string? StageId { get; init; }
-    /// <summary>--preview 대상(sprites / enemies / effects / tiles / blend).</summary>
+    /// <summary>--preview 대상(sprites / enemies / effects / tiles / blend / fog).</summary>
     public string? Preview { get; init; }
-    /// <summary>--debug-nav 층(빈 목록 = 끔, "all" = 전부).</summary>
+    /// <summary>--debug-nav 층(grid / flow / astar / shapes / entries / tiles / sight, 빈 목록 = 끔, "all" = 전부).</summary>
     public IReadOnlyList<string> DebugNav { get; init; } = [];
+    /// <summary>
+    /// --reveal(v0.5): 안개를 <b>그리기에서만</b> 끈다(땅은 빛 지도만, 시야 밖 대상도 그림, 미니맵 전체 — 7.10·8.2).
+    /// <c>RunOptions</c> 가 아니다 — Core 는 이 값을 모르고 <c>World.Visibility</c> 와 규칙은 그대로라 같은 씨앗이면 해시가 같다. 개발 옵션 판정에 든다(9절).
+    /// </summary>
+    public bool Reveal { get; init; }
     public double TimeScale { get; init; } = 1;
     public bool Vsync { get; init; } = true;
     /// <summary>--window 크기 = 창 클라이언트 크기이자 캡처 크기.</summary>

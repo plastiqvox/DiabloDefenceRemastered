@@ -3,7 +3,7 @@ namespace DiabloDefenceRemastered.Core.Defs;
 /// <summary>
 /// <c>rules</c>(객체 하나). 여러 파일에서 하위 키 단위로 합친다(같은 하위 키가 두 파일에 있으면 오류, 설계서 6.1).
 /// WP3 <c>rules/hero.json</c> = hero·xp_curve·level_up·level_up_push, WP4 <c>rules/enemies.json</c> = ranks·enemies·caps·spawn,
-/// WP8 <c>rules/audio.json</c> = audio.
+/// WP5 <c>rules/sight.json</c> = sight(v0.5, 첫 판 WP0a — 시뮬레이션 값 줄은 WP4 와 합의, 6.10), WP8 <c>rules/audio.json</c> = audio.
 /// </summary>
 public sealed record RulesDef
 {
@@ -17,6 +17,34 @@ public sealed record RulesDef
     public CapsDef? Caps { get; init; }
     public SpawnRulesDef? Spawn { get; init; }
     public AudioRulesDef? Audio { get; init; }
+    /// <summary>
+    /// 전장의 안개 값(v0.5, 6.10). 기본값을 코드에 두지 않는다 — 스테이지가 있는 데이터에 없으면 로딩 오류(WP7).
+    /// 없으면 <c>World.Visibility.Enabled</c> 가 거짓(맵 없는 시험 월드처럼 안개 없음).
+    /// </summary>
+    public SightRulesDef? Sight { get; init; }
+}
+
+/// <summary>
+/// <c>rules.sight</c> (설계서 6.10, 기획 10.7·23절). 시야 반경은 여기 없다 — 스테이지 조명의 <c>hero_light.radius</c> 가 곧 시야 반경이다.
+/// 시뮬레이션 값 <see cref="Edge"/>·<see cref="ViewInset"/>·<see cref="RefreshTicks"/>·<see cref="RangedMargin"/> 은 쏘기 거리·해시·13.5-15 를 바꾼다(WP4 와 합의).
+/// 그림 값 <see cref="MemoryRatio"/>·<see cref="Fade"/>·<see cref="TouchMargin"/> 은 WP5 가 고른다.
+/// </summary>
+public sealed record SightRulesDef
+{
+    /// <summary>경계 흐림 폭 px. 그리기 알파·땅 밝기 띠와 "또렷이 보임" 의 R − edge.</summary>
+    public required float Edge { get; init; }
+    /// <summary>가 본 곳 밝기 = 빛 없는 바닥 밝기 × 이 값(FogRenderer).</summary>
+    public required float MemoryRatio { get; init; }
+    /// <summary>칸 보임이 바뀔 때 그림이 바뀌는 시간(s, 그림만). F = round(fade × 60) 틱.</summary>
+    public required float Fade { get; init; }
+    /// <summary>가 본 칸 표시 주기(틱).</summary>
+    public required int RefreshTicks { get; init; }
+    /// <summary>"또렷이 보임" 의 화면 사각형 안쪽 여백 px.</summary>
+    public required float ViewInset { get; init; }
+    /// <summary>주인공에 닿은 적을 시야와 상관없이 그리는 거리의 최솟값(몸 반경 합 + 이 값, 적마다 <c>Enemy.TouchReach</c>).</summary>
+    public required float TouchMargin { get; init; }
+    /// <summary>13.5-15 의 여유(빛 반경 ≥ 원거리 최대 + edge + 이 값).</summary>
+    public required float RangedMargin { get; init; }
 }
 
 public sealed record EnemyRulesDef

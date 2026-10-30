@@ -72,6 +72,12 @@ public sealed partial class Enemy : IEntity
     public AnimClock Anim;
     public EnemyVisual Visual;
 
+    // 쓰기 WP4(생성 때 한 번) / 읽기 WP4(SeenClearly)·FogMath (v0.5.1, 설계서 4.11·6.6)
+    /// <summary>몸 높이 px = 그림 묶음 <c>body_height</c> × 최종 크기. "또렷이 보임" 의 몸 위 끝(발 y − 이 값).</summary>
+    public float BodyTop;
+    /// <summary>닿은 거리 여분 = max(<c>rules.sight.touch_margin</c>, 단일 대상 근접 사거리 − 두 반경 + 10). 두 반경 + 이 값 안이면 안개와 상관없이 그린다.</summary>
+    public float TouchReach;
+
     // 쓰기 WP3(장판 둔화)·WP4(오라·함성) — BuffSlots 도우미로만
     public BuffSlots Buffs;
 
@@ -112,6 +118,7 @@ public sealed partial class Enemy : IEntity
         Facing = new Vector2(0, 1);
         Anim = default;
         Visual = new EnemyVisual { AlphaMul = 1f };
+        BodyTop = TouchReach = 0f;
         Buffs.Clear();
         ResetNav();
         ResetCombat();

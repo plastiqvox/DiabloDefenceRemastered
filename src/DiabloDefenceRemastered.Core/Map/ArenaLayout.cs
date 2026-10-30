@@ -24,8 +24,12 @@ public readonly record struct LayoutError(string Path, string Message)
 /// </summary>
 public static class ArenaLayout
 {
-    /// <summary>성질 글자. 하위 칸 4개를 TIL 순서로 적는다.</summary>
-    public const string PropChars = ".WMX";
+    /// <summary>
+    /// 성질 글자 8개(v0.5, 설계서 6.11 표). 글자 번호 = 원본 <c>sol &amp; 7</c>(bit0 걷기, bit1 시야, bit2 투사체) → 가져오기 도구는 <c>PropChars[sol &amp; 7]</c> 로 적는다.
+    /// 대문자 = 시야 막힘, 소문자 = 시야 통과. v0.4 의 <c>W</c>(걷기만)·<c>M</c>(투사체만)은 <c>w</c>·<c>m</c> 이 되었고, 지금 <c>W</c>·<c>M</c> 은 시야도 막는다.
+    /// 하위 칸 4개를 TIL 순서로 적는다.
+    /// </summary>
+    public const string PropChars = ".wLWmxMX";
 
     public static ArenaGrid Expand(MapDef map) => Expand(map, map.Tileset.Def);
 
@@ -199,7 +203,7 @@ public static class ArenaLayout
                 if (!TryParseProps(text, props))
                 {
                     if (missing.Add(tile))
-                        errors.Add(new("$.layout", $"타일셋 '{tileset.Id}' 의 메가타일 {tile} 성질 '{text}' 가 틀렸다(글자 4개, {PropChars})"));
+                        errors.Add(new("$.layout", $"타일셋 '{tileset.Id}' 의 메가타일 {tile} 성질 '{text}' 가 틀렸다(글자 4개, {PropChars} — 대문자 = 시야 막힘)"));
                     continue;
                 }
                 var extra = boundary[i] ? CellFlags.Boundary : CellFlags.None;
@@ -233,7 +237,7 @@ public static class ArenaLayout
         Span<CellFlags> scratch = stackalloc CellFlags[4];
         foreach (var (tile, text) in tileset.Props.OrderBy(p => p.Key))
             if (!TryParseProps(text, scratch))
-                errors.Add(new($"$.props.{tile}", $"성질 '{text}' 가 틀렸다(하위 칸 4개를 {PropChars} 글자로)"));
+                errors.Add(new($"$.props.{tile}", $"성질 '{text}' 가 틀렸다(하위 칸 4개를 {PropChars} 글자로 — 대문자 = 시야 막힘)"));
 
         var named = NamedTiles(tileset);
         if (named.Count > 0 && named.Min < 0)
@@ -287,20 +291,15 @@ public static class ArenaLayout
         return set;
     }
 
-    /// <summary>성질 글자 4개 → 하위 칸 성질(TIL 순서). 틀리면 false.</summary>
+    /// <summary>성질 글자 4개(<see cref="PropChars"/>) → 하위 칸 성질(TIL 순서). 틀리면 false. <see cref="ArenaGrid.PropChar"/> 의 역.</summary>
     public static bool TryParseProps(string text, Span<CellFlags> cells)
     {
         if (text.Length != 4 || cells.Length < 4) return false;
         for (var k = 0; k < 4; k++)
         {
-            switch (text[k])
-            {
-                case '.': cells[k] = CellFlags.None; break;
-                case 'W': cells[k] = CellFlags.BlocksWalk; break;
-                case 'M': cells[k] = CellFlags.BlocksProjectiles; break;
-                case 'X': cells[k] = CellFlags.BlocksWalk | CellFlags.BlocksProjectiles; break;
-                default: return false;
-            }
+            var sol = PropChars.IndexOf(text[k]);
+            if (sol < 0) return false;
+            cells[k] = ArenaGrid.FromSol(sol);
         }
         return true;
     }
