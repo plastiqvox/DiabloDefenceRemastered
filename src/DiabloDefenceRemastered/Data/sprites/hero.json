@@ -1,0 +1,27 @@
+// 주인공 그림 묶음 — 마법사 slt 한 벌 (설계서 6.3·6.16, 기획 4.0). 첫 판 WP0a, 그 뒤 소유 WP5.
+// 칸·방향·프레임 수 = 이 PC 의 diabdat 원본 CL2 를 읽은 값. 죽기는 맨손 벌 sln\slndt(원작도 죽기는 맨손 벌에만 있다)를 같은 페이지의 die 동작으로 넣는다.
+// 프레임 시간 = 원작 플레이어 동작별 틱 수 × 50ms(서기 4, 죽기 2, 그 밖 1), 시전 프레임 = 원작 값 — 원본 파일에 없는 게임 동작 값이라 DevilutionX 참고.
+// origin 첫 값 = (칸 폭/2, 칸 높이 − 16), body_height 는 어림 — WP5 가 --preview 로 맞춘다.
+{
+  "sprites": [
+    // plrgfx\sorceror\slt\slt{as,aw,fm,lm,qm}.cl2 · sln\slndt.cl2 — 출처: 원본 확인(칸 96×96·128×128·128×96, 8방향, 프레임 8·8·12·12·12·20)
+    { "id": "slt_idle",           "source": "atlas", "file": "d1/hero/slt.png", "action": "idle",           "frame": [96, 96],   "directions": 8, "frames": 8,  "origin": [48, 80] },
+    { "id": "slt_walk",           "source": "atlas", "file": "d1/hero/slt.png", "action": "walk",           "frame": [96, 96],   "directions": 8, "frames": 8,  "origin": [48, 80] },
+    { "id": "slt_cast_fire",      "source": "atlas", "file": "d1/hero/slt.png", "action": "cast_fire",      "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "slt_cast_lightning", "source": "atlas", "file": "d1/hero/slt.png", "action": "cast_lightning", "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "slt_cast_magic",     "source": "atlas", "file": "d1/hero/slt.png", "action": "cast_magic",     "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "sln_die",            "source": "atlas", "file": "d1/hero/slt.png", "action": "die",            "frame": [128, 96],  "directions": 8, "frames": 20, "origin": [64, 80] }
+  ],
+  "sprite_sets": [
+    { "id": "set_sorcerer", "base_speed": 95, "base_radius": 14, "body_height": 76,
+      "frame_time": 0.05,                                                                  // 출처: DevilutionX 참고(걷기·시전 1틱 × 50ms)
+      "variants": [""],
+      "clips": {
+        "idle":           { "sprite": "slt_idle", "frame_time": 0.2 },                     // 출처: DevilutionX 참고(서기 4틱)
+        "walk":           { "sprite": "slt_walk" },
+        "cast_fire":      { "sprite": "slt_cast_fire", "event_frame": 8 },                 // 출처: DevilutionX 참고(마법사 시전 프레임 8)
+        "cast_lightning": { "sprite": "slt_cast_lightning", "event_frame": 8 },            // 출처: DevilutionX 참고(마법사 시전 프레임 8)
+        "cast_magic":     { "sprite": "slt_cast_magic", "event_frame": 8 },                // 출처: DevilutionX 참고(마법사 시전 프레임 8)
+        "die":            { "sprite": "sln_die", "frame_time": 0.1 } } }                   // 출처: DevilutionX 참고(죽기 2틱)
+  ]
+}

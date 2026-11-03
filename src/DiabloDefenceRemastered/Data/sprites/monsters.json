@@ -1,0 +1,57 @@
+// 단계 1 몬스터 그림 묶음 (설계서 6.3, 기획 8.1·8.2·14.1 — 해골·좀비·해골 궁수·불타는 해골·구울). 첫 판 WP0a, 그 뒤 소유 WP5.
+// 칸(frame)·방향·프레임 수 = 이 PC 의 diabdat 원본 CL2 를 읽은 값(칸 = 원작 프레임 폭 × 그 동작의 최대 높이).
+// 프레임 시간 = 원작 동작별 재생 간격 × 50ms, 타격·발사 프레임 = 원작 값(1부터). 둘 다 원작 게임 동작 값이라 원본 파일에는 없다 — DevilutionX 참고.
+// origin 첫 값 = (칸 폭/2, 칸 높이 − 16), body_height 는 어림 — WP5 가 --preview 로 맞춘다(기획 열린 질문 7).
+// file 은 가져오기 표(WP0) 출력 이름 d1/monsters/<원작 폴더>.png 를 따른다(13.5-10 이 표와 대조).
+{
+  "sprites": [
+    // monsters\skelaxe\sklax{n,w,a,d}.cl2 — 출처: 원본 확인(칸 128×96, 8방향, 프레임 12·8·13·17)
+    { "id": "skelaxe_idle",   "source": "atlas", "file": "d1/monsters/skelaxe.png", "action": "idle",   "frame": [128, 96], "directions": 8, "frames": 12, "origin": [64, 80] },
+    { "id": "skelaxe_walk",   "source": "atlas", "file": "d1/monsters/skelaxe.png", "action": "walk",   "frame": [128, 96], "directions": 8, "frames": 8,  "origin": [64, 80] },
+    { "id": "skelaxe_attack", "source": "atlas", "file": "d1/monsters/skelaxe.png", "action": "attack", "frame": [128, 96], "directions": 8, "frames": 13, "origin": [64, 80] },
+    { "id": "skelaxe_die",    "source": "atlas", "file": "d1/monsters/skelaxe.png", "action": "die",    "frame": [128, 96], "directions": 8, "frames": 17, "origin": [64, 80] },
+
+    // monsters\skelbow\sklbw{n,w,a,d}.cl2 — 출처: 원본 확인(칸 128×96, 8방향, 프레임 9·8·16·16). 특수 sklbws(16)는 블랙애시(단계 2)에 WP5 가 더한다
+    { "id": "skelbow_idle",   "source": "atlas", "file": "d1/monsters/skelbow.png", "action": "idle",   "frame": [128, 96], "directions": 8, "frames": 9,  "origin": [64, 80] },
+    { "id": "skelbow_walk",   "source": "atlas", "file": "d1/monsters/skelbow.png", "action": "walk",   "frame": [128, 96], "directions": 8, "frames": 8,  "origin": [64, 80] },
+    { "id": "skelbow_attack", "source": "atlas", "file": "d1/monsters/skelbow.png", "action": "attack", "frame": [128, 96], "directions": 8, "frames": 16, "origin": [64, 80] },
+    { "id": "skelbow_die",    "source": "atlas", "file": "d1/monsters/skelbow.png", "action": "die",    "frame": [128, 96], "directions": 8, "frames": 16, "origin": [64, 80] },
+
+    // monsters\zombie\zombie{n,w,a,d}.cl2 — 출처: 원본 확인(칸 128×96, 8방향, 프레임 11·24·12·16)
+    { "id": "zombie_idle",    "source": "atlas", "file": "d1/monsters/zombie.png",  "action": "idle",   "frame": [128, 96], "directions": 8, "frames": 11, "origin": [64, 80] },
+    { "id": "zombie_walk",    "source": "atlas", "file": "d1/monsters/zombie.png",  "action": "walk",   "frame": [128, 96], "directions": 8, "frames": 24, "origin": [64, 80] },
+    { "id": "zombie_attack",  "source": "atlas", "file": "d1/monsters/zombie.png",  "action": "attack", "frame": [128, 96], "directions": 8, "frames": 12, "origin": [64, 80] },
+    { "id": "zombie_die",     "source": "atlas", "file": "d1/monsters/zombie.png",  "action": "die",    "frame": [128, 96], "directions": 8, "frames": 16, "origin": [64, 80] }
+  ],
+  "sprite_sets": [
+    // 해골(white)·불타는 해골(원색). 원작은 같은 그림을 두 종이 다른 서기 간격으로 쓴다(해골 5, 불타는 해골 2) — 묶음 하나라 해골 값을 쓴다
+    { "id": "set_skelaxe", "base_speed": 70, "base_radius": 12, "body_height": 70,
+      "frame_time": 0.05,                                                         // 출처: DevilutionX 참고(걷기·공격·죽기 간격 1 × 50ms)
+      "variants": ["", "white"],
+      "clips": {
+        "idle":   { "sprite": "skelaxe_idle", "frame_time": 0.25 },               // 출처: DevilutionX 참고(해골 서기 간격 5)
+        "walk":   { "sprite": "skelaxe_walk" },
+        "attack": { "sprite": "skelaxe_attack", "event_frame": 8 },               // 출처: DevilutionX 참고(해골 타격 프레임 8)
+        "die":    { "sprite": "skelaxe_die" } } },
+
+    // 해골 궁수(white). 불타는 해골 궁수(원색)·블랙애시 변종 bashtb·special 은 단계 2 에 WP5 가 더한다(11.1 WP0a)
+    { "id": "set_skelbow", "base_speed": 62, "base_radius": 12, "body_height": 70,
+      "frame_time": 0.05,                                                         // 출처: DevilutionX 참고(걷기·공격·죽기 간격 1 × 50ms)
+      "variants": ["", "white"],
+      "clips": {
+        "idle":   { "sprite": "skelbow_idle", "frame_time": 0.2 },                // 출처: DevilutionX 참고(해골 궁수 서기 간격 4)
+        "walk":   { "sprite": "skelbow_walk" },
+        "attack": { "sprite": "skelbow_attack", "event_frame": 12 },              // 출처: DevilutionX 참고(해골 궁수 발사 프레임 12)
+        "die":    { "sprite": "skelbow_die" } } },
+
+    // 좀비(원색)·구울(bluered). 원작 두 종의 간격·타격 프레임이 같다
+    { "id": "set_zombie", "base_speed": 40, "base_radius": 14, "body_height": 72,
+      "frame_time": 0.05,                                                         // 출처: DevilutionX 참고(걷기·공격·죽기 간격 1 × 50ms)
+      "variants": ["", "bluered"],
+      "clips": {
+        "idle":   { "sprite": "zombie_idle", "frame_time": 0.2 },                 // 출처: DevilutionX 참고(좀비 서기 간격 4)
+        "walk":   { "sprite": "zombie_walk" },
+        "attack": { "sprite": "zombie_attack", "event_frame": 8 },                // 출처: DevilutionX 참고(좀비 타격 프레임 8)
+        "die":    { "sprite": "zombie_die" } } }
+  ]
+}

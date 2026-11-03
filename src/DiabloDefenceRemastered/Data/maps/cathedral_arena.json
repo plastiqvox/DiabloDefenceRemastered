@@ -1,0 +1,56 @@
+// 스테이지 1 맵 (설계서 6.11 예 = 기획 v0.7.1 10.3). 첫 판 WP0a, 그 뒤 소유 WP5(미리보기로 기준점·입구를 맞춘다).
+// 메가 [mx,my] 20×20 = 하위 40×40. 위치(entries·hero_start·anchors)는 하위 타일 좌표(칸 중심 = 정수).
+// 방은 원작 방의 크기·문 방향·벽 재료만 본뜨고 칸 배열은 우리 조각 이름으로 새로 짰다(6.11 "원작 방 본뜨기") — DUN 을 옮기지 않는다.
+// 벽 끝 조각(wall_end_v·wall_end_h)은 위·왼쪽 끝이 빈 자리에만 둔다 — 그 조각은 번호가 작은 쪽 끝이 마감돼 있다(설계서 13.16). 아래·오른쪽 끝은 보통 벽.
+// 피 방의 방 밖을 향하는 벽(오른쪽 T·아래 줄·왼쪽 아래 ├)은 보통 벽 — 피 묻은 벽 메가의 바닥 반 칸이 피 바닥이라 방 밖에 피가 번진다.
+// 피 방 오른쪽 아래 [5,5](┘ — 아래 벽이 왼쪽에서, 문 틈 선이 위에서 와서 만남)는 작은 모서리 기둥 — 가로 벽을 두면 오른쪽 벽 선 너머로 한 메가 더 나간다(설계서 13.16).
+{
+  "maps": [
+    {
+      "id": "cathedral_arena", "tileset": "l1", "palette": "l1_1", "size": 20,
+      "layout": {
+        "border": "arch_hall",
+        "gates": [ { "id": "gate_nw", "side": "nw" }, { "id": "gate_ne", "side": "ne" },
+                   { "id": "gate_se", "side": "se" }, { "id": "gate_sw", "side": "sw" } ],
+        "place": [
+          // 피 방 6×6(위 모서리): 바깥 두 벽은 둘레 자리에 겹친다(갇힌 띠 없음). 문 = 오른쪽 벽 [5,3..4] 하위 4칸 틈, 막다른 방
+          { "id": "s1_room_blood", "origin": [0, 0], "over_border": true,
+            "decor_why": "닫힌 문(door_closed 26)은 아래 벽 장식 — 문으로 쓰지 않음(기획 10.3)",
+            "grid": [ "blood_wall_corner blood_wall_h blood_wall_h blood_wall_h blood_wall_h wall_corner      ",
+                      "blood_wall_v      blood_floor  blood_floor  blood_floor  blood_floor  wall_v",
+                      "blood_wall_v      blood_floor  blood_floor  blood_floor  blood_floor  wall_v",
+                      "blood_wall_v      blood_floor  blood_floor  blood_floor  blood_floor  .",
+                      "blood_wall_v      blood_floor  blood_floor  blood_floor  blood_floor  .",
+                      "wall_corner       wall_h       door_closed  wall_h       wall_h       wall_post   " ] },
+          // 창살 방(오른쪽 모서리): 위는 둘레, 오른쪽은 앞 턱. 문 = 왼쪽 벽 [13,3..4], 아래 벽에 창살 두 메가
+          { "id": "s1_room_grate", "origin": [13, 0], "over_border": true,
+            "grid": [ "wall_corner",
+                      "wall_v",
+                      "wall_v",
+                      ".",
+                      ".",
+                      "wall_end_v",                                            // 틈 아래에서 다시 시작하는 벽의 위 끝
+                      "wall_h wall_h grate_h grate_h wall_h wall_h" ] },
+          // ㄱ 자 짧은 벽(왼쪽 모서리): 둘레와 떼어 출입구 둘(둘레 쪽 하위 5칸 틈 + [6,17..18])
+          { "id": "s1_wall_west", "piece": "wall_end_h", "at": [[3, 13]] },
+          { "piece": "wall_h", "line": [[4, 13], [5, 13]] },
+          { "piece": "wall_v", "line": [[6, 13], [6, 16]] },
+          // Γ 자 짧은 벽 + 기둥 셋(아래 모서리, open_center 밖)
+          { "id": "s1_wall_south", "piece": "wall_corner", "at": [[13, 13]] },
+          { "piece": "wall_h", "line": [[14, 13], [16, 13]] },
+          { "piece": "wall_v", "line": [[13, 14], [13, 16]] },
+          { "piece": "pillar", "at": [[15, 16], [17, 15], [17, 17], [7, 9], [12, 9]] } ] },
+      "open_center": [6, 6, 13, 13],
+      "entries": [ { "id": "gate_nw", "outside": [-4, 19.5], "inside": [4, 19.5] },
+                   { "id": "gate_ne", "outside": [19.5, -4], "inside": [19.5, 4] },
+                   { "id": "gate_se", "outside": [43, 19.5], "inside": [34, 19.5] },
+                   { "id": "gate_sw", "outside": [19.5, 43], "inside": [19.5, 34] } ],
+      "hero_start": { "tile": [19.5, 19.5], "facing": "south" },
+      "anchors": { "center": [19.5, 19.5], "room_blood": [5, 5], "room_grate": [32, 7],
+                   "room_west": [6, 32], "room_south": [31, 31] },
+      "room_areas": { "room_blood": [0, 0, 5, 5], "room_grate": [13, 0, 19, 6],
+                      "room_west": [0, 13, 6, 19], "room_south": [13, 13, 19, 19] },
+      "art": "d1/maps/cathedral_arena"
+    }
+  ]
+}
