@@ -14,6 +14,7 @@ public static class AudioServices
     {
         public bool Muted => true;
         public void PreloadStage(StageDef stage) { }
+        public void Attach(World world) { }
         public void Consume(PresentationBuffer buffer, World world) { }
         public void PlayUi(string key) { }
         public void PlayMusic(string key) { }

@@ -3,7 +3,7 @@ namespace DiabloDefenceRemastered.Core.Assets;
 /// <summary>정의가 가리키는 파일 하나와 그 주인 정의 D(적·스테이지·직업·무기·음악, 또는 기본 내용이면 null — 6.14 13.5-10 귀속 규칙).</summary>
 /// <param name="Owner">
 /// 그 파일에 닿는 <c>requires</c> 를 가진 정의. 그림 묶음·소리·이펙트처럼 <c>requires</c> 가 없는 정의의 파일은 그것을 가리키는 D 들마다 한 줄씩,
-/// 맵 그림(<c>art</c> 폴더)은 그 맵을 쓰는 스테이지, 소리 연결 표 줄은 귀속 규칙대로(<c>hero.&lt;id&gt;</c> → 직업, <c>ui</c>·<c>pickups</c>·<c>music.title</c> → null).
+/// 맵 그림(<c>art</c> 폴더)은 그 맵을 쓰는 스테이지(v0.7 — 그 맵을 <c>room_maps</c> 에 둔 스테이지들, 본문 WP7), 소리 연결 표 줄은 귀속 규칙대로(<c>hero.&lt;id&gt;</c> → 직업, <c>ui</c>·<c>pickups</c>·<c>music.title</c> → null).
 /// </param>
 /// <param name="File">Assets 뿌리 기준 '/' 상대 경로(<c>d1/monsters/zombie.png</c>).</param>
 public readonly record struct DefAsset(IDef? Owner, string File);

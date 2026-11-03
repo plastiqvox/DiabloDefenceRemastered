@@ -20,7 +20,8 @@ public enum SimPhase : byte
     DeathHooks,     // 13 WP4
     DeathRewards,   // 14 WP3
     Pickups,        // 15 WP3
-    EndTick,        // 16 WP1
+    RoomFlow,       // 16 WP1e(v0.7 — 방 흐름 상태 기계, 3.6. 방 없는 월드는 무동작)
+    EndTick,        // 17 WP1
 }
 
 /// <summary>시스템 하나. 상태가 있으면 월드마다 따로 만든다(<see cref="ModuleContext.AddWorldInstaller"/>).</summary>
@@ -39,7 +40,7 @@ public interface ISimProfiler
 /// <summary>단계 → 시스템 짝을 모은다. 같은 단계에 두 번째 시스템을 넣으면 예외.</summary>
 public sealed class SimulationBuilder
 {
-    public const int PhaseCount = 16;
+    public const int PhaseCount = 17;
 
     private readonly ISimSystem?[] _systems = new ISimSystem?[PhaseCount];
 

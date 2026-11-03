@@ -22,6 +22,71 @@ public sealed record RulesDef
     /// 없으면 <c>World.Visibility.Enabled</c> 가 거짓(맵 없는 시험 월드처럼 안개 없음).
     /// </summary>
     public SightRulesDef? Sight { get; init; }
+    /// <summary>
+    /// 방 흐름·문·넓이 배율 값(v0.7, 6.10 — WP4 <c>rules/rooms.json</c>). 키는 모두 <c>required</c> — 기본값을 코드에 두지 않는다.
+    /// 스테이지가 있는 데이터에 없으면 로딩 오류(WP7). 없으면(시험 월드) 방 흐름을 쓰는 코드(<c>RunPlanner</c>·<c>RoomFlow</c>·<c>RunSession</c>)가 예외.
+    /// </summary>
+    public RoomRulesDef? Rooms { get; init; }
+}
+
+/// <summary>
+/// <c>rules.rooms</c> (v0.7, 설계서 6.10, 기획 2.5·10.8·11.4·15절 첫 값). 쓰는 곳: <see cref="Grace"/>·<see cref="CleanupLimit"/>·<see cref="EliteSpawnCap"/> = <c>RoomFlow</c>·감독,
+/// <see cref="Gates"/>·<see cref="Exits"/> = <c>RunPlanner</c>, <see cref="AreaScale"/> = <c>RunSession</c>, <see cref="RewardAnchor"/>·<see cref="ChestRing"/>·<see cref="FallbackReward"/> = <c>RoomFlow</c>,
+/// <see cref="RemainingMarker"/> = HUD 미니맵(WP6), <see cref="Transition"/> = <c>PlayScene</c>(앱 틱), <see cref="AutoplayDoorSkip"/> = <c>AutoplayPolicy</c>.
+/// <see cref="Transition"/>·<see cref="RemainingMarker"/> 를 뺀 값을 바꾸면 같은 씨앗의 판이 바뀐다(WP4 가 바꾸고 <c>Scenario</c>·13.5-23 을 다시 돌림).
+/// </summary>
+public sealed record RoomRulesDef
+{
+    /// <summary>들어옴 단계 길이(초, 3). 그동안 생성 없음.</summary>
+    public required float Grace { get; init; }
+    /// <summary>정리 안전장치(초, 45) — 넘으면 남은 적을 무너뜨린다.</summary>
+    public required float CleanupLimit { get; init; }
+    /// <summary>정리 단계에서 남은 적이 이 수 이하면 미니맵에 모두 점으로(그림 값).</summary>
+    public required int RemainingMarker { get; init; }
+    /// <summary>정예 방 생성이 멈추는 방 시계(2:30).</summary>
+    public required ClockTime EliteSpawnCap { get; init; }
+    /// <summary>방 이동 어두워짐 길이(초, 앱 틱 — 그림 값).</summary>
+    public required float Transition { get; init; }
+    public required RoomGatesDef Gates { get; init; }
+    public required ExitsDef Exits { get; init; }
+    public required AreaScaleDef AreaScale { get; init; }
+    /// <summary>보상 물체 자리 기준점(<c>center</c>).</summary>
+    public required string RewardAnchor { get; init; }
+    /// <summary>정리 끝에 남은 정예 상자를 옮겨 놓는 둘레 반경(px).</summary>
+    public required float ChestRing { get; init; }
+    /// <summary>문 열기 거르기로 출구 문을 다 못 채울 때 쓰는 보상(보물 상자).</summary>
+    public required DefRef<RewardDef> FallbackReward { get; init; }
+    /// <summary>자동 조작이 문 단계를 이 초 안에 못 끝내면 <c>DOOR_SKIP</c>(보상 단계면 <c>REWARD_STALL</c> 기록).</summary>
+    public required float AutoplayDoorSkip { get; init; }
+}
+
+/// <summary>문 이름(v0.7, 6.10). 모두 맵의 문 넷 안(13.5-23 ④).</summary>
+public sealed record RoomGatesDef
+{
+    /// <summary>일반·정예 방의 들어오는 문 후보(<c>gate_sw</c>·<c>gate_se</c>).</summary>
+    public required IReadOnlyList<string> Entry { get; init; }
+    /// <summary>보스 방의 들어오는 문(<c>gate_sw</c>).</summary>
+    public required string BossEntry { get; init; }
+    /// <summary>출구 문 둘(<c>gate_nw</c>·<c>gate_ne</c>) — 순서가 <c>RoomPlan.ExitGates</c> 순서.</summary>
+    public required IReadOnlyList<string> Exits { get; init; }
+    /// <summary>출구가 하나일 때(다음이 정예·보스 방, 액트 보스 방의 계단)의 문(<c>gate_ne</c>).</summary>
+    public required string SingleExit { get; init; }
+}
+
+/// <summary>출구 문 수(v0.7, 6.10).</summary>
+public sealed record ExitsDef
+{
+    /// <summary>출구가 둘인 방에서 남은 앞 문을 더해 셋이 될 확률(0.4).</summary>
+    public required float ThreeChance { get; init; }
+}
+
+/// <summary>넓이 배율(v0.7, 6.10·3.6): <c>clamp(걸을 칸 수 / 기준 맵 칸 수, min, max)</c>.</summary>
+public sealed record AreaScaleDef
+{
+    /// <summary>기준 맵(<c>cathedral_arena</c>).</summary>
+    public required DefRef<MapDef> Reference { get; init; }
+    public required float Min { get; init; }
+    public required float Max { get; init; }
 }
 
 /// <summary>

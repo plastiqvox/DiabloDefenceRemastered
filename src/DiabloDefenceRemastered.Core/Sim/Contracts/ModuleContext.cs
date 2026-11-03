@@ -31,13 +31,26 @@ public sealed class ModuleContext
 
     public void AddRunSetup(IRunSetup setup) => _runSetups.Add(setup);
 
+    /// <summary>
+    /// 방 사이 빌드 넘기기(v0.7, 3.6 — WP3 가 등록). <c>RunSession</c> 이 방을 나갈 때 <c>Capture</c>, 새 방 월드에 <c>Restore</c> 한다.
+    /// 없으면(WP3 없는 시험) 짐을 건너뛴다. 두 번 등록하면 예외.
+    /// </summary>
+    public IHeroCarry? HeroCarry { get; private set; }
+
+    public void SetHeroCarry(IHeroCarry carry)
+    {
+        ArgumentNullException.ThrowIfNull(carry);
+        if (HeroCarry is not null) throw new InvalidOperationException($"IHeroCarry 가 이미 등록됐다({HeroCarry.GetType().Name})");
+        HeroCarry = carry;
+    }
+
     /// <summary>등록된 월드 설치를 순서대로 부른다(시험이 자기 시스템을 더 넣을 때).</summary>
     public void Install(World world, SimulationBuilder builder)
     {
         foreach (var install in _installers) install(world, builder);
     }
 
-    /// <summary>BeginTick·EndTick 과 모듈 시스템을 넣어 시뮬레이션을 만든다.</summary>
+    /// <summary>BeginTick·RoomFlow·EndTick 과 모듈 시스템을 넣어 시뮬레이션을 만든다.</summary>
     public Simulation CreateSimulation(World world)
     {
         var builder = Simulation.CreateBuilder();

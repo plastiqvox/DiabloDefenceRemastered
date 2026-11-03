@@ -66,6 +66,8 @@ public sealed record SoundBindingsDef
     public IReadOnlyDictionary<string, DefRef<SoundDef>> Ui { get; init; } = new Dictionary<string, DefRef<SoundDef>>();
     /// <summary>음악 키(<c>title</c> 또는 스테이지 ID) → 곡.</summary>
     public IReadOnlyDictionary<string, DefRef<MusicDef>> Music { get; init; } = new Dictionary<string, DefRef<MusicDef>>();
+    /// <summary>문 보상 ID → 소리(v0.7, 6.15 — 줍기 <c>collect</c>·창 열기 <c>open</c>). 신호 <c>CueKind.RewardCollected</c>(Subject = <c>RewardDef</c>). 13.5-10 귀속: 그 보상.</summary>
+    public IReadOnlyDictionary<string, RewardSoundsDef> Rewards { get; init; } = new Dictionary<string, RewardSoundsDef>();
 }
 
 public sealed record FireSoundsDef
@@ -95,6 +97,13 @@ public sealed record PickupSoundsDef
 {
     public DefRef<SoundDef>? Collect { get; init; }
     public DefRef<SoundDef>? Drop { get; init; }
+}
+
+/// <summary>문 보상 소리(v0.7, 6.15): 물체를 주울 때·보상 창이 열릴 때.</summary>
+public sealed record RewardSoundsDef
+{
+    public DefRef<SoundDef>? Collect { get; init; }
+    public DefRef<SoundDef>? Open { get; init; }
 }
 
 public sealed record HeroSoundsDef

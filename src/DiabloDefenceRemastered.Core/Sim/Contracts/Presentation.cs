@@ -49,6 +49,12 @@ public enum CueKind : byte
     BossPhase,
     /// <summary>WP4 정예 무리 등장. Subject 없음.</summary>
     ElitePack,
+    /// <summary>v0.7 <c>RoomFlow</c> — 방이 정리됨(보상 단계 시작). Subject 없음, Pos = 보상 자리.</summary>
+    RoomCleared,
+    /// <summary>v0.7 <c>RoomFlow</c> — 출구 문이 열림. Subject 없음, Pos = 보상 자리.</summary>
+    DoorsOpened,
+    /// <summary>v0.7 WP3 Pickups — 문 보상 물체를 주움. Subject = RewardDef.</summary>
+    RewardCollected,
 }
 
 /// <summary>

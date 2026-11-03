@@ -5,7 +5,8 @@ namespace DiabloDefenceRemastered.Core.Data.Registry;
 /// <c>TextureStore</c>·<c>SoundBank</c>·시작 검사 ③ 교차 확인이 모두 이것을 부른다 — 같은 닫힘 계산을 여러 벌 짜다 엇갈리지 않게
 /// (소환으로만 나오는 헬파이어 적을 놓치면 기본 스테이지가 묶음 그림을 쓰는 것을 못 잡는다).
 /// <list type="number">
-/// <item>시작 집합 = 생성 구간 <c>weights</c> 의 적 + 이벤트 부품(<see cref="PartKind.StageEvent"/>)의 <see cref="PartDef.ReferencedEnemies"/>(보스·중간 보스·행진·고리·호위 대장 등).</item>
+/// <item>시작 집합 = 생성 구간 <c>weights</c> 의 적 + 이벤트 부품(<see cref="PartKind.StageEvent"/>)의 <see cref="PartDef.ReferencedEnemies"/>(보스·중간 보스·행진·고리·호위 대장 등)
+/// + 방 순번 표의 <c>rooms[].miniboss</c>·<c>boss</c>(v0.7 — 정예 방 중간 보스가 이벤트 없이도 "나오는 적" 에 듦).</item>
 /// <item>고정점까지: 집합의 각 적이 가진 모든 부품(행동·훅·죽음 훅 = <c>behaviors</c>, 패턴 동작, 페이즈 패턴 동작)의 <see cref="PartDef.ReferencedEnemies"/>(summon·split_on_death·호위 등)를 더한다.</item>
 /// </list>
 /// 접두사(<c>affixes</c>) 부품은 보지 않는다 — 접두사는 적을 부르지 않는다(6.7). 접두사가 적을 부르게 되면 여기에 더한다.
@@ -39,6 +40,11 @@ public static class StageReach
         foreach (var interval in stage.SpawnIntervals)
             foreach (var w in interval.Weights) Add(w.Ref);
         AddParts(stage.Events);
+        foreach (var room in stage.Rooms)
+        {
+            if (room.Miniboss is { } mb) Add(mb);
+            if (room.Boss is { } boss) Add(boss);
+        }
 
         while (queue.Count > 0)
         {

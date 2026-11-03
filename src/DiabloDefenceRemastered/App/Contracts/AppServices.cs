@@ -31,32 +31,38 @@ public sealed record GameSettings
     public float? MusicVolume { get; init; }
 }
 
-/// <summary>한 판 결과(저장·RESULT 로그). <paramref name="HeroClassId"/> = <c>World.HeroClass.Id</c>(v0.6.1 — 기록은 스테이지 × 직업, 8.3).</summary>
-public sealed record RunResult(string StageId, string HeroClassId, bool Victory, float StageTime, int Level, int Kills, int Gold);
+/// <summary>
+/// 한 판 결과(저장·<c>RESULT</c> 로그, v0.7 — 8.3). <paramref name="StartActId"/> = 시작 액트, <paramref name="HeroClassId"/> = <c>World.HeroClass.Id</c>,
+/// <paramref name="Reached"/>·<paramref name="ReachedActId"/>·<paramref name="RunTime"/> = <c>RunSession.Conclude()</c> 뒤의 <c>RunState</c>(v0.7.1 — <c>Depth</c>·그 액트 ID·<c>ElapsedTicks</c> 초).
+/// 방 종류·<c>rooms_hash</c> 는 저장 구현(WP7)이 <c>GameDefs</c> 에서 계산해 적는다.
+/// </summary>
+public sealed record RunResult(string StartActId, string HeroClassId, bool Victory, RunDepth Reached, string ReachedActId, float RunTime, int Level, int Kills, int Gold);
 
-/// <summary>스테이지 × 직업 하나의 최고 기록(v0.6.1, 8.3 — 저장 <c>records.&lt;스테이지&gt;.&lt;직업&gt;</c>).</summary>
-public sealed record StageRecord(float BestTime, int BestLevel, int Kills, bool Victory);
+/// <summary>
+/// 시작 액트 × 직업 하나의 최고 기록(v0.7 — v0.6.1 의 <c>StageRecord</c> 를 대신함, 8.3). <paramref name="BestDepth"/> null = 방 표가 바뀌어 비운 깊이(v0.7.1 — 어떤 판보다도 얕음).
+/// 비교 키 = (깊이, 승리, −걸린 시간)의 사전순(v0.7.1).
+/// </summary>
+public sealed record RunRecord(RunDepth? BestDepth, bool Victory, float BestTime, int Level, int Kills);
 
 /// <summary>
 /// 저장(WP7 SaveStore 가 구현, 설계서 8.3). 개발 옵션 실행인데 --save-dir 가 없으면 사용자 파일을 읽지도 쓰지도 않고
-/// 기본값(창 모드, 스테이지 1 만 열림, 기록 없음)으로 메모리에만 둔다 — 그 판단은 구현 쪽.
-/// 기록은 스테이지 × 직업이다(v0.6). 구현은 "늘 sorcerer" 를 가정하지 않는다 — 직업은 <see cref="RunResult.HeroClassId"/> 로 실려 온다.
-/// 해금은 스테이지 단위(직업과 무관). 옛 판(직업 없는 기록)은 sorcerer 아래로 읽는다(WP7).
+/// 기본값(창 모드, 기록 없음)으로 메모리에만 둔다 — 그 판단은 구현 쪽.
+/// 기록은 시작 액트 × 직업이다(v0.7 — 해금 없음, 깊이 기록 <c>best_depth</c>). 구현은 "늘 sorcerer" 를 가정하지 않는다 — 직업은 <see cref="RunResult.HeroClassId"/> 로 실려 온다.
+/// 읽기 규칙(v0.7.1): 모르는 키 무시, 깨진 기록 한 줄만 버림, 높은 <c>version</c> 은 읽기 전용, 깨진 JSON 은 <c>save.json.bad</c> 로 옮기고 기본값.
 /// </summary>
 public interface ISaveService
 {
     GameSettings Settings { get; }
     int TotalGold { get; }
-    bool IsUnlocked(string stageId);
     void SaveSettings(GameSettings settings);
-    /// <summary>기록만 쓴다(<c>records.&lt;StageId&gt;.&lt;HeroClassId&gt;</c>·해금·금화). 마지막 직업은 <see cref="SetLastHero"/>.</summary>
+    /// <summary>기록만 쓴다(<c>records.&lt;StartActId&gt;.&lt;HeroClassId&gt;</c>·금화 — 비교 키는 8.3). 마지막 직업은 <see cref="SetLastHero"/>.</summary>
     void RecordResult(RunResult result);
     /// <summary>저장의 <c>last_hero</c>(없으면 null). 데이터에 없거나 꺼진 직업이면 앱이 <c>rules.hero.class</c> 로 시작한다(기록은 지우지 않음).</summary>
     string? LastHero { get; }
     /// <summary>직업 고르기(WP9)·<c>--hero</c> 없는 판 시작 때.</summary>
     void SetLastHero(string heroClassId);
-    /// <summary>StageSelect 의 고른 직업 최고 기록(WP6). 없으면 null.</summary>
-    StageRecord? BestRecord(string stageId, string heroClassId);
+    /// <summary>타이틀 한 줄(WP6)의 시작 액트 × 직업 최고 기록. 없으면 null.</summary>
+    RunRecord? BestRecord(string startActId, string heroClassId);
 }
 
 /// <summary>
@@ -93,11 +99,12 @@ public interface IArtServices
 /// <summary>
 /// 소리 서비스 (설계서 7.9, 계약 WP1b, 구현 WP8 <c>Audio/AudioServices.cs</c> 가 만든다).
 /// 무음(<see cref="AppOptions.Muted"/>)이어도 소리 색인으로 고르기를 그대로 돌려 <c>AUDIO</c> 수가 소리 켬과 같다.
+/// v0.7.1: <see cref="IWorldBound"/> — 방 이동마다 개체 키 반복 소리를 멈추고 쿨다운을 비운다(곡은 액트가 같으면 이어 틂).
 /// </summary>
-public interface IAudioServices
+public interface IAudioServices : IWorldBound
 {
     bool Muted { get; }
-    /// <summary>PlayScene 시작: 그 스테이지에 쓸 소리·곡을 미리 읽는다.</summary>
+    /// <summary>PlayScene 이 액트를 시작할 때만(v0.7 — 방마다가 아님): 그 액트에 쓸 소리·곡을 미리 읽는다.</summary>
     void PreloadStage(StageDef stage);
     /// <summary>PlayScene 프레임 끝: <c>FxSystem.Consume</c> 다음, <c>buffer.Clear</c> 전.</summary>
     void Consume(PresentationBuffer buffer, World world);
@@ -118,12 +125,17 @@ public interface IAudioServices
 /// </summary>
 public sealed record AppOptions
 {
-    /// <summary>개발 옵션 실행(--autoplay·--stage·--capture*·--preview·--validate-data·--stress·--reveal·--god·--level·--weapons·--passives·--hero 중 하나라도 — 9절, 판정은 WP7).</summary>
+    /// <summary>개발 옵션 실행(--autoplay·--stage·--room·--map·--capture*·--preview·--validate-data·--stress·--reveal·--god·--level·--weapons·--passives·--hero 중 하나라도 — 9절, 판정은 WP7).</summary>
     public bool DevRun { get; init; }
     public bool Autoplay { get; init; }
     public bool Background { get; init; }
     public ulong Seed { get; init; }
+    /// <summary>--stage(v0.7): 판의 시작 액트(그 액트의 1번 방부터). null 이면 뿌리 액트.</summary>
     public string? StageId { get; init; }
+    /// <summary>--room a:n(v0.7, 9절): 그 방부터. <c>RunPlanner.ActAt</c> → <c>RunStart.StartAct</c>·<c>StartRoomIndex</c>. <see cref="StageId"/> 와 같이 주면 옵션 오류.</summary>
+    public RoomRef? StartRoom { get; init; }
+    /// <summary>--map(v0.7): <c>--preview tiles</c>·<c>fog</c> 의 맵. 없으면 <see cref="StageId"/>(없으면 뿌리 액트)의 보스 맵.</summary>
+    public string? Map { get; init; }
     /// <summary>
     /// --hero(v0.6): 그 직업으로 시작(직업 고르기 화면을 건너뜀). null 이면 저장의 last_hero → rules.hero.class.
     /// 없는 ID 는 옵션 오류(64, 데이터를 읽은 뒤), 꺼진 직업은 종료 코드 5(9절). 개발 옵션 판정에 든다.

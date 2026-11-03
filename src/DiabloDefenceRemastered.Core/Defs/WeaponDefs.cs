@@ -84,6 +84,11 @@ public sealed record PassiveDef : IDef
     public bool Trait { get; init; }
     /// <summary>이 패시브를 고를 수 있는 직업(v0.6.1). 비면 모든 직업.</summary>
     public IReadOnlyList<DefRef<HeroClassDef>> Classes { get; init; } = [];
+    /// <summary>
+    /// 축복 패시브(v0.7, 6.9 — 기획 6절): 패시브 칸을 쓰지 않고 <c>Hero.Blessings</c>(8칸)에, 성소 창에만 나온다(레벨업·채움·마법서·상자 후보 밖).
+    /// 레벨 있음, 진화의 짝이 아님, <see cref="Trait"/> 와 함께 참이면 오류(13.5-23).
+    /// </summary>
+    public bool Blessing { get; init; }
 }
 
 public sealed record OnAcquireDef
@@ -105,7 +110,8 @@ public sealed record EvolutionDef : IDef
     public string Id => Result.Id;
 }
 
-public enum PickupKind : byte { Xp, Gold, Heal, Surge, Magnet, Chest }
+/// <summary>획득물 종류. <see cref="Reward"/>(v0.7, JSON <c>reward</c>) = 문 보상 물체 — 몸에 닿아야 먹히고 끌어당김·수명·상한 정리 밖, 상태와 상관없이 늘 집힌다(6.9·6.18).</summary>
+public enum PickupKind : byte { Xp, Gold, Heal, Surge, Magnet, Chest, Reward }
 
 /// <summary>획득물 <c>pickups[]</c> (기획 11.1). 경험치 보석은 드롭 표가 아니라 규칙(죽으면 항상 1개).</summary>
 public sealed record PickupDef : IDef

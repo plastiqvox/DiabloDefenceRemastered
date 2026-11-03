@@ -11,43 +11,103 @@ public sealed partial class World
     /// <summary>틱 길이(초). 모든 속도·시간은 초 단위이고 틱마다 Dt 를 곱한다.</summary>
     public const float Dt = 1f / TicksPerSecond;
 
+    /// <summary>
+    /// 방 없는 월드(v0.7.1 — 3.6 결정 4 "생성자 둘"): <see cref="Room"/> == null, 그 액트의 보스 맵(없으면 첫 일반 맵 — <c>slice</c> 판) 하나에서 v0.6 처럼 돈다.
+    /// 시험·<c>--preview</c>·<c>--map</c> 만 쓴다. 게임 판은 늘 <see cref="RunSession"/>(방 월드)이다.
+    /// </summary>
     /// <param name="heroClass">
     /// 고른 직업(v0.6, 6.16). 앱(WP6·WP7)이 <c>--hero</c> → 저장의 마지막 직업 → <c>rules.hero.class</c> 순으로 정하고 꺼진 직업이면 기본 직업으로 바꿔 넘긴다.
     /// null 이면 <c>rules.hero.class</c>. 시뮬레이션은 묶음을 모른다(같은 씨앗·스테이지·직업이면 같은 결과).
     /// </param>
     public World(GameDefs defs, ulong seed, StageDef? stage = null, HeroClassDef? heroClass = null)
+        : this(defs, seed, stage, heroClass, null)
+    {
+    }
+
+    /// <summary>
+    /// 방 월드(v0.7.1 — 3.6 결정 1·4): 방 하나 = <c>World</c> 하나. 씨앗 = <c>room.Plan.RoomSeed</c>, 액트 = <c>room.Run.Act.Act</c>, 직업 = <c>room.Run.HeroClass</c>,
+    /// 맵 = <c>room.Plan.Map</c> — 서로 다른 값이 들어올 길이 없게 이 생성자 하나로만 만든다(<see cref="RunSession"/>·시험).
+    /// 주인공은 들어온 문 진입점(<c>inside</c>)에서 <c>center</c> 쪽 방위로 서고, 첫 틱 전에 그 액트의 지난 <c>light_change</c>(<c>RoomSchedule.Replay</c>)를 다시 적용한다.
+    /// </summary>
+    public World(GameDefs defs, RoomStart room)
+        : this(defs, room.Plan.RoomSeed, room.Run.Act.Act, room.Run.HeroClass, room)
+    {
+    }
+
+    private World(GameDefs defs, ulong seed, StageDef? stage, HeroClassDef? heroClass, RoomStart? room)
     {
         Defs = defs;
         Seed = seed;
         Rng = new SimRandom(seed);
         Stage = stage;
         HeroClass = heroClass ?? defs.Rules.Hero?.Class.Def;
-        Map = stage?.Map.Def;
+        Map = room is not null ? room.Plan.Map : NoRoomMap(stage);
         if (Map is { } map)
         {
             // 배치 풀기·좌표 풀기는 여기서 한 번(4.1). 다른 묶음은 Arena·Resolved 만 읽고 IsoMath 를 따로 부르지 않는다
             Arena = ArenaLayout.Expand(map);
             Resolved = ResolvedMap.Resolve(map, Arena.Iso);
-            Rooms = RoomFloors.Compute(map, Arena);
+            InnerRooms = RoomFloors.Compute(map, Arena);
+            Gates = GateZones.Compute(map, Arena);
             MapSize = Arena.Iso.BoxSize;
         }
         else MapSize = CameraMath.DefaultViewSize;
 
-        if (stage is not null && Resolved is not null) Lighting.Load(stage.Lighting, Resolved);
-        RoomPresence.Reset(Rooms.Rooms.Count);
+        if (room is not null)
+        {
+            var rules = defs.Rules.Rooms ?? throw new InvalidOperationException("방 월드에는 rules.rooms 가 있어야 한다(6.10)");
+            if (Resolved is null) throw new InvalidOperationException($"방 {room.Plan.Act}:{room.Plan.Number} 에 맵이 없다");
+            Run = room.Run;
+            Room = new RoomState(room, rules);
+            RunStats = room.Run.Stats;
+        }
+        else RunStats = new RunStats();
+
+        if (stage is not null && Resolved is not null)
+        {
+            Lighting.Load(stage.Lighting, Resolved);
+            if (room is not null)
+            {
+                // 첫 틱 전에 지난 조명 바꾸기를 시간 순으로 다시 적용(v0.7.1) — 감독 없이도 서고 첫 틱 시야(1단계)가 바뀐 반경으로 계산된다
+                var schedule = RoomEvents.Schedule(stage, room.Plan, defs.Rules.Rooms!, room.StartClockTicks);
+                foreach (var e in schedule.Replay)
+                    if (e.Params is LightChangeParams change) Lighting.Apply(change);
+            }
+        }
+        InnerRoomPresence.Reset(InnerRooms.Rooms.Count);
 
         Hero.Reset();
         Hero.Radius = HeroClass?.Radius ?? 14f;
         if (Resolved is { } r)
         {
-            Hero.Pos = Hero.PrevPos = r.HeroStart;
-            Hero.Facing = FacingMath.ToVector(r.HeroFacing);
+            if (room is not null)
+            {
+                var start = r.Entry(room.Plan.GateIn).Inside;
+                Hero.Pos = Hero.PrevPos = start;
+                var toCenter = r.Anchor(defs.Rules.Rooms!.RewardAnchor) - start;
+                Hero.Facing = toCenter.LengthSquared() > 1e-6f
+                    ? FacingMath.FromColumn(FacingMath.ToColumn(Vector2.Normalize(toCenter), 8), 8)
+                    : FacingMath.ToVector(r.HeroFacing);
+            }
+            else
+            {
+                Hero.Pos = Hero.PrevPos = r.HeroStart;
+                Hero.Facing = FacingMath.ToVector(r.HeroFacing);
+            }
         }
         else Hero.Pos = Hero.PrevPos = MapSize * 0.5f;
         ViewRect = CameraMath.ViewRect(Hero.Pos, MapSize, ViewSize);
 
         // 시야는 늘 있다(꺼지면 Enabled = false). 계산은 첫 BeginTick 이 한다 — 생성 뒤 주인공을 옮기는 설정이 있어서(4.11 "시작")
         Visibility = new VisibilityField(this);
+    }
+
+    /// <summary>방 없는 월드의 맵: 보스 맵, 없으면 첫 일반 맵(<c>slice</c> 판은 보스 맵이 없다).</summary>
+    private static MapDef? NoRoomMap(StageDef? stage)
+    {
+        if (stage is null) return null;
+        if (stage.RoomMaps.Boss is { } boss) return boss.Def;
+        return stage.RoomMaps.Normal.Count > 0 ? stage.RoomMaps.Normal[0].Def : null;
     }
 
     // ── 정의·시계·난수 ──────────────────────────────────────────────
@@ -65,10 +125,15 @@ public sealed partial class World
     /// <summary>입구·기준점·주인공 시작을 월드 px 로 푼 것. 맵 위치가 필요한 묶음은 이것만 읽는다(4.1). 맵 없는 시험 월드는 null.</summary>
     public ResolvedMap? Resolved { get; }
     /// <summary>
-    /// 방 바닥(v0.6.3, 6.11 "방 바닥" — 맵을 읽을 때 한 번). 방 체류 압박·방 보급(WP4)·방 들르기 "방 안"(WP4 <c>AutoplayPolicy</c>)·로그(WP7)가 이것만 읽는다.
+    /// <b>안쪽 방</b> 바닥(v0.6.3, 6.11 "방 바닥" — 맵을 읽을 때 한 번. v0.7.1 에 <c>Rooms</c> 에서 이름을 바꿈 — 판 단위 방 <see cref="Room"/> 과 한 글자 차이였다, 11.2).
+    /// 방 체류 압박·방 보급(WP4)·방 들르기 "방 안"(WP4 <c>AutoplayPolicy</c>)·로그 <c>INNER_ROOMS</c>(WP7)가 이것만 읽는다.
     /// 맵 없는 시험 월드·<c>room_areas</c> 없는 맵은 <see cref="RoomFloors.Empty"/>.
     /// </summary>
-    public RoomFloors Rooms { get; } = RoomFloors.Empty;
+    public RoomFloors InnerRooms { get; } = RoomFloors.Empty;
+    /// <summary>
+    /// 문 틈 칸(v0.7, 6.11 — 생성자에서 한 번 <c>GateZones.Compute</c>). 나가는 자리 판정(<c>RoomFlow</c>), 봉인 그리기·문 위 아이콘(WP5), 미니맵 문 점(WP6). 맵 없는 월드는 빈 사전.
+    /// </summary>
+    public IReadOnlyDictionary<string, GateZone> Gates { get; } = GateZones.Empty;
     /// <summary>외곽 상자 64N × (32N + H)(카메라·생성 띠 기준, 4.1). 맵 없는 시험 월드는 960×540.</summary>
     public Vector2 MapSize { get; set; }
     public ulong Seed { get; }
@@ -81,6 +146,11 @@ public sealed partial class World
     public int Tick { get; set; }
     public float StageTime => Tick * Dt;
     public float StageMinutes => Tick * Dt / 60f;
+    /// <summary>
+    /// 난이도 분 t(v0.7, 3.1·3.6) = <c>Room?.T ?? StageMinutes</c>. 감독의 구간·배율·이벤트 판정과 규칙 쪽 시각은 이것을 쓴다 — 방 월드는 방마다 <see cref="Tick"/> 이 0 부터라
+    /// <see cref="StageMinutes"/> 는 그 방 안의 경과 시간일 뿐이다.
+    /// </summary>
+    public float DifficultyMinutes => Room?.T ?? StageMinutes;
 
     /// <summary>이 월드를 돌리는 시뮬레이션(<see cref="SimulationBuilder.Build"/> 가 넣는다). <see cref="StageStepper"/> 가 쓴다.</summary>
     public Simulation? Simulation { get; internal set; }
@@ -135,15 +205,27 @@ public sealed partial class World
     public ICombatSpawner Spawner { get; set; } = null!;
     /// <summary>WP3 CombatModule 이 넣는다. 없는 시험 월드면 null.</summary>
     public IProgression? Progression { get; set; }
-    public RunStats RunStats { get; } = new();
+    /// <summary>
+    /// 판 누적 기록. 방 월드는 <c>Run.Stats</c> 를 가리키고(v0.7 — 방 사이에 이어짐), 방 없는 월드는 새로 만든다. 지우는 곳이 없다(v0.7.1, 3.6).
+    /// </summary>
+    public RunStats RunStats { get; }
 
     // ── WP4 가 쓰고 WP5·WP6 이 읽는 것 ─────────────────────────────────
 
     public LightingState Lighting { get; } = new();
-    /// <summary>주인공이 선 방과 방마다 누적(v0.6.3 — 방 체류 압박·첫 플레이 로그). 방 번호 = <see cref="Rooms"/> 순서.</summary>
-    public RoomPresence RoomPresence { get; } = new();
+    /// <summary>주인공이 선 안쪽 방과 안쪽 방마다 누적(v0.6.3 — 방 체류 압박·첫 플레이 로그. v0.7.1 에 <c>RoomPresence</c> 에서 이름을 바꿈). 방 번호 = <see cref="InnerRooms"/> 순서.</summary>
+    public RoomPresence InnerRoomPresence { get; } = new();
     public List<BossBar> BossBars { get; } = [];
     public BannerState Banner;
+
+    // ── 판·방 (v0.7, 3.6) ─────────────────────────────────────────────
+
+    /// <summary>
+    /// 이 방의 흐름 상태(v0.7). 방 없는 월드는 null(<c>RoomFlow</c> 꺼짐). 쓰기는 생성자와 <c>RoomFlowSystem</c>(16단계)뿐.
+    /// </summary>
+    public RoomState? Room { get; }
+    /// <summary>판 상태(v0.7 — 판 수명, <see cref="RunSession"/> 이 넣음). 방 없는 월드는 null.</summary>
+    public RunState? Run { get; }
 
     // ── 시야 (v0.5, 4.11) ─────────────────────────────────────────────
 
@@ -170,13 +252,22 @@ public sealed partial class World
 
     /// <summary>
     /// 승리 처리 시작 (설계서 3.5 끝): VictoryPending, 살아 있는 적 전부 Dead(Collapse).
-    /// 적 투사체·장판·예고는 EndTick 이 지운다. boss 승리는 DeathHooks(WP4), survive 승리는 EndTick 이 부른다.
+    /// 적 투사체·장판·예고는 EndTick 이 지운다. v0.7: 방 월드는 판의 마지막 방에서 <c>RoomFlow</c>(보스 처치·정리 끝)가, 방 없는 월드는 DeathHooks(WP4, 보스 처치)가 부른다.
     /// </summary>
     public void BeginVictory()
     {
         if (Outcome != RunOutcome.Running) return;
         Outcome = RunOutcome.VictoryPending;
         OutcomeTick = Tick;
+        CollapseEnemies();
+    }
+
+    /// <summary>
+    /// 무너짐(v0.7, 3.6): 살아 있는 적 전부 Dead(<see cref="KillCause.Collapse"/> — 훅·보상·처치 수 없음). <see cref="BeginVictory"/>·정리 안전장치·마지막이 아닌 보스 처치가 부른다.
+    /// 적 투사체·장판·예고는 <c>EndTick</c> 이 승리 대기·<c>Room.Phase ≥ Reward</c> 동안 지운다.
+    /// </summary>
+    public void CollapseEnemies()
+    {
         var enemies = Enemies.Items;
         for (var i = 0; i < enemies.Length; i++)
         {

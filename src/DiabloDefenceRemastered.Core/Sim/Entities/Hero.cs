@@ -73,6 +73,14 @@ public struct PassiveSlots
     private PassiveSlot _e0;
 }
 
+/// <summary>축복 칸 8(v0.7, 6.9 — <c>blessing</c> 패시브, 패시브 칸 밖). 쓰기 WP3(성소 창), 읽기 WP6(일시정지 빌드 목록)·WP7(해시).</summary>
+[InlineArray(SlotCount)]
+public struct BlessingSlots
+{
+    public const int SlotCount = 8;
+    private PassiveSlot _e0;
+}
+
 /// <summary>
 /// 주인공 — 공통 조각 (WP1, 설계서 11.2). 저장소에 없고 핸들은 <see cref="EntityId.Hero"/>.
 /// 재생·무기 내부 상태는 <c>Sim/Hero/Hero.Combat.cs</c>(WP3, <see cref="ResetCombat"/>).
@@ -106,6 +114,8 @@ public sealed partial class Hero
     public StatBlock Stats { get; } = new();
     public WeaponSlots Weapons;
     public PassiveSlots Passives;
+    /// <summary>축복(v0.7 — <c>blessing</c> 패시브, 슬롯 밖 8칸). 방 사이에는 <c>HeroCarry.Blessings</c> 로 넘긴다.</summary>
+    public BlessingSlots Blessings;
 
     // 쓰기 WP2 / 읽기 WP3
     /// <summary>몸이 닿은 적 수(3 이상이면 다음 틱 이동 ×0.6).</summary>
@@ -127,6 +137,7 @@ public sealed partial class Hero
         Stats.Clear();
         for (var i = 0; i < WeaponSlots.SlotCount; i++) Weapons[i] = new WeaponSlot { MaxedAtTick = -1 };
         for (var i = 0; i < PassiveSlots.SlotCount; i++) Passives[i] = default;
+        for (var i = 0; i < BlessingSlots.SlotCount; i++) Blessings[i] = default;
         TouchingCount = 0;
         ResetCombat();
     }

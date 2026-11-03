@@ -53,7 +53,7 @@ public sealed class GameDefs
     [
         "rules", "sprites", "sprite_sets", "effects", "projectiles", "tilesets", "maps", "enemies", "affixes", "buffs",
         "weapons", "passives", "evolutions", "pickups", "drop_tables", "stages", "sounds", "music", "sound_bindings",
-        "hero_classes",
+        "hero_classes", "rewards",
     ];
 
     public static GameDefs Empty { get; } = new();
@@ -79,4 +79,6 @@ public sealed class GameDefs
     public SoundBindingsDef SoundBindings { get; init; } = new();
     /// <summary>직업(v0.6, 6.16). 주인공 코드는 이 표가 아니라 <c>World.HeroClass</c>(고른 직업 하나)를 읽는다.</summary>
     public DefTable<HeroClassDef> HeroClasses { get; init; } = DefTable<HeroClassDef>.Empty;
+    /// <summary>문 보상(v0.7, 6.18). 액트의 <c>rewards.weights</c>·<c>first_room</c>·<c>rules.rooms.fallback_reward</c> 가 가리킨다.</summary>
+    public DefTable<RewardDef> Rewards { get; init; } = DefTable<RewardDef>.Empty;
 }

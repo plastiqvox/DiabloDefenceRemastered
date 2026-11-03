@@ -6,8 +6,8 @@ namespace DiabloDefenceRemastered.Core.Sim.Contracts;
 /// </summary>
 public enum RunOutcome : byte { Running, VictoryPending, Victory, DefeatPending, Defeat }
 
-/// <summary>선택 대기. EndTick 이 켜고 PlayScene 이 같은 앱 틱에 오버레이를 올린다(3.3).</summary>
-public enum ChoiceKind : byte { None, LevelUp, Chest }
+/// <summary>선택 대기. EndTick 이 켜고 PlayScene 이 같은 앱 틱에 오버레이를 올린다(3.3). <see cref="Reward"/>(v0.7) = 마법서·성소 창(레벨업 오버레이 재사용, 6.18).</summary>
+public enum ChoiceKind : byte { None, LevelUp, Chest, Reward }
 
 /// <summary>점 빛 하나의 현재 값(월드 px). 깜빡임·맥동은 렌더가 스테이지 틱으로 계산한다(7.7).</summary>
 public struct PointLight
@@ -80,12 +80,70 @@ public sealed class LightingState
             });
         }
     }
+
+    /// <summary>
+    /// <c>light_change</c> 하나를 적용한다(v0.7.1, 순수 — 3.6 결정 5). 방 월드 생성자가 첫 틱 전에 지난 것(<c>RoomSchedule.Replay</c>)을 시간 순으로,
+    /// 감독(WP4)이 방 안에서 시각이 된 것을 같은 함수로 부른다. 경로는 적힌 순서대로. 모르는 경로·없는 점 빛·값 개수가 틀리면 예외(로딩 검사 13.5-1 이 먼저 막는다).
+    /// </summary>
+    public void Apply(LightChangeParams change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        foreach (var set in change.Set) Apply(set);
+    }
+
+    private void Apply(LightSet set)
+    {
+        var path = set.Path;
+        switch (path)
+        {
+            case "ambient": Ambient = ColorOf(set); return;
+            case "darkness": Darkness = One(set); return;
+            case "unit_min_light": UnitMinLight = One(set); return;
+            case "hero_light.color": HeroLightColor = ColorOf(set); return;
+            case "hero_light.radius": HeroLightRadius = One(set); return;
+        }
+        const string lightsPrefix = "lights.";
+        if (path.StartsWith(lightsPrefix, StringComparison.Ordinal))
+        {
+            var rest = path.AsSpan(lightsPrefix.Length);
+            var dot = rest.IndexOf('.');
+            if (dot > 0)
+            {
+                var id = rest[..dot].ToString();
+                var field = rest[(dot + 1)..].ToString();
+                if (!TryGetLight(id, out var light)) throw new ArgumentException($"light_change: 점 빛 '{id}' 가 없다({path})");
+                switch (field)
+                {
+                    case "color": light.Color = ColorOf(set); break;
+                    case "radius": light.Radius = One(set); break;
+                    case "flicker": light.Flicker = One(set); break;
+                    case "pulse.period": light.PulsePeriod = One(set); break;
+                    case "pulse.amount": light.PulseAmount = One(set); break;
+                    default: throw new ArgumentException($"light_change: 모르는 경로 '{path}'");
+                }
+                SetLight(id, light);
+                return;
+            }
+        }
+        throw new ArgumentException($"light_change: 모르는 경로 '{path}'");
+    }
+
+    private static float One(LightSet set) =>
+        set.Value is { Length: 1 } v ? v[0] : throw new ArgumentException($"light_change: '{set.Path}' 는 값 하나여야 한다");
+
+    private static Rgb ColorOf(LightSet set)
+    {
+        if (set.Value is not { Length: 3 } v) throw new ArgumentException($"light_change: '{set.Path}' 는 [r,g,b] 여야 한다");
+        static byte B(float x) => (byte)Math.Clamp((int)MathF.Round(x), 0, 255);
+        return new Rgb(B(v[0]), B(v[1]), B(v[2]));
+    }
 }
 
 /// <summary>
-/// 주인공이 선 방과 방마다 누적 (v0.6.3, <c>World.RoomPresence</c> — 기획 10.1 방 체류 압박·첫 플레이 로그). 방 번호 = <c>World.Rooms.Rooms</c> 의 순서.
+/// 주인공이 선 <b>안쪽 방</b>과 안쪽 방마다 누적 (v0.6.3, <c>World.InnerRoomPresence</c> — 기획 10.1 방 체류 압박·첫 플레이 로그). 방 번호 = <c>World.InnerRooms.Rooms</c> 의 순서.
+/// v0.7: <c>World</c> 수명이라 판 단위 방(<c>World.Room</c>) 하나 — 그 맵 하나의 누적이다(3.6). 형 이름은 그대로 두고 <c>World</c> 속성 이름만 v0.7.1 에 바꿨다(11.2 "방" 의 두 뜻).
 /// 쓰기: WP4 Director(2단계 — 주인공 칸의 방 번호로 <see cref="Current"/>·<see cref="EnteredTick"/>, 누적은 앞 틱의 <c>HeroDamaged</c>·<c>SupplyCollected</c> 로).
-/// 읽기: WP4 방 체류 압박·<c>AutoplayPolicy</c>("방 안"), WP7 로그 <c>ROOMS</c>(판 끝 방마다 체류 시간·받은 피해·주운 보급)·<c>StateHasher</c>(<see cref="Current"/>·<see cref="EnteredTick"/>).
+/// 읽기: WP4 방 체류 압박·<c>AutoplayPolicy</c>("방 안"), WP7 로그 <c>INNER_ROOMS</c>(v0.7.1 — 판 단위 방이 끝날 때마다 안쪽 방마다 체류 시간·받은 피해·주운 보급)·<c>StateHasher</c>(<see cref="Current"/>·<see cref="EnteredTick"/>).
 /// 사람이 하는 판에도 센다(자동 조작의 <c>RoomVisitStats</c> 와 따로).
 /// </summary>
 public sealed class RoomPresence
@@ -137,7 +195,7 @@ public struct BannerState
 }
 
 /// <summary>
-/// 공정성 계측 누적 수 (<c>World.Fairness</c>, v0.5.1, 설계서 10.1 공정성 열 — 기획 10.7 공정성 1~5). 판이 끝나면 월드와 함께 버린다.
+/// 공정성 계측 누적 수 (<c>World.Fairness</c>, v0.5.1, 설계서 10.1 공정성 열 — 기획 10.7 공정성 1~5). 방(월드) 하나의 수이고, 방이 끝나면 <c>RunSession</c> 이 <see cref="AddTo"/> 로 판 합(<c>RunState.Fairness</c>)에 더한다(v0.7).
 /// 쓰기: WP3(<see cref="UnseenShots"/>·<see cref="HiddenHits"/>), WP4(<see cref="UnseenCharges"/>·<see cref="KiteSwitches"/>).
 /// 읽기: WP2 <c>InvariantChecker</c>(열 <c>unseen_shots</c>·<c>unseen_charges</c>·<c>hidden_hits</c>·<c>kite_switches</c>), WP7 로그.
 /// 기준은 앞 셋이 0, <c>kite_switches</c> 는 살아 있는 <c>kite</c> 적 하나당 초당 1 이하.
@@ -152,4 +210,13 @@ public sealed class FairnessCounters
     public int HiddenHits { get; set; }
     /// <summary><c>kite</c> 상태(다가감·물러남·쏨) 전환 수.</summary>
     public int KiteSwitches { get; set; }
+
+    /// <summary>이 수들을 <paramref name="total"/> 에 더한다(v0.7 — 방이 끝날 때 <c>RunState.Fairness</c> 에, 3.6).</summary>
+    public void AddTo(FairnessCounters total)
+    {
+        total.UnseenShots += UnseenShots;
+        total.UnseenCharges += UnseenCharges;
+        total.HiddenHits += HiddenHits;
+        total.KiteSwitches += KiteSwitches;
+    }
 }

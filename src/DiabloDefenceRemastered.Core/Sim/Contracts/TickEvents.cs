@@ -52,8 +52,18 @@ public readonly record struct LevelUpReady(int NewLevel);
 /// <summary>보스(rank: boss)가 Damage 로 죽었다.</summary>
 public readonly record struct BossDefeated(EntityId Id, int DefIndex, Vector2 Pos);
 
-/// <summary>방 보급을 주웠다(v0.6.3, WP3 Pickups 15 가 낸다 — <c>Pickup.SupplyRoom</c> 이 있는 획득물). WP4 가 다음 틱에 <c>RoomPresence.SuppliesTaken</c> 에 센다.</summary>
+/// <summary>방 보급을 주웠다(v0.6.3, WP3 Pickups 15 가 낸다 — <c>Pickup.SupplyRoom</c> 이 있는 획득물). WP4 가 다음 틱에 <c>World.InnerRoomPresence.SuppliesTaken</c> 에 센다.</summary>
 public readonly record struct SupplyCollected(string RoomId, PickupDef Def, Vector2 Pos);
+
+/// <summary>
+/// 방이 정리됐다(v0.7, <c>RoomFlowSystem</c> 16 이 보상 단계에 들어가는 틱에 낸다 — 3.6). <paramref name="Collapsed"/> = 정리 안전장치가 남은 적을 무너뜨림.
+/// WP3 가 다음 틱에 보석·금화를 끌어당기고, 마지막이 아닌 보스 방(<see cref="RoomKind.Boss"/>)이면 체력을 전부 채운다.
+/// 판의 마지막 방은 승리라 내지 않는다.
+/// </summary>
+public readonly record struct RoomCleared(RoomKind Kind, bool Collapsed);
+
+/// <summary>일반 방 생존 시간이 끝났다·정예 방 중간 보스를 처치했다(v0.7, <c>RoomFlowSystem</c>). 감독(WP4)은 다음 틱부터 생성·이벤트를 안 한다(남은 방 이벤트는 버림).</summary>
+public readonly record struct RoomSurviveEnded(RoomKind Kind);
 
 /// <summary>한 틱 동안 쓴 이벤트 묶음.</summary>
 public sealed class TickEventSet
@@ -65,6 +75,8 @@ public sealed class TickEventSet
     public EventList<LevelUpReady> LevelUpReady { get; } = new(4);
     public EventList<BossDefeated> BossDefeated { get; } = new(2);
     public EventList<SupplyCollected> SupplyCollected { get; } = new(2);
+    public EventList<RoomCleared> RoomCleared { get; } = new(2);
+    public EventList<RoomSurviveEnded> RoomSurviveEnded { get; } = new(2);
 
     public void Clear()
     {
@@ -75,6 +87,8 @@ public sealed class TickEventSet
         LevelUpReady.Clear();
         BossDefeated.Clear();
         SupplyCollected.Clear();
+        RoomCleared.Clear();
+        RoomSurviveEnded.Clear();
     }
 }
 

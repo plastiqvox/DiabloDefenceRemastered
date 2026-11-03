@@ -352,9 +352,10 @@ public static class TestDefs
 
     /// <summary>
     /// 합성 맵: 네 변 가운데에 문(입구 ID = 문 ID), 진입점은 뒤 문 4·앞 문 N−6, 바깥 시작점 −4·N+3(6.11 규칙), 주인공 시작·기준점 center = 맵 중심.
+    /// <paramref name="roomKinds"/>(v0.7) 를 주면 방 맵(13.5-23 ③ 검사 대상) — 문 넷·<c>center</c> 는 늘 있다.
     /// </summary>
     public static MapDef Map(int megaTiles = DefaultMegaTiles, string id = MapId, TilesetDef? tileset = null,
-                             IReadOnlyList<PiecePlacementDef>? place = null)
+                             IReadOnlyList<PiecePlacementDef>? place = null, IReadOnlyList<RoomKind>? roomKinds = null)
     {
         var ts = tileset ?? Tileset();
         var n = megaTiles * 2;
@@ -385,24 +386,107 @@ public static class TestDefs
             HeroStart = new HeroStartDef { Tile = new TileCoord(c, c), Facing = Compass.South },
             AnchorsTile = new Dictionary<string, TileCoord> { ["center"] = new(c, c) },
             Art = "d1/maps/" + id,
+            RoomKinds = roomKinds ?? [],
         };
     }
 
-    public static StageDef Stage(MapDef map, string id = StageId, VictoryDef? victory = null, LightingDef? lighting = null) => new()
+    // ── 방 구조(v0.7, WP1e #23-형) ──────────────────────────────────────
+
+    /// <summary>합성 문 보상(마법서 — 무기 카드).</summary>
+    public const string RewardTomeId = "test_reward_tome";
+    /// <summary>합성 문 보상(보물 상자 — 레벨업, <c>rules.rooms.fallback_reward</c>).</summary>
+    public const string RewardChestId = "test_reward_chest";
+    /// <summary>합성 문 보상(완전 회복 물약).</summary>
+    public const string RewardPotionId = "test_reward_potion";
+    /// <summary>합성 정예 상자 획득물(<c>kind: chest</c> — 정예·보스 방 보상 시험).</summary>
+    public const string EliteChestId = "test_elite_chest";
+
+    /// <summary>문 보상 물체(<c>kind: reward</c> 획득물, 코드 그림).</summary>
+    public static PickupDef RewardObject(string id) => new()
+    {
+        Id = id,
+        Kind = PickupKind.Reward,
+        Draw = new PickupDrawDef { Procedural = "gem", Size = new Int2(16, 16) },
+    };
+
+    /// <summary>정예 상자(<c>kind: chest</c>).</summary>
+    public static PickupDef EliteChest(string id = EliteChestId) => new()
+    {
+        Id = id,
+        Kind = PickupKind.Chest,
+        Draw = new PickupDrawDef { Procedural = "gem", Size = new Int2(16, 16) },
+    };
+
+    /// <summary>합성 문 보상 셋(마법서·보물 상자·물약)과 그 물체. 6.18 예의 모양을 줄인 것.</summary>
+    public static (IReadOnlyList<RewardDef> Rewards, IReadOnlyList<PickupDef> Objects) Rewards()
+    {
+        var tome = RewardObject("obj_test_tome");
+        var chest = RewardObject("obj_test_chest");
+        var potion = RewardObject("obj_test_potion");
+        RewardDef[] rewards =
+        [
+            new() { Id = RewardTomeId, Name = "마법서", Kind = RewardKind.WeaponCards, Object = DefRef<PickupDef>.To(tome),
+                    Cards = new RewardCardsDef { OwnedWeapon = 100, NewWeapon = 100 }, Skip = new RewardSkipDef { Gold = 25 } },
+            new() { Id = RewardChestId, Name = "보물 상자", Kind = RewardKind.LevelUp, Object = DefRef<PickupDef>.To(chest), Gold = [30, 60] },
+            new() { Id = RewardPotionId, Name = "완전 회복 물약", Kind = RewardKind.FullHeal, Object = DefRef<PickupDef>.To(potion), SkipWhenHpAtLeast = 0.7f },
+        ];
+        return (rewards, [tome, chest, potion]);
+    }
+
+    /// <summary>
+    /// 합성 <c>rules.rooms</c> = 6.10 첫 값(유예 3s, 정리 45s, 정예 생성 2:30, 문 sw·se 로 들어와 nw·ne 로 나감, 셋 0.4, 넓이 배율 기준 <paramref name="reference"/> [0.6, 1.0]).
+    /// </summary>
+    public static RoomRulesDef RoomRules(RewardDef fallback, MapDef reference) => new()
+    {
+        Grace = 3f,
+        CleanupLimit = 45f,
+        RemainingMarker = 10,
+        EliteSpawnCap = new ClockTime(150f),
+        Transition = 0.5f,
+        Gates = new RoomGatesDef { Entry = ["gate_sw", "gate_se"], BossEntry = "gate_sw", Exits = ["gate_nw", "gate_ne"], SingleExit = "gate_ne" },
+        Exits = new ExitsDef { ThreeChance = 0.4f },
+        AreaScale = new AreaScaleDef { Reference = DefRef<MapDef>.To(reference), Min = 0.6f, Max = 1.0f },
+        RewardAnchor = "center",
+        ChestRing = 48f,
+        FallbackReward = DefRef<RewardDef>.To(fallback),
+        AutoplayDoorSkip = 20f,
+    };
+
+    /// <summary>방 하나(v0.7). <paramref name="to"/> 는 일반·정예 방의 t 끝(초).</summary>
+    public static RoomDef Room(RoomKind kind, float from, float? to, int number, EnemyDef? miniboss = null, EnemyDef? boss = null) => new()
+    {
+        Kind = kind,
+        From = new ClockTime(from),
+        To = to is { } t ? new ClockTime(t) : null,
+        Number = number,
+        Miniboss = miniboss is null ? null : DefRef<EnemyDef>.To(miniboss),
+        Boss = boss is null ? null : DefRef<EnemyDef>.To(boss),
+    };
+
+    /// <summary>
+    /// v0.7 모양의 액트(v0.7.1 #23-형): 보스 맵·일반 풀 = <paramref name="map"/>, 방은 일반 방 하나(0:00~1:00, 번호 1), <c>next_act</c> 없음.
+    /// <paramref name="rewards"/> 를 주면 그 보상들이 같은 가중으로 <c>rewards.weights</c>, 첫째가 <c>first_room</c>.
+    /// 기존 시험은 방 없는 월드(<c>World(defs, seed, stage)</c>)로 이 액트의 보스 맵에서 돈다.
+    /// </summary>
+    public static StageDef Stage(MapDef map, string id = StageId, LightingDef? lighting = null, IReadOnlyList<RewardDef>? rewards = null) => new()
     {
         Id = id,
         Name = id,
-        Map = DefRef<MapDef>.To(map),
-        Victory = victory ?? new VictoryDef { Type = VictoryKind.Boss },
+        Rooms = [Room(RoomKind.Normal, 0f, 60f, 1)],
+        RoomMaps = new RoomMapPoolDef { Normal = [DefRef<MapDef>.To(map)], Boss = DefRef<MapDef>.To(map) },
+        Rewards = rewards is { Count: > 0 }
+            ? new StageRewardsDef { Weights = [.. rewards.Select(r => new WeightEntry<RewardDef>(DefRef<RewardDef>.To(r), 1f))], FirstRoom = DefRef<RewardDef>.To(rewards[0]) }
+            : new StageRewardsDef(),
         Lighting = lighting ?? new LightingDef(),
     };
 
     /// <summary>
     /// 타일셋·맵·스테이지·그림 하나·적 정의들·합성 직업(<see cref="HeroClassId"/> = <c>rules.hero.class</c>, 시작 무기 하나·특성 하나, v0.6)으로 된 정의 묶음.
+    /// v0.7: 합성 문 보상 셋·보상 물체·정예 상자, <c>rules.rooms</c>(<see cref="RoomRules"/>)도 넣는다 — 방 월드(<c>WithRoom</c>)가 바로 쓴다.
     /// 시야(v0.5): <paramref name="sight"/>(<c>rules.sight</c>)와 빛 반경 &gt; 0(<paramref name="heroLight"/> 또는 <paramref name="lighting"/>)이 둘 다 있어야 켜진다.
     /// <paramref name="place"/> 를 주면 맵의 안쪽 조각을 그것으로(기본 기둥 넷 대신), <paramref name="tileset"/> 을 주면 그 타일셋으로(시험이 조각을 더할 때).
     /// </summary>
-    public static GameDefs Basic(int megaTiles = DefaultMegaTiles, VictoryDef? victory = null, IEnumerable<EnemyDef>? extraEnemies = null,
+    public static GameDefs Basic(int megaTiles = DefaultMegaTiles, IEnumerable<EnemyDef>? extraEnemies = null,
                                  LightingDef? lighting = null, SightRulesDef? sight = null, float heroLight = 0f,
                                  IReadOnlyList<PiecePlacementDef>? place = null, TilesetDef? tileset = null)
     {
@@ -412,7 +496,8 @@ public static class TestDefs
         var map = Map(megaTiles, tileset: tileset, place: place);
         if (heroLight > 0f)
             lighting = (lighting ?? new LightingDef()) with { HeroLight = (lighting?.HeroLight ?? new HeroLightDef()) with { Radius = heroLight } };
-        var stage = Stage(map, victory: victory, lighting: lighting);
+        var (rewards, objects) = Rewards();
+        var stage = Stage(map, lighting: lighting, rewards: rewards);
         var enemies = new List<EnemyDef> { Enemy(set) };
         if (extraEnemies is not null) enemies.AddRange(extraEnemies);
         var weapon = Weapon();
@@ -420,7 +505,12 @@ public static class TestDefs
         var hero = HeroClass(set, weapon, trait);
         return new GameDefs
         {
-            Rules = new RulesDef { Sight = sight, Hero = new HeroRulesDef { Class = DefRef<HeroClassDef>.To(hero) } },
+            Rules = new RulesDef
+            {
+                Sight = sight,
+                Hero = new HeroRulesDef { Class = DefRef<HeroClassDef>.To(hero) },
+                Rooms = RoomRules(rewards[1], map),
+            },
             Sprites = new DefTable<SpriteDef>([sprite]),
             SpriteSets = new DefTable<SpriteSetDef>([set]),
             Weapons = new DefTable<WeaponDef>([weapon]),
@@ -430,6 +520,8 @@ public static class TestDefs
             Maps = new DefTable<MapDef>([map]),
             Stages = new DefTable<StageDef>([stage]),
             Enemies = new DefTable<EnemyDef>(enemies),
+            Rewards = new DefTable<RewardDef>(rewards),
+            Pickups = new DefTable<PickupDef>([.. objects, EliteChest()]),
         };
     }
 }

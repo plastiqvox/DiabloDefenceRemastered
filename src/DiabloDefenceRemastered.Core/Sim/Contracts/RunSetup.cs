@@ -15,6 +15,7 @@ public sealed record RunOptions
     public int? Level { get; init; }
     public IReadOnlyList<LoadoutEntry> Weapons { get; init; } = [];
     public IReadOnlyList<LoadoutEntry> Passives { get; init; } = [];
+    /// <summary>--start-at(v0.7): 판의 <b>첫 방</b> 방 시계 시작(<c>RoomStart.StartClockTicks</c>, 3.6). 둘째 방부터는 쓰지 않는다. 방 없는 월드는 v0.6 대로 스테이지 시각.</summary>
     public ClockTime? StartAt { get; init; }
     public int? StressEnemies { get; init; }
     public int? StressProjectiles { get; init; }
@@ -42,13 +43,19 @@ public enum CommandButtons : ushort
     Reroll = 1 << 6,
     Skip = 1 << 7,
     Minimap = 1 << 8,
+    /// <summary>
+    /// 문 단계에서 <see cref="PlayerCommand.ExitIndex"/> 번째 출구로 나간다(v0.7.1 — 자동 조작 <c>DOOR_SKIP</c> 만, 3.6·9절). 깃발이 없으면 "안 나감" 이라
+    /// 기본값(<c>default</c>·<see cref="PlayerCommand.None"/>)이 조용히 0번 출구로 나가는 일이 없다.
+    /// </summary>
+    Exit = 1 << 9,
 }
 
 /// <summary>
 /// 틱 하나의 명령 (설계서 2.1 명령 패턴): 이동 벡터(길이 ≤ 1) + 버튼 비트. 시뮬레이션은 입력 장치를 모른다.
 /// 한 번만 일어나야 하는 버튼은 프레임의 첫 틱에만 넣는다(3.2).
+/// <paramref name="ExitIndex"/>(v0.7.1)는 <see cref="CommandButtons.Exit"/> 가 있을 때만 뜻이 있다 — 문 단계에서 <c>Room.Exits[ExitIndex]</c> 로 나감.
 /// </summary>
-public readonly record struct PlayerCommand(Vector2 Move, CommandButtons Buttons = CommandButtons.None)
+public readonly record struct PlayerCommand(Vector2 Move, CommandButtons Buttons = CommandButtons.None, byte ExitIndex = 0)
 {
     public static PlayerCommand None => default;
 }

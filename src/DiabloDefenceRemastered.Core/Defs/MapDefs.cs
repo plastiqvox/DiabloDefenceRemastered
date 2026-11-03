@@ -146,6 +146,12 @@ public sealed record MapDef : IDef
     /// 모든 <c>room_*</c> 기준점에 하나씩(13.5-19). 방 체류 압박·방 보급·방 들르기의 "방 안" 이 이것을 쓴다.
     /// </summary>
     public IReadOnlyDictionary<string, RectI> RoomAreas { get; init; } = new Dictionary<string, RectI>();
+    /// <summary>
+    /// 이 맵을 쓸 수 있는 방 종류(v0.7, 6.11 "방 맵", 기본 빈 목록). 비어 있으면 방 맵이 아니다(방 없는 월드·<c>--map</c> 미리보기에만).
+    /// 비어 있지 않으면 문이 정확히 <c>gate_nw</c>·<c>gate_ne</c>·<c>gate_se</c>·<c>gate_sw</c> 넷이고 기준점 <c>center</c> 가 있어야 한다(13.5-23 ③, <c>ArenaLayout.ValidateRooms</c>).
+    /// 액트의 방 맵 풀(<see cref="RoomMapPoolDef"/>)에 든 맵은 그 종류를 담아야 한다(13.5-23 ②).
+    /// </summary>
+    public IReadOnlyList<RoomKind> RoomKinds { get; init; } = [];
 }
 
 /// <summary>배치(6.11 배치 풀기 1~5단계의 입력).</summary>

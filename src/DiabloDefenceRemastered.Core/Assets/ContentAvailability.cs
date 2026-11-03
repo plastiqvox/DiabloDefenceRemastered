@@ -6,7 +6,8 @@ namespace DiabloDefenceRemastered.Core.Assets;
 /// 스테이지·직업 자신의 <c>requires</c> 만 본다. 음악은 꺼지지 않고 <c>fallback</c> 으로 바뀐다.
 /// 헬파이어 MPQ 가 없는 PC 는 그 묶음을 단 스테이지·직업만 빠지고 나머지(기본 내용)는 그대로 돈다 — 안내 화면을 띄우지 않는다.
 /// <b>시뮬레이션(<c>Sim/</c>)은 이것을 쓰지 않는다</b>(10.1 소스 문자열 시험) — 같은 씨앗·스테이지·직업이면 묶음 유무와 상관없이 결과가 같다.
-/// 쓰는 곳: 시작 검사 ③ "꺼짐"(WP7), 타이틀 한 줄·스테이지 카드(WP6), 직업 고르기(WP9), 음악 대체(WP8), <c>--hero</c>·<c>--stage</c> 판정(WP7).
+/// 쓰는 곳: 시작 검사 ③ "꺼짐"(WP7), 타이틀 한 줄(WP6 — v0.7: 스테이지 선택 화면 없음), 직업 고르기(WP9), 음악 대체(WP8), <c>--hero</c>·<c>--stage</c>·<c>--room</c> 판정(WP7).
+/// 맵 그림의 묶음 귀속(13.5-10 묶음판)은 v0.7 부터 그 맵을 <c>room_maps</c> 에 둔 스테이지들이다(본문 WP7 — <c>DefAssetNames</c>).
 /// </summary>
 public sealed class ContentAvailability
 {

@@ -282,6 +282,8 @@ public static class ArenaLayout
     /// 방 바닥(<see cref="RoomFloors"/>)에서 영역 밖으로 이어지는 걷기 칸이 있음(오류).</item>
     /// <item>(v0.6.1) ① 갇힌 바닥 — 걷기 막힘 없는 칸을 주인공 시작 칸에서 4이웃으로 채워 못 닿는 칸. ② 하위 1칸 틈 — 걷기 막힘 없는 칸인데 좌우 둘 다 또는 위아래 둘 다 걷기 막힘(격자 밖 포함).
     /// 둘 다 칸 목록을 메가타일로 묶어 한 줄씩(오류).</item>
+    /// <item>(v0.7, 13.5-23 ③ 맵 쪽) <c>room_kinds</c> 가 빈 목록이 아닌 방 맵: 문이 정확히 <c>gate_nw</c>(nw)·<c>gate_ne</c>(ne)·<c>gate_se</c>(se)·<c>gate_sw</c>(sw) 넷, 입구도 그 넷, 기준점 <c>center</c>.
+    /// 작은 방(N ≤ <see cref="RoomMapRules.SmallRoomMaxN"/>)은 문 하나인 방 바닥 없음, 문 넷 진입점에서 <see cref="RoomMapRules.DoorClearance"/> 안에 둘레가 아닌 걷기 막힘 칸 없음(오류).</item>
     /// </list>
     /// <c>over_border</c> 의 막힘 줄어듦은 <see cref="TryExpand"/> 가 낸다. WP2 의 13.5-4(80px)·13.5-5(반경 14 격자)는 이 위의 정밀 검사로 남는다.
     /// </summary>
@@ -415,6 +417,47 @@ public static class ArenaLayout
                     gaps.Add(new(tx, ty));
             }
         ReportByMega(gaps, m, "하위 1칸 틈", "좌우 둘 다 또는 위아래 둘 다 걷기 막힘(벽 맞물림 구멍·벽 두 겹 사이 띠·아치 틈 — 꺾이는 자리는 모서리 조각)", errors);
+
+        // (v0.7) 13.5-23 ③ 방 맵
+        if (map.RoomKinds.Count > 0) ValidateRoomMap(map, grid, roomFloors, errors);
+    }
+
+    /// <summary>13.5-23 ③ 맵 쪽(v0.7, 6.11 "방 맵"). 이벤트의 <c>entry:</c> 이름이 맵이 바뀌어도 같게 문 넷·<c>center</c> 를 요구하고, 작은 방은 막다른 방·문 앞 막힘을 막는다.</summary>
+    private static void ValidateRoomMap(MapDef map, ArenaGrid grid, RoomFloors roomFloors, ICollection<LayoutError> errors)
+    {
+        var gates = map.Layout.Gates;
+        var gatesOk = gates.Count == RoomMapRules.Gates.Count;
+        foreach (var (id, side) in RoomMapRules.Gates)
+            if (!gates.Any(g => string.Equals(g.Id, id, StringComparison.Ordinal) && g.Side == side)) gatesOk = false;
+        if (!gatesOk)
+            errors.Add(new("$.layout.gates", $"방 맵(room_kinds)의 문은 정확히 gate_nw(nw)·gate_ne(ne)·gate_se(se)·gate_sw(sw) 넷이어야 한다 — 지금 {string.Join(", ", gates.Select(g => $"{g.Id}({SideName(g.Side)})"))}"));
+        var entriesOk = map.Entries.Count == RoomMapRules.Gates.Count;
+        foreach (var (id, _) in RoomMapRules.Gates)
+            if (!map.Entries.Any(e => string.Equals(e.Id, id, StringComparison.Ordinal))) entriesOk = false;
+        if (!entriesOk)
+            errors.Add(new("$.entries", $"방 맵(room_kinds)의 입구는 문 넷과 같은 ID 넷이어야 한다 — 지금 {string.Join(", ", map.Entries.Select(e => e.Id))}"));
+        if (!map.AnchorsTile.ContainsKey(RoomMapRules.CenterAnchor))
+            errors.Add(new("$.anchors", $"방 맵(room_kinds)에 기준점 {RoomMapRules.CenterAnchor} 가 없다 — 보상 자리(기획 10.8·11.4)"));
+
+        if (grid.Size > RoomMapRules.SmallRoomMaxN) return;
+        foreach (var floor in roomFloors.Rooms)
+            if (floor.OneDoor)
+                errors.Add(new($"$.room_areas.{floor.Id}", $"작은 방(N {grid.Size} ≤ {RoomMapRules.SmallRoomMaxN})에 문 하나인 방 바닥 {floor.Id} 가 있다 — 막다른 방(기획 10.8)"));
+        var n = grid.Size;
+        for (var e = 0; e < map.Entries.Count; e++)
+        {
+            var entry = map.Entries[e];
+            var at = grid.Iso.ToWorld(entry.InsideTile);
+            var blocked = new List<Int2>();
+            for (var ty = 0; ty < n; ty++)
+                for (var tx = 0; tx < n; tx++)
+                {
+                    if (grid.IsWalkable(tx, ty) || grid.IsBoundary(tx, ty)) continue;
+                    if (Vector2.Distance(grid.Iso.CellCenter(tx, ty), at) < RoomMapRules.DoorClearance) blocked.Add(new(tx, ty));
+                }
+            if (blocked.Count > 0)
+                errors.Add(new($"$.entries[{e}]", $"작은 방 진입점 {entry.Id} {entry.InsideTile} 에서 {RoomMapRules.DoorClearance}px 안에 둘레가 아닌 걷기 막힘 칸 {blocked.Count}개: {string.Join(" ", blocked.Take(8).Select(c => $"({c.X},{c.Y})"))}"));
+        }
     }
 
     /// <summary>칸 목록을 메가타일(행 우선 순서)로 묶어 한 줄씩.</summary>

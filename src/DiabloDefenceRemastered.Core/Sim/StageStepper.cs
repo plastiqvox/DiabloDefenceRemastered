@@ -5,7 +5,7 @@ public enum StageStep : byte
 {
     /// <summary>스테이지 틱을 하나 돌았다.</summary>
     Stepped,
-    /// <summary>선택 대기(레벨업·상자) — 오버레이가 받는다.</summary>
+    /// <summary>선택 대기(레벨업·상자·보상) — 오버레이가 받는다.</summary>
     AwaitingChoice,
     /// <summary>히트 스톱.</summary>
     Frozen,
@@ -13,11 +13,15 @@ public enum StageStep : byte
     Stretched,
     /// <summary>판이 끝났다(Victory·Defeat).</summary>
     Finished,
+    /// <summary>방을 나간다(v0.7 — <c>Room.Phase == Exit</c>). 돌지 않는다 — 앱이 어두워짐 가운데 <c>RunSession.Advance()</c> 를 부른다(3.6).</summary>
+    RoomExit,
 }
 
 /// <summary>
 /// 스테이지 틱을 돌릴지 정하는 규칙 한 곳 (설계서 3.3). PlayScene.FixedTick 은 앱 틱마다 <see cref="AppTick"/> 를 부르기만 한다.
-/// - 선택 대기면 돌지 않는다(같은 앱 틱에 오버레이가 올라간다).
+/// 판정 순서(v0.7.1): 끝난 판 → 선택 대기 → 방 나감 → 히트 스톱 → 슬로모션.
+/// - 선택 대기면 돌지 않는다(같은 앱 틱에 오버레이가 올라간다). 나감 단계와 선택 대기가 같이 있으면 선택 대기가 먼저다.
+/// - 방 나감(<c>Room.Phase == Exit</c>)이면 돌지 않고 <see cref="StageStep.RoomExit"/>. <c>Outcome == Running</c> 일 때만 — 끝나 가는 판(<c>…Pending</c>)은 돌아서 끝난다.
 /// - 히트 스톱: <see cref="World.FreezeTicks"/> 동안 돌지 않는다.
 /// - 슬로모션: 틱 길이는 그대로, 앱 틱마다 배율을 쌓아 1 이 될 때만 한 번 돈다 → 고정 Dt·결정성 유지.
 /// 일시정지는 여기 규칙이 아니다(오버레이 PausesBelow 가 PlayScene 을 부르지 않는다).
@@ -32,6 +36,7 @@ public static class StageStepper
 
         if (world.Outcome is RunOutcome.Victory or RunOutcome.Defeat) return StageStep.Finished;
         if (world.AwaitingChoice != ChoiceKind.None) return StageStep.AwaitingChoice;
+        if (world.Room?.Phase == RoomPhase.Exit && world.Outcome == RunOutcome.Running) return StageStep.RoomExit;
 
         if (world.FreezeTicks > 0)
         {

@@ -18,4 +18,10 @@ public sealed record PartDef(PartKind Kind, string Type, string? Id, string? Tri
     /// "스테이지에서 나올 수 있는 적"(<c>StageReach</c>)이 이것만 읽는다.
     /// </summary>
     public IReadOnlyList<DefRef<EnemyDef>> ReferencedEnemies { get; init; } = [];
+
+    /// <summary>
+    /// 스테이지 이벤트의 시각 <c>at</c>(v0.7 — t, 난이도 분). 로더(WP7)가 매개변수에서 꺼내 둔다 — 방 이벤트 옮기기(<c>RoomEvents.Schedule</c>)·13.5-18·23 이
+    /// 매개변수 형을 모르고 시각을 읽는다. 스테이지 이벤트가 아닌 부품은 null.
+    /// </summary>
+    public ClockTime? At { get; init; }
 }

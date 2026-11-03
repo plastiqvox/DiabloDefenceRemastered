@@ -88,8 +88,9 @@ public readonly record struct TelegraphSpawn(EffectRef? Effect, TelegraphShape S
 
 /// <summary>
 /// 획득물 하나(v0.6.3). <paramref name="Value"/> 0 이면 정의 값. <paramref name="SupplyRoom"/> = 방 보급의 방 기준점 ID(<c>room_supply</c>, 기획 10.1) — null 이면 보통 드롭.
+/// <paramref name="Reward"/>(v0.7) = 문 보상 물체의 보상 — 있으면 <c>SpawnPickup</c> 이 <c>Pickup.Reward</c> 를 채우고 <c>GatesExit = true</c> 로 만든다(v0.7.1, WP3).
 /// </summary>
-public readonly record struct PickupSpawn(PickupDef Def, Vector2 Pos, int Value = 0, string? SupplyRoom = null);
+public readonly record struct PickupSpawn(PickupDef Def, Vector2 Pos, int Value = 0, string? SupplyRoom = null, RewardDef? Reward = null);
 
 /// <summary>
 /// 적 쪽 투사체·장판·예고 생성 (설계서 5.5, WP1 계약, WP3 구현). WP4 는 이것으로 만들기만 하고 저장소·진행·맞음 판정은 WP3 몫.

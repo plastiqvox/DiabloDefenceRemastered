@@ -18,6 +18,7 @@
     <Using Include="DiabloDefenceRemastered.Core.Data.Registry" />
     <Using Include="DiabloDefenceRemastered.Core.Sim" />
     <Using Include="DiabloDefenceRemastered.Core.Sim.Contracts" />
+    <Using Include="DiabloDefenceRemastered.Core.Sim.Run" />
   </ItemGroup>
 
 </Project>

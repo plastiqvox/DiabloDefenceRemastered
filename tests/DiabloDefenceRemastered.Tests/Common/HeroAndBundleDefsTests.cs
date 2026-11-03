@@ -140,9 +140,9 @@ public class HeroAndBundleDefsTests
     {
         var e = TestJson.Read<EnemyDef>("""{ "id": "hf_stinger", "sprites": "set_stinger", "requires": ["hellfire"] }""");
         Assert.Equal([ContentBundle.Hellfire], e.Requires);
-        var s = TestJson.Read<StageDef>("""{ "id": "stage_crypt", "map": "crypt_arena", "requires": ["hellfire"] }""");
+        var s = TestJson.Read<StageDef>("""{ "id": "stage_crypt", "room_maps": { "boss": "crypt_arena" }, "requires": ["hellfire"] }""");
         Assert.Equal([ContentBundle.Hellfire], s.Requires);
-        Assert.Empty(TestJson.Read<StageDef>("""{ "id": "stage_cathedral", "map": "cathedral_arena" }""").Requires);
+        Assert.Empty(TestJson.Read<StageDef>("""{ "id": "stage_cathedral", "room_maps": { "boss": "cathedral_arena" } }""").Requires);
     }
 
     [Fact]
