@@ -29,7 +29,7 @@ public sealed record MapDataResult(IReadOnlyList<MapDef> Maps, IReadOnlyList<Til
 /// <list type="bullet">
 /// <item>공용 STJ 옵션·변환기(<see cref="DefJson"/>) — 모르는 속성 오류.</item>
 /// <item><c>extends</c>·<c>abstract</c>·<c>*_add</c>·<c>*_patch</c> 를 쓰면 오류(병합 규칙이 두 벌이 될 일이 없게).</item>
-/// <item><c>MapDef.Tileset</c> 을 ID 로 연결, 배치 풀기(13.5-4 배치 쪽)와 타일셋 검사(13.5-12)까지.</item>
+/// <item><c>MapDef.Tileset</c> 을 ID 로 연결, 배치 풀기(13.5-4 배치 쪽)와 타일셋 검사(13.5-12), 안쪽 방 검사(13.5-19 <c>ArenaLayout.ValidateRooms</c>, v0.6 — 경고는 <see cref="DataSeverity.Warning"/>)까지.</item>
 /// <item>다른 종류의 데이터 오류·부품 등록과 무관하다. 단 JSON 문법이 깨진 파일은 두 종류가 있는지 알 수 없으므로 오류로 낸다.</item>
 /// </list>
 /// </summary>
@@ -153,11 +153,18 @@ public static class MapDataReader
         }
 
         var layoutErrors = new List<LayoutError>();
+        // LayoutError.Warning(v0.6.1) → DataSeverity.Warning
+        void Report(MapDataElement src)
+        {
+            foreach (var e in layoutErrors)
+                errors.Add(new DataError(src.File, DefJson.JoinPath(src.JsonPath, e.Path), e.Message, e.Warning ? DataSeverity.Warning : DataSeverity.Error));
+        }
+
         foreach (var (def, src) in tilesets)
         {
             layoutErrors.Clear();
             ArenaLayout.ValidateTileset(def, layoutErrors);
-            foreach (var e in layoutErrors) errors.Add(new DataError(src.File, DefJson.JoinPath(src.JsonPath, e.Path), e.Message));
+            Report(src);
         }
 
         foreach (var (def, src) in maps)
@@ -180,12 +187,17 @@ public static class MapDataReader
 
             layoutErrors.Clear();
             var grid = ArenaLayout.TryExpand(def, ts, layoutErrors);
-            foreach (var e in layoutErrors) errors.Add(new DataError(src.File, DefJson.JoinPath(src.JsonPath, e.Path), e.Message));
+            Report(src);
             if (grid is null) continue;
 
             var start = def.HeroStart.Tile;
             if (!grid.IsInside(IsoMath.RoundToCell(start.Tx), IsoMath.RoundToCell(start.Ty)))
                 errors.Add(new DataError(src.File, $"{src.JsonPath}.hero_start.tile", $"주인공 시작 {start} 가 {grid.Size}×{grid.Size} 격자 밖이다"));
+
+            // 안쪽 방(13.5-19, v0.6 — open_center·문 표시·방 기준점·하위 칸 검사 ①②). 펼친 격자로 늘 돈다
+            layoutErrors.Clear();
+            ArenaLayout.ValidateRooms(def, grid, layoutErrors);
+            Report(src);
         }
 
         return new MapDataResult([.. maps.Select(m => m.Def)], [.. tilesets.Select(t => t.Def)], errors);

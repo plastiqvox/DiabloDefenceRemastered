@@ -67,13 +67,16 @@ public sealed record TelegraphRequiredDef
     public float HeavyMeleeWindup { get; init; } = 0.35f;
 }
 
+/// <summary>
+/// <c>rules.hero</c>(v0.6, 6.10) = 모든 직업 공통 규칙 + 고른 직업이 없을 때의 직업. v0.5 의 sprites·radius·start_weapons 는 직업 정의(<see cref="HeroClassDef"/>)로 옮겼다.
+/// </summary>
 public sealed record HeroRulesDef
 {
-    public required DefRef<SpriteSetDef> Sprites { get; init; }
-    public float Radius { get; init; } = 14f;
+    /// <summary>고른 직업이 없을 때 쓰는 직업(MVP·<c>--hero</c> 없음·저장 없음 → <c>sorcerer</c>). <c>requires</c> 가 빈 기본 직업이어야 한다(13.5-20).</summary>
+    public required DefRef<HeroClassDef> Class { get; init; }
     public float InvulnAfterHit { get; init; } = 0.25f;
+    /// <summary>모든 직업의 기본 능력치(기획 4.1 표). 직업 <c>stats</c> 가 키별로 덮어쓴다.</summary>
     public IReadOnlyDictionary<StatKey, float> Stats { get; init; } = new Dictionary<StatKey, float>();
-    public IReadOnlyList<DefRef<WeaponDef>> StartWeapons { get; init; } = [];
     public CrowdSlowDef? CrowdSlow { get; init; }
 }
 
@@ -203,4 +206,23 @@ public sealed record SpawnRulesDef
     public int[] Group { get; init; } = [1, 3];
     public float GroupRadius { get; init; }
     public float AccumulatorHold { get; init; }
+    /// <summary>자리 고르기 길 거리 ≤ 직선 × 이 값(v0.6, 4.10 <c>PlaceReach.Detour</c>, 기획 10.1).</summary>
+    public float PathDetour { get; init; } = 1.5f;
+    /// <summary>방 체류 압박(v0.6.3, 6.12). null 이면 끔 — MVP 데이터는 기획 첫 값(8초·셋 중 하나·150px)을 적는다(WP4).</summary>
+    public RoomPressureDef? RoomPressure { get; init; }
+}
+
+/// <summary>
+/// <c>rules.spawn.room_pressure</c>(v0.6.3, 설계서 6.12 "방 체류 압박", 기획 10.1·열린 질문 30). 주인공이 문 하나인 방(<c>RoomFloor.OneDoor</c>) 바닥에
+/// <see cref="After"/> 초 넘게 머물면 그동안 일반 생성 무리 <see cref="EveryNth"/> 번째마다 하나를 그 방 바닥 안, 주인공에서 <see cref="MinDistance"/> px 이상인 걷기 칸에 등장 연출로 낸다.
+/// 기본값을 코드에 두지 않는다(값은 이 파일 한 곳).
+/// </summary>
+public sealed record RoomPressureDef
+{
+    /// <summary>방 바닥에 머문 시간 문턱(초, 첫 값 8).</summary>
+    public required float After { get; init; }
+    /// <summary>일반 생성 무리 몇 번째마다 하나를 방 안으로(첫 값 3 = 셋 중 하나).</summary>
+    public required int EveryNth { get; init; }
+    /// <summary>주인공에서 떨어질 최소 거리(px, 첫 값 150).</summary>
+    public required float MinDistance { get; init; }
 }

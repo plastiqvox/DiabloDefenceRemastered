@@ -10,4 +10,12 @@ namespace DiabloDefenceRemastered.Core.Defs;
 /// <param name="Type">JSON "type".</param>
 /// <param name="Id">선택 "id" — <c>*_patch</c>·페이즈 <c>patch</c> 가 이것으로 찾는다.</param>
 /// <param name="Trigger">선택 "trigger"(<c>on_death</c> / <c>on_spawn</c> / <c>cooldown</c>).</param>
-public sealed record PartDef(PartKind Kind, string Type, string? Id, string? Trigger, object Params, object Instance);
+public sealed record PartDef(PartKind Kind, string Type, string? Id, string? Trigger, object Params, object Instance)
+{
+    /// <summary>
+    /// 이 부품 매개변수 안의 모든 <c>DefRef&lt;EnemyDef&gt;</c>(v0.6.1 — summon·split_on_death·호위·보스 이벤트 등, 6.14).
+    /// 로더(WP7)가 매개변수의 DefRef 를 채우는 연결 단계에서 같이 모은다 — 매개변수 형을 몰라도 되고 부품을 만드는 묶음은 코드를 더하지 않는다.
+    /// "스테이지에서 나올 수 있는 적"(<c>StageReach</c>)이 이것만 읽는다.
+    /// </summary>
+    public IReadOnlyList<DefRef<EnemyDef>> ReferencedEnemies { get; init; } = [];
+}

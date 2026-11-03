@@ -16,6 +16,24 @@ public interface INavWorld
 
     /// <summary>맵 안인가(바깥 마름모 안, 4.1).</summary>
     bool IsInsideMap(Vector2 p);
+
+    /// <summary>
+    /// 반경 radius 유닛의 from → to 길 길이(px, v0.6 — 4.10 자리 고르기). maxLength 로 자른 A*(4.4 격자·코너 자르기 금지).
+    /// 길이 없거나 maxLength 를 넘으면 +∞. 길 트임(<see cref="HasClearLine"/>)이면 직선 거리 그대로.
+    /// </summary>
+    float PathLength(Vector2 from, Vector2 to, float radius, float maxLength);
+
+    /// <summary>
+    /// from → 주인공 길 길이(v0.6.1). radius ≤ 등급 반경인 가장 작은 플로우 필드가 있고 from 이 그 필드의 통과 칸이면 필드 거리(비용 0),
+    /// 아니면 <see cref="PathLength"/>(from, Hero.Pos, …). 기준이 주인공인지를 좌표로 짐작하지 않으려고 따로 둔다.
+    /// </summary>
+    float PathLengthToHero(Vector2 from, float radius, float maxLength);
+
+    /// <summary>
+    /// 반경 radius 의 A* 길에서 from 다음 꺾임점(v0.6.1 — 자동 조작 방 들르기, 9절). 길이 없으면 false.
+    /// 결과를 맡지 않는다(부르는 쪽이 0.5초마다 다시 부른다).
+    /// </summary>
+    bool TryPathStep(Vector2 from, Vector2 to, float radius, out Vector2 next);
 }
 
 /// <summary>
@@ -49,8 +67,12 @@ public enum TelegraphShape : byte { Circle, Line }
 
 /// <summary>적 투사체 하나. Damage 는 생성 순간 그 적의 배율·버프로 계산한 최종 피해(5.2).</summary>
 /// <param name="Speed">0 이면 정의 speed.</param>
+/// <param name="SightGated">
+/// 시야 조건을 지켜야 하는 발사(<c>shoot_projectile</c>, <c>clear_sight</c> 패턴 — v0.5.3). 채우기 WP4, 세기 WP3:
+/// 공정성 <c>unseen_shots</c> 는 보스·중간 보스 발사를 빼고 세지만 이것이 참이면 센다(10.1).
+/// </param>
 public readonly record struct EnemyProjectileSpawn(ProjectileDef Def, Vector2 Pos, Vector2 Dir, int Damage, EntityId Owner,
-                                                   EntityId Target = default, float Speed = 0f);
+                                                   EntityId Target = default, float Speed = 0f, bool SightGated = false);
 
 /// <summary>장판 하나(독 웅덩이·지옥불 …). CapGroup 별 동시 상한을 넘으면 오래된 것부터 지운다.</summary>
 public readonly record struct HazardSpawn(EffectRef? Effect, Vector2 Pos, float Radius, float Duration, float TickInterval, int TickDamage,
@@ -65,11 +87,19 @@ public readonly record struct TelegraphSpawn(EffectRef? Effect, TelegraphShape S
                                              Faction From, EntityId Owner, BlastSpec Blast = default);
 
 /// <summary>
+/// 획득물 하나(v0.6.3). <paramref name="Value"/> 0 이면 정의 값. <paramref name="SupplyRoom"/> = 방 보급의 방 기준점 ID(<c>room_supply</c>, 기획 10.1) — null 이면 보통 드롭.
+/// </summary>
+public readonly record struct PickupSpawn(PickupDef Def, Vector2 Pos, int Value = 0, string? SupplyRoom = null);
+
+/// <summary>
 /// 적 쪽 투사체·장판·예고 생성 (설계서 5.5, WP1 계약, WP3 구현). WP4 는 이것으로 만들기만 하고 저장소·진행·맞음 판정은 WP3 몫.
+/// v0.6.3: 획득물 놓기 <see cref="SpawnPickup"/>(WP4 <c>room_supply</c> 가 부르고 WP3 드롭도 같은 길) — 저장소·끌어당김·줍기는 WP3 몫.
 /// </summary>
 public interface ICombatSpawner
 {
     EntityId SpawnProjectile(in EnemyProjectileSpawn spawn);
     EntityId SpawnHazard(in HazardSpawn spawn);
     EntityId SpawnTelegraph(in TelegraphSpawn spawn);
+    /// <summary>획득물을 그 자리에 놓는다(<c>PickupDropped</c> 신호 포함). 방 보급은 수명·상한 정리에서 빠진다(주울 때까지 남음, 기획 10.1).</summary>
+    EntityId SpawnPickup(in PickupSpawn spawn);
 }

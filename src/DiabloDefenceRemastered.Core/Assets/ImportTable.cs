@@ -12,7 +12,9 @@ namespace DiabloDefenceRemastered.Core.Assets;
 /// <list type="bullet">
 /// <item>공통: <c>out</c>(출력 이름, <c>d1/</c> 로 시작, 소문자·숫자·밑줄), 원작 경로 틀(<c>{a}</c> = 동작 글자, <c>{d}</c> = 방향 파일 1..dirs),
 /// <c>width</c>(대조용 칸 폭), <c>frames</c>([처음, 끝], 1부터), <c>shadow_alpha</c>(표 머리 → 항목 → 동작 순으로 덮어씀, 없으면 색인 0 을 검정 그대로),
-/// <c>variants</c>(이름 → TRN 경로, <c>""</c> = 원색), <c>optional</c>(<c>--hellfire</c> 로만 찾는 항목 — 없으면 건너뜀).</item>
+/// <c>variants</c>(이름 → TRN 경로, <c>""</c> = 원색), <c>bundle</c>(v0.6 — v0.5 의 <c>optional</c> 을 대신함. 묶음 이름, 없으면 기본 = diabdat.
+/// 그 MPQ 가 없으면 항목을 건너뛰고 manifest 에 없다. 모든 항목 종류가 가진다 — 타일셋 항목의 묶음은 그 타일셋을 쓰는 맵 그림의 묶음도 정한다).</item>
+/// <item>소리·음악 항목 <c>prefer</c>(v0.6): 원본을 먼저 찾을 묶음 목록(수도사 목소리 16비트 hfvoice 먼저). 다른 항목 종류에는 없다(모르는 속성 오류).</item>
 /// <item>몬스터·주인공 동작 값 = 글자 하나 또는 객체 <c>{ file, cl2, width, frames, shadow_alpha }</c>(덮어쓰기).</item>
 /// </list>
 /// </summary>
@@ -113,6 +115,7 @@ public sealed record ImportTable
             var e = Missiles.Missiles[i];
             var p = $"$.missiles[{i}]";
             v.Out(mf, p, e.Out);
+            v.Bundle(mf, p, e.Bundle);
             v.Width(mf, $"{p}.width", e.Width);
             v.Frames(mf, $"{p}.frames", e.Frames);
             v.Alpha(mf, $"{p}.shadow_alpha", e.ShadowAlpha);
@@ -128,6 +131,7 @@ public sealed record ImportTable
             var e = Icons.Icons[i];
             var p = $"$.icons[{i}]";
             v.Out(icf, p, e.Out);
+            v.Bundle(icf, p, e.Bundle);
             v.Width(icf, $"{p}.width", e.Width);
             v.Alpha(icf, $"{p}.shadow_alpha", e.ShadowAlpha);
             v.Dirs(icf, p, e.Cl2, e.Dirs, e.FramesAreDirs);
@@ -155,12 +159,18 @@ public sealed record ImportTable
                     if (values.Count == 0 || values.Any(s => s.Length == 0 || s.Contains('\\') || s.Contains('/')))
                         v.Add(sf, $"{p}.vars.{k}", "vars 값은 비지 않은 목록이고 경로 구분자를 갖지 않는다");
             v.SourcePath(sf, $"{p}.path", e.Path);
+            v.Bundle(sf, p, e.Bundle);
+            v.Prefer(sf, p, e.Bundle, e.Prefer);
         }
         const string muf = "music.json";
         for (var i = 0; i < Music.Music.Count; i++)
         {
-            v.SourcePath(muf, $"$.music[{i}].path", Music.Music[i].Path);
-            if (Placeholders(Music.Music[i].Path).Count > 0) v.Add(muf, $"$.music[{i}].path", "음악 경로에는 자리표시를 쓰지 않는다");
+            var e = Music.Music[i];
+            var p = $"$.music[{i}]";
+            v.SourcePath(muf, $"{p}.path", e.Path);
+            if (Placeholders(e.Path).Count > 0) v.Add(muf, $"{p}.path", "음악 경로에는 자리표시를 쓰지 않는다");
+            v.Bundle(muf, p, e.Bundle);
+            v.Prefer(muf, p, e.Bundle, e.Prefer);
         }
 
         const string ef = "exe.json";
@@ -186,6 +196,15 @@ public sealed record ImportTable
                 if (string.IsNullOrWhiteSpace(value)) v.Add(tf, $"{p}.{prop}", "비어 있다");
             if (t.PiecesPerSubtile <= 0 || t.PiecesPerSubtile % 2 != 0) v.Add(tf, $"{p}.pieces_per_subtile", $"조각 수 {t.PiecesPerSubtile} 는 양의 짝수(L1 10, L4 16)");
             if (t.Palettes.Count == 0) v.Add(tf, $"{p}.palettes", "팔레트가 하나도 없다");
+            v.Bundle(tf, p, t.Bundle);
+            var dunSeen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            for (var k = 0; k < t.AuditDun.Count; k++)
+            {
+                var d = t.AuditDun[k];
+                if (d.Length <= 4 || d.Contains('\\') || d.Contains('/') || !d.EndsWith(".dun", StringComparison.OrdinalIgnoreCase))
+                    v.Add(tf, $"{p}.audit_dun[{k}]", $"'{d}' — 방 DUN 은 타일셋 dir 안 파일 이름이다(폴더 없음, .dun)");
+                else if (!dunSeen.Add(d)) v.Add(tf, $"{p}.audit_dun[{k}]", $"'{d}' 가 두 번 있다");
+            }
             if (t.Overlay is { } o)
             {
                 if (string.IsNullOrWhiteSpace(o.Cel)) v.Add(tf, $"{p}.overlay.cel", "비어 있다");
@@ -196,7 +215,7 @@ public sealed record ImportTable
 
         // 출력 이름이 겹치면 두 항목이 같은 파일을 덮는다
         var owners = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var (name, owner) in NamedOutputs())
+        foreach (var (name, owner, _) in NamedOutputs())
             if (!owners.TryAdd(name, owner))
                 v.Add(owner.Split(' ')[0], owner.Split(' ')[1], $"출력 이름 '{name}' 를 {owners[name]} 도 만든다");
 
@@ -212,6 +231,7 @@ public sealed record ImportTable
             var e = entries[i];
             var p = $"$.{list}[{i}]";
             v.Out(file, p, e.Out);
+            v.Bundle(file, p, e.Bundle);
             v.Width(file, $"{p}.width", e.Width);
             v.Frames(file, $"{p}.frames", e.Frames);
             v.Alpha(file, $"{p}.shadow_alpha", e.ShadowAlpha);
@@ -244,13 +264,37 @@ public sealed record ImportTable
     /// 표가 만드는 <c>d1/</c> 아래 파일 이름(Assets 뿌리 기준, 서수 순): 그림 묶음·마법 = 변종마다 첫 페이지 + 메타 하나, 아이콘 = PNG,
     /// 소리·음악 = <c>d1/sound/</c> + 원작 경로 소문자(<c>vars</c> 펼침) + 소리 색인. 맵 그림은 <see cref="AllNames"/> 가 배치로 계산한다.
     /// 둘째 페이지부터(<c>_p2</c> …)는 가져오기 뒤에야 알 수 있어 목록에 없다 — 정의는 첫 페이지와 메타만 가리키고, 나머지는 메타의 <c>pages</c> 가 안다.
-    /// <c>optional</c> 항목도 넣는다(만들 수 있는 이름의 목록).
+    /// 묶음(<c>bundle</c>) 항목도 넣는다(만들 수 있는 이름의 목록 — 그 묶음이 없는 PC 에서는 만들지 않는다, <see cref="OutputBundles"/>).
     /// </summary>
     public IReadOnlyList<string> OutputNames()
     {
         var set = new SortedSet<string>(StringComparer.Ordinal);
-        foreach (var (name, _) in NamedOutputs()) set.Add(name);
+        foreach (var (name, _, _) in NamedOutputs()) set.Add(name);
         return [.. set];
+    }
+
+    /// <summary>
+    /// 만들 이름 → 그 이름을 만드는 표 항목의 묶음(v0.6, 기본 = null). 시작 검사 ③ "꺼짐"(1.4 끝)·13.5-10 묶음판·도구의 manifest 파일 줄 <c>bundle</c> 이 쓴다.
+    /// v0.6.1: 맵 그림 이름(<see cref="ArenaArt.OutputNames"/>)은 표 항목이 아니라 배치에서 계산되므로 <paramref name="arenas"/> 를 받아
+    /// <c>grid.Tileset.Id</c> 의 타일셋 항목 <c>bundle</c> 로 잇는다(타일셋 항목이 표에 없으면 기본 — <see cref="CheckMaps"/> 가 따로 알린다).
+    /// 같은 이름을 기본 항목과 묶음 항목이 함께 만들면 기본(더 엄한 쪽 — 없으면 오류)이다. 소리 색인은 기본.
+    /// </summary>
+    public IReadOnlyDictionary<string, ContentBundle?> OutputBundles(IEnumerable<ArenaGrid> arenas)
+    {
+        var result = new SortedDictionary<string, ContentBundle?>(StringComparer.Ordinal);
+        void Put(string name, ContentBundle? bundle)
+        {
+            if (!result.TryGetValue(name, out var had)) result[name] = bundle;
+            else if (had != bundle) result[name] = null;
+        }
+
+        foreach (var (name, _, bundle) in NamedOutputs()) Put(name, bundle);
+        foreach (var grid in arenas)
+        {
+            var bundle = Tilesets.Tilesets.FirstOrDefault(t => t.Id == grid.Tileset.Id)?.Bundle;
+            foreach (var n in ArenaArt.OutputNames(grid)) Put(n, bundle);
+        }
+        return result;
     }
 
     /// <summary>원작 exe 그림 이름(<c>Table/exe.json</c>, Assets 뿌리). 13.5-10 은 "표가 만드는 이름 + 이것".</summary>
@@ -279,38 +323,48 @@ public sealed record ImportTable
         return problems;
     }
 
-    private IEnumerable<(string Name, string Owner)> NamedOutputs()
+    private IEnumerable<(string Name, string Owner, ContentBundle? Bundle)> NamedOutputs()
     {
-        IEnumerable<(string, string)> Sheet(string file, string path, string outName, IReadOnlyDictionary<string, string?> variants)
+        IEnumerable<(string, string, ContentBundle?)> Sheet(string file, string path, string outName, IReadOnlyDictionary<string, string?> variants, ContentBundle? bundle)
         {
             var page = outName + ".png";
             foreach (var variant in variants.Keys.Order(StringComparer.Ordinal))
-                yield return (SpriteMeta.PageFile(page, 0, variant), $"{file} {path}");
-            yield return (SpriteMeta.MetaFile(page), $"{file} {path}");
+                yield return (SpriteMeta.PageFile(page, 0, variant), $"{file} {path}", bundle);
+            yield return (SpriteMeta.MetaFile(page), $"{file} {path}", bundle);
         }
 
         for (var i = 0; i < Monsters.Monsters.Count; i++)
-            foreach (var x in Sheet("monsters.json", $"$.monsters[{i}]", Monsters.Monsters[i].Out, Monsters.Monsters[i].Variants)) yield return x;
+        {
+            var e = Monsters.Monsters[i];
+            foreach (var x in Sheet("monsters.json", $"$.monsters[{i}]", e.Out, e.Variants, e.Bundle)) yield return x;
+        }
         for (var i = 0; i < Hero.Hero.Count; i++)
-            foreach (var x in Sheet("hero.json", $"$.hero[{i}]", Hero.Hero[i].Out, Hero.Hero[i].Variants)) yield return x;
+        {
+            var e = Hero.Hero[i];
+            foreach (var x in Sheet("hero.json", $"$.hero[{i}]", e.Out, e.Variants, e.Bundle)) yield return x;
+        }
         for (var i = 0; i < Missiles.Missiles.Count; i++)
-            foreach (var x in Sheet("missiles.json", $"$.missiles[{i}]", Missiles.Missiles[i].Out, Missiles.Missiles[i].Variants)) yield return x;
+        {
+            var e = Missiles.Missiles[i];
+            foreach (var x in Sheet("missiles.json", $"$.missiles[{i}]", e.Out, e.Variants, e.Bundle)) yield return x;
+        }
         for (var i = 0; i < Icons.Icons.Count; i++)
-            yield return (Icons.Icons[i].Out + ".png", $"icons.json $.icons[{i}]");
+            yield return (Icons.Icons[i].Out + ".png", $"icons.json $.icons[{i}]", Icons.Icons[i].Bundle);
 
         var anySound = false;
         for (var i = 0; i < Sounds.Sounds.Count; i++)
             foreach (var src in Sounds.Sounds[i].SourcePaths())
             {
                 anySound = true;
-                yield return (AssetFormat.SoundOutput(src), $"sounds.json $.sounds[{i}]");
+                yield return (AssetFormat.SoundOutput(src), $"sounds.json $.sounds[{i}]", Sounds.Sounds[i].Bundle);
             }
         for (var i = 0; i < Music.Music.Count; i++)
         {
             anySound = true;
-            yield return (AssetFormat.SoundOutput(Music.Music[i].Path), $"music.json $.music[{i}]");
+            yield return (AssetFormat.SoundOutput(Music.Music[i].Path), $"music.json $.music[{i}]", Music.Music[i].Bundle);
         }
-        if (anySound) yield return (AssetFormat.SoundIndexPath, "sounds.json $");
+        // 소리 색인은 만든 소리 전부를 한 파일에 담는다 — 묶음이 없어도 만들어지므로 기본
+        if (anySound) yield return (AssetFormat.SoundIndexPath, "sounds.json $", null);
     }
 
     // ── 도우미 ────────────────────────────────────────────────────────
@@ -403,6 +457,23 @@ public sealed record ImportTable
             SourcePath(file, $"{path}.cl2", cl2);
         }
 
+        /// <summary><c>hfvoice</c> 는 원본 우선순위(<c>prefer</c>)에만 쓰는 묶음이라 항목의 묶음이 될 수 없다(1.4) — 없으면 8비트판으로 같은 이름이 만들어진다.</summary>
+        public void Bundle(string file, string path, ContentBundle? bundle)
+        {
+            if (bundle == ContentBundle.Hfvoice)
+                Add(file, $"{path}.bundle", "hfvoice 는 항목의 묶음이 아니라 prefer 에만 쓴다(원본 우선순위 전용, 설계서 1.4)");
+        }
+
+        public void Prefer(string file, string path, ContentBundle? bundle, IReadOnlyList<ContentBundle> prefer)
+        {
+            var seen = new HashSet<ContentBundle>();
+            for (var k = 0; k < prefer.Count; k++)
+            {
+                if (!seen.Add(prefer[k])) Add(file, $"{path}.prefer[{k}]", $"묶음 '{ContentBundles.Name(prefer[k])}' 가 두 번 있다");
+                else if (prefer[k] == bundle) Add(file, $"{path}.prefer[{k}]", $"prefer 에 항목 자신의 묶음 '{ContentBundles.Name(prefer[k])}' 이 있다 — 그 묶음은 이미 원본 찾는 순서 끝에 있다");
+            }
+        }
+
         public void SourcePath(string file, string path, string source)
         {
             if (string.IsNullOrWhiteSpace(source) || source.Contains('/') || source.StartsWith('\\'))
@@ -490,7 +561,8 @@ public sealed record ImportUnitEntry
     public int[]? Frames { get; init; }
     public float? ShadowAlpha { get; init; }
     public IReadOnlyDictionary<string, string?> Variants { get; init; } = new Dictionary<string, string?> { [""] = null };
-    public bool Optional { get; init; }
+    /// <summary>묶음(v0.6). 없으면 기본(diabdat). 그 MPQ 가 없으면 이 항목을 만들지 않는다.</summary>
+    public ContentBundle? Bundle { get; init; }
     /// <summary>동작 이름(그림 정의의 <c>action</c>) → 원작 글자 또는 덮어쓰기 객체.</summary>
     public required IReadOnlyDictionary<string, ImportAction> Actions { get; init; }
 
@@ -565,7 +637,7 @@ public sealed record ImportMissileEntry
     public int[]? Frames { get; init; }
     public float? ShadowAlpha { get; init; }
     public IReadOnlyDictionary<string, string?> Variants { get; init; } = new Dictionary<string, string?> { [""] = null };
-    public bool Optional { get; init; }
+    public ContentBundle? Bundle { get; init; }
 
     public int Directions => Dirs ?? FramesAreDirs ?? 1;
 
@@ -588,7 +660,7 @@ public sealed record ImportIconEntry
     public int? FramesAreDirs { get; init; }
     public float? ShadowAlpha { get; init; }
     public required IReadOnlyList<ImportIconLayer> Layers { get; init; }
-    public bool Optional { get; init; }
+    public ContentBundle? Bundle { get; init; }
 
     public int Directions => Dirs ?? FramesAreDirs ?? 1;
 
@@ -611,7 +683,9 @@ public sealed record ImportSoundEntry
     public required string Path { get; init; }
     /// <summary>자리표시 → 값 목록. 펼침 = 키 서수 순 곱(앞 키가 바깥 고리).</summary>
     public IReadOnlyDictionary<string, IReadOnlyList<string>>? Vars { get; init; }
-    public bool Optional { get; init; }
+    public ContentBundle? Bundle { get; init; }
+    /// <summary>원본을 먼저 찾을 묶음(v0.6, 적힌 순서): 찾는 순서 = prefer → diabdat → bundle. 출력 이름은 하나, 어느 MPQ 인지는 manifest 파일 줄 <c>sources</c>.</summary>
+    public IReadOnlyList<ContentBundle> Prefer { get; init; } = [];
 
     public IReadOnlyList<string> SourcePaths()
     {
@@ -632,7 +706,9 @@ public sealed record ImportSoundEntry
 public sealed record ImportMusicEntry
 {
     public required string Path { get; init; }
-    public bool Optional { get; init; }
+    public ContentBundle? Bundle { get; init; }
+    /// <summary>원본을 먼저 찾을 묶음(v0.6, <see cref="ImportSoundEntry.Prefer"/> 와 같은 규칙).</summary>
+    public IReadOnlyList<ContentBundle> Prefer { get; init; } = [];
 }
 
 /// <summary>타일셋 원본: 폴더·CEL·MIN·TIL·SOL·하위 타일 조각 수·팔레트 이름 → 파일, 아치 덧그림(L1S) 번호표.</summary>
@@ -650,6 +726,12 @@ public sealed record ImportTilesetEntry
     /// <summary>팔레트 이름(맵 정의 <c>palette</c>) → 폴더 안 파일.</summary>
     public IReadOnlyDictionary<string, string> Palettes { get; init; } = new Dictionary<string, string>();
     public ImportOverlayDef? Overlay { get; init; }
+    /// <summary>묶음(v0.6 — L5·L6 은 hellfire). 그 타일셋을 쓰는 맵 그림의 묶음이기도 하다(v0.6.1, <see cref="ImportTable.OutputBundles"/>).</summary>
+    public ContentBundle? Bundle { get; init; }
+    /// <summary>
+    /// <c>audit</c> 의 방 배열 대조(v0.6.1, 13.5-22)만 읽는 원작 방 DUN — 타일셋 <see cref="Dir"/> 안 파일 이름(<c>rnd6.dun</c>). 메모리에서만 읽고 출력·저장하지 않는다.
+    /// </summary>
+    public IReadOnlyList<string> AuditDun { get; init; } = [];
 
     /// <summary>폴더 안 파일의 MPQ 경로.</summary>
     public string SourcePath(string file) => Dir.TrimEnd('\\') + "\\" + file;

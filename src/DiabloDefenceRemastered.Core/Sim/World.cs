@@ -11,26 +11,33 @@ public sealed partial class World
     /// <summary>틱 길이(초). 모든 속도·시간은 초 단위이고 틱마다 Dt 를 곱한다.</summary>
     public const float Dt = 1f / TicksPerSecond;
 
-    public World(GameDefs defs, ulong seed, StageDef? stage = null)
+    /// <param name="heroClass">
+    /// 고른 직업(v0.6, 6.16). 앱(WP6·WP7)이 <c>--hero</c> → 저장의 마지막 직업 → <c>rules.hero.class</c> 순으로 정하고 꺼진 직업이면 기본 직업으로 바꿔 넘긴다.
+    /// null 이면 <c>rules.hero.class</c>. 시뮬레이션은 묶음을 모른다(같은 씨앗·스테이지·직업이면 같은 결과).
+    /// </param>
+    public World(GameDefs defs, ulong seed, StageDef? stage = null, HeroClassDef? heroClass = null)
     {
         Defs = defs;
         Seed = seed;
         Rng = new SimRandom(seed);
         Stage = stage;
+        HeroClass = heroClass ?? defs.Rules.Hero?.Class.Def;
         Map = stage?.Map.Def;
         if (Map is { } map)
         {
             // 배치 풀기·좌표 풀기는 여기서 한 번(4.1). 다른 묶음은 Arena·Resolved 만 읽고 IsoMath 를 따로 부르지 않는다
             Arena = ArenaLayout.Expand(map);
             Resolved = ResolvedMap.Resolve(map, Arena.Iso);
+            Rooms = RoomFloors.Compute(map, Arena);
             MapSize = Arena.Iso.BoxSize;
         }
         else MapSize = CameraMath.DefaultViewSize;
 
         if (stage is not null && Resolved is not null) Lighting.Load(stage.Lighting, Resolved);
+        RoomPresence.Reset(Rooms.Rooms.Count);
 
         Hero.Reset();
-        if (defs.Rules.Hero is { } rules) Hero.Radius = rules.Radius;
+        Hero.Radius = HeroClass?.Radius ?? 14f;
         if (Resolved is { } r)
         {
             Hero.Pos = Hero.PrevPos = r.HeroStart;
@@ -47,11 +54,21 @@ public sealed partial class World
 
     public GameDefs Defs { get; }
     public StageDef? Stage { get; }
+    /// <summary>
+    /// 이 판의 직업(v0.6, 6.16 — 생성자 인자 ?? <c>rules.hero.class</c>, 바뀌지 않음). 주인공 만들기(WP3)·그림(WP5)·소리(WP8)·해시·로그(WP7)가 이것만 읽는다.
+    /// 규칙 없는 시험 월드는 null(주인공 반경 14).
+    /// </summary>
+    public HeroClassDef? HeroClass { get; }
     public MapDef? Map { get; }
     /// <summary>맵 배치를 푼 격자(하위 칸 성질·둘레 표시·<c>LayoutHash</c>). 맵 없는 시험 월드는 null.</summary>
     public ArenaGrid? Arena { get; }
     /// <summary>입구·기준점·주인공 시작을 월드 px 로 푼 것. 맵 위치가 필요한 묶음은 이것만 읽는다(4.1). 맵 없는 시험 월드는 null.</summary>
     public ResolvedMap? Resolved { get; }
+    /// <summary>
+    /// 방 바닥(v0.6.3, 6.11 "방 바닥" — 맵을 읽을 때 한 번). 방 체류 압박·방 보급(WP4)·방 들르기 "방 안"(WP4 <c>AutoplayPolicy</c>)·로그(WP7)가 이것만 읽는다.
+    /// 맵 없는 시험 월드·<c>room_areas</c> 없는 맵은 <see cref="RoomFloors.Empty"/>.
+    /// </summary>
+    public RoomFloors Rooms { get; } = RoomFloors.Empty;
     /// <summary>외곽 상자 64N × (32N + H)(카메라·생성 띠 기준, 4.1). 맵 없는 시험 월드는 960×540.</summary>
     public Vector2 MapSize { get; set; }
     public ulong Seed { get; }
@@ -123,6 +140,8 @@ public sealed partial class World
     // ── WP4 가 쓰고 WP5·WP6 이 읽는 것 ─────────────────────────────────
 
     public LightingState Lighting { get; } = new();
+    /// <summary>주인공이 선 방과 방마다 누적(v0.6.3 — 방 체류 압박·첫 플레이 로그). 방 번호 = <see cref="Rooms"/> 순서.</summary>
+    public RoomPresence RoomPresence { get; } = new();
     public List<BossBar> BossBars { get; } = [];
     public BannerState Banner;
 

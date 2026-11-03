@@ -58,6 +58,11 @@ public sealed record EnemyDef : IDef
     public bool ShowBossBar { get; init; }
     /// <summary>시간 배율 적용 여부(중간 보스·보스 false).</summary>
     public bool TimeScaling { get; init; } = true;
+    /// <summary>
+    /// 이 적이 쓰는 자원 묶음(v0.6, 6.17 — 헬파이어 몬스터는 <c>hellfire</c>). 꺼짐 단위는 스테이지·직업이라 적은 직접 꺼지지 않고,
+    /// 13.5-20 이 "이 적을 내는 스테이지의 <c>requires</c> ⊇ 이것" 을 지킨다(<c>StageReach</c>).
+    /// </summary>
+    public IReadOnlyList<ContentBundle> Requires { get; init; } = [];
 }
 
 /// <summary>
@@ -76,6 +81,11 @@ public sealed record PatternDef
     /// <summary>1부터.</summary>
     public int? EventFrame { get; init; }
     public TelegraphDef? Telegraph { get; init; }
+    /// <summary>
+    /// 패턴 조건(v0.5.3, <c>clear_sight</c>): 참이면 시작·이벤트 프레임에 <c>SeenClearly</c>(6.6)를 본다 — 겨누어 멀리 쏘는 중간 보스 패턴.
+    /// 이 패턴이 만드는 투사체는 <see cref="EnemyProjectileSpawn.SightGated"/> 가 참(공정성 <c>unseen_shots</c> 가 센다, 10.1).
+    /// </summary>
+    public bool ClearSight { get; init; }
 
     [PartKind(PartKind.EnemyAction)]
     public IReadOnlyList<PartDef> Actions { get; init; } = [];

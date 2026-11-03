@@ -15,8 +15,11 @@ namespace DiabloDefenceRemastered.Core.Assets;
 /// </summary>
 public static class AssetFormat
 {
-    /// <summary>manifest 의 <c>format</c>. 시작 검사가 다르면 "자원 형식이 낡았다(판 a → b)".</summary>
-    public const int Version = 1;
+    /// <summary>
+    /// manifest 의 <c>format</c>. 시작 검사가 다르면 "자원 형식이 낡았다(판 a → b)".
+    /// 2(v0.6, WP1d): manifest 모양 바뀜 — 원본·파일 줄의 <c>bundle</c>, 파일 줄 <c>sources</c>, <c>skipped_bundles</c>.
+    /// </summary>
+    public const int Version = 2;
 
     /// <summary>가져오기 도구가 쓰는 폴더(Assets 뿌리 기준). 원작 exe PNG 는 뿌리, 도구는 이 아래만 쓴다.</summary>
     public const string Root = "d1";

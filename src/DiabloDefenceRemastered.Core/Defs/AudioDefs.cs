@@ -33,11 +33,18 @@ public sealed record MusicDef : IDef
     public required string Id { get; init; }
     public required string File { get; init; }
     public bool Loop { get; init; } = true;
+    /// <summary>이 곡이 쓰는 자원 묶음(v0.6, 6.15·6.17 — 헬파이어 음악은 <c>hfmusic</c>). 음악은 꺼지지 않고 <see cref="Fallback"/> 으로 바뀐다.</summary>
+    public IReadOnlyList<ContentBundle> Requires { get; init; } = [];
+    /// <summary>
+    /// <see cref="Requires"/> 묶음이 없을 때 대신 트는 곡(v0.6, 기획 19.4: 지하실 → dlvla, 둥지 → dlvlc).
+    /// 대체 곡은 <c>requires</c> 가 비고 다시 <c>fallback</c> 이 없어야 한다(13.5-20). 고르기는 게임 쪽(WP8 MusicPlayer)이라 시뮬레이션과 무관하다.
+    /// </summary>
+    public DefRef<MusicDef>? Fallback { get; init; }
 }
 
 /// <summary>
 /// 소리 연결 표 <c>sound_bindings</c>(객체 하나, 데이터 파일 <c>audio/bindings.json</c>). 무엇이 일어나면 어느 소리를 내나.
-/// 사전 키 = 그 종류의 정의 ID(무기·투사체·이펙트·그림 묶음·적·획득물) — 키가 있는지는 WP8 검사기가 본다.
+/// 사전 키 = 그 종류의 정의 ID(무기·투사체·이펙트·그림 묶음·적·획득물·직업) — 키가 있는지는 WP8 검사기가 본다.
 /// 값은 소리·음악 참조라 로더 연결 단계(6.2 의 5단계)가 채운다.
 /// </summary>
 public sealed record SoundBindingsDef
@@ -53,7 +60,8 @@ public sealed record SoundBindingsDef
     /// <summary>적 ID → 덮어쓰기와 보스 대사(<c>voice</c>).</summary>
     public IReadOnlyDictionary<string, EnemySoundsDef> Enemies { get; init; } = new Dictionary<string, EnemySoundsDef>();
     public IReadOnlyDictionary<string, PickupSoundsDef> Pickups { get; init; } = new Dictionary<string, PickupSoundsDef>();
-    public HeroSoundsDef Hero { get; init; } = new();
+    /// <summary>직업 ID → 주인공 소리(v0.6, 6.15 — v0.5 는 객체 하나). <c>AudioSystem</c> 이 <c>World.HeroClass.Id</c> 로 고른다. 직업마다 줄이 없으면 경고(13.5-21, WP8).</summary>
+    public IReadOnlyDictionary<string, HeroSoundsDef> Hero { get; init; } = new Dictionary<string, HeroSoundsDef>();
     /// <summary>UI 소리 키(<c>menu_move</c>, <c>menu_select</c>, <c>level_up</c>, <c>chest_open</c>, <c>elite_pack</c>) → 소리.</summary>
     public IReadOnlyDictionary<string, DefRef<SoundDef>> Ui { get; init; } = new Dictionary<string, DefRef<SoundDef>>();
     /// <summary>음악 키(<c>title</c> 또는 스테이지 ID) → 곡.</summary>

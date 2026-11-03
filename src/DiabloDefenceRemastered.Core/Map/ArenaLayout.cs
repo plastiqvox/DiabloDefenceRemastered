@@ -3,10 +3,14 @@ using System.Text;
 
 namespace DiabloDefenceRemastered.Core.Map;
 
-/// <summary>배치·타일셋 검사 오류. <see cref="Path"/> 는 그 정의 원소 기준(<c>$.layout.gates[1].side</c>).</summary>
-public readonly record struct LayoutError(string Path, string Message)
+/// <summary>
+/// 배치·타일셋·방 검사 오류. <see cref="Path"/> 는 그 정의 원소 기준(<c>$.layout.gates[1].side</c>).
+/// <see cref="Warning"/>(v0.6.1): 참이면 경고(<c>closed_door</c>·<c>arch</c> 를 <c>decor_why</c> 없이 놓음, 13.5-19) — <c>MapDataReader</c> 가 <c>DataSeverity.Warning</c> 으로 바꾼다.
+/// <see cref="ArenaLayout.TryExpand"/>·<see cref="ArenaLayout.ValidateTileset"/>·<see cref="ArenaLayout.ValidateRooms"/> 가 같은 형을 쓴다.
+/// </summary>
+public readonly record struct LayoutError(string Path, string Message, bool Warning = false)
 {
-    public override string ToString() => $"{Path}: {Message}";
+    public override string ToString() => Warning ? $"{Path}: (경고) {Message}" : $"{Path}: {Message}";
 }
 
 /// <summary>
@@ -16,11 +20,12 @@ public readonly record struct LayoutError(string Path, string Message)
 /// <item>모든 칸 = 바닥: <c>floor[StableHash(맵 ID, mx, my) % 개수]</c>.</item>
 /// <item>테두리: 네 모서리·네 변을 <c>borders[border]</c> 번호로(둘레 표시).</item>
 /// <item>문: 변 가운데(또는 <c>at</c>) 메가타일 2개를 <c>open</c> 으로, 양옆 한 칸씩을 <c>end_a</c>/<c>end_b</c> 로(끝 조각은 둘레 표시).</item>
-/// <item><c>place</c>: 조각 번호를 <c>at</c> 의 [mx,my] 마다, 또는 <c>line</c>(가로·세로 줄)에.</item>
+/// <item><c>place</c>: 조각 번호를 <c>at</c> 의 [mx,my] 마다, 또는 <c>line</c>(가로·세로 줄)에, 또는 (v0.6) <c>grid</c> 블록(<c>origin</c> 부터 줄 = y, 칸 = 공백으로 나눈 이름, <c>.</c> 건너뜀).
+/// <c>over_border</c> 놓기는 문 칸이 아닌 테두리 칸을 덮을 수 있다 — 둘레 표시는 남고, 원래 테두리 조각이 막던 비트를 풀면 오류(v0.6.1).</item>
 /// <item>결과: 번호 격자 + 성질 표로 푼 하위 칸 성질 + 둘레 표시 + <c>LayoutHash</c>.</item>
 /// </list>
-/// 검사(13.5-4 배치 쪽): 배치가 M×M 안, 쓰는 메가타일이 모두 성질 표에 있음, 문 칸이 비어 있음, 놓은 조각이 테두리·다른 조각과 겹치지 않음.
-/// 타일셋 자체 검사(13.5-12)는 <see cref="ValidateTileset"/>.
+/// 검사(13.5-4 배치 쪽): 배치가 M×M 안, 쓰는 메가타일이 모두 성질 표에 있음, 문 칸이 비어 있음, 놓은 조각이 테두리(<c>over_border</c> 가 아니면)·문·다른 조각과 겹치지 않음,
+/// 놓기마다 <c>at</c>·<c>line</c>·<c>grid</c> 중 하나. 타일셋 자체 검사(13.5-12)는 <see cref="ValidateTileset"/>, 안쪽 방 검사(13.5-19)는 <see cref="ValidateRooms"/>.
 /// </summary>
 public static class ArenaLayout
 {
@@ -38,7 +43,7 @@ public static class ArenaLayout
     {
         var errors = new List<LayoutError>();
         var grid = TryExpand(map, tileset, errors);
-        if (grid is null || errors.Count > 0)
+        if (grid is null || errors.Any(e => !e.Warning))
             throw new InvalidDataException($"맵 '{map.Id}' 배치를 풀 수 없다: " + string.Join(" / ", errors));
         return grid;
     }
@@ -46,7 +51,7 @@ public static class ArenaLayout
     /// <summary>풀기. 오류를 모두 <paramref name="errors"/> 에 넣고, 하나라도 있으면 null.</summary>
     public static ArenaGrid? TryExpand(MapDef map, TilesetDef tileset, ICollection<LayoutError> errors)
     {
-        var before = errors.Count;
+        var before = errors.Count(e => !e.Warning);
         var m = map.Size;
         if (m < 3) { errors.Add(new("$.size", $"메가타일 수는 3 이상이어야 한다({m})")); return null; }
         if (tileset.Floor.Count == 0) { errors.Add(new("$.tileset", $"타일셋 '{tileset.Id}' 에 floor 가 없다")); return null; }
@@ -57,6 +62,7 @@ public static class ArenaLayout
         var source = new string[m * m];
         var boundary = new bool[m * m];
         var claimed = new bool[m * m];   // 문·조각이 차지한 칸(겹침 검사)
+        var gateCell = new bool[m * m];  // 문(열린 칸·끝 조각) 칸 — over_border 도 덮지 못한다
 
         // 1. 바닥
         var mapHash = StableHash.Of(map.Id);
@@ -143,43 +149,45 @@ public static class ArenaLayout
                 source[i] = s.Name;
                 boundary[i] = s.Boundary;
                 claimed[i] = true;
+                gateCell[i] = true;
                 if (!s.Boundary) openCells.Add((g, mx, my));
             }
         }
 
         // 4. 안쪽 조각
+        Span<CellFlags> was = stackalloc CellFlags[4];
+        Span<CellFlags> now = stackalloc CellFlags[4];
         for (var p = 0; p < layout.Place.Count; p++)
         {
             var place = layout.Place[p];
-            var path = $"$.layout.place[{p}]";
-            if (!tileset.Pieces.TryGetValue(place.Piece, out var tile))
-            {
-                errors.Add(new($"{path}.piece", $"타일셋 '{tileset.Id}' 에 조각 '{place.Piece}' 가 없다"));
-                continue;
-            }
-            var cells = new List<(Int2 Cell, string Path)>();
-            if (place.Line is { } line)
-            {
-                if (place.At.Count > 0) { errors.Add(new(path, "at 과 line 중 하나만 쓴다")); continue; }
-                if (line.Count != 2) { errors.Add(new($"{path}.line", "line 은 [[mx0,my0],[mx1,my1]] 두 점이다")); continue; }
-                var (a, b) = (line[0], line[1]);
-                if (a.X != b.X && a.Y != b.Y) { errors.Add(new($"{path}.line", $"line 은 가로·세로 줄이어야 한다({a} → {b})")); continue; }
-                var steps = Math.Max(Math.Abs(b.X - a.X), Math.Abs(b.Y - a.Y));
-                var d = new Int2(Math.Sign(b.X - a.X), Math.Sign(b.Y - a.Y));
-                for (var s = 0; s <= steps; s++) cells.Add((new Int2(a.X + d.X * s, a.Y + d.Y * s), $"{path}.line"));
-            }
-            else if (place.At.Count == 0) { errors.Add(new(path, "at 또는 line 이 있어야 한다")); continue; }
-            else
-                for (var j = 0; j < place.At.Count; j++) cells.Add((place.At[j], $"{path}.at[{j}]"));
+            if (PlacementCells(place, $"$.layout.place[{p}]", tileset, errors) is not { } cells) continue;
 
-            foreach (var (c, cellPath) in cells)
+            foreach (var (c, piece, tile, cellPath) in cells)
             {
                 if ((uint)c.X >= (uint)m || (uint)c.Y >= (uint)m) { errors.Add(new(cellPath, $"{c} 가 {m}×{m} 밖이다")); continue; }
-                if (c.X == 0 || c.Y == 0 || c.X == m - 1 || c.Y == m - 1) { errors.Add(new(cellPath, $"{c} 가 테두리와 겹친다")); continue; }
                 var i = c.Y * m + c.X;
+                var onBorder = c.X == 0 || c.Y == 0 || c.X == m - 1 || c.Y == m - 1;
+                if (onBorder && !place.OverBorder) { errors.Add(new(cellPath, $"{c} 가 테두리와 겹친다(둘레 자리에 겹쳐 놓으려면 over_border)")); continue; }
+                if (onBorder && gateCell[i]) { errors.Add(new(cellPath, $"{c} 는 문 칸이다 — over_border 도 문 칸은 덮지 않는다")); continue; }
                 if (claimed[i]) { errors.Add(new(cellPath, $"{c} 에 조각이 이미 있다")); continue; }
+
+                // over_border: 덮어도 막힘은 줄지 않는다(v0.6.1) — 원래 테두리 조각이 막던 걷기·시야·투사체 비트를 덮는 조각도 막아야 한다.
+                // 성질 표에 없는 번호는 5단계가 따로 알린다
+                if (onBorder
+                    && tileset.Props.TryGetValue(mega[i], out var wasText) && TryParseProps(wasText, was)
+                    && tileset.Props.TryGetValue(tile, out var nowText) && TryParseProps(nowText, now))
+                {
+                    for (var k = 0; k < 4; k++)
+                    {
+                        var lost = was[k] & ~now[k] & (CellFlags.BlocksWalk | CellFlags.BlocksSight | CellFlags.BlocksProjectiles);
+                        if (lost != CellFlags.None)
+                            errors.Add(new(cellPath, $"테두리 ({c.X},{c.Y}) 하위 칸 {SubName(k)} 의 {BitNames(lost)} 막힘을 {piece} 가 풀었다(over_border 는 둘레 막힘을 줄이지 않는다)"));
+                    }
+                }
+
+                // 덮인 테두리 칸의 둘레 표시(boundary)는 그대로 둔다(4.2)
                 mega[i] = tile;
-                source[i] = $"pieces.{place.Piece}";
+                source[i] = $"pieces.{piece}";
                 claimed[i] = true;
             }
         }
@@ -220,7 +228,7 @@ public static class ArenaLayout
                 errors.Add(new($"$.layout.gates[{g}]", $"문 칸 ({mx},{my}) 이 비어 있지 않다(메가타일 {tile} 성질 '{text}')"));
         }
 
-        if (errors.Count > before) return null;
+        if (errors.Count(e => !e.Warning) > before) return null;
         var iso = new IsoMath(n, tileset.ColumnHeight);
         return new ArenaGrid(map, tileset, iso, mega, cellsOut, ComputeLayoutHash(map, tileset, mega));
     }
@@ -253,6 +261,254 @@ public static class ArenaLayout
 
         CheckDiffs(tileset, tileset.SolKnownDiffs, "sol_known_diffs", errors);
         CheckDiffs(tileset, tileset.DesignDiffs, "design_diffs", errors);
+
+        // v0.6: marks 의 번호는 이름 붙인 번호 안(13.5-12 — 성질 표 키와 같은 집합)
+        foreach (var (mark, tiles) in tileset.Marks.OrderBy(p => p.Key))
+        {
+            if (tiles.Count == 0) errors.Add(new($"$.marks.{MarkName(mark)}", "번호가 하나도 없다"));
+            for (var k = 0; k < tiles.Count; k++)
+                if (!named.Contains(tiles[k]))
+                    errors.Add(new($"$.marks.{MarkName(mark)}[{k}]", $"메가타일 {tiles[k]} 은 이 타일셋이 이름 붙인 번호(floor·borders·gates·pieces)가 아니다"));
+        }
+    }
+
+    /// <summary>
+    /// 안쪽 방 검사(13.5-19, v0.6 — 펼친 뒤 부른다, 자원·반경·격자 없이 성질 글자만 본다). 오류와 경고를 <paramref name="errors"/> 에 넣는다.
+    /// <list type="bullet">
+    /// <item><c>open_center</c> 가 비지 않고 테두리 안, 그 안 메가타일은 바닥 또는 <c>marks.pillar</c>, 기둥 ≤ 2(오류).</item>
+    /// <item><c>marks.closed_door</c>·<c>arch</c> 번호를 놓은 놓기에 <c>decor_why</c> 가 없으면 경고.</item>
+    /// <item>방 기준점(<c>anchors</c> 의 <c>room_*</c>)마다 격자 안·그 칸 걷기 막힘 없음(오류).</item>
+    /// <item>(v0.6.3) 방 영역 <c>room_areas</c>: <c>room_*</c> 기준점마다 하나, 키는 <c>room_*</c> 기준점, 맵 안·서로 겹치지 않음, 기준점이 영역 안,
+    /// 방 바닥(<see cref="RoomFloors"/>)에서 영역 밖으로 이어지는 걷기 칸이 있음(오류).</item>
+    /// <item>(v0.6.1) ① 갇힌 바닥 — 걷기 막힘 없는 칸을 주인공 시작 칸에서 4이웃으로 채워 못 닿는 칸. ② 하위 1칸 틈 — 걷기 막힘 없는 칸인데 좌우 둘 다 또는 위아래 둘 다 걷기 막힘(격자 밖 포함).
+    /// 둘 다 칸 목록을 메가타일로 묶어 한 줄씩(오류).</item>
+    /// </list>
+    /// <c>over_border</c> 의 막힘 줄어듦은 <see cref="TryExpand"/> 가 낸다. WP2 의 13.5-4(80px)·13.5-5(반경 14 격자)는 이 위의 정밀 검사로 남는다.
+    /// </summary>
+    public static void ValidateRooms(MapDef map, ArenaGrid grid, ICollection<LayoutError> errors)
+    {
+        var ts = grid.Tileset;
+        var m = grid.MegaSize;
+
+        // open_center
+        if (map.OpenCenter is { } oc)
+        {
+            if (oc.IsEmpty || oc.X0 < 1 || oc.Y0 < 1 || oc.X1 > m - 1 || oc.Y1 > m - 1)
+                errors.Add(new("$.open_center", $"open_center {oc} 는 비지 않고 테두리 안(메가 1..{m - 2}, 끝 미포함 {m - 1})이어야 한다"));
+            else
+            {
+                var floors = new HashSet<int>(ts.Floor);
+                var pillars = Marked(ts, TileMark.Pillar);
+                var pillarCount = 0;
+                for (var my = oc.Y0; my < oc.Y1; my++)
+                    for (var mx = oc.X0; mx < oc.X1; mx++)
+                    {
+                        var tile = grid.MegaTile(mx, my);
+                        if (floors.Contains(tile)) continue;
+                        if (pillars.Contains(tile)) { pillarCount++; continue; }
+                        errors.Add(new("$.open_center", $"open_center 안 메가 ({mx},{my}) 의 메가타일 {tile} 은 바닥도 기둥(marks.pillar)도 아니다"));
+                    }
+                if (pillarCount > 2)
+                    errors.Add(new("$.open_center", $"open_center 안 기둥이 {pillarCount}개다 — 2개까지(무리를 끌고 도는 가운데를 넓게 둔다)"));
+            }
+        }
+
+        // 닫힌 문·아치 = 문으로 쓰면 안 되는 조각(경고, decor_why 면 끔)
+        var noDoor = Marked(ts, TileMark.ClosedDoor);
+        noDoor.UnionWith(Marked(ts, TileMark.Arch));
+        if (noDoor.Count > 0)
+            for (var p = 0; p < map.Layout.Place.Count; p++)
+            {
+                var place = map.Layout.Place[p];
+                if (!string.IsNullOrWhiteSpace(place.DecorWhy)) continue;
+                if (PlacementCells(place, $"$.layout.place[{p}]", ts, null) is not { } cells) continue;
+                var names = cells.Where(c => noDoor.Contains(c.Tile)).Select(c => c.Piece).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
+                if (names.Count > 0)
+                    errors.Add(new($"$.layout.place[{p}]",
+                        $"조각 {string.Join(", ", names)} 는 marks 의 closed_door·arch 번호다 — 문으로 쓰면 안 된다(닫힌 문은 벽, 아치는 틈이 하위 1칸). 장식이면 decor_why 에 이유를 적는다",
+                        Warning: true));
+            }
+
+        // 방 기준점
+        foreach (var (id, at) in map.AnchorsTile.OrderBy(a => a.Key, StringComparer.Ordinal))
+        {
+            if (!id.StartsWith("room_", StringComparison.Ordinal)) continue;
+            var c = at.Cell;
+            if (!grid.IsInside(c.X, c.Y)) errors.Add(new($"$.anchors.{id}", $"방 기준점 {at} 가 {grid.Size}×{grid.Size} 격자 밖이다"));
+            else if (!grid.IsWalkable(c.X, c.Y)) errors.Add(new($"$.anchors.{id}", $"방 기준점 {at} 의 칸 ({c.X},{c.Y}) 이 걷기 막힘이다(성질 '{grid.Prop(c.X, c.Y)}')"));
+            if (!map.RoomAreas.ContainsKey(id))
+                errors.Add(new("$.room_areas", $"방 기준점 {id} 의 영역(room_areas.{id})이 없다 — 방 바닥(방 체류 압박·방 보급·방 들르기)을 계산하지 못한다"));
+        }
+
+        // 방 영역(v0.6.3) — 키·범위·겹침, 기준점이 영역 안, 바닥에서 밖으로 나가는 길
+        var roomFloors = RoomFloors.Compute(map, grid);
+        var areas = map.RoomAreas.OrderBy(a => a.Key, StringComparer.Ordinal).ToList();
+        for (var i = 0; i < areas.Count; i++)
+        {
+            var (id, area) = areas[i];
+            var path = $"$.room_areas.{id}";
+            if (!id.StartsWith("room_", StringComparison.Ordinal) || !map.AnchorsTile.TryGetValue(id, out var at))
+            {
+                errors.Add(new(path, $"room_areas 의 키 '{id}' 는 anchors 의 room_* 기준점이어야 한다"));
+                continue;
+            }
+            if (area.IsEmpty || area.X0 < 0 || area.Y0 < 0 || area.X1 > m || area.Y1 > m)
+            {
+                errors.Add(new(path, $"방 영역 {area} 는 비지 않고 맵 안(메가 0..{m - 1}, 끝 미포함 {m})이어야 한다"));
+                continue;
+            }
+            for (var j = i + 1; j < areas.Count; j++)
+                if (area.Intersects(areas[j].Value))
+                    errors.Add(new(path, $"방 영역 {area} 가 {areas[j].Key} 의 영역 {areas[j].Value} 와 겹친다 — 한 칸은 한 방 바닥에만 든다"));
+            var c = at.Cell;
+            if (!grid.IsInside(c.X, c.Y) || !grid.IsWalkable(c.X, c.Y)) continue;   // 위 기준점 검사가 이미 냄
+            if (!RoomFloors.SubRect(area, grid.Size).Contains(c.X, c.Y))
+            {
+                errors.Add(new(path, $"방 기준점 {at} 가 방 영역 {area}(하위 칸 {area.X0 * 2}..{area.X1 * 2 - 1}, {area.Y0 * 2}..{area.Y1 * 2 - 1}) 밖이다"));
+                continue;
+            }
+            if (roomFloors.TryGet(id, out var floor) && floor.Doors == 0)
+                errors.Add(new(path, $"방 바닥({floor.Cells.Count}칸)에서 영역 밖으로 이어지는 걷기 칸이 없다 — 문이 없는 방"));
+        }
+
+        // ① 갇힌 바닥 — 주인공 시작 칸에서 4이웃 채우기
+        var n = grid.Size;
+        var start = map.HeroStart.Tile.Cell;
+        if (grid.IsInside(start.X, start.Y))   // 격자 밖이면 MapDataReader 가 따로 오류
+        {
+            if (!grid.IsWalkable(start.X, start.Y))
+                errors.Add(new("$.hero_start.tile", $"주인공 시작 칸 ({start.X},{start.Y}) 이 걷기 막힘이다 — 갇힌 바닥 검사를 하지 못했다"));
+            else
+            {
+                var reached = new bool[n * n];
+                var queue = new Queue<int>();
+                reached[start.Y * n + start.X] = true;
+                queue.Enqueue(start.Y * n + start.X);
+                while (queue.Count > 0)
+                {
+                    var i = queue.Dequeue();
+                    var (x, y) = (i % n, i / n);
+                    Visit(x - 1, y); Visit(x + 1, y); Visit(x, y - 1); Visit(x, y + 1);
+                }
+                void Visit(int x, int y)
+                {
+                    if (!grid.IsWalkable(x, y) || reached[y * n + x]) return;
+                    reached[y * n + x] = true;
+                    queue.Enqueue(y * n + x);
+                }
+
+                var trapped = new List<Int2>();
+                for (var ty = 0; ty < n; ty++)
+                    for (var tx = 0; tx < n; tx++)
+                        if (grid.IsWalkable(tx, ty) && !reached[ty * n + tx]) trapped.Add(new(tx, ty));
+                ReportByMega(trapped, m, "갇힌 바닥", "주인공 시작에서 4이웃으로 닿지 않는다(벽 두 겹 사이 띠·막힌 방)", errors);
+            }
+        }
+
+        // ② 하위 1칸 틈 — 좌우 둘 다 또는 위아래 둘 다 걷기 막힘(격자 밖 포함)
+        var gaps = new List<Int2>();
+        for (var ty = 0; ty < n; ty++)
+            for (var tx = 0; tx < n; tx++)
+            {
+                if (!grid.IsWalkable(tx, ty)) continue;
+                if ((!grid.IsWalkable(tx - 1, ty) && !grid.IsWalkable(tx + 1, ty)) || (!grid.IsWalkable(tx, ty - 1) && !grid.IsWalkable(tx, ty + 1)))
+                    gaps.Add(new(tx, ty));
+            }
+        ReportByMega(gaps, m, "하위 1칸 틈", "좌우 둘 다 또는 위아래 둘 다 걷기 막힘(벽 맞물림 구멍·벽 두 겹 사이 띠·아치 틈 — 꺾이는 자리는 모서리 조각)", errors);
+    }
+
+    /// <summary>칸 목록을 메가타일(행 우선 순서)로 묶어 한 줄씩.</summary>
+    private static void ReportByMega(List<Int2> cells, int m, string what, string why, ICollection<LayoutError> errors)
+    {
+        foreach (var group in cells.GroupBy(c => (c.Y / 2) * m + c.X / 2).OrderBy(g => g.Key))
+        {
+            var (mx, my) = (group.Key % m, group.Key / m);
+            var list = string.Join(" ", group.Select(c => $"({c.X},{c.Y})"));
+            errors.Add(new("$.layout", $"{what} — 메가 ({mx},{my}) 하위 칸 {list}: {why}"));
+        }
+    }
+
+    /// <summary>타일셋 <c>marks</c> 의 그 표시 번호(없으면 빈 집합).</summary>
+    private static HashSet<int> Marked(TilesetDef ts, TileMark mark) =>
+        ts.Marks.TryGetValue(mark, out var tiles) ? [.. tiles] : [];
+
+    /// <summary><see cref="TileMark"/> 의 JSON 이름(오류 경로용).</summary>
+    public static string MarkName(TileMark mark) => mark switch
+    {
+        TileMark.Pillar => "pillar",
+        TileMark.Grate => "grate",
+        TileMark.ClosedDoor => "closed_door",
+        _ => "arch",
+    };
+
+    /// <summary>
+    /// 놓기 하나의 칸·조각 이름·번호·오류 경로(파일 순서, 줄 = y). 모양 오류(at·line·grid 중 하나가 아님, grid 에 piece, 없는 이름 …)면
+    /// <paramref name="errors"/> 에 넣고(null 이면 버림) null. 범위·테두리·겹침은 부르는 쪽이 본다.
+    /// </summary>
+    private static List<(Int2 Cell, string Piece, int Tile, string Path)>? PlacementCells(PiecePlacementDef place, string path, TilesetDef tileset, ICollection<LayoutError>? errors)
+    {
+        var kinds = (place.At.Count > 0 ? 1 : 0) + (place.Line is not null ? 1 : 0) + (place.Grid is not null ? 1 : 0);
+        if (kinds == 0) { errors?.Add(new(path, "at·line·grid 중 하나가 있어야 한다")); return null; }
+        if (kinds > 1) { errors?.Add(new(path, "at·line·grid 중 하나만 쓴다")); return null; }
+
+        var cells = new List<(Int2, string, int, string)>();
+        if (place.Grid is { } rows)
+        {
+            if (place.Piece is not null) { errors?.Add(new($"{path}.piece", "grid 놓기에는 piece 를 쓰지 않는다 — 칸마다 조각 이름을 적는다")); return null; }
+            if (place.Origin is not { } origin) { errors?.Add(new($"{path}.origin", "grid 놓기에는 origin [mx, my] 가 있어야 한다")); return null; }
+            var ok = true;
+            for (var r = 0; r < rows.Count; r++)
+            {
+                var names = rows[r].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                for (var c = 0; c < names.Length; c++)
+                {
+                    if (names[c] == ".") continue;
+                    if (!tileset.Pieces.TryGetValue(names[c], out var t))
+                    {
+                        errors?.Add(new($"{path}.grid[{r}]", $"{c + 1}번째 칸: 타일셋 '{tileset.Id}' 에 조각 '{names[c]}' 가 없다"));
+                        ok = false;
+                        continue;
+                    }
+                    cells.Add((new Int2(origin.X + c, origin.Y + r), names[c], t, $"{path}.grid[{r}]"));
+                }
+            }
+            // 빈 목록·'.' 만 있는 grid 는 방 블록을 통째로 지운 오타일 수 있다 — 다른 모양 오류처럼 조용히 넘기지 않는다
+            if (ok && cells.Count == 0) { errors?.Add(new($"{path}.grid", "grid 에 놓을 조각이 하나도 없다(빈 목록 또는 '.' 만)")); return null; }
+            return ok ? cells : null;
+        }
+
+        if (place.Origin is not null) { errors?.Add(new($"{path}.origin", "origin 은 grid 놓기에만 쓴다")); return null; }
+        if (place.Piece is not { } piece) { errors?.Add(new($"{path}.piece", "at·line 놓기에는 piece 가 있어야 한다")); return null; }
+        if (!tileset.Pieces.TryGetValue(piece, out var tile))
+        {
+            errors?.Add(new($"{path}.piece", $"타일셋 '{tileset.Id}' 에 조각 '{piece}' 가 없다"));
+            return null;
+        }
+        if (place.Line is { } line)
+        {
+            if (line.Count != 2) { errors?.Add(new($"{path}.line", "line 은 [[mx0,my0],[mx1,my1]] 두 점이다")); return null; }
+            var (a, b) = (line[0], line[1]);
+            if (a.X != b.X && a.Y != b.Y) { errors?.Add(new($"{path}.line", $"line 은 가로·세로 줄이어야 한다({a} → {b})")); return null; }
+            var steps = Math.Max(Math.Abs(b.X - a.X), Math.Abs(b.Y - a.Y));
+            var d = new Int2(Math.Sign(b.X - a.X), Math.Sign(b.Y - a.Y));
+            for (var s = 0; s <= steps; s++) cells.Add((new Int2(a.X + d.X * s, a.Y + d.Y * s), piece, tile, $"{path}.line"));
+        }
+        else
+            for (var j = 0; j < place.At.Count; j++) cells.Add((place.At[j], piece, tile, $"{path}.at[{j}]"));
+        return cells;
+    }
+
+    /// <summary>하위 칸 번호(TIL 순서 0..3) → 이름.</summary>
+    private static string SubName(int k) => k switch { 0 => "위-왼", 1 => "위-오른", 2 => "아래-왼", _ => "아래-오른" };
+
+    /// <summary>막힘 비트 → "걷기·시야·투사체" 중 켜진 것.</summary>
+    private static string BitNames(CellFlags f)
+    {
+        var parts = new List<string>(3);
+        if ((f & CellFlags.BlocksWalk) != 0) parts.Add("걷기");
+        if ((f & CellFlags.BlocksSight) != 0) parts.Add("시야");
+        if ((f & CellFlags.BlocksProjectiles) != 0) parts.Add("투사체");
+        return string.Join("·", parts);
     }
 
     private static void CheckDiffs(TilesetDef tileset, IReadOnlyList<SolDiffDef> diffs, string name, ICollection<LayoutError> errors)

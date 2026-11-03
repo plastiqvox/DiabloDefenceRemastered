@@ -1,6 +1,6 @@
 # Diablo Defence Remastered — 설계서 (Architecture)
 
-- 상태: v0.5.3 (설계 담당).
+- 상태: v0.6.3 (설계 담당).
   - v0.1: 첫 판.
   - v0.2: 세 리뷰(`docs/reviews/architecture-planner.md`, `architecture-implementer.md`, `architecture-verifier.md`)를 반영했다 — 지적별 처리는 13.1~13.3.
   - v0.3: 기획서 v0.4 의 **디아블로 1 원본 자원 사용**(사용자 요구 10)을 받았다 — 자원 가져오기 도구(1.4), 등각 아레나 좌표·타일 충돌(4.1·4.2),
@@ -20,7 +20,19 @@
   - v0.5.2: WP1c 구현(시야 계약·`VisibilityField`·`FogMath`)이 문서와 다르게·더 정한 것을 옮겼다. 처리 목록은 13.10.
   - v0.5.3: 기획서 v0.6.2 의 **중간 보스 늘리기**(사용자 요구 "중간 보스 늘리자" — 스테이지 1 은 2명, 스테이지 2 는 3명)를 받았다 — 패턴 조건 `clear_sight`·발사 프레임 시야 재확인(6.5·6.6),
     중간 보스의 `kite`·`split_on_death`, 보스 막대 여러 줄(8.2), 검증 13.5-18(6.14), 계약 보탬 **WP1d**(11.1). 처리 목록은 13.11.
-  기준 기획서: `docs/gdd.md` v0.6.2(설계에 넘긴 목록은 기획서 23·24·25절 끝). 출발점: `docs/brief.md`.
+  - v0.6: 기획서 v0.7 의 사용자 결정 셋(brief 요구 12~14)을 받았다 — **H 헬파이어 자원 정식**: 콘텐츠 묶음 `ContentBundle`(MPQ 하나 = 묶음 하나)과 정의의 `requires`(6.17),
+    가져오기 표 `bundle`·`prefer`·없는 MPQ 건너뛰기·manifest 의 만든 묶음/건너뛴 묶음(1.4), 시작 검사의 "꺼짐"(1.4 끝), 지하실 L5·둥지 L6 타일셋(6.11). **K 직업 4개**: 직업 정의 `HeroClassDef`(6.16 — `rules.hero` 는 공통 규칙과 고른 직업만),
+    무기 `classes`·근접 시전 클립 `attack`(6.8), 직업별 주인공 소리(6.15), 기록 = 스테이지 × 직업(8.3), `--hero`(9절). **M 넓은 방 + 안쪽 방**: 배치 `grid`·`over_border`·`open_center`·방 기준점·타일 표시 `marks`(6.11),
+    갇힌 바닥 칸 오류·큰 적 방 길(13.5-5), 자리 고르기의 길 거리 조건(4.10), `--autoplay-visit rooms`(9절), 검증 13.5-19~21(6.14). 계약은 아직 구현 전인 **WP1d 에 합쳤다**(11.1). 처리 목록은 13.12.
+  - v0.6.1: v0.6 리뷰(`docs/reviews/architecture-v06-review.md`, 구현·검증·기획 담당 지적 29개)를 반영하고 기획서 v0.7.1 에 맞췄다 — 맵 그림의 묶음 = 타일셋 표 항목의 묶음(`OutputBundles(arenas)`, 1.4), 불완전·깨진 묶음 MPQ 는 그 묶음만 건너뜀(1.4),
+    저장 계약에 직업(`RunResult.HeroClassId`·`LastHero`·`BestRecord`, 8.3), `AutoplayPolicy` 인스턴스와 방 들르기 기록(9절), "스테이지에서 나올 수 있는 적" 함수 `StageReach`(6.14), 특성 = 패시브(6.16),
+    스테이지 1 예시 배치를 자기 검사에 맞게 고침(모서리 조각·Γ 한 칸 밈·기둥·창살 두 칸, 6.11)과 하위 칸 채우기·1칸 틈·`over_border` 막힘 검사(13.5-19), "원작 방을 본뜬다" 의 뜻과 `audit` 의 DUN 배열 대조(R24),
+    WP1d 를 형·구현 둘로 나눔(11.1). 처리 목록은 13.13.
+  - v0.6.2: WP1d 구현(형·순수 로직·합성 방 맵)이 문서와 다르게·더 정한 것을 옮겼다. 처리 목록은 13.14.
+  - v0.6.3: WP1d 검증 지적을 반영했다 — 13.13 열린 질문 3(기획 v0.7.1 의 방 보급 `room_supply`·방 체류 압박)을 WP1d 커밋 전에 정했다: 맵 `room_areas` 와 방 바닥 `RoomFloors`(6.11),
+    `World.Rooms`·`World.RoomPresence`, 획득물 놓기 `ICombatSpawner.SpawnPickup`·`Pickup.SupplyRoom`·틱 이벤트 `SupplyCollected`, `rules.spawn.room_pressure`(6.10·6.12), 13.5-19 방 영역 검사, 빈 `grid` 오류.
+    WP1d 에 형과 순수 로직(방 바닥)을 더했다(11.1 #21~#24). 처리 목록은 13.15.
+  기준 기획서: `docs/gdd.md` v0.7.1(설계에 넘긴 목록은 기획서 23~27절 끝). 출발점: `docs/brief.md`.
 - 이 문서는 **코드 구조·형식·알고리즘·작업 나누기**를 정한다. 수치·규칙은 기획서가 정하고, 여기서는 그것을 어디에 어떻게 담는지만 정한다.
   기획서와 다르게 해석한 곳은 그 자리에 `[해석]` 으로 표시하고 12.1 에 모았다.
 - 코드 조각은 인터페이스 시그니처 수준이다. 이름은 구현 때 바뀔 수 있지만 **11절 작업 묶음 사이의 계약**(굵게 표시한 형)은 WP1·WP1b 가 정한 뒤 고치려면 관련 묶음 담당과 합의한다.
@@ -32,6 +44,11 @@
   단, 원본으로 확인해야 하는 숫자(타일 번호·성질 표, 단계 1 그림 묶음의 프레임 수)는 WP0a 가 이 PC 에서 먼저 읽어 저장소 데이터로 넣는다(11절).
 - 사용자 요구 11 "전장의 안개(원작식 시야)" 는 4.11·6.11·6.5·7.10·8.2 에 답한다: 시야는 **시뮬레이션 상태**(Core `VisibilityField`, 하위 타일 칸 단위, 성질 표의 시야 막힘 칸)라
   원거리 적의 사격·돌진이 같은 씨앗이면 같고, 그리기(`--reveal` 포함)는 그것을 읽기만 한다.
+- 사용자 결정 H "헬파이어 자원도 쓴다"(요구 12)는 1.4·6.11·6.17 에 답한다: 묶음은 `hellfire`·`hfmonk`·`hfmusic`·`hfvoice` 넷이고, MPQ 가 없는 PC 는 가져오기가 그 묶음을 건너뛰고(실패 아님)
+  그 묶음을 `requires` 로 단 스테이지·직업만 꺼진다. 기본 내용(대성당·지하묘지·마법사)은 헬파이어 파일을 하나도 쓰지 않으므로(13.5-20) 같은 씨앗·스테이지·직업이면 묶음 유무와 상관없이 결과가 같다.
+- 사용자 결정 K "직업 4개"(요구 13)는 6.16 에 답한다: 직업 = 정의 파일 하나(`Data/heroes/<id>.json`, 그림 묶음·시작 무기·능력치 덮어쓰기·특성·`requires`). 주인공을 만드는 코드는 `World.HeroClass` 만 읽는다.
+  MVP 데이터는 `sorcerer` 하나지만 계약(형·소리 연결 키·저장 모양)은 처음부터 직업 단위라 직업을 더할 때 계약을 다시 고치지 않는다.
+- 사용자 결정 M "넓은 방 + 안쪽 방"(요구 14)은 4.10·6.11·6.14 에 답한다: 원작 작은 방·짧은 벽은 배치 데이터(`grid` 놓기, 둘레에 겹쳐 붙이기)로 적고, 갇힌 바닥 칸은 길 검사 오류, 큰 적은 모든 방 기준점까지 길이 있어야 한다.
 - 이 문서에서 **"시야"** 는 주인공 시야(안개)만 뜻한다. 카메라가 보는 사각형은 **화면 사각형**(`World.ViewRect`), 길찾기의 선분 검사(`HasClearLine`)는 **길 트임**이라 부른다(v0.5, 4.5).
 
 ## 0. 핵심 결정 한눈에
@@ -40,6 +57,9 @@
 |---|---|
 | 프로젝트 | `Core`(그래픽·소리 재생 없는 순수 로직: 데이터·타일 배치 풀기·길찾기·시뮬레이션·틱 누적기·소리 고르기 규칙) / 게임(MonoGame: 렌더·소리 재생·입력·화면·앱) / 테스트(Core 만 참조) / 가져오기 도구(`tools/DiabloAssetImporter`: Core + MPQ 읽기)와 그 시험 |
 | 자원 | 원작 디아블로 1(`diabdat.mpq`)의 몬스터·주인공·마법·타일·소리·음악은 가져오기 도구가 `Assets/d1/` 에 뽑는다(가져오기 표에 적은 것만, 결정적, 캐시). 원작 exe PNG 는 아이콘·획득물·타이틀·로고·커서에만. 자원이 없으면 빌드는 DDR0001, 실행은 안내 화면, 시험은 자원 대조만 건너뜀 |
+| 헬파이어 묶음 (v0.6) | 같은 폴더의 `hellfire`·`hfmonk`·`hfmusic`·`hfvoice` MPQ = 콘텐츠 묶음 넷(`ContentBundle`). 가져오기 표 항목에 `bundle`, 정의(적·스테이지·직업·무기·음악)에 `requires`. MPQ 가 없으면 그 묶음만 건너뛰고(종료 코드 0) manifest 에 적음 → 시작 검사가 그 묶음 정의를 "꺼짐" 으로 세고 그 스테이지·직업 카드를 어둡게. 시뮬레이션은 묶음 유무를 모른다(6.17) |
+| 직업 (v0.6) | `HeroClassDef`(6.16): 그림 묶음·몸 반경·능력치 덮어쓰기·시작 무기·특성·`requires`. `rules.hero` = 공통 규칙 + 기본 능력치 + 고른 직업 ID. 월드는 `World.HeroClass` 하나를 받는다. MVP = `sorcerer` 하나 |
+| 맵 배치 (v0.6) | 넓은 방 + 안쪽 방: 둘레 테두리·문 + 조각 놓기(`at`·`line`·**`grid`** 블록, 둘레에 겹치는 **`over_border`**) + `open_center`·방 기준점 `room_*`. 갇힌 바닥 칸은 길 검사 오류, 큰 적(26·34)은 모든 방 기준점까지 길. 포위·소환·지점 예고 자리는 길 거리 ≤ 직선 × 1.5(4.10) |
 | 개체 모델 | 범용 ECS 를 쓰지 않는다. **종류별 풀(EntityStore) + 고정 순서 시스템**. 개체 클래스는 `partial` 이고 묶음마다 자기 필드 조각을 가진다(11.2). 적의 다양성은 상속이 아니라 **행동 부품(전략) 조합** |
 | 데이터 | `Data/**/*.json`(경로 서수 정렬로 읽음), 한 파일에 여러 종류를 담을 수 있음(적 + 그 적의 투사체). `extends` 로 변형 정의. 로딩 때 오류를 모두 모아 보여 줌. 게임 정의는 가져오기가 만든 파일 이름만 알고 원작 경로는 모른다 |
 | 좌표 | 월드 = 등각 아레나 그림의 **화면 픽셀**(실수). 하위 타일 ↔ 월드는 `IsoMath` 한 곳. 화면 어느 방향이든 같은 속도(4.1) |
@@ -49,7 +69,7 @@
 | 시야 (v0.5) | Core `VisibilityField`: **하위 타일 칸** 단위, 주인공 칸 중심 → 칸 중심 정수 선분이 시야 막힘 칸(성질 표 대문자, 원작 SOL bit1)을 지나지 않으면 보임, 반경 = 주인공 빛 반경, 두 줄 벽은 같은 메가타일의 벽 칸이 함께 보임. 주인공 칸·반경이 바뀐 틱에 다시 계산(`BeginTick`), 가 본 칸 비트맵. 질의 `IsClearlyVisible`(몸 위 끝까지 화면 안)을 원거리·돌진 규칙이 쓴다. 그리기는 이것을 읽어 안개(보임·기억·검정)를 빛 지도에 합친다(값은 알파 채널, 7.10) |
 | 렌더 | 960×540 월드 렌더 타깃 → 정수배 점 확대 후 선형 축소(레터박스). 바닥은 구운 조각 텍스처, 뒷둘레 벽은 바닥 바로 뒤·앞둘레 턱은 유닛 뒤 단계, 안쪽 벽 기둥만 유닛과 y 정렬, 주인공을 가리는 벽은 반투명. 원작 시트는 (그림 묶음 × 변종)마다 모든 동작 프레임을 잘라 한 페이지에 묶은 아틀라스, TRN 변종은 파일. 빛은 곱하기 빛 지도 |
 | 소리 | 시뮬레이션은 소리를 모르고 신호(`CueEvent`)·표시 이벤트만 낸다. 게임 `AudioSystem` 이 연결 표(`sound_bindings`)로 소리를 고르고 동시 재생 제한·우선순위를 적용한다(7.9). 소리 길이는 자원 색인에서 읽어 무음·소리 켬이 같은 수를 센다. 개발 옵션 실행은 OpenAL 을 출력 없는 장치(`ALSOFT_DRIVERS=null`)로 열고 기본 무음 |
-| 검증 | `--autoplay --seed --capture --capture-at --quit-after --stage --debug-nav --preview --log-ticks --log-hash --check --stress --exit-on-result --mute --sound --sound-device --reveal`. 창을 앞으로 끌어오지 않고, 개발 옵션 실행은 사용자 저장 파일을 **읽지도 쓰지도 않으며** 스피커로 소리를 내지 않는다(`--sound-device default` 를 줄 때만, 사용자 동의) |
+| 검증 | `--autoplay --seed --capture --capture-at --quit-after --stage --hero --autoplay-visit --debug-nav --preview --log-ticks --log-hash --check --stress --exit-on-result --mute --sound --sound-device --reveal`. 창을 앞으로 끌어오지 않고, 개발 옵션 실행은 사용자 저장 파일을 **읽지도 쓰지도 않으며** 스피커로 소리를 내지 않는다(`--sound-device default` 를 줄 때만, 사용자 동의) |
 
 ---
 
@@ -74,15 +94,19 @@ DiabloDefenceRemastered/
 │  ├─ DiabloDefenceRemastered.Core/            클래스 라이브러리. MonoGame 참조 없음
 │  │  ├─ Common/        EntityId, EntityStore<T>, Pool<T>, SimRandom, StableHash, FacingMath(방향→열)·Compass, Rgb, Int2, RectI, MathX,
 │  │  │                 AnimClock(클립·프레임·이벤트 프레임), CameraMath(ViewRect), TickAccumulator(누적기·틱 상한·캡처 멈춤)
-│  │  ├─ Defs/          정의 record (SpriteDef, TilesetDef, MapDef, EnemyDef, WeaponDef, SoundDef …), DefRef<T>, StatKey, EnemyStatKey
+│  │  ├─ Defs/          정의 record (SpriteDef, TilesetDef, MapDef, EnemyDef, WeaponDef, SoundDef, HeroClassDef(v0.6) …), DefRef<T>, StatKey, EnemyStatKey,
+│  │  │                 ContentBundle(v0.6 — 헬파이어 묶음 이름)
 │  │  ├─ Data/
 │  │  │  ├─ Registry/   PartRegistry, PartKind, IPartFactory, IDataValidator, ValidationContext, DataError, GameDefs   (계약, WP1)
+│  │  │  │              StageReach(스테이지에서 나올 수 있는 적, 6.14)                                       (v0.6.1 계약 WP1d, 소유 WP4)
 │  │  │  ├─ Json/       DefJson(공용 STJ 옵션: snake_case·주석·Disallow), 공용 변환기(Vector2·TileCoord·Rgb·RectI)    (계약, WP1b)
 │  │  │  └─ Loading/    DataLoader, JsonMerge(extends·*_add·*_patch·페이즈 풀기), 나머지 변환기, 공통 검증 규칙     (WP7)
 │  │  ├─ Map/           IsoMath(하위 타일 ↔ 월드), TileCoord, MapDataReader(tilesets·maps 만 읽기), ArenaLayout(배치 → 메가타일 격자),
 │  │  │                 ArenaGrid(하위 타일 막힘·둘레 표시), ResolvedMap(입구·기준점·시작 = 월드 px)                  (계약, WP1b)
 │  │  ├─ Assets/        AssetFormat(판 번호), AssetManifest, ImportTable(가져오기 표 8개 모양·만들 이름 목록), SpriteMeta,
 │  │  │                 ArenaArt(arena.json·바닥 조각 이름 규칙), SoundIndex(소리 길이)                                (계약, WP1b)
+│  │  │                 ContentAvailability(있는 묶음 → 꺼진 스테이지·직업, 6.17)                                       (계약·구현 WP1d)
+│  │  │                 DefAssetNames(정의 → 파일·주인 D, 13.5-10·시작 검사)                                   (v0.6.1 계약 WP1d, 본문 WP7)
 │  │  ├─ Geometry/      Shape(원·사각형·다각형), 부호 거리, 밀어내기, 선분 판정
 │  │  ├─ Nav/           ArenaCollision(막힘 → 평행사변형), NavGrid, ClearanceField, FlowField, AStar, BinaryHeap, PathSmoother,
 │  │  │                 Navigator, PlacementResolver, NavConst, Validation/(길 검사)
@@ -116,6 +140,7 @@ DiabloDefenceRemastered/
 │     ├─ Audio/         AudioServices(연결 파일), AudioSystem(신호 → 소리), SoundBank(WAV 읽기), MusicPlayer(페이드·덕킹)
 │     ├─ Input/         KeyboardMouseSource, InputMap
 │     ├─ Scenes/        SceneFactory, Title, StageSelect, Play, Result, DataError, Preview, Overlays/(LevelUp, Chest, Pause, Settings), AutoplayDriver
+│     │                 (직업 단계: HeroSelect — 8.1)
 │     └─ UI/            UiCanvas, Widgets, Hud, Minimap, Theme
 └─ tests/
    ├─ DiabloDefenceRemastered.Tests/           xunit.v3. Core 만 참조
@@ -185,10 +210,10 @@ DiabloDefenceRemastered/
 
 ```powershell
 # 두 원본을 한 명령으로: 원작 exe PNG(import-assets.ps1) → diabdat(도구)
-powershell -ExecutionPolicy Bypass -File tools\import-all.ps1 -Diabdat "<…>\diabdat.mpq" -Exe "<…>\DiabloDefence.exe"
+powershell -ExecutionPolicy Bypass -File tools\import-all.ps1 -Diabdat "<…>\diabdat.mpq" -Exe "<…>\DiabloDefence.exe" [-Hellfire "<폴더>"] [-SkipBundles "<묶음,…|all>"]   # v0.6.1: 도구 옵션을 그대로 넘김
 
 # 도구만
-dotnet run --project tools/DiabloAssetImporter -c Release -- import --diabdat <diabdat.mpq> [--out <Assets 폴더>] [--force] [--jobs <n>] [--hellfire <폴더>]
+dotnet run --project tools/DiabloAssetImporter -c Release -- import --diabdat <diabdat.mpq> [--out <Assets 폴더>] [--force] [--jobs <n>] [--hellfire <폴더>] [--skip-bundles <묶음,…|all>]
 dotnet run --project tools/DiabloAssetImporter -- verify [--out <Assets 폴더>]           # manifest 와 파일 해시만 대조
 dotnet run --project tools/DiabloAssetImporter -- probe tiles --diabdat <…> --tileset l1 --tiles 1,2,15   # 성질 표(6.11)를 쓸 때 SOL 보기
 dotnet run --project tools/DiabloAssetImporter -- contact --diabdat <…> --out <저장소 밖 폴더>           # 사람이 눈으로 볼 견본 PNG
@@ -202,8 +227,38 @@ dotnet run --project tools/DiabloAssetImporter -- audit [--out <Assets 폴더>] 
   git 을 찾을 수 없으면 작업 트리 안은 `src\DiabloDefenceRemastered\Assets\` 아래만 허용한다. 견본·캡처는 저장소 밖(스크래치·임시 폴더)에 두는 것이 원칙이다.
 - `audit`: `git ls-files` 의 파일마다 SHA-256 을 manifest 의 출력 해시, 그리고 표가 가리키는 원본 항목 바이트의 해시와 대조하고, 확장자 목록(`*.mpq *.cl2 *.cel *.pal *.trn *.min *.til *.sol *.dun *.amp *.wav`)과
   `Assets/d1/**` 도 본다. 하나라도 걸리면 그 목록과 종료 코드 4. 원본이 없으면 출력 해시와 확장자만 본다. 원작 그림이 든 캡처 PNG(바이트가 출력과 다름)는 이 검사로 못 잡으므로 규칙으로 막는다(R24).
+  **v0.6.1 방 배열 대조(13.5-22)**: 원본이 있으면 알려진 L1·L2 방 DUN(경로 목록은 가져오기 표 `Table/tilesets.json` 의 타일셋 항목 `audit_dun` — 타일셋 `dir` 기준 파일 이름만, 예 l1 의 `rnd6.dun`·`banner1.dun`·`banner2.dun`·`skngdo.dun`, 단계 3 의 l2 에 `blind1.dun`·`blind2.dun` 등 — 목록은 WP0 이 원본 목록으로 확인)을 **메모리에서만** 읽어(내용을 출력·저장하지 않음),
+  저장소 `Data/maps/*.json` 을 펼친 메가타일 격자(`MapDataReader` → `ArenaLayout.Expand`)와 4×4 창마다 비교한다. 두 쪽 모두 바닥 번호(그 타일셋 `floor`)와 DUN 의 0 을 "바닥" 하나로 본 뒤, 16칸이 모두 같고 그 창에 바닥 아닌 칸이 **8개 이상**이면
+  `maps/cathedral_arena.json (mx,my): rnd6.dun (x,y) 와 4×4 배열이 같다` 와 종료 코드 4. 바닥 아닌 칸 8개 기준은 "벽 모서리 하나(Γ + 두 벽 = 7칸)" 같은 어느 방에나 생기는 모양을 거르려는 시험 상수다 — WP0 이 실제 배치에서 거짓 실패가 없는지 보고 고친다.
+  DUN 형식은 부록 A.3 끝. "원작 방을 본뜬다" 의 뜻은 6.11 "원작 방 본뜨기"·R24.
 - 원본은 `FileAccess.Read`·`FileShare.Read` 로만 연다. 원본 폴더에 캐시·로그를 만들지 않는다.
-- **`diabdat.mpq` 에만 기댄다**(기획 19.2). `devilutionx.mpq` 는 열지 않는다. `hellfire*.mpq` 는 `--hellfire` 를 줄 때만 열고, 표에서 `"optional": true` 인 항목만 거기서 찾는다(MVP 는 그런 항목이 없다, 기획 19.4).
+- **기본 내용은 `diabdat.mpq` 에만 기댄다**(기획 19.2). `devilutionx.mpq` 는 열지 않는다. 헬파이어 MPQ 는 v0.6 에 정식 자원이 됐지만(기획 19.4) **표에서 `bundle` 을 단 항목만** 거기서 찾는다 — 아래 "헬파이어 묶음".
+
+**헬파이어 묶음** (v0.6, 사용자 결정 H, 기획 19.4)
+
+- 묶음 넷 = MPQ 넷: `hellfire`(`hellfire.mpq`), `hfmonk`(`hfmonk.mpq`), `hfmusic`(`hfmusic.mpq`), `hfvoice`(`hfvoice.mpq`). 이름은 Core `Defs/ContentBundle`(열거형, JSON 은 소문자 이름) 하나다.
+- **찾기**: `--hellfire <폴더>` 의 기본값은 `--diabdat` 파일이 있는 폴더다(v0.5 까지는 "줄 때만"). 그 폴더에서 네 이름을 대소문자 무관으로 찾는다(`HELLFIRE.MPQ`).
+  `--skip-bundles <묶음,…>`(또는 `all`)은 있어도 열지 않는다 — 이 PC(네 MPQ 가 다 있음)에서 "헬파이어 없는 PC" 를 재현하는 검증용이다.
+- **없는 MPQ = 그 묶음 건너뛰기**(실패 아님, 종료 코드 0): 그 묶음 항목을 만들지 않고 manifest 의 `skipped_bundles` 에 `{ "bundle", "mpq", "reason" }` 로 적고 끝 보고에 한 줄.
+  `reason` = `"없음"` | `"--skip-bundles"` | (v0.6.1) `"열 수 없음"` | `"판 다름: <빠진 원본 경로 목록>"`.
+- **쓸 수 없는 묶음 MPQ도 그 묶음만 건너뛴다**(v0.6.1 — v0.6 은 종료 코드 2·3 이었다): `--hellfire` 기본값이 diabdat 폴더라 사용자가 고르지 않은 묶음 MPQ 도 저절로 열린다.
+  그 MPQ 가 깨져 열리지 않거나(`열 수 없음`), 판이 달라 그 묶음 표 항목의 원본 파일이 하나라도 없으면(`판 다름`) 그 묶음 **전체**를 건너뛰고 기본 항목은 그대로 만든다 — 종료 코드 0, 끝 보고 맨 끝에
+  `경고: 헬파이어 묶음 hfmusic 을 건너뜀 — hfmusic.mpq 를 열 수 없음` 꼴로 묶음마다 한 줄(사용자가 "기본 내용까지 자원 없음" 이 되지 않게 — 기획 19.4 "없으면 그 내용만 꺼진다").
+  판이 다른 MPQ 를 "없음" 으로 덮지 않는다는 v0.6 의 뜻은 `reason` 에 빠진 파일 목록을 남기는 것으로 지킨다. 원본 찾는 순서(아래)에서 `prefer` 로만 쓰는 묶음(`hfvoice`)이 쓸 수 없으면 그 묶음만 건너뛰고 다음 순서로 찾는다.
+  **실패로 남기는 경우**: `diabdat.mpq` 를 못 찾거나 못 엶(2), 기본 항목의 원본 파일이 없음(3), 그리고 사용자가 `--hellfire <폴더>` 를 **직접 준** 실행에서 묶음 MPQ 가 열리지 않거나(2) 파일이 빠짐(3) — 직접 고른 것은 조용히 넘기지 않는다.
+  이 두 실패의 문구 끝에 우회 명령 한 줄을 붙인다: `헬파이어 없이 가져오려면: … --skip-bundles hellfire`(`import-all.ps1` 이면 `-SkipBundles hellfire`).
+- **한 묶음은 전부 있거나 전부 없다**(기획 19.4): 묶음 항목 일부만 만들어지는 경우는 없다(위 규칙 — 쓸 수 없으면 통째로 건너뜀).
+- **타일셋 묶음과 맵**(v0.6.1): 맵 정의에는 `requires` 를 두지 않는다(`MapDataReader` 가 모르는 속성 오류). 맵 그림(`arena.json`·`floor_*`·`columns.*`·`minimap.png`)의 묶음은 **그 맵이 쓰는 타일셋의 표 항목 `bundle`** 이다.
+  타일셋 항목의 묶음을 건너뛰면 그 타일셋을 쓰는 맵 굽기도 건너뛴다(manifest 에 그 맵 그림이 없다 — 시작 검사가 `ImportTable.OutputBundles(arenas)` 로 "꺼짐" 으로 센다, 1.4 끝).
+- **원본 찾는 순서**(항목 하나의 원본 경로마다): 항목의 `prefer` 묶음 MPQ(있으면, 적힌 순서) → `diabdat.mpq` → 항목 `bundle` 의 MPQ. 처음 찾은 곳의 바이트를 쓴다.
+  - 기본 항목(`bundle` 없음)은 diabdat 만 본다. 그림·기본 소리는 diabdat 먼저(기존 규칙, 부록 A.1).
+  - 펠트윈·스컬윙·본 데몬은 그림이 diabdat 에 있어도 표 항목에 `"bundle": "hellfire"` 를 단다 — 판단 기준은 내용이다(기획 19.4). 그래서 hellfire.mpq 가 없으면 그림도 만들지 않는다.
+    (v0.6.1 사실 바로잡음) 소리는 펠트윈만 hellfire 에 있고(`newsfx\ftwin`), 스컬윙·본 데몬의 원작 소리 묶음(`demskel\demskl`)은 원본 어디에도 없다(조사 0/8) — 두 적은 WP10 에서 헬파이어 소리를 빌려 단다.
+  - 수도사 목소리·헬파이어 대사처럼 같은 이름이 16비트(hfvoice)와 8비트(hfmonk·hellfire)에 다 있으면 `"bundle": "hfmonk", "prefer": ["hfvoice"]` — 출력 이름은 하나(`d1/sound/…`)이고 어느 MPQ 에서 왔는지는 manifest 의 파일 줄 `sources` 가 안다.
+- `hfvoice` 는 **원본 우선순위에만 쓰는 묶음**이다: 정의의 `requires` 에 쓰지 않는다(13.5-20 오류). 없으면 8비트판으로 같은 이름이 만들어져 꺼지는 내용이 없다.
+- 헬파이어 층 경로는 `nlevels\l5data\…`·`nlevels\l6data\…` 다(실행 파일 문자열의 `Levels/L5Data/…` 로는 없다 — 부록 A.1).
+- MVP 표에는 묶음 항목이 아직 없다(기획 19.4 — MVP 내용은 헬파이어를 쓰지 않음). 도구 시험이 합성 MPQ 로 "묶음 MPQ 없음 → 건너뜀·manifest 기록", "`--skip-bundles`", "있는 MPQ 에 파일 없음 → 그 묶음만 건너뜀(`판 다름`)·`--hellfire` 직접 지정이면 3",
+  "깨진 묶음 MPQ → `열 수 없음`", "`prefer` 순서", "타일셋 묶음 건너뜀 → 그 맵 굽기 건너뜀" 을 본다(10.1 `Pipeline`). 실제 묶음 MPQ 의 항목이 War3Net 으로 읽히는지는 `RealMpq` 가 이 PC 에서 본다(10.1, v0.6.1).
 
 **구성**: `Mpq/`(War3Net 감싸기, 여러 MPQ 우선순위 — diabdat 먼저), `Formats/`(순수 해석기: 스프라이트 CL2·CEL, 레벨 CEL 조각, MIN, TIL, SOL, PAL, TRN, WAV),
 `Bake/`(시트 잘라 묶기, 아레나 바닥·기둥, 미니맵, 아이콘, 소리 변환), `Output/`(PNG 쓰기, 임시 파일 → 바꿔치기, manifest, 캐시, 소리 색인), `Audit/`.
@@ -233,7 +288,12 @@ dotnet run --project tools/DiabloAssetImporter -- audit [--out <Assets 폴더>] 
                    "cast_fire": { "file": "fm", "width": 128 }, "cast_lightning": { "file": "lm", "width": 128 },
                    "cast_magic": { "file": "qm", "width": 128 },
                    "die": { "cl2": "plrgfx\\sorceror\\sln\\slndt.cl2", "width": 128 } },
-      "variants": { "": null } } ] }
+      "variants": { "": null } },
+    // (직업 단계 예, v0.6) 수도사: 묶음 hfmonk, 칸 폭이 동작마다 다름, 죽기는 자기 벌(맨손 벌에서 빌리지 않음 — 공통 규칙으로 두지 않는다)
+    { "out": "d1/hero/mlt", "cl2": "plrgfx\\monk\\mlt\\mlt{a}.cl2", "width": 112, "bundle": "hfmonk",
+      "actions": { "idle": "as", "walk": "aw", "attack": { "file": "at", "width": 130 },
+                   "cast_fire": { "file": "fm", "width": 114 }, "cast_lightning": { "file": "lm", "width": 114 },
+                   "cast_magic": { "file": "qm", "width": 114 }, "die": { "file": "dt", "width": 160 } } } ] }
 
 // Table/missiles.json — shadow_alpha 를 적은 항목만 색인 0 을 그림자로 바꾼다(firerun·guard 처럼 그림자가 있는 것). 없으면 색인 0 도 그냥 색
 { "palette": "levels\\l1data\\l1.pal",
@@ -254,7 +314,9 @@ dotnet run --project tools/DiabloAssetImporter -- audit [--out <Assets 폴더>] 
 // Table/sounds.json — {키} 는 vars 의 값마다 펼친다. 출력 = "d1/sound/" + 원작 경로 소문자·'/'
 { "sounds": [
     { "path": "sfx\\misc\\cbolt.wav" },
-    { "path": "monsters\\zombie\\zombie{k}{i}.wav", "vars": { "k": ["a", "h", "d", "s"], "i": ["1", "2"] } } ] }
+    { "path": "monsters\\zombie\\zombie{k}{i}.wav", "vars": { "k": ["a", "h", "d", "s"], "i": ["1", "2"] } },
+    // (v0.6 예) 같은 이름이 hfvoice(16비트)·hfmonk(8비트)에 있음 → hfvoice 먼저
+    { "path": "sfx\\monk\\monk{i}.wav", "vars": { "i": ["69", "69b", "71"] }, "bundle": "hfmonk", "prefer": ["hfvoice"] } ] }
 
 // Table/music.json
 { "music": [ { "path": "music\\dintro.wav" }, { "path": "music\\dlvla.wav" }, { "path": "music\\dlvlb.wav" } ] }
@@ -266,20 +328,28 @@ dotnet run --project tools/DiabloAssetImporter -- audit [--out <Assets 폴더>] 
 { "tilesets": [
     { "id": "l1", "dir": "levels\\l1data", "cel": "l1.cel", "min": "l1.min", "til": "l1.til", "sol": "l1.sol",
       "pieces_per_subtile": 10, "palettes": { "l1_1": "l1_1.pal", "l1_2": "l1_2.pal" },
+      "audit_dun": ["rnd6.dun", "banner1.dun", "banner2.dun", "skngdo.dun"],   // v0.6.1: audit 의 방 배열 대조(13.5-22)만 읽음 — 메모리에서만
       "overlay": { "cel": "l1s.cel",                       // 출처: DevilutionX 참고(아치 덧그림 번호표, 부록 A.5)
                    "frames": { "1": [11, 70, 320, 210, 340, 417], "2": [10, 248, 324, 343, 330, 420],
-                               "3": [252], "4": [254], "5": [258], "6": [266] } } } ] }
+                               "3": [252], "4": [254], "5": [258], "6": [266] } } },
+    // (헬파이어 스테이지 단계 예, v0.6) 지하실 L5 — 경로는 nlevels, 팔레트 하나. 덧그림 번호표는 그 단계에 확인
+    { "id": "l5", "dir": "nlevels\\l5data", "cel": "l5.cel", "min": "l5.min", "til": "l5.til", "sol": "l5.sol",
+      "pieces_per_subtile": 10, "palettes": { "l5base": "l5base.pal" }, "bundle": "hellfire" } ] }
 ```
 
 - 공통 필드: `out`(출력 이름, `d1/` 로 시작), 원작 경로 틀(`{a}` = 동작 글자, `{d}` = 방향 파일 1..`dirs`), `width`, `frames`([처음, 끝], 1부터 — 파일이 더 많을 때 쓸 범위),
-  `shadow_alpha`(표 머리 → 항목 → 동작 순으로 덮어씀, 없으면 색인 0 을 그대로 검정으로), `variants`(이름 → TRN 경로, `""` = 원색), `"optional": true`(헬파이어처럼 `--hellfire` 로만 찾는 항목.
-  없으면 건너뛰고 manifest 에도 없다 — 정의가 가리키면 시작 검사가 잡는다. MVP 에는 없음).
+  `shadow_alpha`(표 머리 → 항목 → 동작 순으로 덮어씀, 없으면 색인 0 을 그대로 검정으로), `variants`(이름 → TRN 경로, `""` = 원색),
+  **`bundle`**(v0.6 — v0.5 의 `"optional": true` 를 대신함. 묶음 이름, 없으면 기본 = diabdat. 그 MPQ 가 없으면 항목을 건너뛰고 manifest 에 없다 — 정의가 가리키면 시작 검사가 "꺼짐" 으로 센다, 1.4 끝),
+  **`prefer`**(v0.6, 소리·음악 항목 — 원본을 먼저 찾을 묶음 목록, 위 "헬파이어 묶음"). 모든 항목 종류(몬스터·주인공·마법·아이콘·소리·음악·타일셋)가 `bundle` 을 가진다. MVP 표에는 둘 다 없다.
+  타일셋 항목의 `bundle` 은 그 타일셋을 쓰는 **맵 그림의 묶음**도 정한다(v0.6.1, 위 "타일셋 묶음과 맵").
   아이콘 `layers` 원소 = `{ "dir", "frame", "offset"?: [x,y], "rotate"?: 도 }`(겹침·회전은 1.4 변환 규칙 "아이콘").
 - **칸 폭**: 도구가 파일에서 추정한 폭(32줄 건너뛰기 표, 부록 A.2)을 쓴다. 표의 `width` 는 **대조용**이고, 32줄보다 낮은 프레임처럼 추정이 안 되는 때만 대신 쓴다.
   둘이 다르면 종료 코드 4(`hero/slt cast_fire: 파일 폭 128, 표 96`). 마법사 `slt` 처럼 동작마다 폭이 다르면 동작 객체에 `width` 를 적는다.
+  칸 폭을 96·128·160 으로 가정하지 않는다 — 헬파이어는 나크룰 226, 폭발 `ex_red3`·`ex_blu3` 292, 수도사 98~160(동작마다)까지 간다(v0.6, 기획 8.5·4.5).
 - 표에 적지 않는 것: 프레임 수·높이(도구가 파일에서 읽는다. 정의의 값과는 게임 시작·시험이 대조 — 6.3), 원작 그림·소리 바이트, DevilutionX `*.tsv`(읽지도 복사하지도 않는다, 기획 19.1).
 - **원본에서 온 수치**(R24): 저장소에 들어가는 원본 유래 숫자는 **사실 수치만 손으로** 적는다 — 경로·칸 폭·프레임 범위(이 표), 타일 번호·성질·SOL 보정 칸(6.11),
   아치 덧그림 번호표(위 `overlay`), 동작별 프레임 시간·타격 프레임(그림 묶음 클립, 6.3). DevilutionX 의 파일·표 구조·주석·코드는 옮기지 않는다.
+  원작 방 DUN 의 **칸 배열**도 옮기지 않는다(v0.6.1) — 맵 배치는 크기·문 방향·벽 재료만 본뜨고 칸은 우리 조각 이름으로 새로 짠다(6.11 "원작 방 본뜨기", `audit` 가 대조).
   값마다 출처를 JSON 주석으로 남긴다: `// 출처: 원본 확인`(이 PC 의 diabdat 를 읽어 확인) 또는 `// 출처: DevilutionX 참고`(원본 파일에 없는 게임 동작 값). 둘 곳은 위에 적은 한 곳뿐이다.
   JSON 주석은 로더가 버리므로 원문 문자열 시험이 주석이 있는지 본다(6.14 13.5-16, v0.5.1).
   이 범위는 **사용자가 확인했다**(v0.5, 기획 열린 질문 19 닫힘·기획 19.1): DevilutionX(Sustainable Use License) 소스를 보고 안 사실 수치는 출처 주석을 달아 공개 저장소에 손으로 적어도 되고,
@@ -298,6 +368,9 @@ Assets/
   d1/
     manifest.json                     마지막에 쓴다: 형식 판(AssetFormat.Version), 도구 판(도구·Core 어셈블리 SHA-256), .NET 런타임 판, 원본 크기·SHA-256,
                                       표 해시(Table/*.json 8개를 이름 순으로 이은 바이트의 SHA-256), 파일마다 경로·크기·SHA-256
+                                      (v0.6) 원본 줄마다 묶음(`bundle`, 기본은 없음), `skipped_bundles`(건너뛴 묶음·MPQ·이유),
+                                      파일 줄마다 `bundle`(그 파일을 만든 표 항목의 묶음 — 맵 그림은 타일셋 항목의 묶음)·`sources`(v0.6.1: 바이트를 읽은 MPQ 이름 목록,
+                                      서수 정렬 — 고유 몬스터 페이지처럼 CL2 는 hellfire, TRN 은 diabdat 인 출력이 있다. v0.6 의 이름 하나 `source` 를 대신함)
     monsters/zombie.png  zombie@bluered.png  zombie@grey.png …  zombie.json     그림 묶음 한 페이지(모든 동작, 변종마다) + 메타(변종 공통, 6.3)
     hero/slt.png  slt.json            missiles/fireba.png  fireba.json …      icons/fireball.png …
     maps/cathedral_arena/arena.json  floor_<cx>_<cy>.png  columns.png  columns.json  minimap.png       (7.6, 이름 규칙은 아래 "아레나")
@@ -317,7 +390,7 @@ Assets/
 | 몬스터·주인공 CL2 | 8그룹(방향) 묶음으로 읽는다(마법은 평면 — 그룹 머리가 평면 표로도 읽히는 함정 때문에 종류별로 정해 둔다, 부록 A.2). RLE 투명 → 알파 0, **색인 0(그림자) → 검정 × `shadow_alpha`**(그 항목·동작에 값이 있을 때), 나머지 = TRN(있으면 먼저) → PAL. 프레임은 칸(폭 × 그 동작 최대 높이)에 바닥 맞춤으로 놓는다 |
 | 잘라 묶기 | 프레임마다 **알파 > 0 인 픽셀**의 사각형으로 잘라(반투명 그림자도 사각형 안에 남는다 — "불투명 픽셀" 로 자르면 그림자만 조용히 잘린다), **(그림 묶음 × 변종) 하나의 모든 동작**을 한 페이지(가로·세로 ≤ 4096)에 줄 쌓기로 묶는다. 순서 = (동작 이름 서수, 방향, 프레임) 고정. 넘치면 동작 단위로 다음 페이지(위 출력). 변종은 같은 자리에 색만 다르게(TRN 은 투명을 바꾸지 않으므로 사각형이 같다) → 메타 하나를 같이 쓴다. 좀비 묶음 전체 약 630프레임 × 평균 50×70 이면 2048² 안에 든다(어림, WP0 이 잰다) |
 | 마법 | 방향 있는 것은 파일 16개(뼈 영혼 8개)를 방향 0..15 로(1번 파일 = 아래 = 방향 0, 시계 방향 — brief 4절 각도 순서와 같다). `arrows` 는 프레임 n → 방향 n−1, 프레임 1개. 방향 없는 것은 방향 1 |
-| 주인공 | 마법사 `slt` 의 `as`·`aw`·`fm`·`lm`·`qm`, 죽기 `sln\slndt`(기획 4.0) |
+| 주인공 | 직업마다 장비 한 벌(기획 4.5): MVP 는 마법사 `slt` 의 `as`·`aw`·`fm`·`lm`·`qm`, 죽기 `sln\slndt`(기획 4.0). 직업 단계에 전사 `wms`(죽기 `wmn\wmndt`)·도적 `rlb`(`rln\rlndt`)·수도사 `mlt`(죽기 자기 벌 `mltdt`, `hfmonk`), 근접 시작 무기 직업은 공격 `at` 도. 프레임 수는 파일에서 읽는다(전사 `hn`·`mn` 죽기 15처럼 원작 표와 다른 곳이 있다) |
 | 아이콘 | 표 `layers` 의 (방향, 프레임)을 차례로 겹쳐(`rotate` 는 가장 가까운 픽셀 회전, `offset` 은 정수 이동) 48×48 어두운 칸 가운데에 맞춰 줄인다(정수 상자 평균 — 결정적, 기획 5.9) |
 | 아레나 | `MapDataReader` → `ArenaLayout.Expand`(6.11) → 메가타일 격자 → TIL → MIN(위 단부터 저장 — 뒤집어 읽음) → 레벨 CEL 조각(종류 = MIN 값 비트 12~14, 삼각형 패딩) + 맵 팔레트(`Table/tilesets.json` 의 `palettes`). 바닥 칸(걷기·투사체 막힘이 없는 칸 — 성질 `.`·`L`, 원작 바닥 판정 A.4) → 512×512 바닥 조각, 그 밖의 칸 → 하위 타일 기둥 그림(64×160) 아틀라스(같은 그림은 한 프레임), L1 아치 덧그림(`overlay`), 칸 목록 `arena.json`(Core `Assets/ArenaArt`), 미니맵(외곽 상자 1/16). **바닥 조각 이름 규칙**(자원 없이 계산, Core `ArenaArt.FloorChunks(ArenaGrid, IsoMath)`): 조각 (cx, cy) 는 바닥 칸(`.`·`L`)의 마름모 상자 `[C.x−32, C.x+32) × [C.y−16, C.y+16)` 가 하나라도 `[512cx, 512cx+512) × [512cy, 512cy+512)` 와 겹치면 있다 → `floor_<cx>_<cy>.png`. 픽셀이 모두 투명이어도 규칙이 있다고 하면 쓴다. 자세한 것은 7.6 |
 | 성질 대조 | 타일셋의 성질 표(6.11)를 쓰는 메가타일에 대해 원본 SOL 과 비교한다. 비교는 **세 비트만**(v0.5: bit1 추가): bit0(Solid) = 걷기, bit1(BlockLight) = 시야, bit2(BlockMissile) = 투사체 — `sol & 7` 을 6.11 의 글자 하나로 바꿔 표 글자와 같은지 본다(`x` = 걷기·투사체, `X` = 셋 다 …). 다른 비트(Transparent·TransLeft/Right·Trap 128)는 무시한다(바이트를 그대로 비교하면 SOL 159/175/191 같은 벽 조각에서 거짓 실패). 다르면 그 칸이 표의 `sol_known_diffs`(또는 `design_diffs`)에 그 원본 글자로 있어야 하고, 없으면 실패: `타일셋 l1 메가타일 15 하위 칸 0: 표 'X', SOL 'x'(시야 막힘 다름)` |
@@ -340,8 +413,11 @@ Assets/
 **실패와 보고**
 - 시작할 때 `d1/manifest.json` 을 먼저 지우고, 표의 모든 항목을 만든 뒤에만 쓴다 → 중간에 실패하면 빌드·실행이 "자원 없음" 으로 본다(반쯤 채운 Assets 로 뜨지 않음, 기획 19.2).
 - 파일은 임시 이름으로 쓰고 바꿔치기한다. 새 manifest 에 없는 `d1/` 아래 파일은 지운다(`d1/` 밖은 건드리지 않음).
-- 종료 코드: 0 성공, 1 처리 안 된 예외, 2 원본을 못 찾음·못 엶, 3 표에 있는데 원본에 없는 파일(목록 전부), 4 대조 실패(성질 표·프레임 범위·형식).
-- 끝 보고(표준 출력 + `d1/import.log`): 종류별 만든 수·크기, 캐시 적중 수, 걸린 시간, 없는 파일 목록, 원본 SHA-256.
+- 종료 코드: 0 성공(묶음 MPQ 가 없거나 쓸 수 없어 그 묶음을 건너뛴 것 포함 — v0.6.1), 1 처리 안 된 예외, 2 원본을 못 찾음·못 엶(`diabdat.mpq`, 또는 `--hellfire` 로 직접 준 폴더의 열리지 않는 묶음 MPQ),
+  3 표에 있는데 원본에 없는 파일(목록 전부 — 기본 항목, 또는 `--hellfire` 로 직접 준 묶음 MPQ), 4 대조 실패(성질 표·프레임 범위·형식, v0.6.1: `audit` 의 DUN 배열 같음 포함).
+- 끝 보고(표준 출력 + `d1/import.log`): 종류별 만든 수·크기, 캐시 적중 수, 걸린 시간, 없는 파일 목록, 원본 SHA-256, (v0.6) 묶음마다 `만듦`/`건너뜀(이유)` 한 줄,
+  (v0.6.1) 쓸 수 없어 건너뛴 묶음은 맨 끝에 `경고:` 줄(위 "헬파이어 묶음") — 종료 코드만 보는 `import-all.ps1` 도 이 줄을 그대로 보인다.
+- 캐시 키(v0.6): 원본 항목 바이트 해시가 이미 키에 있으므로 같은 이름을 hfvoice → hfmonk 로 바꿔 읽으면 키가 달라져 다시 만든다. 건너뛴 묶음의 옛 출력은 "새 manifest 에 없는 `d1/` 아래 파일은 지운다" 규칙으로 지워진다.
 
 **원작 exe 가져오기와의 관계** — `tools/import-assets.ps1`(원작 exe PNG 49장)은 그대로 둔다. 리소스 Bitmap 을 되살리려면 Windows PowerShell 5.1(.NET Framework)이 필요해서
 .NET 9 도구로 옮기지 않는다. `tools/import-all.ps1` 이 exe → diabdat 순서로 둘을 부른다(사용자가 두 번 실행하지 않게, 기획 19.2). exe PNG 는 정의에서 `source: "grid"`(6.3)이고
@@ -351,9 +427,17 @@ Assets/
 - 빌드: DDR0001(1.3) — manifest 와 `TITLE.png` 가 있는지만.
 - 실행 시작(WP7 `AssetCheck`): manifest 를 읽어 ① `format` ≠ Core `AssetFormat.Version` 이면 "자원 형식이 낡았다(판 a → b). 가져오기를 다시 돌린다",
   ② manifest 의 표 해시 ≠ 출력 `ImportTable\` 로 복사된 표의 해시면 "가져오기 표가 바뀌었다 — 가져오기를 다시 돌린다"(git pull 로 칸 폭·그림자 값이 바뀐 경우 — 이름은 같아 ③ 이 못 잡는다),
-  ③ 정의가 가리키는 파일(시트·변종·메타·맵 그림·소리·음악·소리 색인)이 manifest 에 없으면 그 목록, ④ manifest 의 파일마다 **크기**가 디스크와 다르면 그 목록(해시보다 싸다 — 섞인 출력 폴더, 1.3),
+  ③ 정의가 가리키는 파일(시트·변종·메타·맵 그림·소리·음악·소리 색인)이 manifest 에 없으면 그 목록 — **단 v0.6: 그 이름을 만드는 표 항목의 묶음이 manifest `skipped_bundles` 에 있으면 오류가 아니라 "꺼짐"**
+  으로 센다(기획 19.4. 이름 → 묶음은 출력 `ImportTable\` 의 **`ImportTable.OutputBundles(arenas)`** — v0.6.1: 맵 그림 이름은 표 항목이 아니라 배치에서 계산되므로 펼친 `ArenaGrid` 를 받아 그 타일셋 항목의 묶음에 잇는다).
+  꺼짐은 안내 화면을 띄우지 않고, `ContentAvailability`(6.17)가 그 묶음을 `requires` 로 단 스테이지·직업을 끈다.
+  **교차 확인**(v0.6.1): "꺼짐" 으로 센 파일마다 그 파일에 닿는 정의(`DefAssetNames.For` 의 주인 D, 6.14 13.5-10)를 구하고, 그중 하나라도 **켜진** 스테이지·직업에서 닿으면(켜진 스테이지의 적 = `StageReach.Enemies`,
+  켜진 직업·스테이지의 무기·음악 — `fallback` 이 있는 음악은 대체되므로 빼고) 꺼짐이 아니라 오류다(`기본 스테이지 stage_cathedral 이 꺼진 묶음 hellfire 의 파일 d1/… 을 씀`). 13.5-10·13.5-20 이 빈틈없으면 이 경우는 없다 — 그 둘이 놓친 것을 시작 때 잡는 그물이다.
+  꺼진 묶음이 아닌데 없는 파일(기본 내용, 또는 만든 묶음의 파일)은 지금처럼 오류다. ④ manifest 의 파일마다 **크기**가 디스크와 다르면 그 목록(해시보다 싸다 — 섞인 출력 폴더, 1.3),
   ⑤ 맵 `arena.json` 의 `layout_hash` 가 저장소 배치·타일셋으로 계산한 값과 다르면 "맵 배치가 바뀌었다 — 가져오기를 다시 돌린다".
   하나라도 있으면 타이틀 대신 **안내 화면**(DataError 화면, 무엇이 없는지 + 명령 한 줄, 기획 19.3)을 띄운다.
+  "꺼짐" 만 있으면 타이틀로 가고, **꺼진 스테이지·직업이 하나라도 있으면** 타이틀 아래 한 줄(기획 12.5 — `헬파이어 자원 없음 — 수도사·지하실 꺼짐`, 8.1. v0.6.1: 문구의 앞말은 `skipped_bundles` 의 이유로 고른다 —
+  `없음`·`--skip-bundles` 는 "없음", `열 수 없음`·`판 다름` 은 "읽지 못함(<MPQ 이름>)", 문구 자체는 기획 12.5). 음악만 대체되는 경우(`hfmusic` 만 없음)는 꺼지는 것이 없으므로 한 줄을 띄우지 않고 로그 `AUDIO music=… fallback=…` 만 남긴다.
+  로그 `ASSETS` 줄에 `bundles=… skipped=… disabled=…`(9절 — `disabled` 는 꺼진 스테이지·직업 ID).
   개발 옵션 실행이면 화면 없이 로그 + 종료 코드 5. 단 개발 옵션이 `--capture*`·`--quit-after`·`--window`·`--log` 뿐이면(`--autoplay` 없음) 안내 화면을 띄운 채 캡처하고 종료 코드 5 — 안내 화면을 캡처로 확인하는 길(10.2).
 - 게임의 자원 폴더를 바꾸는 방법은 **빌드 하나**다: `dotnet build -p:DdrAssetDir=<빈 폴더> -p:SkipAssetCheck=true -o <임시 폴더>`(복사가 비어 출력에 `Assets\d1` 이 없다).
   게임은 `DDR_ASSETS` 를 읽지 않는다(그 변수는 시험 전용, 1.3). 실행 옵션으로 자원 폴더를 바꾸는 길은 두지 않는다 — 검사·읽기 경로가 두 벌이 된다.
@@ -569,11 +653,13 @@ Draw:
   2. 타일 공간 직사각형은 등각 변환(아핀)으로 화면의 **평행사변형** = 볼록 다각형 하나가 된다. 둘레 벽은 문 틈을 포함해 십여 개, 기둥은 하나씩.
   3. 도형마다 `BlocksWalk`·`BlocksProjectiles`·`IsBoundary`. 걷기만 막는 칸(`w`·`W`)은 `BlocksWalk` 만, 투사체만 막는 칸(`m`·`M`)은 `BlocksProjectiles` 만.
      **원본 사실**(v0.4, diabdat 직접 확인): L1 앞둘레 턱 메가타일 18·19·20·24 는 하위 칸 4개가 모두 SOL 15(Solid·BlockLight·BlockMissile·Transparent) = `X` 다 — 걷기도 투사체도(시야도) 막는
-     하위 칸 두 줄 두께의 벽이다. 뒷벽(메가타일 1·2)은 한 줄만 막히고 나머지 반은 바닥이다. 그래서 MVP 맵에는 걷기만 막는 칸(`w`·`W`)이 없다. "낮은 턱은 투사체 통과" 는 원본과 다르므로 쓰지 않는다
+     하위 칸 두 줄 두께의 벽이다. 뒷벽(메가타일 1·2)은 한 줄만 막히고 나머지 반은 바닥이다. 그래서 둘레에는 걷기만 막는 칸(`w`·`W`)이 없다(v0.6: 안쪽 방의 창살이 `w` 를 처음 쓴다, 6.11). "낮은 턱은 투사체 통과" 는 원본과 다르므로 쓰지 않는다
      (기획 v0.5 10.1·10.2 도 같은 사실로 고쳤다 — 앞 턱은 보기에만 낮은 두 줄 두께 벽, 기획 의도 차이는 MVP 에 없음). 투사체가 앞둘레를 넘어야 할 기획 이유가 생기면 그때 성질 표에 `design_diffs`(이유 필수, `sol_known_diffs` 와 따로)를 더한다(6.11).
   4. 맵 경계 = 바깥 마름모(4.1). 밖은 맵 밖이고 입장 중인 유닛만 지나간다(기획 2.4).
      **둘레 도형**: 타일셋 `borders` 와 문 끝 조각(`end_a`/`end_b`)에서 온 막힌 칸의 도형은 `IsBoundary = true` 다. 장애물 통과 유닛(`phase_through`)도 이 도형에는 막힌다(4.7-3).
      → 핀드가 기획 8.3 "안쪽 장애물만 무시, 둘레 벽(타일 테두리 칸 전부)과 맵 바깥은 막힘" 대로 둘레 벽 칸 안으로 들어가지 않는다(벽 기둥에 가려 안 보이고 투사체로 못 맞히는 자리에서 주인공을 때리는 일을 막는다).
+     (v0.6) 둘레 표시는 **메가타일 자리**(테두리 줄·문 끝)로 정한다 — 안쪽 방의 바깥 벽을 둘레에 겹쳐 놓아(`over_border`, 6.11) 번호가 바뀌어도 그 칸은 둘레다(그 너머는 맵 밖이라 핀드가 들어갈 곳이 아님).
+     안쪽 방의 나머지 벽·짧은 벽·창살은 안쪽 장애물이라 핀드가 넘는다(기획 8.3·열린 질문 30).
   - 같은 목록에서 ① 충돌 해소(정확한 도형) ② 내비 격자 clearance ③ 투사체 막음 ④ `--debug-nav shapes` 를 만든다. 그림은 이 목록으로 만들지 않는다(가져오기 도구가 같은 배치로 굽는다).
   - 시야 막힘(성질 대문자, v0.5)은 도형을 만들지 않는다. 시야는 하위 칸 단위로 보므로 `VisibilityField` 가 `ArenaGrid.BlocksSight` 를 칸 그대로 읽는다(4.11). `ArenaCollision` 은 바뀌지 않는다.
 - 흙처럼 그림이 32px 떠 보이는 막힌 칸도 충돌은 그 칸 자리다(기획 10.1, 보이는 것과 32px 어긋나는 것이 정상).
@@ -582,7 +668,7 @@ Draw:
   마름모 밖 칸은 clearance 가 음수(맵 밖)라 처음부터 막힘이다. 통과 칸 수가 v0.2(6,144)와 비슷해 필드·A* 비용도 비슷하고, 배열만 상자 크기로 잡는다.
   가장 작은 유닛 반경 9, 통로 80px = 5칸이라 충분히 곱다. 8px 는 필드 비용이 4배인데 얻는 것이 적다.
 - **clearance 장(여유 거리)**: 칸 중심에서 가장 가까운 걷기 막힘 도형·맵 경계(바깥 마름모)까지의 **부호 있는 거리**(px, 도형 안·맵 밖이면 음수)를 정확히 계산해 `float[]` 로 둔다.
-  도형 25개 안팎 × 칸 1.7만 ≈ 40만 번 거리 계산 → `ObstacleIndex`(64px 칸) 로 후보를 줄여 스테이지 시작 때 수 ms. 장애물이 움직이지 않으므로 한 번만 만든다.
+  도형 25개 안팎(v0.6 안쪽 방 배치로 40~60개 — 짧은 벽 줄·방 벽이 직사각형 몇 개씩, 여전히 같은 자릿수) × 칸 1.7만 ≈ 40만~100만 번 거리 계산 → `ObstacleIndex`(64px 칸) 로 후보를 줄여 스테이지 시작 때 수 ms. 장애물이 움직이지 않으므로 한 번만 만든다.
   - "반경 r 유닛이 이 칸에 설 수 있다" = `clearance ≥ r`. 장애물을 반경만큼 부풀려 칸에 찍는 방식과 같은 뜻이지만, 칸 반올림 없이 **실수 거리**라 80px 틈이 칸 경계 때문에 막히는 문제(리뷰 M1)가 줄어든다.
   - 입장 중인 유닛은 격자를 쓰지 않는다(직선).
   - 기울기(이웃 칸 clearance 차)는 "벽 안으로 밀려 들어간 유닛이 나갈 방향" 으로 쓴다.
@@ -741,6 +827,29 @@ public static Vector2 Throw(INavWorld nav, Vector2 from, Vector2 dir, float dist
 ```
 
 - 포위 고리(기획 10.3 "반경 20px 씩 줄여 R/2 까지")가 이 규칙의 원형이다. 보스가 기둥 옆·맵 모서리에서 소환해도 밀어내기(원 중심 문제·오목 다각형)에 기대지 않는다.
+
+**자리 고르기의 길 거리 조건** (v0.6, 기획 10.1 "자리 고르기" — 안쪽 방이 생겨 "가깝지만 벽 너머" 자리가 생긴다)
+
+```csharp
+public readonly record struct PlaceReach(Vector2 From, float Detour, bool FromHero = false);
+// From = 기준(주인공 또는 부른 적), Detour = rules.spawn.path_detour(1.5), FromHero = 기준이 주인공(v0.6.1 — 어느 길 함수를 쓸지 부르는 쪽이 정함)
+public static bool TryPlace(INavWorld nav, Vector2 center, Vector2 wish, float bodyRadius, PlaceReach reach, out Vector2 placed);
+// 위 TryPlace 의 각 후보에 조건 하나를 더한다: 길 길이(아래) 가 유한해야 함. maxLength = |후보 − From| × Detour.
+//   FromHero 면 nav.PathLengthToHero(후보, bodyRadius, maxLength), 아니면 nav.PathLength(후보, reach.From, bodyRadius, maxLength).
+// 아니면 다음 후보(20px 당김), 끝까지 없으면 false(생략).
+// INavWorld (v0.6, 계약 WP1d — v0.6.1 에 둘을 나눔)
+float PathLength(Vector2 from, Vector2 to, float radius, float maxLength);        // 자른 A* 길 길이(px). 없거나 maxLength 를 넘으면 +∞
+float PathLengthToHero(Vector2 from, float radius, float maxLength);             // 주인공까지. 필드를 쓸 수 있으면 필드 거리(아래), 아니면 PathLength(from, Hero.Pos, …)
+bool TryPathStep(Vector2 from, Vector2 to, float radius, out Vector2 next);     // (v0.6.1) 반경 radius 의 A* 길에서 from 다음 꺾임점. 길이 없으면 false — 자동 조작 방 들르기(9절)
+```
+
+- 쓰는 곳: 포위 고리(`ring` 이벤트 — 기준 주인공), `summon`(기준 부른 적), `telegraphed_blast` 지점(기준 주인공, 몸 반경 0 — 막힌 칸이면 가장 가까운 걸을 수 있는 칸으로), 정예 무리·호위 대형(기준 대장).
+  분열 튕김(`Throw`)은 쓰지 않는다(죽은 자리 바로 옆, 기획 10.1). 일반 생성(생성 띠)도 쓰지 않는다 — 띠는 화면 밖이고 방 안 생성은 허용이다(기획 2.4).
+- 구현(WP2): `PathLength` 는 `maxLength` 로 자른 A*(4.4 와 같은 격자·코너 자르기 금지, 펼침 수 상한). `PathLengthToHero` 는 **`radius` ≤ 등급 반경인 가장 작은 플로우 필드 등급(S 16·M 26)이 있고 후보 칸이 그 필드의 통과 칸일 때만**
+  그 필드 거리(4.3, 이미 있음 — 비용 0)를 쓰고, 아니면(반경 34, 필드가 못 닿는 칸) 자른 A* 로 넘긴다. 반경 0(예고 지점)은 S 필드다. 기준이 주인공인지를 좌표 비교로 짐작하지 않는다(v0.6.1).
+  거리는 격자 비용(10/14)을 px 로 바꾼 값이다. 조건이 "1.5 배" 로 넉넉해 격자 근사로 충분하다. 길 트임(`HasClearLine`)이 참이면 직선 거리 그대로(검색 없음).
+  `TryPathStep` 은 4.4 의 A*·끈 당기기를 그대로 쓰고 결과를 맡지 않는다(부르는 쪽이 0.5초마다 다시 부름).
+- 결정성: 후보 순서·당김 간격이 고정이고 `PathLength` 가 결정적이라 생략 수도 결정적이다. 값 1.5 는 `rules.spawn.path_detour`(WP4 파일) 한 곳.
 - "맵 안" 은 바깥 마름모 안이다(4.1). 마름모 아레나에서는 주인공이 모서리 쪽에 있으면 고리의 상당 부분이 맵 밖이라 반경 줄이기가 자주 일어난다 — 그래도 규칙은 같다(기획 2.4).
 
 ### 4.11 시야(전장의 안개) `VisibilityField` (v0.5, 기획 10.7, 사용자 요구 11)
@@ -929,7 +1038,8 @@ public interface ITargeting   // nearest / random_in_radius / facing / densest /
 
 - 여러 발: `count` 발을 한 번에 또는 `base.burst_interval`(매직 미사일 0.08s) 간격으로. 간격 발사는 칸 상태의 "남은 발 수·다음 발 시각" 으로 처리한다.
 - 조준 `densest`: `ISpatialQuery.CellCount` 의 32px 칸 개수를 2×2 로 합쳐 64px 칸 기준 최댓값을 찾는다(해시를 다시 훑지 않는다).
-- 무기 발동 시 주인공이 서 있으면 그 무기 정의의 `cast_clip`(`cast_fire`·`cast_lightning`·`cast_magic` — 원작 마법사 `fm`·`lm`·`qm`, 기획 4.0·5.1) 클립 재생(재생 중이면 그대로, 움직이면 바로 걷기).
+- 무기 발동 시 주인공이 서 있으면 그 무기 정의의 `cast_clip`(`cast_fire`·`cast_lightning`·`cast_magic` — 원작 `fm`·`lm`·`qm`, 근접 무기는 `attack` — `at`, v0.6, 기획 4.0·4.5·5.1) 클립을
+  **고른 직업의 그림 묶음**(`World.HeroClass.Sprites`)에서 재생(재생 중이면 그대로, 움직이면 바로 걷기). 그림은 보여 주기만 한다 — 발동 시각·피해는 쿨다운이 정하고 클립 길이·이벤트 프레임은 규칙에 쓰지 않는다(직업마다 시전 길이가 달라도 결과가 같다, 기획 4.5).
   애니메이션은 주인공 상태라 렌더가 그냥 읽는다. 발동 한 번에 신호 `WeaponFired` 하나(7.9, 여러 발이어도 하나).
 - 진화 무기의 추가 효과(`on_hit`/`on_explode`/`on_crit`)는 `PartKind.WeaponEffect` 부품 목록이다(6.8). 투사체·장판이 그 순간에 목록 순서대로 부른다.
 
@@ -968,7 +1078,7 @@ public interface ITargeting   // nearest / random_in_radius / facing / densest /
   `Culled`(상한 정리)는 시체를 내지 않는다. 렌더의 `CorpseLayer` 가 죽기 클립 재생 → 2초 → 0.5초 투명, 상한 150. → 시뮬레이션 개체 수가 줄고, 시체 상한이 규칙과 섞이지 않는다.
 - 이름: 틱 이벤트(시뮬레이션 안) = `EnemyKilled(Id, DefIndex, Pos, Rank, Cause, Attacker)`, 표시 이벤트(화면) = `CorpseSpawned`. 한 사건에 이름 하나씩이다.
   표시 이벤트 전체: `FxEvent`·`DamageNumber`·`CorpseSpawned`·`ShakeEvent`·`CueEvent`(v0.3, 7.9). 알림 문구는 표시 이벤트가 아니라 `World.Banner`(`BannerState`) 하나다 — WP4 가 쓰고 WP6 HUD 가 읽는다.
-- 주인공 죽음(원작 마법사 죽기 20프레임, 기획 4.0)은 결과 화면 시점이 걸려 있어 시뮬레이션 상태로 둔다.
+- 주인공 죽음(그 직업의 죽기 클립 — 마법사 20프레임, 기획 4.0·4.5)은 결과 화면 시점이 걸려 있어 시뮬레이션 상태로 둔다. 결과 화면 시점은 기획 2.2 의 초 단위 값으로 세고 클립 길이에 묶지 않는다 — 직업마다 죽기 프레임 수가 달라도(수도사 칸 160) 결과 시각이 같다.
 
 ---
 
@@ -983,7 +1093,7 @@ public interface ITargeting   // nearest / random_in_radius / facing / densest /
 ```
 
   종류 키: `rules`(객체, 아래), `sprites`, `sprite_sets`, `effects`, `projectiles`, `tilesets`, `maps`, `enemies`, `affixes`, `buffs`,
-  `weapons`, `passives`, `evolutions`, `pickups`, `drop_tables`, `stages`, `sounds`, `music`, `sound_bindings`(v0.3: `tilesets`·소리 셋 추가, `obstacle_kinds` 삭제).
+  `weapons`, `passives`, `evolutions`, `pickups`, `drop_tables`, `stages`, `sounds`, `music`, `sound_bindings`(v0.3: `tilesets`·소리 셋 추가, `obstacle_kinds` 삭제), `hero_classes`(v0.6, 6.16).
 - `rules` 는 **여러 파일에서 하위 키 단위로 합친다**: `rules/hero.json` = `{ "rules": { "hero": …, "xp_curve": …, "level_up": … } }`,
   `rules/enemies.json` = `{ "rules": { "ranks": …, "enemies": …, "caps": …, "spawn": … } }`, `rules/audio.json` = `{ "rules": { "audio": … } }`. 같은 하위 키가 두 파일에 있으면 오류. 그래서 두 묶음이 같은 파일을 고치지 않는다.
 - 권장 배치(소유 묶음은 11절):
@@ -991,9 +1101,10 @@ public interface ITargeting   // nearest / random_in_radius / facing / densest /
 ```
 Data/
   rules/hero.json  rules/enemies.json  rules/audio.json     주인공·레벨업 / 등급·상한·생성 / 소리 규칙
+  heroes/<직업>.json            직업 정의 1개(v0.6, 6.16 — MVP 는 sorcerer.json 하나)
   sprites/monsters.json hero.json missiles.json ui.json     sprites + sprite_sets
   effects/common.json           fx_warning_*, fx_levelup_pillar …
-  tilesets/l1.json  l2.json     타일 번호·성질 표
+  tilesets/l1.json  l2.json     타일 번호·성질 표 (헬파이어 스테이지 단계에 l5.json·l6.json — 층마다 따로, 6.11)
   maps/cathedral_arena.json  catacombs_arena.json           배치·입구·기준점
   audio/sounds.json  audio/bindings.json                    소리·음악 / 연결 표
   weapons/<무기>.json           무기 1개 + 그 투사체·이펙트 (+ 진화 무기)
@@ -1024,7 +1135,7 @@ Data/
                                      "type"·"id"·"trigger" 를 뺀 나머지를 역직렬화. JsonException.Path → DataError 의 JSON 경로.
                                      3단계의 페이즈별 완성 패턴도 같이 바꿔 PhaseDef.Patterns 에 넣는다(WP4 는 이것만 읽는다)
 5. 연결 (DefRef<T> 채우기, 한 번만)  없는 ID → "비슷한 ID" 제안(편집 거리 ≤ 2)과 함께 오류. 객체 가중치 → JSON 순서 배열
-6. 의미 검사                          13.5 규칙 1~3, 7(정의끼리), 8, 9 + 부품 자체 검사 + 6.14 추가 규칙(변종·클립·배치 이름)
+6. 의미 검사                          13.5 규칙 1~3, 7(정의끼리), 8, 9, 20(정의 쪽)·21(v0.6) + 부품 자체 검사 + 6.14 추가 규칙(변종·클립·배치 이름)
 7. 등록된 IDataValidator 들           기하·길 검사 13.5-4~6(WP2, 늘), 레벨 표 13.5-2(WP3), 소리 연결 표(WP8),
                                      자원 대조 13.5-7(WP5, 자원이 있을 때만) — 로더는 구체 검사기를 모른다
 → 결과: GameDefs + IReadOnlyList<DataError>
@@ -1099,6 +1210,10 @@ public interface IDataValidator { string Name { get; } void Validate(GameDefs de
   ]
 }
 ```
+
+- **주인공 그림 묶음은 직업마다 하나**(v0.6, 6.16): `set_sorcerer`(MVP), 직업 단계에 `set_warrior`·`set_rogue`·`set_monk`. 같은 클립 이름(`idle`·`walk`·`cast_*`·`die`, 근접 시작 무기 직업은 `attack`)을 쓴다.
+  시전 클립의 `event_frame` 이 기획 4.5 의 "발동 프레임"(마법사 8·전사 14·도적 12·수도사 13, 출처: DevilutionX 참고)이고 `frames` 가 시전 길이(파일 값 12·20·16·18)다 — 그림 맞춤 값이라 직업 정의에 따로 두지 않는다(12.1 `[해석]`).
+  수도사는 칸 폭이 동작마다 달라 그림(`sprites`)마다 `frame` 이 다르다(112·130·98·114·160). `origin` 도 그림마다 맞춘다(기획 열린 질문 7).
 
 (숫자는 모양을 보이기 위한 예다. 프레임 수·칸은 원작 파일 값, 프레임 시간·이벤트 프레임은 원작 게임 동작 값을 WP5 가 손으로 옮겨 적는다 — 기획 8.1.
 원본 유래 수치를 두는 곳은 이 그림 묶음 클립 한 곳이고, 값마다 `// 출처: 원본 확인` / `// 출처: DevilutionX 참고` 주석을 단다(1.4 "원본에서 온 수치", R24).)
@@ -1213,6 +1328,7 @@ public interface IDataValidator { string Name { get; } void Validate(GameDefs de
 - `behaviors` 는 `extends` 에서 **통째로 교체**된다(배열 규칙). 부모 부품에 하나만 더하려면 `"behaviors_add": [ … ]`, 부모 부품의 매개변수 몇 개만 바꾸려면
   `"behaviors_patch": { "<부품 id>": { "cooldown": 0.7 } }`(부품의 선택 `id` 로 찾아 깊은 병합, 없는 id 는 오류). 패턴·페이즈도 `patterns_add`/`patterns_patch`/`phases_patch` 로 같다.
 - `movement`: `flow` / `astar` / `direct`. 위치 잡기 부품(`kite`, `phase_through`)이나 이동 지시(6.6)가 없으면 기본 "주인공 쪽으로"(`SeekHero`).
+- `requires`(v0.6, 6.17): 헬파이어 몬스터는 `["hellfire"]`(펠트윈·스컬윙·본 데몬도 — 그림이 diabdat 여도). 이 적을 내는 스테이지의 `requires` 안이어야 한다(13.5-20). MVP 적은 모두 빈 목록.
 - `rank`: 정의 자체의 등급 `normal`(기본) / `miniboss` / `boss`. 정예·우두머리는 정의가 아니라 생성 때 붙는 등급이다(6.7).
   `miniboss`·`boss` 는 상한 정리에서 지우지 않고, 보스 막대·처치 연출·드롭 규칙을 고른다.
 - `elite_eligible`: 기본 `true`. 확률 정예 무리의 종류 뽑기에서 뺄 적은 `false`(`skeleton_captain`, `corpse_spawn`, 기획 9.1). `miniboss`·`boss` 는 늘 빠진다.
@@ -1572,6 +1688,12 @@ public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public
 - 아이콘은 `{ sprite, frame?, dir?, tint?, scale?, layers?, frame_border? }`. 무기 아이콘은 가져오기 도구가 원작 마법 프레임으로 구운 48×48 한 장(`d1/icons/<무기>.png`, `source: "grid"`, 기획 5.9)이고,
   "화살 3장 겹침" 도 도구가 굽는다(1.4). `layers` 는 남겨 두되 MVP 에서 쓰지 않는다. 패시브 아이콘은 원작 exe PNG, 탐욕 아이콘(28px `GoldIcon` 을 48 칸에)은 `scale`.
 - `cast_clip`(v0.3, 계약 변경): 서 있을 때 발동하면 재생할 주인공 시전 클립(`cast_fire`·`cast_lightning`·`cast_magic`, 기본 `cast_magic`, 기획 5.1·5.2 표의 시전 그림 열).
+  v0.6: 근접 무기(`cleave`·`staff_sweep`, 직업 단계)는 `"cast_clip": "attack"`(기획의 `at` — 클립 이름은 `ClipKind` 그대로 쓰고 원작 글자는 가져오기 표만 안다, 12.1). 클립은 고른 직업의 그림 묶음에서 찾는다(5.3).
+- **`classes`**(v0.6, 기획 5.2): 이 무기를 고를 수 있는 직업 ID 목록(`DefRef<HeroClassDef>`), 비면 모든 직업. 레벨업 후보(WP3)·`--weapons`(9절)가 `World.HeroClass` 로 거른다.
+  직업 전용 시작 무기만 쓴다(`"classes": ["warrior"]`). 무기 목록 자체는 직업 공통이다(기획 4.5).
+- **`requires`**(v0.6, 6.17): 헬파이어 마법 그림(`ms_*`·`ex_*`)을 쓰는 무기의 묶음. 레벨업 후보는 `requires ⊆ (스테이지 requires ∪ 직업 requires)` 인 무기만 낸다 — 그래서 후보가 PC 의 묶음 유무로 바뀌지 않는다(결정성, 6.17). MVP 무기는 모두 비어 있다.
+- `melee_arc`(E, 직업 단계 — 기획 13.2): 바라보는 방향 부채꼴(`arc`)·둘레 원(`arc` 360) 근접 피해. 레벨 표 키 `damage`·`cooldown`·`arc`·`reach`, `area_pct` 는 `reach` 에, `projectile_count` 는 휘두르는 횟수(0.15s 간격)에.
+  새 발사 패턴 하나(WP3 등록)와 무기 정의 둘이다. 맞음 판정은 `ISpatialQuery.Query(주인공, 몸 반경 + reach + 적 반경)` 후 각도로 거른다. 레벨 표는 직업 단계에 정한다.
 - 무기 발사 소리는 무기 정의에 두지 않는다 — 소리 연결 표 `weapons.<id>.fire`(6.15).
 
 ### 6.9 패시브·진화·획득물·드롭
@@ -1615,9 +1737,9 @@ public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public
 // rules/hero.json (WP3)
 {
   "rules": {
-    "hero": { "sprites": "set_sorcerer", "radius": 14, "invuln_after_hit": 0.25,
-              "stats": { "max_hp": 100, "move_speed": 95, "armor": 0, "regen": 0, "pickup_radius": 60 },
-              "start_weapons": ["magic_missile"], "crowd_slow": { "touching": 3, "mul": 0.6 } },
+    "hero": { "class": "sorcerer", "invuln_after_hit": 0.25,                        // v0.6: 그림·반경·시작 무기는 직업 정의로(6.16)
+              "stats": { "max_hp": 100, "move_speed": 95, "armor": 0, "regen": 0, "pickup_radius": 60 },   // 모든 직업의 기본값(기획 4.1 = 마법사 값)
+              "crowd_slow": { "touching": 3, "mul": 0.6 } },
     "xp_curve": [ { "from": 1, "to": 1, "base": 5, "per": 0 },
                   { "from": 2, "to": 19, "base": 5, "per": 10, "origin": 1 },
                   { "from": 20, "to": 39, "base": 185, "per": 13, "origin": 19 },
@@ -1648,11 +1770,15 @@ public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public
     "enemies": { "telegraph_required": { "min_damage": 10, "min_time": 0.4, "melee_reach_over_contact": 50,
                                          "heavy_melee_damage": 25, "heavy_melee_windup": 0.35 } },
     "caps": { "enemies": 300, "enemies_absolute": 360, "hero_projectiles": 400, "enemy_projectiles": 200, "gems": 300 },
-    "spawn": { "band": [40, 200], "tries": 12, "edge_margin": 4, "group": [1, 3], "group_radius": 40, "accumulator_hold": 3 }
+    "spawn": { "band": [40, 200], "tries": 12, "edge_margin": 4, "group": [1, 3], "group_radius": 40, "accumulator_hold": 3,
+               "path_detour": 1.5,                                                     // v0.6: 자리 고르기 길 거리 ≤ 직선 × 이 값(4.10, 기획 10.1)
+               "room_pressure": { "after": 8, "every_nth": 3, "min_distance": 150 } } // v0.6.3: 방 체류 압박(6.12, 기획 10.1 첫 값 — 열린 질문 30). 없으면 끔, 있으면 셋 다 필수
   }
 }
 ```
 
+- **`rules.hero`**(v0.6, 계약 변경 WP1d): `class` = 고른 직업이 없을 때 쓰는 직업(MVP·`--hero` 없음·저장 없음 → `sorcerer`, 기본 직업이어야 함 — 13.5-20), `stats` = 모든 직업의 기본 능력치(기획 4.1 표),
+  `invuln_after_hit`·`crowd_slow` = 모든 직업 공통. v0.5 의 `sprites`·`radius`·`start_weapons` 는 직업 정의로 옮겼다(6.16). 능력치 = `rules.hero.stats` 를 직업 `stats` 가 키별로 **덮어쓰고**, 그 위에 직업 특성·패시브를 **더한다**(기획 4.1 규칙).
 - 카드 문구 `피해 14 → 18` 은 레벨 표 두 행을 비교해 `stat_labels` 로 만든다 → 새 무기도 문구가 저절로 생긴다.
   패시브 카드(`최대 체력 +20`, `피해 +10%`)도 같은 표에서 `StatKey` 라벨과 `format`(`abs` 기본 / `pct`)으로 만든다. 표에 없는 키를 쓰는 무기·패시브는 검증 경고.
 - `level_up_push`: 선택 창이 닫힌 다음 스테이지 틱에 주인공 반경 150 안 적을 80px 밀어낸다(피해 0, 기획 12.6).
@@ -1696,11 +1822,15 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
       "borders": { "arch_hall": { "corner_n": 4, "edge_ne": 2, "corner_e": 23, "edge_se": 18,
                                   "corner_s": 20, "edge_sw": 19, "corner_w": 24, "edge_nw": 1 } },
       "gates":   { "arch_hall": { "nw": { "open": 13, "end_a": 0, "end_b": 0 } } },     // 문 틈·벽 끝 조각: WP0 이 견본 그림으로 골라 채운다
-      "pieces":  { "pillar": 15 },
+      "pieces":  { "pillar": 15,                     // v0.6: 안쪽 방·짧은 벽 조각(기획 10.3). 이름 → 번호는 이 층의 번호다(L5·L6 은 자기 파일)
+                   "wall_v": 1, "wall_h": 2, "wall_corner": 4, "wall_end_v": 6, "wall_end_h": 7, "grate_h": 36,
+                   "blood_wall_v": 166, "blood_wall_corner": 167, "blood_wall_h": 168, "blood_floor": 171, "door_closed": 98 },   // 피 방 번호 배정은 모양 예 — WP0a 가 견본으로 정함
+      "marks":   { "pillar": [15], "grate": [36], "closed_door": [98] },   // v0.6: 검증용 표시(13.5-19). 번호는 이름 붙인 것만(25·26·11·12 는 이름을 붙일 때 같이 표시). 키는 TileMark 의 JSON 이름
       "props": {                                     // 메가타일 → 하위 칸 4개 (위-왼, 위-오른, 아래-왼, 아래-오른). 출처: 원본 확인(probe tiles)
         "13": "....", "162": "....", "163": "....",
         "15": "x...",                                // 기둥: 막힌 칸은 위-왼 하나(TIL p24, SOL 13 = 걷기·투사체, 시야 통과). 나머지 셋은 걸을 수 있는 칸의 위 조각
         "1": "X.X.", "2": "XX..",                    // 뒷벽: 칸의 반만 벽. 시야 비트는 WP0a 가 원본으로 확인(기획 열린 질문 22)
+        "36": "Xw..",                                // v0.6 창살: 기둥 칸만 셋 다, 나머지 한 칸은 걷기만(SOL 1 — 시야·투사체 통과). 값은 WP0a 가 원본으로 확인
         "18": "XXXX", "19": "XXXX", "20": "XXXX", "24": "XXXX"   // 앞둘레 턱: SOL 15 = 걷기·시야·투사체 모두 막힘(4.2)
       },
       "sol_known_diffs": [                           // 출처: DevilutionX 참고(원본 SOL 오류 보정 칸, 부록 A.4). 번호와 이유만
@@ -1717,7 +1847,7 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 | 글자 | 걷기 막힘 (bit0) | 시야 막힘 (bit1) | 투사체 막힘 (bit2) | `sol & 7` | 쓰는 곳 |
 |---|---|---|---|---|---|
 | `.` | | | | 0 | 바닥 |
-| `w` | 막힘 | | | 1 | (MVP 맵에 없음, 합성 시험) |
+| `w` | 막힘 | | | 1 | v0.6: L1 창살(35·36 계열의 기둥 아닌 칸, 기획 10.1), L2 교수대·말뚝(단계 3), 합성 시험 |
 | `L` | | 막힘 | | 2 | (MVP 맵에 없음, 합성 시험) |
 | `W` | 막힘 | 막힘 | | 3 | (MVP 맵에 없음) |
 | `m` | | | 막힘 | 4 | (MVP 맵에 없음, 합성 시험) |
@@ -1743,13 +1873,42 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
         "border": "arch_hall",
         "gates": [ { "id": "gate_nw", "side": "nw" }, { "id": "gate_ne", "side": "ne" },
                    { "id": "gate_se", "side": "se" }, { "id": "gate_sw", "side": "sw" } ],
-        "place": [ { "piece": "pillar", "at": [[7,7], [13,7], [7,13], [13,13], [10,4], [16,10], [10,16], [4,10]] } ] },
+        "place": [                                   // v0.6: 넓은 방 + 안쪽 방(기획 10.3). 자리는 첫 값, 이름·번호는 WP0a 가 견본으로 맞춘다
+                                                     // v0.6.1: 기획 v0.7.1 10.3 배치. 위 줄·왼쪽 열을 같이 막아야 하는 자리는 모서리 조각(아래 "벽 맞물림")
+                                                     //   설계 담당이 하위 칸으로 풀어 13.5-19 ①②·막힘 줄어듦·open_center·80px(근사)를 확인했다(13.13)
+          { "id": "s1_room_blood", "origin": [0, 0], "over_border": true,      // 피 방 6×6: 바깥 두 벽은 둘레 자리에 겹침(갇힌 띠 없음, 기획 10.1)
+            "decor_why": "닫힌 문 98 은 아래 벽 장식(기획 10.3)",
+            "grid": [ "blood_wall_corner blood_wall_h blood_wall_h blood_wall_h blood_wall_h blood_wall_corner",   // [5,0](T): 둘레 위 줄 + 오른쪽 벽 왼쪽 열 = 모서리
+                      "blood_wall_v      blood_floor  blood_floor  blood_floor  blood_floor  wall_v",
+                      "blood_wall_v      blood_floor  blood_floor  blood_floor  blood_floor  wall_end_v",
+                      "blood_wall_v      blood_floor  blood_floor  blood_floor  blood_floor  .",
+                      "blood_wall_v      blood_floor  blood_floor  blood_floor  blood_floor  .",
+                      "blood_wall_corner blood_wall_h door_closed  blood_wall_h blood_wall_h blood_wall_h" ] },   // [0,5](├): 둘레 왼쪽 열 + 아래 벽 위 줄 = 모서리
+          { "id": "s1_room_grate", "origin": [13, 0], "over_border": true,     // 창살 방: 위는 둘레, 오른쪽은 앞 턱. 짧은 줄의 나머지는 건드리지 않음
+            "grid": [ "wall_corner",                                           // [13,0](T): 둘레 위 줄 + 왼쪽 벽 = 모서리
+                      "wall_v",
+                      "wall_end_v",                                            // 문 틈 [13,3..4](하위 4칸, 틈 앞 끝만 벽 끝 — 조사 함정 7)
+                      ".",
+                      ".",
+                      "wall_v",
+                      "wall_h wall_h grate_h grate_h wall_h wall_h" ] },       // [13,6](ㄴ): 위에서 온 왼쪽 벽이 가로로 꺾임 = 가로 조각. 창살은 두 칸 잇기(기획 10.1 "창은 2메가 이상")
+          { "id": "s1_wall_west", "piece": "wall_end_h", "at": [[3, 13]] },    // ㄱ 벽: 기획 v0.7.1 에서 둘레와 떼어 출입구 둘(둘레 쪽 하위 5칸 틈 + [6,17..18])
+          { "piece": "wall_h", "line": [[4, 13], [5, 13]] },
+          { "piece": "wall_v", "line": [[6, 13], [6, 15]] }, { "piece": "wall_end_v", "at": [[6, 16]] },     // 가로 끝 다음 칸의 세로 조각은 그대로 이어진다(ㄱ)
+          { "id": "s1_wall_south", "piece": "wall_corner", "at": [[13, 13]] },                              // Γ: v0.6 의 [12,12] 에서 한 칸 밈 — open_center 밖
+          { "piece": "wall_h", "line": [[14, 13], [15, 13]] }, { "piece": "wall_end_h", "at": [[16, 13]] },
+          { "piece": "wall_v", "line": [[13, 14], [13, 15]] }, { "piece": "wall_end_v", "at": [[13, 16]] },
+          { "piece": "pillar", "at": [[15, 16], [17, 15], [17, 17], [7, 9], [12, 9]] } ] },               // Γ 안 기둥 셋은 벽·서로·앞 턱과 하위 3칸 이상(13.5-4 80px)
+      "open_center": [6, 6, 13, 13],                 // v0.6: 메가 [6..12,6..12](RectI 끝 미포함, 기획 "7×7"). 안에는 기둥 2개까지(13.5-19)
       "entries": [ { "id": "gate_nw", "outside": [-4, 19.5], "inside": [4, 19.5] },
                    { "id": "gate_ne", "outside": [19.5, -4], "inside": [19.5, 4] },
                    { "id": "gate_se", "outside": [43, 19.5], "inside": [34, 19.5] },
                    { "id": "gate_sw", "outside": [19.5, 43], "inside": [19.5, 34] } ],
       "hero_start": { "tile": [19.5, 19.5], "facing": "south" },
-      "anchors": { "center": [19.5, 19.5] },
+      "anchors": { "center": [19.5, 19.5], "room_blood": [5, 5], "room_grate": [32, 7],      // v0.6: 방 기준점 = 방 바닥 가운데(하위 타일)
+                   "room_west": [6, 32], "room_south": [31, 31] },                              // v0.6.1: 반쯤 막힌 구역(ㄱ 안·Γ 안)에도 기준점(13.5-5 큰 적 길)
+      "room_areas": { "room_blood": [0, 0, 5, 5], "room_grate": [13, 0, 19, 6],       // v0.6.3: 방 영역(메가, 끝 미포함) → 방 바닥·문 수(아래 "방 영역과 방 바닥")
+                      "room_west": [0, 13, 6, 19], "room_south": [13, 13, 19, 19] },  //   문 수: 피 방·창살 방 1(방 체류 압박 대상), ㄱ 안·Γ 안 2
       "art": "d1/maps/cathedral_arena" }
   ]
 }
@@ -1757,27 +1916,60 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 
 - **타일셋**(`TilesetDef`, 계약 WP1b): `column_height` = 벽 기둥 높이(4.1 의 Hc), `floor` = 바닥 메가타일(섞어 깖), `borders`/`gates`/`pieces` = 이름 → 메가타일 번호.
   맵은 번호를 직접 적지 않고 이 이름을 쓴다 → 번호를 아는 묶음(WP0)과 배치를 맞추는 묶음(WP5)의 파일이 나뉜다.
+  - **층마다 타일셋 하나**(v0.6, 기획 13.1): 메가타일 번호 44 이상은 층마다 뜻이 다르다(L1 162 바닥 / L5 162 기둥). 이름 → 번호는 타일셋 파일 안에서만 뜻이 있으므로 L5·L6 은 자기 파일(`l5.json`·`l6.json`)을 갖는다.
+    L5 는 번호 1~43 과 바닥 13 이 L1 과 같은 구실이라(조사, 원본 그림으로 확인) `pieces` 이름을 L1 과 같게 붙이면 스테이지 1 의 배치를 거의 그대로 쓸 수 있다 — 바닥 변종·피 방처럼 44 이상인 이름만 L5 번호로 다시 고른다.
+    성질 표는 이름이 같아도 그 층의 SOL 로 따로 확인한다(L5 기둥 15·아치는 걷기·투사체만 막고 시야는 안 막음 — 기획 10.6). L6 은 L3 번호와 맞지 않아 견본으로 새로 고른다.
+  - **`marks`**(v0.6, 계약 `TilesetDef.Marks`, 키 = `TileMark`: `pillar`·`grate`·`closed_door`·`arch` — v0.6.1: 사전 키로 읽으므로 `StatKey` 처럼 값마다 `JsonStringEnumMemberName` 을 단다. `closed_door` 처럼 두 낱말인 이름의 읽기 시험을 WP1d 에 둔다): 검증이 뜻을 알아야 하는 번호의 표시. 번호는 이름 붙인 번호여야 한다(13.5-12 — 성질 표 키와 같은 집합 안).
+    `pillar` = `open_center` 안에 허용되는 조각(13.5-19), `closed_door`·`arch` = 문으로 쓰면 안 되는 조각(원작 닫힌 문은 SOL 로 벽, 아치는 틈이 하위 1칸 — 기획 10.1, 경고), `grate` = 미리보기·로그 이름(규칙은 성질 글자가 정함).
+    `marks` 는 `LayoutHash` 에 넣지 않는다 — 그림을 바꾸지 않는다.
   - 테두리 이름은 메가타일 격자 기준이다: `corner_n` = (0,0)(화면 맨 위), `edge_ne` = 윗줄(y = 0), `corner_e`, `edge_se` = 오른쪽 열, `corner_s`, `edge_sw` = 아랫줄, `corner_w`, `edge_nw` = 왼쪽 열.
     L1 번호는 조사 문서의 해골왕 방(`SklKng2.DUN`) 짜임이다.
   - **`props`**(성질 표): 쓰는 메가타일마다 하위 칸 4개(TIL 순서: 위-왼, 위-오른, 아래-왼, 아래-오른 = 하위 타일 (2mx,2my) (2mx+1,2my) (2mx,2my+1) (2mx+1,2my+1)).
-    글자는 위 표 8개(원본 SOL 의 bit0·bit1·bit2 와 대응, 1.4 성질 대조 — v0.4 까지는 bit0·bit2 의 4글자). 지금 MVP 맵에 걷기만 막는 칸(`w`·`W`)은 없다 — 앞둘레 턱도 `X` 다(4.2).
+    글자는 위 표 8개(원본 SOL 의 bit0·bit1·bit2 와 대응, 1.4 성질 대조 — v0.4 까지는 bit0·bit2 의 4글자). 앞둘레 턱은 `X` 다(4.2). 걷기만 막는 칸(`w`)은 v0.6 의 창살에서 처음 쓴다 —
+    걷기와 시야가 다른 첫 칸이라 길 검사·시야·투사체가 같은 칸을 다르게 보는지가 실제 맵에서 시험된다(10.1 `Nav`·`Visibility`).
     쓰는 메가타일인데 표에 없으면 로딩 오류. **표에 이름 붙이지 않은 메가타일이 있어도 오류**: `props` 의 키 = 그 타일셋이 이름 붙인 번호(`floor`·`borders`·`gates`·`pieces`)와 같은 집합
     (맵과 무관하게 타일셋만으로 판정, 번호 ≥ 0) → 성질 표가 SOL 전체를 옮긴 덤프로 커지지 않는다(R24). 이름만 붙이고 어느 맵도 안 쓰는 조각은 남을 수 있다.
   - `sol_known_diffs`: 원본 SOL 과 일부러 다르게 둔 칸 중 **원작 수정판이 고치는 SOL 오류**만(고치지 않으면 아치 밑으로 투사체가 지나가고 시야가 샌다, 기획 10.1·10.7). 원소 = 메가타일 번호·하위 칸·원본 글자·쓰는 글자·이유.
     글자는 위 8글자라 시야 보정도 같은 원소 하나로 적는다(아치: 원본 `.` → `M`). 가져오기 도구가 대조할 때만 쓴다(1.4).
     기획 이유로 원본과 다르게 둘 칸이 생기면 따로 `design_diffs`(이유 필수)에 적는다 — 두 목록을 섞지 않는다. 지금은 `design_diffs` 가 없다
-    (기둥이 시야를 막게 하기로 하면 `{ "tile": 15, "sub": 0, "sol": "x", "use": "X", "why": "…" }` 가 첫 원소다 — 기획 열린 질문 22).
+    (v0.6: 기둥이 시야를 막게 하기로 하면 `{ "tile": 15, "sub": 0, "sol": "x", "use": "X", "why": "…" }` 는 `design_diffs` 가 아니라 `sol_known_diffs` 원소다 — DevilutionX 가 "잘못 표시된 기둥" 으로 보정하는 칸이라 SOL 오류 보정으로 적는다, 출처: DevilutionX 참고. 기획 열린 질문 22 v0.7, 지금 기본은 원본대로 안 막음).
 - **맵**(`MapDef`, 계약 변경 WP1b): `size` = 메가타일 수 M(정사각, 하위 타일 N = 2M), `tileset`, `palette`(층 팔레트 — 가져오기·그림만 씀, 기획 10.1 "맵마다 고정"), `art` = 가져오기 출력 폴더(7.6).
   v0.2 의 `image`·`minimap`·`size`(px)·`collision`·`texture_source` 는 없앴다. 월드 크기는 `IsoMath` 가 N 과 기둥 높이로 계산한다(4.1).
 - **배치 풀기** `ArenaLayout.Expand(MapDef, TilesetDef) → ArenaGrid`(Core `Map/`, WP1b, 결정적):
   1. 모든 칸 = 바닥: `floor[StableHash(맵 ID, mx, my) % 개수]`(기획 10.1 "좌표 해시로 섞는다").
   2. 테두리: 네 모서리·네 변을 `borders[border]` 의 번호로.
   3. 문: `gates[i].side` 의 가운데(`at` 으로 변 위 메가타일 번호를 줄 수 있음) 메가타일 2개(= 하위 타일 4칸, 폭 약 140px)를 `open` 으로, 양옆 한 칸씩을 `end_a`/`end_b` 로.
-  4. `place`: 조각 이름 → 번호를 `at` 목록의 [mx, my] 에, 또는 `line: [[mx0,my0],[mx1,my1]]`(가로·세로 줄 — 스테이지 2 의 짧은 벽).
+  4. `place`(파일 순서대로): 조각 이름 → 번호를 `at` 목록의 [mx, my] 에, 또는 `line: [[mx0,my0],[mx1,my1]]`(가로·세로 줄 — 짧은 벽), 또는 (v0.6) **`grid`** 블록 —
+     `origin` [mx, my] 에서 시작하는 줄 목록(줄 = y, 칸 = 공백으로 나눈 조각 이름 — `Split(' ', RemoveEmptyEntries)` 라 칸 사이 공백 수는 자유, `.` = 건드리지 않음).
+     줄마다 칸 수가 달라도 된다 — 짧은 줄의 나머지는 건드리지 않는다(v0.6.1). 우리 조각 이름으로 방을 짜는 자리다(아래 "원작 방 본뜨기").
+     놓기 하나는 `at`·`line`·`grid` 중 하나만, `grid` 면 `piece` 없음. 한 칸에 두 번 놓으면 오류(지금 규칙 그대로).
+     **`over_border`**(v0.6, 기본 거짓): 참이면 그 놓기가 테두리 칸(문 칸 제외 — 문 칸은 여전히 오류)을 덮을 수 있다. 덮인 칸의 **둘레 표시는 남는다**(4.2). 거짓이면 테두리 칸에 놓기는 지금처럼 오류.
+     → 안쪽 방의 바깥 벽을 "둘레 벽 바로 옆 메가" 가 아니라 둘레 자리에 겹쳐 놓아, 벽 두 겹 사이 하위 1칸 바닥 띠(갇힌 띠)가 생기지 않게 한다(기획 10.1, 조사 함정 7).
+     **덮어도 막힘은 줄지 않는다**(v0.6.1, 오류): 덮은 칸의 하위 칸 넷마다 원래 테두리 조각이 막던 비트(걷기·시야·투사체 셋 각각)를 덮는 조각도 막아야 한다.
+     `Expand` 가 덮을 때 성질 글자 둘을 비교해 `place[3]: 테두리 (0,13) 하위 칸 아래-왼 의 걷기·시야 막힘을 wall_h 가 풀었다` 로 낸다 — 둘레 왼쪽 열을 가로 조각으로 덮어 바깥 벽에 홈이 나는 일(v0.6 예의 ㄱ 벽)을 막는다.
+     **벽 맞물림**(v0.6.1, 원본 SOL — 벽 메가는 반만 막는다: 세로 1 = 왼쪽 열, 가로 2 = 위 줄, 모서리 4 = 위 줄 + 왼쪽 열): 위 줄과 왼쪽 열을 **같이** 막아야 하는 메가(Γ 꺾임, 세로 벽이 가로 벽·둘레 위 줄 밑에 T 자로 붙는 자리,
+     가로 벽이 둘레 왼쪽 열에 붙는 자리)에는 모서리 조각을 둔다. 한쪽 조각만 두면 하위 1칸 구멍이 남는다(약 28.6px — 시야가 새고 작은 적만 지나감). 세로 벽이 위에서 내려와 가로로 꺾이는 └ 자리는 가로 조각,
+     가로 벽 끝 다음 칸에서 세로로 내려가는 ㄱ 자리는 세로 조각이면 이어진다. 남은 구멍은 13.5-19 의 "하위 1칸 틈" 과 13.5-4 의 80px 규칙이 잡는다. 그림 맞물림은 WP0a 가 견본으로 본다.
+     `id`(선택)는 방·벽 이름 — 오류 문구와 `--debug-nav tiles` 에만 쓴다. `decor_why`(선택)는 `marks` 의 `closed_door`·`arch` 번호를 일부러 장식으로 쓸 때의 이유 — 있으면 13.5-19 경고를 끈다.
   5. 결과: 메가타일 번호 M×M + 하위 타일 성질 N×N(`props` 로) + 하위 칸 **둘레 표시**(2·3단계 테두리·문 끝 조각에서 온 칸 — 4.2-4 `IsBoundary`)
      + `LayoutHash`(번호 격자·타일셋 ID·팔레트 + **타일셋 정의 전체**(`props`·`sol_known_diffs`·`design_diffs`·이름 → 번호)를 정해진 순서로 이은 `StableHash` — 그림이 낡았는지 보는 값, 1.4).
      성질 표나 보정 목록을 고치면 바닥/벽 나눔이 바뀔 수 있으므로 해시도 바뀐다. 시야 글자만 바꿔도(`x` ↔ `X`) 해시가 바뀐다 — 성질 글자를 그대로 잇기 때문이다(v0.5, 식은 그대로).
      그래서 WP1c 가 합성·실제 표의 글자를 바꾸면 그 전에 구운 맵 그림은 낡음이 된다(1.4 시작 검사 ⑤, 다시 가져오기).
+- **`open_center`**(v0.6, 선택, 계약 `MapDef.OpenCenter` = `RectI?`, 메가타일 좌표, 끝 미포함 — 기획 "메가 [6..12,6..12]" = `[6, 6, 13, 13]`): 가운데 열린 공간.
+  그 안의 메가타일은 바닥(`floor`) 또는 `marks.pillar` 번호뿐이고 기둥은 2개 이하(13.5-19, 오류). 무리를 끌고 도는 가운데가 넓게 남는지를 데이터로 지킨다(기획 10.1).
+- **방 기준점**(v0.6): `anchors` 의 키가 `room_` 으로 시작하면 안쪽 방 기준점(방 바닥 가운데)이다. 따로 칸을 두지 않는다 — 기준점은 이미 `anchors` 이고 이름 규칙 하나로 충분하다.
+  v0.6.1: 방이 아닌 **반쯤 막힌 구역**(출입구가 한두 곳인 짧은 벽 안쪽 — 스테이지 1 의 ㄱ 안 `room_west`·Γ 안 `room_south`)에도 같은 이름으로 둔다. 주인공이 숨어 큰 적이 못 들어오는 곳이 생기지 않는지를 데이터가 지키게 한다.
+  쓰는 곳: 큰 적 길 검사(13.5-5 — 26·34 등급이 모든 입구 진입점에서 모든 방 기준점까지), 13.5-19(기준점 칸이 맵 안·걷기 막힘 없음), `--autoplay-visit rooms`(9절), `--debug-nav entries`.
+- **방 영역과 방 바닥**(v0.6.3, 계약 `MapDef.RoomAreas` = `room_areas`, 기획 10.1 "방 바닥 = 기준점에서 반경 14 로 문을 지나지 않고 닿는 칸"): `room_*` 기준점마다 메가타일 사각형 하나(끝 미포함, `open_center` 와 같은 표기).
+  **방 바닥** = 그 사각형을 하위 칸으로 넓힌 범위 안에서 기준점 칸부터 걷기 막힘 없는 칸을 4이웃으로 채운 칸(13.5-19 ① 과 같은 걷기 기준 — 하위 1칸 틈이 ② 로 막히므로 반경 14 의 대리로 충분하다).
+  **문 수** = 사각형 밖이면서 바닥 칸에 4이웃으로 붙은 걷기 칸들의 4이웃 무리 수. 문 칸을 데이터에 따로 적지 않아도 "문을 지나지 않고" 가 사각형 경계로 정해진다.
+  벽 메가는 위 줄·왼쪽 열만 막으므로 방의 **오른쪽·아래 벽 메가는 사각형에 넣지 않는다**(피 방 블록 메가 [0..5] → `[0, 0, 5, 5]`) — 넣으면 벽 바깥 반 칸이 문을 지나 바닥에 섞인다. 왼쪽·위 벽 메가는 넣어도 된다(그 줄의 문 틈 칸이 바닥이 된다).
+  계산은 Core `Map/RoomFloors.Compute(MapDef, ArenaGrid) → RoomFloors`(맵을 읽을 때 한 번 — `World.Rooms`): 방 순서 = 기준점 ID 서수, 칸 = 행 우선, `IndexAt(tx, ty)`·`IndexAt(월드 px)` → 방 번호 또는 −1, `RoomFloor.OneDoor`(문 수 1).
+  잘못된 입력은 빈 바닥으로 두고 던지지 않는다 — 오류 문구는 13.5-19 가 낸다. `ResolvedMap` 에 두지 않은 이유: 바닥 계산에 펼친 격자(걷기 막힘)가 필요한데 `ResolvedMap.Resolve(MapDef, IsoMath)` 는 격자를 받지 않는다(시그니처를 바꾸지 않고 `World` 가 `Arena` 옆에 둔다).
+  쓰는 곳: 방 체류 압박(6.12 — 문 하나인 방만)·방 보급 검사(13.5-19)·방 들르기의 "방 안"(9절)·판 끝 `ROOMS` 로그(9절).
+- **원작 방 본뜨기**(v0.6.1, 사용자 결정 B·M, R24): 원작 작은 방(도살자 방 `rnd6` 6×6, `Banner` 8×8 등)을 "본뜬다" 는 **크기·문 방향·벽 재료(어느 조각 이름을 쓰나)만 따른다**는 뜻이다.
+  칸 배열은 우리 조각 이름(벽·모서리·벽 끝·바닥·장식)으로 새로 짠다 — DUN 을 읽어 칸마다 옮겨 적지 않는다. 장식 번호(피 묻은 벽 166~170·피 바닥 171~174·닫힌 문 98)가 원본에 있다는 것은 사실로 적고 타일셋 `pieces` 에 이름을 붙이지만,
+  그 번호를 어디에 어떤 순서로 놓을지는 우리가 정한다. `audit` 가 원본이 있을 때 맵 배치와 알려진 방 DUN 의 4×4 배열을 대조해 같으면 실패한다(1.4). 이 경계는 사용자 확인을 받는다(13.13 열린 질문).
 - 위치(`entries` 의 `outside`/`inside`, `hero_start.tile`, `anchors`)는 **하위 타일 좌표(실수, 칸 중심 = 정수)**, 형은 `TileCoord`(4.1). 입구 ID 는 문 ID 와 같게 둔다(`entry:gate_ne`, 기획 10.1).
   기획 10.1 의 진입점 값은 첫 값이고 `--debug-nav entries,tiles` 로 맞춘다(기획 열린 질문 7). 위 예는 문 틈 중심(19.5)에 맞췄다 — 20 이면 문 틈 중심에서 0.5칸(약 14px) 비켜 행진이 한쪽 문설주로 몰린다.
   진입점은 기획 10.1 표 그대로 뒤 문 `4`, 앞 문 `N − 6`(N 40 → 34), 바깥 시작점 `−4`·`N + 3` 이다 — 뒤 벽은 한 줄, 앞 턱은 두 줄 두께라 둘 다 벽 안쪽 면에서 3.5칸(약 100px) 떨어진다.
@@ -1788,6 +1980,11 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 - 스테이지 2(`catacombs_arena`, L2, M = 22): L2 테두리·문·벽 조각 번호가 아직 없다(기획 열린 질문 15). WP0 이 단계 3 전에 `tilesets/l2.json` 을 채운다.
   앞쪽 둘레·협로 벽은 보기에 낮은 조각을 먼저 찾고(기획 10.4), L2 에 없으면 높은 벽을 쓰고 가림 규칙(7.6, `wall_fade` 기본 `light`)에 맡긴다. 협로 벽은 `place` 의 `line`. L2 조각의 성질도 원본 SOL 로 확인한다 —
   "낮은 턱이라 투사체 통과" 를 미리 가정하지 않는다(L1 앞둘레 턱은 `X` 였다). v0.5: 협로 벽의 **시야 막힘**도 원본대로 적는다 — 그 값에 따라 앞쪽 길목에서 안개가 하는 일이 달라진다(기획 10.7·열린 질문 15).
+  v0.6: 뒤쪽 안쪽 방 둘(`s2_room_bone` 문 둘, `s2_room_gallows` 문 하나 + 교수대·말뚝 `w` 칸 — 기획 10.4)도 같은 `grid`·`over_border` 로 적는다. 조사 견본의 L2 번호(벽 1·2, 모서리 6~9, 걷기만 95·101·104,
+  닫힌 문 150·151 → `marks.closed_door`, 아치 4·5 → `marks.arch`, 낮은 판 10~12 = 앞 턱 후보)는 추정이라 단계 3 에 깔아 보고 성질을 원본 SOL 로 확인한다.
+- **헬파이어 층**(v0.6, 헬파이어 스테이지 단계 — 기획 10.6): 지하실 `l5`(`nlevels\l5data`, 팔레트 `l5base` 하나)·둥지 `l6`(`nlevels\l6data`, `l6base1~5` 중 하나 고정). 가져오기 표 `tilesets.json` 의 항목에 `"bundle": "hellfire"`(1.4).
+  스테이지는 `requires: ["hellfire"]`(6.17). **맵에는 `requires` 를 두지 않는다**(v0.6.1 — `MapDef` 에 칸이 없어 엄격 읽기가 오류를 낸다): 맵 그림의 묶음은 타일셋 표 항목의 `bundle` 이고(1.4 "타일셋 묶음과 맵"),
+  그 맵을 쓰는 스테이지의 `requires` 에 그 묶음이 있는지는 13.5-10 묶음판이 본다. 색 순환(용암)은 멈춘 그림(기획 10.2). 나크룰 방은 MPQ 에 없어 우리가 L5 이름으로 `grid` 를 깐다(DevilutionX 의 DUN 은 보지 않는다, 기획 19.4).
 
 ### 6.12 스테이지 `stages`
 
@@ -1850,6 +2047,21 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
   감독(WP4)이 `World.Lighting` 을 바꾸고 렌더(WP5)가 읽는다.
 - 이벤트가 적 정의를 덮어쓰는 매개변수: `escort` 의 `escorts`(호위 수, 0 포함), `march` 의 방향·`straight`, `boss`/`miniboss` 의 `enrage`·`arrival`. 호위 수는 `SpawnContext.EscortCount` 로 넘기고(생성 훅이 읽음), 행진 지시·광폭화·등장 연출은 이벤트가 생성 직후 그 적에 직접 건다(6.6).
 - 스테이지 음악은 스테이지 정의에 두지 않고 소리 연결 표의 `music.<스테이지 ID>`(6.15).
+- **`requires`**(v0.6, 6.17): 그 스테이지가 쓰는 헬파이어 묶음(지하실·둥지 `["hellfire"]`, MVP 두 스테이지는 비어 있음). 구간표·이벤트·보스·소환·분열·호위로 나오는 적의 `requires` 는 이 목록 안이어야 한다(13.5-20) —
+  그래서 묶음이 없을 때 "구간표에서 몇 종만 빠지는" 일은 없고 스테이지가 통째로 꺼진다(기획 19.4). 해금 조건(`unlock`)과 꺼짐은 따로다 — 꺼짐은 스테이지 선택 카드가 어둡고 빠진 MPQ 이름이 붙는다(8.1).
+  **해금 사슬**(v0.6.1): `requires` 가 빈 스테이지(기본)의 `unlock` 은 `requires` 가 빈 스테이지만 가리킨다(13.5-20 오류). 헬파이어 스테이지는 사슬 중간에 끼지 않고 곁가지(앞 기본 스테이지를 깨면 열림)다 —
+  헬파이어 없는 PC 는 꺼진 스테이지를 깰 수 없어 그 뒤 기본 스테이지가 영원히 잠기는 일이 없게 한다(기획 19.4).
+- **안쪽 방과 생성**(v0.6, 기획 2.4·10.1): 일반 생성 자리 규칙은 그대로다(생성 띠·걸을 수 있음·여유 거리) — 방 안도 후보다. 갇힌 바닥 칸이 없으므로(13.5-5) 방 안에서 생긴 적은 문으로 나와 플로우 필드를 따라온다.
+  포위 고리·`summon`·`telegraphed_blast` 지점은 4.10 의 길 거리 조건을 쓴다(벽 너머 방 안 자리 버림).
+- **방 보급 `room_supply`**(v0.6.3, 기획 10.1·10.3·10.4·13.4): `{ "at": "01:30", "type": "room_supply", "anchor": "room_blood", "pickup": "potion_health" }` — 이벤트 부품(WP4). 그 시각에
+  `World.Spawner.SpawnPickup(new PickupSpawn(정의, World.Resolved.Anchor(anchor), SupplyRoom: anchor))` 로 기준점 자리에 획득물 하나를 놓는다.
+  같은 기준점에 **살아 있는 보급**(`World.Pickups` 중 `SupplyRoom == anchor`)이 있으면 생략한다(쌓이지 않음) — "안 주운 보급" 상태는 이 필드 하나이고 따로 표를 두지 않는다.
+  씨앗을 쓰지 않는다(같은 시각·같은 자리). 보급은 수명·상한 정리에서 빠지고(WP3) 미니맵에 흰 점으로 늘 보인다(WP6 — 가 본 곳이 아니어도, 8.2). 주우면 WP3 가 틱 이벤트 `SupplyCollected(방 ID, 정의, 자리)` 를 낸다.
+  매개변수 이름은 WP4 가 정하는 자리지만(위 "매개변수 이름") 13.5-19 의 방 보급 검사(WP7)가 읽으므로 `anchor`·`pickup` 으로 고정한다. 보급은 위협이 아니라 13.5-18 리듬 검사에 세지 않는다(기획 10.3).
+- **방 체류 압박**(v0.6.3, 기획 10.1·열린 질문 30, 값 `rules.spawn.room_pressure` — 6.10): 감독(WP4, 2단계)이 틱마다 주인공 자리의 방 번호(`World.Rooms.IndexAt(Hero.Pos)`)로 `World.RoomPresence` 의 `Current`·`EnteredTick` 을 고친다(바뀌면 `EnteredTick` = 지금 틱).
+  `Current` 방이 `OneDoor` 이고 머문 시간이 `after` 초를 넘으면 그동안 일반 생성 무리 `every_nth` 번째마다 하나(감독의 무리 순번으로 셈 — 결정적)를 그 방 바닥 칸 중 주인공에서 `min_distance` px 이상인 걷기 칸에 등장 연출(2.4)로 낸다.
+  후보 칸은 바닥 칸 목록에서 `World.Rng` 로 뽑고(`spawn.tries` 번), 다 실패하면 그 무리는 보통 자리에 낸다(조용히 버리지 않음). 방을 나오면 바로 멈춘다. `room_pressure` 가 없으면 끈다.
+  누적(방마다 체류 틱·받은 피해·주운 보급)도 감독이 같은 자리에서 앞 틱의 `HeroDamaged`·`SupplyCollected` 로 센다 — 사람이 하는 판도 세어 판 끝 로그 `ROOMS`(9절)가 쓴다.
 
 ### 6.13 몬스터 늘리기 — 구조·시험·이번에 늘린 것 (사용자 요구 8)
 
@@ -1892,6 +2104,10 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 - **확장 후보(E, 기획 8.4)의 비용**: 대부분 "가져오기 표 한 줄 + 정의 1개". 새 부품이 필요한 것만: `scavenger`(`eat_corpse`), `hidden`·`counselor`(`blink`, 자리는 `PlacementResolver`),
   `gargoyle`(`stone_form`), `blood_knight`(`lifesteal` — 접두사 `vampiric` 과 공유, `HitLanded` 사용).
   멀리서 피해를 주는 새 부품(투사체·원거리 즉발·돌진류)은 시작 조건에 `EnemyCtx.SeenClearly` 를 넣는다(v0.5, 6.6 — 보이지 않는 곳에서 맞지 않음). 보스 패턴으로 겨누어 쏘면 `clear_sight`(v0.5.3).
+- **헬파이어 몬스터의 비용**(v0.6, 기획 8.5·13.6): "가져오기 표 한 줄(`bundle: hellfire`) + 그림 묶음 정의 + 적 정의 1개(`requires: [hellfire]`) + 그 스테이지 가중치". hellfire.mpq 의 그림 묶음 24개에는 원작 TRN 이 없어 `variants` 는 `[""]` 뿐이고,
+  예외로 diabdat 그림(`demskel\demskl`)을 빌리는 스컬윙은 diabdat `monsters\skelaxe\skelt.trn` 을 변종 `skelt` 로 단다(v0.6.1 — 같은 그림의 본 데몬은 원색. 조사 문서 확인),
+  고유 셋(호크 데몬·디파일러·나크룰)은 diabdat 의 `monsters\monsters\genrl.trn` 을 변종으로 단다(표 항목은 `bundle: hellfire` 인데 TRN 경로만 diabdat — 찾는 순서 1.4 가 그대로 찾는다).
+  기본 스테이지에 넣으면 13.5-20 오류다. 헬파이어 몬스터와 원작 투사체(`ms_*`·`ex_*`)의 연결은 아직 확인하지 않았다 — 그 스테이지를 만들 때 원본으로 본다.
 - **중간 보스 늘리기의 비용**(v0.5.3, 기획 9.4 "고르는 기준" ②): 그림 묶음이 그 스테이지 목록에 이미 있는 원작 고유 몬스터면 "가져오기 표 `variants` 한 칸(고유 TRN `monsters\monsters\<이름>.trn`) + 그림 묶음 `variants` 한 칸 + 정의 1개 + `miniboss` 이벤트 한 줄 + 그 구간 줄임" 이다.
   쓰는 클립이 그 묶음 정의에 아직 없으면(블랙애시·데스스핏의 `special`) 클립 한 줄과 소리 연결 `special` 한 줄이 더 든다(WP5·WP8).
 
@@ -1914,21 +2130,25 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 | 13.5-1 | 종류 안 ID 유일, 모든 `DefRef` 존재(그림·그림 묶음·이펙트·투사체·버프·타일셋·맵·입구 `entry:`·기준점·몬스터·드롭 표·진화 재료·보스), 맵의 테두리·문·조각 이름이 타일셋에 있음, 적 `variant` ∈ 그림 묶음 `variants` | Data (WP7) |
 | 13.5-2 | 레벨 표 길이 = 최대 레벨, 키 = 패턴 `LevelKeys`, 단조성. `null` 은 `NullableKeys` 에서만 | **Data(발사 패턴 등록 여부 — `WeaponDef.Pattern` 의 `[PartType(FirePattern)]`) + WP3 검사기(레벨 키·단조성·null)** (WP1 코드) |
 | 13.5-3 | 생성 구간이 0:00 부터 빈틈·겹침 없이, 가중치 합 > 0, `during: boss` 는 보스 있을 때만 | Data |
-| 13.5-4 | 배치가 M×M 안, 쓰는 메가타일이 모두 성질 표에 있음, **성질 표의 키 = 타일셋이 이름 붙인 번호**(13.5-12), 문 칸이 비어 있음, 놓은 조각이 테두리와 겹치지 않음. 충돌 도형 묶음끼리·경계와 80px 이상 또는 붙음 | Map(WP1b 배치) + Nav/Validation (WP2) — **자원 없이 늘 돈다** |
-| 13.5-5 | 길 검사: 반경 14(주인공 시작 → 모든 입구 진입점·도달 칸), `NavConst.FieldS`·`FieldM`(16·26)과 34(입구 진입점 → `center`), 주인공이 설 수 있는 모든 칸에서 `S` 필드 시작점 ≥ 1 | Nav/Validation (WP2) — 늘 돈다 |
-| 13.5-6 | 입구 진입점·시작 위치의 clearance ≥ 38, 바깥 시작점은 맵 밖(바깥 마름모 밖) | Nav/Validation (WP2) — 늘 돈다 |
+| 13.5-4 | 배치가 M×M 안, 쓰는 메가타일이 모두 성질 표에 있음, **성질 표의 키 = 타일셋이 이름 붙인 번호**(13.5-12), 문 칸이 비어 있음, 놓은 조각이 테두리와 겹치지 않음(v0.6: `over_border` 놓기는 문 칸만 아니면 됨), 놓기마다 `at`·`line`·`grid` 중 하나, `grid` 칸 이름이 타일셋에 있음. 충돌 도형 묶음끼리·경계와 80px 이상 또는 붙음 | Map(WP1b 배치) + Nav/Validation (WP2) — **자원 없이 늘 돈다** |
+| 13.5-5 | 길 검사: 반경 14(주인공 시작 → 모든 입구 진입점·도달 칸 — v0.6.1: 모든 직업의 `radius` ≤ 14 는 13.5-21 이 지킨다), `NavConst.FieldS`·`FieldM`(16·26)과 34(입구 진입점 → `center`, **v0.6: 그리고 모든 방 기준점 `room_*`** — v0.6.1: 반쯤 막힌 구역 기준점 포함, 6.11), 주인공이 설 수 있는 모든 칸에서 `S` 필드 시작점 ≥ 1. **v0.6 갇힌 바닥 칸(오류)**: 주인공 시작에서 반경 14 로 닿는 내비 칸(clearance ≥ 14, 8방향·코너 자르기 금지 채우기)을 구하고, 걷기 막힘이 없는 맵 안 하위 칸마다 "닿는 내비 칸 중심이 그 칸 마름모에서 14px 안에 있다"(주인공 몸이 그 칸에 걸칠 수 있다)가 아니면 `갇힌 바닥 칸 (tx,ty)` — 칸 목록을 메가타일로 묶어 한 줄씩. 자동으로 막힘 처리하지 않는다(그림과 충돌이 어긋남, 기획 10.1) | Nav/Validation (WP2) — 늘 돈다 |
+| 13.5-6 | 입구 진입점·시작 위치의 clearance ≥ 38, 바깥 시작점은 맵 밖(바깥 마름모 밖), **v0.6: 입구 진입점에서 둘레가 아닌 걷기 막힘 도형(안쪽 방·짧은 벽·기둥·창살)까지 > 60px**(기획 10.1 "방은 진입점에서 60px 넘게") | Nav/Validation (WP2) — 늘 돈다 |
 | 13.5-7 | **정의끼리**(늘): grid 시트 = 프레임 × 개수(+slack), atlas 는 방향·프레임 > 0·`origin` 이 칸 안, 클립 존재, `event_frame` ≤ 프레임 수. **실제 자원**(있을 때만): manifest 판, atlas 메타의 칸·방향·프레임 = 정의, 사각형이 페이지 안, PNG IHDR = 메타 페이지(변종마다), grid PNG = `sheet`, 맵 `arena.json` 의 `layout_hash` = 배치 | Data / Art (WP5) |
 | 13.5-8 | 진화 재료 무기의 최대 레벨, 재료 패시브 존재 | Data |
 | 13.5-9 | 패시브 키 ∈ `StatKey`, 접두사·버프 키 ∈ `EnemyStatKey` | Data |
-| 13.5-10 | 정의가 가리키는 파일 이름(atlas 페이지 × 변종, 메타, grid PNG, 맵 `art` 폴더의 파일 — `arena.json`·`columns.*`·`minimap.png`·바닥 조각 이름 규칙(1.4)으로 계산한 `floor_*`, 소리·음악 파일, 소리 색인) ⊂ **가져오기 표가 만드는 이름 + `Table/exe.json`** — 자원 없이 돈다(기획 13.5-10). 두 쪽으로 나눈다: ① 표 → 이름 목록(`ImportTable`, 기본 분류) ② 정의 → 이름 추출과 대조(실제 `Data/` 를 WP7 로더로 읽으므로 `Integration`) | 시험 `tests/…/Assets/` (WP0 작성, ② 는 통합 때 기본으로) |
+| 13.5-10 | 정의가 가리키는 파일 이름(atlas 페이지 × 변종, 메타, grid PNG, 맵 `art` 폴더의 파일 — `arena.json`·`columns.*`·`minimap.png`·바닥 조각 이름 규칙(1.4)으로 계산한 `floor_*`, 소리·음악 파일, 소리 색인) ⊂ **가져오기 표가 만드는 이름 + `Table/exe.json`** — 자원 없이 돈다(기획 13.5-10). 두 쪽으로 나눈다: ① 표 → 이름 목록(`ImportTable`, 기본 분류) ② 정의 → 이름 추출과 대조(실제 `Data/` 를 WP7 로더로 읽으므로 `Integration`). **v0.6 묶음판**: ② 에서 정의 D(적·스테이지·직업·무기·음악 — 그림 묶음·소리·이펙트처럼 `requires` 가 없는 정의는 그것을 가리키는 D 들의 것으로)가 닿는 파일 이름의 묶음(`ImportTable.OutputBundles(arenas)`)이 기본이거나 D 의 `requires` 안. **v0.6.1 귀속 규칙**: 맵 그림(`art` 폴더의 파일) → 그 맵을 쓰는 스테이지 D(그래서 "스테이지 `requires` ⊇ 맵 타일셋 항목의 `bundle`" 이 여기서 서다). 소리 연결 표 줄 → `hero.<id>` 는 그 직업, `enemies.<id>` 는 그 적, `sprite_sets.<s>` 는 `s` 를 쓰는 적·직업들, `weapons.<w>` 는 그 무기, `music.<스테이지>` 는 그 줄이 가리키는 음악 정의(음악 D), `projectiles`·`effects`·`hazard_loops` 는 그것을 가리키는 D 들(없으면 기본), `ui`·`pickups`·`music.title` 은 기본. ② 의 "정의 → 이름(주인 D 포함)" 추출은 Core 함수 하나 `DefAssetNames.For(GameDefs, arenas) → (D, 파일)` 목록(WP7, D 가 없으면 기본 — v0.6.2)이고 시작 검사 ③ 의 교차 확인(1.4 끝)이 같은 함수를 쓴다 | 시험 `tests/…/Assets/` (WP0 작성, ② 는 통합 때 기본으로) |
 | 13.5-11 | 아래 "추가(경고)" 의 구별 경고(기획 13.5-11) | Data |
-| 13.5-12 | 성질 표의 키 = 타일셋이 이름 붙인 번호(`floor`·`borders`·`gates`·`pieces`, 번호 ≥ 0 — `ArenaLayout.ValidateTileset`), 성질·`sol`·`use` 글자가 8글자(`.wLWmxMX`, 6.11 — v0.5) 안, `sol_known_diffs`·`design_diffs` 원소의 메가타일이 성질 표에 있음, `why` 가 비면 오류 | Map(WP1b `MapDataReader`, 글자 WP1c) — 늘 돈다 |
+| 13.5-12 | 성질 표의 키 = 타일셋이 이름 붙인 번호(`floor`·`borders`·`gates`·`pieces`, 번호 ≥ 0 — `ArenaLayout.ValidateTileset`), 성질·`sol`·`use` 글자가 8글자(`.wLWmxMX`, 6.11 — v0.5) 안, `sol_known_diffs`·`design_diffs` 원소의 메가타일이 성질 표에 있음, `why` 가 비면 오류, **v0.6: `marks` 의 번호가 이름 붙인 번호 안** | Map(WP1b `MapDataReader`, 글자 WP1c, `marks` WP1d) — 늘 돈다 |
 | 13.5-13 | 큰 피해 패턴·부품의 예고(6.5 판정, `rules.enemies.telegraph_required`): 예고 필수인데 없거나 `min_time` 보다 짧으면 **오류**, 무거운 근접 단일 대상의 타격 프레임까지 시간이 `heavy_melee_windup` 미만이면 **오류** | Data + 부품(WP4 매개변수 검사) |
 | 13.5-14 | 정의 `scale` 이 0.65~1.6 밖, 또는 정의 `scale` × 받을 수 있는 가장 큰 등급 배율 > `rules.ranks.max_scale` 이면 경고(넘는 쪽은 생성 때 잘림, 6.5) | Data |
-| 13.5-15 (v0.5) | 스테이지마다 주인공 빛 반경(= 시야 반경 — 정의 값과 그 스테이지 `light_change` 가 넣는 `hero_light.radius` 값 모두)이 **380 이상(기획 10.5-3 하한 — v0.5.1, 원거리 적이 없는 스테이지에도) 화면 가로 반폭(`ViewSize.X / 2` = 480) 이하**이고, **그 스테이지에 나오는 적**(구간 가중치·이벤트·소환·분열·호위 — 6.14 "안 나오는 적" 과 같은 계산) 중 `kite` 를 가진 적의 `range_band` 최대 + `rules.sight.edge` + `rules.sight.ranged_margin`(40 + 20 = 60) **이상**. 어기면 오류: `stage_catacombs: 빛 반경 360 < burning_archer 거리 유지 최대 340 + 60`. 주인공 빛(`hero_light`)이 없거나 반경 0 이하면 같은 오류다 — 그래서 `VisibilityField.Enabled` 가 거짓인 것은 맵 없는 시험 월드뿐이다(4.11) | Data(380·반폭) + WP4 검사기(`kite` 매개변수를 읽음) |
+| 13.5-15 (v0.5) | 스테이지마다 주인공 빛 반경(= 시야 반경 — 정의 값과 그 스테이지 `light_change` 가 넣는 `hero_light.radius` 값 모두)이 **380 이상(기획 10.5-3 하한 — v0.5.1, 원거리 적이 없는 스테이지에도) 화면 가로 반폭(`ViewSize.X / 2` = 480) 이하**이고, **그 스테이지에 나오는 적**(구간 가중치·이벤트·소환·분열·호위 — v0.6.1: `StageReach.Enemies`, 아래 "나오는 적 계산") 중 `kite` 를 가진 적의 `range_band` 최대 + `rules.sight.edge` + `rules.sight.ranged_margin`(40 + 20 = 60) **이상**. 어기면 오류: `stage_catacombs: 빛 반경 360 < burning_archer 거리 유지 최대 340 + 60`. 주인공 빛(`hero_light`)이 없거나 반경 0 이하면 같은 오류다 — 그래서 `VisibilityField.Enabled` 가 거짓인 것은 맵 없는 시험 월드뿐이다(4.11) | Data(380·반폭) + WP4 검사기(`kite` 매개변수를 읽음) |
 | 13.5-16 (v0.5.1) | **원본 유래 값의 출처 주석**(오류)(사용자 결정 B 의 조건, 1.4): JSON 주석은 로더가 버리므로 원문 문자열로 본다. `Data/tilesets/*.json` 의 `props`·`sol_known_diffs`, `Data/sprites/*.json` 의 `frame_time`·`event_frame`, 가져오기 표 `Table/tilesets.json` 의 `overlay` 가 있는 줄마다, 그 줄 끝 또는 그 줄을 담은 객체·배열을 여는 줄 끝에 `// 출처: 원본 확인` 또는 `// 출처: DevilutionX 참고` 가 있다(줄 단위 + 괄호 깊이 추적) | 시험 `Data/SourceCommentTests`(기본 분류, WP0a 작성 — 실제 `Data/`·가져오기 표 원문만 읽음) |
 | 13.5-18 (v0.5.3) | **중간 보스 리듬**(경고, 기획 13.5-18): 스테이지마다 `miniboss`·`boss` 이벤트 시각을 정렬해 이웃끼리 2:00 미만이면 경고. `miniboss` 이벤트 시각이 든 생성 구간(`from` ≤ 시각 < `to`)의 `max_alive`·`per_second` 중 하나라도 바로 앞 구간보다 크면 경고(같으면 통과 — 스테이지 2 의 3:00 구간). 같은 스테이지의 `miniboss` 이벤트 둘이 같은 그림 묶음(`sprites`)을 쓰면 경고. 자원 없이 늘 돈다 | WP4 검사기(이벤트 매개변수 `enemy`·`at` 를 읽음 — 13.5-15 와 같은 자리) |
-| 소리 | 소리 연결 표의 대상(무기·투사체·이펙트·그림 묶음·적·획득물·스테이지)과 소리 ID 가 있음, 분류가 `rules.audio` 에 있음, 소리 파일 ≥ 1 | Audio (WP8) |
+| 13.5-19 (v0.6) | **안쪽 방**(기획 13.5-19): 맵의 `open_center` 안 메가타일은 바닥 또는 `marks.pillar` 이고 기둥 ≤ 2(오류), `open_center` 가 맵 안·테두리 밖(오류). `marks.closed_door`·`arch` 번호를 놓은 놓기에 `decor_why` 가 없으면 경고. 방 기준점(`room_*`)마다 맵 안·그 칸 걷기 막힘 없음(오류). **v0.6.1 하위 칸 검사**(오류, 반경·격자 없이 성질만): ① **갇힌 바닥** — 걷기 막힘 없는 맵 안 하위 칸을 주인공 시작 칸에서 4이웃으로 채워 못 닿는 칸(띠·막힌 방), ② **하위 1칸 틈** — 걷기 막힘 없는 칸인데 좌우 둘 다 또는 위아래 둘 다 걷기 막힘(맵 밖 포함): 벽 맞물림 구멍·벽 두 겹 사이 띠·아치 틈(6.11 "벽 맞물림"). 칸 목록을 메가타일로 묶어 한 줄씩. `over_border` 의 막힘 줄어듦은 `Expand` 가 낸다(6.11). WP2 의 13.5-4(80px)·13.5-5(반경 14 격자)는 그 위의 정밀 검사로 남는다. **v0.6.3 방 영역**(오류): `room_*` 기준점마다 `room_areas` 하나, 키는 `room_*` 기준점, 맵 안·서로 겹치지 않음, 기준점이 영역 안, 방 바닥에서 영역 밖으로 이어지는 걷기 칸이 있음(문 0 = 오류, 6.11). **방 보급**(v0.6.3, 정의 검사 — 스테이지 + 맵): `room_supply` 의 `anchor` 가 그 스테이지 맵의 `room_*` 이고 `RoomFloor.OneDoor`, `pickup` 이 있는 획득물(오류). 자원 없이 늘 돈다 | Map(`ArenaLayout.ValidateRooms`, WP1d-구현 — 부르는 곳 `MapDataReader.Read`), 방 보급 검사 WP7 |
+| 13.5-20 (v0.6) | **자원 묶음**(오류, 기획 13.5-20): `requires` 에 `hfvoice` 없음(원본 우선순위 전용, 1.4). 참조 덮기 — 스테이지가 내는 적(**`StageReach.Enemies`** — 구간·이벤트·보스·`summon`·분열·호위, v0.6.1), 직업의 시작 무기·특성 패시브가 가리키는 정의의 `requires` ⊆ 가리키는 쪽의 `requires`. 스테이지 음악(`music.<스테이지>`)은 `requires` 가 스테이지 것 밖이면 `fallback` 이 있어야 함. `rules.hero.class` 의 직업은 `requires` 가 빔(기본 직업). 음악 `fallback` 은 `requires` 가 비고 다시 `fallback` 이 없음. **v0.6.1 해금 사슬**: `requires` 가 빈 스테이지의 `unlock` 이 `requires` 가 비지 않은 스테이지를 가리키면 오류(6.12). 맵에는 `requires` 가 없다 — 맵 그림 묶음과 스테이지의 대조는 13.5-10 묶음판 | Data (WP7) + 13.5-10 시험(WP0) |
+| 13.5-21 (v0.6) | **직업**(오류, 기획 13.5-21): 시작 무기 ≥ 1 이고 모두 그 직업이 고를 수 있음(`classes` 가 비었거나 그 직업 포함), 특성(v0.6.1: `traits` 의 패시브)은 `trait: true`·`max_level` 1·진화의 짝 패시브가 아니고 그 패시브의 `classes` 가 비었거나 그 직업 포함, **직업 `radius` ≤ 14**(v0.6.1 — 13.5-5 길 검사의 주인공 등급. 미리보기로 키우려면 길 검사 등급을 같이 올린다, 기획 13.5-21), `stats` 키 ∈ `StatKey`(형이 보장), 그림 묶음에 `idle`·`walk`·`cast_fire`·`cast_lightning`·`cast_magic`·`die` 클립, 시작 무기 중 `cast_clip: attack` 이 있으면 `attack` 클립, 시전 클립 `event_frame` ≤ 프레임 수(13.5-7 과 같은 자리), 직업 ID 마다 소리 연결 `hero.<id>` 가 있음(경고 — WP8 검사기) | Data (WP7), 소리 WP8 |
+| 13.5-22 (v0.6.1) | **원작 방 DUN 칸 배열을 옮기지 않음**(오류, 기획 13.5-22, 사용자 결정 B): 원본이 있을 때 표 `audit_dun` 의 DUN 과 `Data/maps/*.json` 을 펼친 메가 격자에 4×4 창이 같은 곳(바닥·0 을 하나로 보고, 그 창의 바닥 아닌 칸 ≥ 8)이 있으면 실패. DUN 은 메모리에서만 읽음 | 도구 `audit`(WP0) — 원본이 없으면 건너뜀 표시 |
+| 소리 | 소리 연결 표의 대상(무기·투사체·이펙트·그림 묶음·적·획득물·스테이지·**직업**(v0.6))과 소리 ID 가 있음, 분류가 `rules.audio` 에 있음, 소리 파일 ≥ 1 | Audio (WP8) |
 | 추가(오류, v0.5) | 스테이지가 있는데 `rules.sight` 가 없음(6.10) | Data (WP7) |
 | 추가(오류) | `extends` 순환·없는 부모, `abstract` 정의를 생성에 씀, 부품 `(종류, type)` 미등록, 부품 매개변수 검사, `*_patch` 의 없는 id, 클립·이벤트 프레임 범위, 큰 피해 패턴의 예고 필수(13.5-13), 참조 쪽 덮어쓰기는 색조·크기만, 부품 슬롯 > 12, 여러 틱 동작이 `actions` 마지막이 아님, `rules` 하위 키 중복, atlas 그림에 `sheet`·`color_key`·`slack` 속성, 쓰는 클립(`special`·`cast_*`)이 그림 묶음에 없음, `tilesets`·`maps` 에 `extends`·`*_add`·`*_patch` | Data + 부품 |
 | 추가(경고) | flow 유닛 반경 > 26, 명시한 `radius` 가 `round(base_radius × scale)` 와 2 넘게 다름, 크기 범위(13.5-14), 사거리가 몸 반경 합 + `melee_reach_over_contact` 를 넘는 단일 대상 근접(6.5), **생성 가능한 적인데 어느 스테이지에서도 나오지 않음**, **같은 스테이지에 나오는 두 적이 같은 그림 묶음 + 같은 변종이고 색조 거리(RGB 유클리드) < 60, 크기 차 < 0.15, 알파·발광도 같음**, 소리 연결이 없는 그림 묶음을 쓰는 생성 가능한 적(소리 없는 적, WP8), **13.5-17 `include_bosses: true` 인 오라·함성·범위 버프**(v0.5.1 — MVP 데이터에는 없어야 함, 결정 C. WP4 매개변수 검사) | Data + 부품 |
@@ -1936,6 +2156,27 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 - 13.5-15 의 "`kite` 를 가진 적" 은 등급과 상관없다 — v0.5.3 에 스테이지 1 블랙애시(`kite` 최대 320 + 60 = 380 ≤ 420)가 든다. 13.5-13 예고 검사는 새 중간 보스의 불비(18, 예고 0.8s)·진흙 강타(반경 75 피해 26, 0.6s)도 본다.
 - 구별 경고는 변종이 다르면 구별되는 것으로 본다(원작 TRN 은 색이 크게 다르다 — 기획 8.2). 기준값(60·0.15)은 설계 제안이고 최종 판정은 `--preview enemies` 캡처를 사람이 본다.
 - v0.2 에서 "그림이 있을 때만" 이던 기하 검사(13.5-4~6)는 v0.3 에서 **늘 돈다**(충돌을 저장소 데이터로 만들므로, 4.2). 기획 13.5-4 의 "다각형이 없으면 건너뜀" 은 필요 없어졌다. `[해석]`
+- (v0.6) **갇힌 바닥 칸**의 기준을 "반경 14 로 설 수 있는 칸" 이 아니라 "**주인공 몸이 걸칠 수 있는 바닥 칸**" 으로 둔 이유: 벽 두 겹 사이 하위 1칸 띠는 폭이 약 28.6px 라 띠 가운데 clearance 가 14 를 겨우 넘거나 못 넘는다 —
+  "clearance ≥ 14 인데 못 닿는 칸" 만 보면 격자 표본 위치에 따라 띠를 놓칠 수 있다. 바닥 칸(그림이 바닥인 칸)을 기준으로 보면 띠는 늘 걸리고, 벽에 붙은 보통 바닥 칸은 몸이 걸쳐 통과한다(벽 옆 칸 중심의 벽까지 거리 ≈ 14.3px).
+  시험(WP2, 합성 맵): 둘레 벽 바로 옆 메가에 안쪽 벽 줄을 둔 배치 → 갇힌 칸 오류, 같은 벽을 `over_border` 로 둘레에 겹친 배치와 하위 3칸 띄운 배치 → 통과(10.1 `Nav`).
+- (v0.6) 13.5-20 의 참조 덮기는 "기본 내용이 묶음 내용을 가리키지 못한다" 보다 넓다 — 묶음 정의끼리도 `hellfire` 스테이지가 `hfmonk` 적을 내면 오류다. 그래서 `ContentAvailability` 는 스테이지·직업 자신의 `requires` 만 보면 된다(6.17).
+- (v0.6.1) **나오는 적 계산 `StageReach`** — "스테이지에서 나올 수 있는 적" 을 함수 하나로 둔다. 13.5-15·13.5-20·"안 나오는 적" 경고·`TextureStore`·`SoundBank`·시작 검사 ③ 교차 확인이 모두 이것을 부른다(같은 닫힘 계산을 여러 벌 짜다 엇갈리는 일 막기 — 소환으로만 나오는 헬파이어 적을 놓치면 R30 이 다시 생긴다).
+
+```csharp
+// Core Data/Registry/StageReach.cs (계약 WP1d-형, 구현·시험 WP1d-구현, 그 뒤 소유 WP4)
+public static class StageReach
+{
+    public static IReadOnlyList<EnemyDef> Enemies(StageDef stage, GameDefs defs);   // ID 서수 순, 결정적
+}
+// Defs/PartDef.cs: PartDef 에 `IReadOnlyList<DefRef<EnemyDef>> ReferencedEnemies { get; init; } = []` — 그 부품 매개변수 안의 모든 DefRef<EnemyDef>.
+//   로더(WP7)가 매개변수의 DefRef 를 채우는 연결 단계에서 같이 모은다(매개변수 형을 몰라도 됨 — 부품을 만드는 묶음은 코드를 더하지 않는다).
+```
+
+  계산: 시작 집합 = 구간 `weights` 의 적 + 이벤트 부품(`PartKind.StageEvent`)의 `ReferencedEnemies`(보스·중간 보스·행진·고리·호위 대장 등). 그 뒤 고정점까지 — 집합의 각 적이 가진 모든 부품(행동·패턴·페이즈·훅·죽음 훅)의 `ReferencedEnemies`(`summon`·`split_on_death`·호위 등)를 더한다.
+  시험(WP1d-구현, 합성 정의): 소환으로만 나오는 적·분열체의 분열체·페이즈 패턴의 소환이 들어감, 고리가 있어도 끝남, 같은 입력 같은 순서.
+
+- (v0.6.1) **하위 칸 검사(13.5-19 ①②)와 13.5-5 의 관계**: ①② 는 반경·격자 없이 성질 글자만 보므로 WP1d-구현이 `ArenaLayout` 에 넣고 WP0a 의 실제 맵이 WP2 를 기다리지 않고 통과를 확인한다(v0.6 의 "시제품 길 검사를 다시 돌림" 대신).
+  ① 은 4이웃이라 하위 1칸 띠도 끝이 막혔으면 잡고, 띠 끝이 열린 경우는 ② 가 잡는다. 13.5-5 의 반경 14 갇힌 칸·13.5-4 의 80px 는 WP2 가 실제 충돌 도형으로 다시 본다(정밀 검사).
 
 ### 6.15 소리 데이터 `sounds`, `music`, `sound_bindings`, `rules.audio` (v0.3, WP8)
 
@@ -1955,7 +2196,9 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
   "music": [
     { "id": "mus_title",     "file": "d1/sound/music/dintro.wav" },
     { "id": "mus_cathedral", "file": "d1/sound/music/dlvla.wav" },
-    { "id": "mus_catacombs", "file": "d1/sound/music/dlvlb.wav" }
+    { "id": "mus_catacombs", "file": "d1/sound/music/dlvlb.wav" },
+    // (헬파이어 스테이지 단계 예, v0.6) 묶음이 없으면 fallback 곡
+    { "id": "mus_crypt", "file": "d1/sound/music/dlvlf.wav", "requires": ["hfmusic"], "fallback": "mus_cathedral" }
   ]
 }
 
@@ -1969,7 +2212,7 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
     "sprite_sets":  { "set_zombie": { "attack": "snd_zombie_attack", "hit": "snd_zombie_hit", "death": "snd_zombie_death", "special": "snd_zombie_special" } },
     "enemies":      { "skeleton_king": { "voice": "snd_sking_voice" }, "butcher": { "voice": "snd_butcher_voice" } },
     "pickups":      { "gold": { "collect": "snd_gold" }, "healing_potion": { "collect": "snd_invpot", "drop": "snd_flippot" } },
-    "hero":         { "hurt": "snd_hero_hurt", "death": "snd_hero_death" },
+    "hero":         { "sorcerer": { "hurt": "snd_hero_hurt", "death": "snd_hero_death" } },     // v0.6: 키 = 직업 ID(6.16)
     "ui":           { "menu_move": "snd_titlemov", "menu_select": "snd_titlslct", "level_up": "snd_magic", "chest_open": "snd_chest", "elite_pack": "snd_magic1" },
     "music":        { "title": "mus_title", "stage_cathedral": "mus_cathedral", "stage_catacombs": "mus_catacombs" }
   }
@@ -2003,12 +2246,111 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
   ③ 새 적은 그림 묶음이 같으면 소리도 저절로 따라온다(연결 키 = 그림 묶음). 새 그림 묶음에 소리 연결이 없으면 경고(6.14)가 잡는다.
 - `sounds[]`: `files`(여럿이면 무작위 — 게임 쪽 난수, 시뮬레이션 난수와 따로), `category`(`rules.audio.categories` 의 ID — 우선순위는 목록 순서, 앞이 높음 = 기획 12.7 순서),
   `volume`(분류 배율에 곱함), `max_instances`(기본 `same_sound`), `min_interval`(기본 `rules.audio.min_interval`), `pitch_jitter`(± 비율), `offscreen`(분류 값 덮어쓰기), `loop`.
-- `music[]`: `file`, `loop`(기본 true). 기획 12.7 의 곡 목록.
+- `music[]`: `file`, `loop`(기본 true). 기획 12.7 의 곡 목록. v0.6: `requires`(6.17)·`fallback`(음악 ID — `requires` 묶음이 없으면 대신 트는 곡, 기획 19.4: 지하실 → `dlvla`, 둥지 → `dlvlc`).
+  음악은 그림과 달리 묶음이 없어도 그 스테이지를 끄지 않는다 — 스테이지의 `requires` 에 `hfmusic` 을 넣지 않고 음악 정의에만 둔다. 고르기는 게임 쪽(WP8 `MusicPlayer`)이라 시뮬레이션과 무관하다.
+- **주인공 소리**(v0.6, 기획 4.5·12.7): `hero` 의 키는 **직업 ID** 다(v0.5 는 객체 하나). `AudioSystem` 이 `World.HeroClass.Id` 로 고른다. 소리 정의는 직업 단계에 `snd_<직업>_hurt`·`_death`
+  (전사 파일 철자 `warior69`·`wario69b`·`warior71` 섞임, 수도사 `monk69`·`69b`·`71` — `72` 없음, 기획 4.5. 번호는 들어 보고 확정 — 기획 열린 질문 29).
 - 연결 키의 대상은 그 종류의 정의 ID 다. `sprite_sets` 의 소리를 적 정의가 덮어쓰려면 `enemies.<id>.{attack,hit,death,special}`. 보스·중간 보스(정의 `rank`)가 낸 몬스터 소리는 분류를 `boss` 로 올린다(기획 12.7 "보스·중간 보스 소리").
   v0.5.3: 새 중간 보스는 그림 묶음이 같아 소리가 저절로 따라온다. 다만 `special` 을 처음 쓰는 묶음(`set_skelbow` — 블랙애시 해골 일으키기, `set_acid` — 데스스핏 산성 분출)은 `sprite_sets.<묶음>.special` 한 줄과 그 WAV(`monsters\skelbow\sklbws*.wav`·`monsters\acid\acids*.wav`)를 가져오기 소리 표에 더한다. 중간 보스에는 등장 대사(`voice`)가 없다(기획 12.7).
 - 파일 이름은 가져오기 출력(1.4: 원작 경로를 소문자로 `d1/sound/` 아래에 그대로)이다. 13.5-10 시험이 표와 맞춘다.
 - 소리 길이는 정의에 적지 않고 가져오기 출력 `d1/sound/index.json`(Core `Assets/SoundIndex`: 파일마다 표본 수·표본율·채널)에서 읽는다. 무음에서도 읽는다(7.9 고르기).
 - 정의 형(`SoundDef`, `MusicDef`, `SoundBindingsDef`, `AudioRulesDef`)은 Core `Defs/`(데이터 모양, 계약 WP1b)이고, 검사기·고르기 규칙은 Core `Audio/`(WP8), 재생은 게임 `Audio/`(WP8). `Sim/` 은 어느 것도 쓰지 않는다.
+
+### 6.16 직업 `hero_classes` (v0.6, 사용자 결정 K, 기획 4.5·13.1)
+
+MVP 는 마법사 하나지만 주인공을 **처음부터 직업 정의로** 만든다. 직업을 더할 때 늘어나는 것은 정의 파일·그림 묶음·가져오기 표 줄·소리 연결 줄뿐이고, 계약(형·월드·소리 키·저장 모양)은 그대로다.
+
+```json
+// Data/heroes/sorcerer.json (WP3) — 직업마다 파일 하나
+{ "hero_classes": [
+    { "id": "sorcerer", "name": "마법사", "description": "마법 무기의 쿨다운이 조금 짧다",
+      "sprites": "set_sorcerer", "radius": 14,
+      "stats": {},                                         // rules.hero.stats 를 키별로 덮어씀(기획 4.1 기본값 = 마법사 값이라 비어 있음)
+      "start_weapons": ["magic_missile"],
+      "traits": ["trait_arcane_affinity"] } ] }                // v0.6.1: 특성 = 패시브 정의 ID(아래 passives.json)
+
+// Data/passives.json 에 더함 (WP3) — 특성 패시브. 아이콘은 직업 단계(WP9)에 WP5 가 단다(MVP 는 HUD 에 특성 아이콘을 그리지 않음)
+{ "passives": [
+    { "id": "trait_arcane_affinity", "name": "마력 친화",          // 설명 문구는 패시브 카드처럼 per_level 에서 만든다(쿨다운 감소 +5%)
+      "trait": true, "max_level": 1, "per_level": { "cooldown_pct": 0.05 }, "classes": ["sorcerer"] } ] }
+
+// (직업 단계 예) Data/heroes/monk.json
+{ "hero_classes": [
+    { "id": "monk", "name": "수도사", "description": "…", "sprites": "set_monk", "radius": 14,
+      "stats": { "max_hp": 115, "move_speed": 100 }, "start_weapons": ["staff_sweep"],
+      "traits": ["trait_discipline"],                     // 패시브 trait_discipline: per_level { "regen": 0.2 }, trait, classes ["monk"]
+      "requires": ["hfmonk"] } ] }
+```
+
+```csharp
+// Core Defs/HeroDefs.cs (계약, WP1d)
+public sealed record HeroClassDef : IDef
+{
+    public required string Id { get; init; }
+    public string Name { get; init; } = "";
+    public string Description { get; init; } = "";
+    public IconDef? Icon { get; init; }                                   // 직업 고르기 카드(직업 단계). 없으면 서기 그림 첫 프레임
+    public required DefRef<SpriteSetDef> Sprites { get; init; }           // idle·walk·cast_*·die(+ attack) — 13.5-21
+    public float Radius { get; init; } = 14f;
+    public IReadOnlyDictionary<StatKey, float> Stats { get; init; } = new Dictionary<StatKey, float>();   // 덮어쓰기
+    public required IReadOnlyList<DefRef<WeaponDef>> StartWeapons { get; init; }
+    public IReadOnlyList<DefRef<PassiveDef>> Traits { get; init; } = [];   // v0.6.1: 특성 = 레벨 없고 슬롯을 안 쓰는 패시브(v0.6 의 HeroTraitDef 를 대신함)
+    public IReadOnlyList<ContentBundle> Requires { get; init; } = [];
+}
+// WeaponDefs.cs (v0.6.1, 기본값 있는 칸 더하기)
+//   PassiveDef:   bool Trait(`trait`, 기본 false — 참이면 레벨업·상자 후보에 안 나오고 직업 특성으로만 붙음),
+//                 IReadOnlyList<DefRef<HeroClassDef>> Classes(`classes`, 기본 빈 = 모든 직업 — 직업 전용 패시브)
+//   EvolutionDef: IReadOnlyList<DefRef<HeroClassDef>> Classes(기본 빈 = 모두 — 직업 전용 진화)
+// RulesDefs.cs: HeroRulesDef 에서 Sprites·Radius·StartWeapons 를 빼고 `required DefRef<HeroClassDef> Class` 를 더함. Stats(기본값)·InvulnAfterHit·CrowdSlow 는 그대로
+// World.cs:     public World(GameDefs defs, ulong seed, StageDef? stage = null, HeroClassDef? heroClass = null)
+//               public HeroClassDef? HeroClass { get; }   // heroClass ?? defs.Rules.Hero?.Class.Def. 맵·규칙 없는 시험 월드는 null
+//               Hero.Radius = HeroClass?.Radius ?? 14
+```
+
+- **고른 직업이 들어오는 길**: 앱(WP6·WP7)이 `--hero` → 저장의 마지막 직업 → `rules.hero.class` 순으로 정하고, `ContentAvailability`(6.17)로 꺼진 직업이면 기본 직업으로 바꾼다(`--hero` 로 꺼진 직업을 고르면 시작하지 않음 — 9절).
+  그 정의를 `World` 생성자에 넘긴다. 시뮬레이션은 묶음을 모른다. 같은 씨앗·스테이지·직업이면 같은 결과다(3.4 — 첫 로그 줄과 `RESULT` 에 `hero=<id>`).
+- **주인공 만들기**(WP3 `HeroSetup`): 능력치 = `rules.hero.stats` → `HeroClass.Stats` 로 키별 덮어쓰기 → 특성 패시브(`Traits`, 1레벨 `per_level`·`on_acquire`)를 더함 → 고른 패시브(4.1 적용 규칙). 시작 무기 = `HeroClass.StartWeapons`(Lv1).
+  그림 = `HeroClass.Sprites`(시전 클립은 `cast_clip` 으로, 5.3). 특성은 슬롯을 쓰지 않고 레벨이 없다 — HUD 지속 효과 줄에 아이콘 하나(직업 단계, WP6. 아이콘 그림은 WP5 가 그때 단다 — 원작 exe PNG 나 주문 아이콘).
+- **특성을 패시브로 둔 이유**(v0.6.1, 기획 리뷰): 직업 단계에서 특성 둘 이상·`on_acquire`·직업 전용 패시브·진화를 원해도 직업 형을 고치지 않는다. 능력치 키로 안 되는 특성(피격 반격·이동 중 막기 같은 효과)이 필요해지면
+  그것은 **패시브 일반의 확장**(패시브 효과 부품)이라 직업 계약 밖이다(R31 남는 위험). `trait` 패시브는 레벨업·상자·`--passives` 후보에서 빠진다(WP3, 6.9).
+- **시전 길이·발동 프레임**은 직업 정의가 아니라 그 직업 그림 묶음의 시전 클립(`frames`·`event_frame`, 출처 주석)이다(6.3) — 그림 맞춤 값이고 규칙이 쓰지 않는다(기획 4.5 "시전 그림은 보여 주기만"). `[해석]`
+- **무기는 직업 공통 목록**이다. 직업 전용 무기만 무기 정의의 `classes` 로 묶는다(6.8 — v0.6.1: 패시브·진화도 같은 `classes`). 레벨업 후보·진화·상자는 `classes` 와 6.17 의 묶음 조건으로 거른다(WP3).
+- **소리**는 직업 정의에 두지 않는다 — `sound_bindings.hero.<직업 ID>`(6.15).
+- **직업 고르기 화면·근접 무기 `melee_arc`·전사·도적·수도사 데이터**는 직업 단계(WP9, 11.1)다. MVP 의 WP1d·WP3 은 형·로딩·주인공 만들기·`sorcerer` 한 파일까지.
+
+### 6.17 자원 묶음 `requires`·`ContentAvailability` (v0.6, 사용자 결정 H, 기획 19.4)
+
+```csharp
+// Core Defs/ContentBundle.cs (계약, WP1d)
+public enum ContentBundle : byte { Hellfire, Hfmonk, Hfmusic, Hfvoice }     // JSON: "hellfire" "hfmonk" "hfmusic" "hfvoice"
+public static class ContentBundles { public static string MpqName(ContentBundle b); }   // "hellfire.mpq" …
+// 정의에 더하는 칸(모두 기본 빈 목록): EnemyDef.Requires, StageDef.Requires, HeroClassDef.Requires, WeaponDef.Requires, MusicDef.Requires (+ MusicDef.Fallback: DefRef<MusicDef>?)
+
+// Core Assets/ContentAvailability.cs (계약·구현 WP1d)
+public sealed class ContentAvailability
+{
+    public static ContentAvailability All { get; }                         // 시험·자원 없이 도는 경로
+    public static ContentAvailability From(AssetManifest manifest);        // skipped_bundles 에 없는 묶음 = 있음
+    public bool Has(ContentBundle b);
+    public IReadOnlyList<ContentBundle> Missing(IReadOnlyList<ContentBundle> requires);   // 빈 목록 = 켜짐
+    public IReadOnlyList<ContentBundle> MissingFor(StageDef s);            // = Missing(s.Requires)  (13.5-20 이 적·무기를 덮어 줌)
+    public IReadOnlyList<ContentBundle> MissingFor(HeroClassDef c);
+    public DisabledContent Disabled(GameDefs defs);                        // v0.6.1(v0.6 의 DisabledInDefs 를 대신함): 꺼진 스테이지·직업과 그 묶음
+    public ManifestSkippedBundle? Skipped(ContentBundle b);                // v0.6.1: 건너뛴 이유(없음·--skip-bundles·열 수 없음·판 다름) — 타이틀 한 줄의 앞말. All 이면 늘 null
+}
+public sealed record DisabledContent(IReadOnlyList<StageDef> Stages, IReadOnlyList<HeroClassDef> Heroes, IReadOnlyList<ContentBundle> Bundles)
+{
+    public bool Any => Stages.Count > 0 || Heroes.Count > 0;              // 타이틀 한 줄·ASSETS disabled= 는 이것이 참일 때만(음악만 대체되면 거짓)
+}
+```
+
+- **꺼짐 단위는 스테이지·직업**이다(기획 19.4 "그 정의를 쓰는 스테이지·직업이 통째로 꺼진다"). 적·무기·음악은 스테이지·직업을 거쳐서만 쓰이고 13.5-20 이 `requires` 를 위로 덮게 하므로, 스테이지·직업 자신의 `requires` 만 보면 된다.
+  음악은 꺼지지 않고 `fallback` 으로 바뀐다(6.15). 그래서 `hfmusic` 만 없으면 `Disabled(defs).Any` 가 거짓이고 타이틀 한 줄도 없다 — 로그 `AUDIO music=… fallback=…` 만 남는다(v0.6.1).
+- **시뮬레이션은 묶음을 모른다**: `Sim/` 은 `ContentAvailability` 를 쓰지 않는다(소스 문자열 시험, 10.1 `Sim`). 레벨업 후보도 PC 의 묶음이 아니라 **정의**로 거른다 — 무기 `requires ⊆ 스테이지 requires ∪ 직업 requires`(6.8).
+  그래서 같은 씨앗·스테이지·직업이면 헬파이어 MPQ 유무와 상관없이 결과가 같고(기획 19.4 "결정성"), 꺼진 스테이지·직업은 애초에 시작되지 않는다.
+- **쓰는 곳**: 시작 검사 ③ "꺼짐"(WP7, 1.4 끝), 타이틀 한 줄·스테이지 카드 어둡게(WP6, 8.1), 직업 고르기 카드(WP9), 음악 대체(WP8), `--hero`·`--stage` 가 꺼진 것을 고르면 종료 코드 5 와 이유(WP7, 9절).
+  시험·`--validate-data` 는 `All` 을 쓴다(자원 없이 모든 정의를 검사).
+- 카드 문구의 MPQ 이름은 `ContentBundles.MpqName` 이 만든다: `헬파이어 자원 필요(hellfire.mpq)`(기획 12.5). 타이틀 한 줄의 앞말은 `Skipped(b).Reason` 으로 "없음" / "읽지 못함" 을 가른다(1.4 끝, v0.6.1).
 
 ---
 
@@ -2069,6 +2411,8 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
   - **뒷둘레 벽**: 막힌 칸 중 뒤쪽 이웃((tx−1, ty)·(tx, ty−1)·(tx−1, ty−1))에 걸을 수 있는 칸이 하나도 없는 칸(뒷벽 줄과 그 모서리). 어떤 유닛보다도 뒤라 **0b 층**(바닥 바로 뒤)에 그린다.
   - **앞둘레 턱**: 막힌 칸 중 앞쪽 이웃((tx+1, ty)·(tx, ty+1)·(tx+1, ty+1))에 걸을 수 있는 칸이 하나도 없는 칸. 모든 유닛보다 앞이라 **5층**(4층 뒤)에 그린다. 주인공 가림 판정 대상이다.
   - **안쪽 기둥·벽**(그 밖의 막힌 칸, 문 끝 조각 포함): 4층에서 유닛과 y 정렬.
+  - (v0.6) 안쪽 방·짧은 벽·창살도 같은 이웃 판정으로 나뉜다(배치 출처를 보지 않음). 둘레에 겹쳐 놓은 방 바깥 벽(`over_border`)은 뒤가 맵 밖이라 뒷둘레 무리, 방 안쪽 벽·창살 기둥은 4층(기획 10.2).
+    창살의 걷기만 막는 칸(`w`)도 Solid 라 원작 바닥 판정(A.4)으로는 바닥이 아니다 — 기둥 그림 항목(4층)이고 가림·안개도 벽 칸 규칙을 따른다(시야는 막지 않으므로 그 너머 칸이 보인다).
   - 무리는 `ArenaGrid` 에서 한 번 계산한다(칸마다 바이트 하나, `ArenaRenderer` 가 맵을 열 때). 맵 밖 입장 중 유닛은 뒤쪽 바깥이면 0b 층(뒷벽보다 먼저), 앞쪽 바깥이면 5층(앞 턱보다 뒤)에 그린다(7.3).
 - 4층 항목을 `DrawItem { float SortY; int Tiebreak; Kind; Index }` 배열에 모아 `Array.Sort`(키 = SortY, 같으면 Tiebreak) — 같은 y 에서 깜빡임 없음.
   - 유닛 SortY = 발 y. 단 **덧그림이 있는 칸 안에 발이 있는 유닛**은 `min(발 y, 그 칸 중심 y − 0.5)`(아래 덧그림). Tiebreak = 개체 ID.
@@ -2100,7 +2444,7 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
   그림 메모리 이득이 없고, 색인 PNG 해독기·팔레트 데이터를 게임에 따로 둬야 한다. 디스크만 변종 수만큼 늘어난다.
 - **그림 메모리**: 칸 그대로의 시트면 변종 하나(좀비 묶음 서기·걷기·공격·죽기)가 25MB 안팎, 스테이지 1 의 변종 12개 + 보스면 300MB 를 넘는다. 프레임을 잘라 묶으면 약 1/3 로 본다(추정, WP0 가 잰다 —
   좀비 묶음 한 페이지가 2048² 안이면 16MB).
-  게다가 `TextureStore` 는 **스테이지 시작 때 그 스테이지에서 나올 수 있는 것만** 읽는다: 나오는 적(구간 가중치·이벤트·소환·분열·호위 — 6.14 "안 나오는 적" 과 같은 계산)의 (그림 묶음 × 변종),
+  게다가 `TextureStore` 는 **스테이지 시작 때 그 스테이지에서 나올 수 있는 것만** 읽는다: 나오는 적(구간 가중치·이벤트·소환·분열·호위 — v0.6.1: `StageReach.Enemies`, 6.14)의 (그림 묶음 × 변종),
   주인공, 모든 무기·이펙트·투사체·획득물·아이콘, 그 맵의 그림. 스테이지를 바꾸면 쓰지 않는 것은 내린다. 로그 `ASSETS stage=… textures=… vram_mb=…`(R7).
 - **색조**: SpriteBatch 색 = 색조 × 알파(premultiplied 이므로 `new Color(r*a, g*a, b*a, a)`). 곱하기라 어둡게만 된다(기획 8.1 그대로).
 - **발광**: 같은 프레임을 `BlendState.Additive` 로 발광 색 × 알파로 한 번 더(7층). 발광 색·알파·맥동·번쩍임·발밑 원·알파 배율은 모두 `Enemy.Visual`(6.6)에서 읽는다 — 렌더는 부품 종류를 모른다.
@@ -2210,7 +2554,7 @@ public readonly record struct CueEvent(int Tick, CueKind Kind, Vector2 Pos, IDef
 | `EnemyAttack` / `EnemySpecial` | WP4 `EnemyThink`(능력·패턴이 `attack`·`special` 클립을 시작할 때) | `EnemyDef` | `enemies.<id>` → 없으면 `sprite_sets.<묶음>` 의 `attack`/`special` | monster(보스면 boss) |
 | `EnemyHit` | WP3 `DamageResolve`(적에게 실제로 들어간 피해) | `EnemyDef` | 같음, `hit` | monster_hit |
 | `EnemyShot` | WP4 `shoot_projectile`·`projectile_spread` | `ProjectileDef` | `projectiles.<id>.fire` | monster(보스면 boss) |
-| `HeroHurt` / `HeroDied` | WP3 `DamageResolve`(피격 무적이 아닐 때 한 번) / 죽음 처리 | — | `hero.hurt` / `hero.death` | hero |
+| `HeroHurt` / `HeroDied` | WP3 `DamageResolve`(피격 무적이 아닐 때 한 번) / 죽음 처리 | — | `hero.<World.HeroClass.Id>.hurt` / `.death`(v0.6) | hero |
 | `PickupCollected` / `PickupDropped` | WP3 `Pickups` / 드롭 생성 | `PickupDef` | `pickups.<id>.collect` / `.drop` | pickup |
 | `BossArrived` / `BossPhase` | WP4 `boss`·`miniboss` 이벤트 / `PhaseController`(페이즈 `voice: true`) | `EnemyDef` | `enemies.<id>.voice` | boss_voice |
 | `ElitePack` | WP4 정예 무리 등장 | — | `ui.elite_pack` | ui |
@@ -2234,7 +2578,8 @@ public readonly record struct CueEvent(int Tick, CueKind Kind, Vector2 Pos, IDef
 - 시간 기준은 앱 틱(벽시계가 아님) — 같은 실행이면 같은 고르기 결과(로그 수까지 재현). 무음과 소리 켬도 같은 길이 색인을 쓰므로 `AUDIO` 수가 같다(10.1 `Audio` 시험).
 
 **재생**(게임 `Audio/`)
-- `SoundBank`: `SoundEffect.FromFile(path)`(파이프라인 없이, 16비트 PCM — 가져오기가 바꿔 둠). 스테이지 시작 때 연결 표에서 그 스테이지에 쓸 소리만 읽는다(`TextureStore` 와 같은 "나올 수 있는 것" 계산). 효과음 전부 수 MB.
+- `SoundBank`: `SoundEffect.FromFile(path)`(파이프라인 없이, 16비트 PCM — 가져오기가 바꿔 둠). 스테이지 시작 때 연결 표에서 그 스테이지에 쓸 소리만 읽는다(`TextureStore` 와 같은 "나올 수 있는 것" 계산 = `StageReach.Enemies` — v0.6: 고른 직업의 `hero.<id>` 포함). 효과음 전부 수 MB.
+  v0.6: 꺼진 스테이지·직업은 시작되지 않으므로 건너뛴 묶음의 소리를 읽을 일이 없다. 음악은 `MusicPlayer` 가 그 곡의 `requires` 를 `ContentAvailability` 로 보고 없으면 `fallback` 을 튼다(6.15, 로그 `AUDIO music=… fallback=…`).
 - 목소리 칸: `SoundEffectInstance` 24개 풀 + 반복 소리 칸. 음량 = 설정(전체 × 효과음) × 분류 × 정의.
 - `MusicPlayer`: 곡은 최대 두 곡만 메모리에(바뀌는 동안 옛 곡·새 곡, 가장 긴 `dlvlb` 약 15MB), `SoundEffectInstance.IsLooped`. 보스 대사가 나면 `voice_duck`(50%, 2s).
   장면이 바뀌면 **파일 읽기는 작업 스레드**에서(`File.ReadAllBytes` → `byte[]`) 시작하고 옛 곡을 `music_fade`(0.5s)에 걸쳐 줄인다. 읽기가 끝난 뒤 첫 프레임에 주 스레드가 `SoundEffect` 를 만들어 튼다
@@ -2369,8 +2714,9 @@ public interface IAutoplayDriver { AppTick Now { get; } bool Ready(IScene scene)
 | 씬 | 종류 | 들어가는 곳 → 나가는 곳 |
 |---|---|---|
 | `DataErrorScene` | 씬 | 시작 때 데이터 오류 또는 **자원 없음·낡음**(1.4 끝: 무엇이 없는지 + 가져오기 명령 한 줄) → 종료만 |
-| `TitleScene` | 씬 | 시작 → 새 게임(StageSelect) / 설정(오버레이) / 종료 |
-| `StageSelectScene` | 씬 | 카드 2장(잠김 표시) → Play |
+| `TitleScene` | 씬 | 시작 → 새 게임(StageSelect, 직업 단계부터 HeroSelect) / 설정(오버레이) / 종료. v0.6: 꺼진 스테이지·직업이 있으면 메뉴 아래 한 줄(`ContentAvailability.Disabled(defs).Any` — v0.6.1: 음악만 대체되면 없음, 기획 12.5) |
+| `HeroSelectScene` (직업 단계, WP9) | 씬 | 카드 4장(서기 그림·이름·설명·특성, 꺼진 직업은 어둡게 + MPQ 이름) → StageSelect. 고른 직업은 저장의 `last_hero` |
+| `StageSelectScene` | 씬 | 카드 2장(잠김 표시, v0.6: 꺼짐 표시 — 어둡게 + `헬파이어 자원 필요(hellfire.mpq)`, 해금과 따로) → Play(고른 직업의 최고 기록을 보임) |
 | `PlayScene` | 씬 | 월드 + HUD. 시뮬레이션 소유 → Result |
 | `LevelUpOverlay` | 오버레이(멈춤) | `World.AwaitingChoice == LevelUp` 이면 Play 가 **같은 앱 틱 안에서** 올림(3.3) |
 | `ChestOverlay` | 오버레이(멈춤) | 상자 열기 1.2s 연출 |
@@ -2381,7 +2727,7 @@ public interface IAutoplayDriver { AppTick Now { get; } bool Ready(IScene scene)
 - 씬 스택은 상태 패턴이다: 위 씬이 입력을 먼저 받고, `PausesBelow` 가 참이면 아래로 내려가지 않는다.
 - `PlayScene` 은 시뮬레이션과 그림을 잇는 곳이다: 앱 틱마다 `StageStepper.AppTick(world, command)` 를 부르고(3.3), `World` 를 읽어 `WorldRenderer`·`Hud` 에 넘긴다.
   레벨업 선택은 `world.Progression`(`IProgression`)의 `Choose(index)` / `Reroll()` / `Skip()` 를 오버레이가 직접 부른다(시뮬레이션이 멈춘 사이라 결정성에 영향 없음).
-  자동 조작이면 오버레이가 Core `AutoplayPolicy.PickCard` 의 답을 정해진 앱 틱 수 뒤에 고른다.
+  자동 조작이면 오버레이가 Core `AutoplayPolicy` 인스턴스(v0.6.1 — `AutoplayDriver` 가 판마다 하나 만듦, 9절)의 `PickCard` 답을 정해진 앱 틱 수 뒤에 고른다.
   프레임 끝에 `FxSystem.Consume` → `AppServices.Audio.Consume` → `world.Presentation.Clear()` 순서로 표시 이벤트를 소비한다(3.5·7.9). 마우스 이동은 `AppServices.Render.ScreenToWorld` 로.
 - 소리(v0.3): 타이틀·스테이지 선택·결과는 `PlayMusic("title")`, `PlayScene` 은 `PreloadStage` 뒤 `PlayMusic(<스테이지 ID>)`, 일시정지 오버레이는 `SetPaused`, 레벨업·상자 오버레이와 메뉴는 `PlayUi`(7.9).
 - 씬이 바뀔 때마다 로그에 `SCENE <이름> app_tick=…`, 결과 화면이 열릴 때 `RESULT …` 를 쓴다(9절).
@@ -2400,6 +2746,7 @@ public interface IAutoplayDriver { AppTick Now { get; } bool Ready(IScene scene)
     셰이더·렌더 타깃 가림을 쓰지 않는 이유: 그림이 작고 바뀌는 때가 드물어 CPU 가 가장 단순하고, 같은 가 본 칸이면 같은 픽셀이다. 칸 하나가 4×2px 라 경계 계단은 미니맵 크기에서 문제가 없다.
     `--reveal` 이면 원래 그림 그대로. 원작 자동 지도처럼 벽 선을 따로 그리지 않는다(기획 10.2).
   - **점 규칙**: 주인공 흰색, 중간 보스·보스 큰 빨강, 정예 상자 금색은 늘. 정예·우두머리 파랑은 `FogMath.EnemyAlpha > 0` 일 때만(그 적이 화면에 그려질 때와 같은 판정). 일반 적은 그리지 않는다.
+    v0.6.3: 방 보급(`Pickup.SupplyRoom` 이 있는 획득물)은 흰 점으로 늘 — 가 본 곳이 아니어도, 주울 때까지(기획 10.1, 6.12).
 - 위젯: `Label`, `Button`, `Card`, `Bar`, `IconSlot` — 즉시 모드에 가까운 작은 클래스. 마우스 올림·방향키 선택·Enter 를 같은 "포커스" 개념으로.
 - 글꼴: `C:\Windows\Fonts\malgun.ttf` → `malgunbd.ttf` 순으로 찾고, 모두 없으면 `arial.ttf` + 로그 경고(한글이 네모로 보임).
   `gulim.ttc` 같은 글꼴 묶음(.ttc)은 `FontSystem.AddFont(byte[])` 에 몇 번째 글꼴인지 고를 인자가 없어 목록에서 뺐다. 실제로 넣어 보고 되면 다시 넣는다.
@@ -2407,6 +2754,23 @@ public interface IAutoplayDriver { AppTick Now { get; } bool Ready(IScene scene)
 ### 8.3 저장 (기획 열린 질문 3)
 
 - 위치: `%LOCALAPPDATA%\DiabloDefenceRemastered\save.json`(기록·해금·누적 금화·설정 한 파일, `version` 필드). 쓰기는 임시 파일 → 바꿔치기.
+- **기록은 스테이지 × 직업**(v0.6, 기획 4.5 — MVP 부터 이 모양): `"records": { "<스테이지 ID>": { "<직업 ID>": { "best_time", "best_level", "kills", "victory" } } }`, `"last_hero": "<직업 ID>"`.
+  MVP 는 늘 `sorcerer` 로 판이 돌아 결과가 그 아래에 쓰인다 — 직업을 더할 때 저장을 옮기지 않는다. 해금은 스테이지 단위(직업과 무관). 저장에 있는 직업이 데이터에 없거나 꺼져 있으면 `rules.hero.class` 로 시작한다(기록은 지우지 않음).
+- **저장 계약**(v0.6.1, 게임 `App/Contracts/AppServices.cs` — WP1d-형): 직업은 결과에 실려 오고, 저장 구현이 "늘 `sorcerer`" 를 가정하지 않는다(가정하면 WP9 에서 다른 직업의 판이 마법사 기록으로 조용히 저장된다).
+
+```csharp
+public sealed record RunResult(string StageId, string HeroClassId, bool Victory, float StageTime, int Level, int Kills, int Gold);   // HeroClassId = World.HeroClass.Id
+public sealed record StageRecord(float BestTime, int BestLevel, int Kills, bool Victory);
+public interface ISaveService
+{
+    // … 기존(Settings·TotalGold·IsUnlocked·SaveSettings·RecordResult) 그대로
+    string? LastHero { get; }                                   // 저장의 last_hero(없으면 null)
+    void SetLastHero(string heroClassId);                       // 직업 고르기(WP9)·--hero 없는 판 시작 때. RecordResult 는 기록만 쓴다
+    StageRecord? BestRecord(string stageId, string heroClassId); // StageSelect 의 고른 직업 최고 기록(WP6)
+}
+```
+
+  쓰는 곳: WP6(판 시작 때 고른 직업으로 `SetLastHero`, 결과에 `HeroClassId` 를 채워 `RecordResult`, StageSelect 가 `BestRecord`), WP7(`SaveStore` 구현·옛 판 읽기 — 직업 없는 기록은 `sorcerer` 아래로).
 - 설정(`GameSettings`, 계약 변경 WP1b): 전체 화면, 화면 흔들림, 미니맵, 피해 숫자, **음량 셋**(전체·효과음·음악, 0~100% 10% 단위 — 기획 12.3). 저장 파일에 없으면 음량은 `rules.audio.defaults`(80·80·60%) — `GameSettings` 의 음량은 `float?`(null = 없음)이고 기본값은 rules 한 곳에만 둔다.
 - `--save-dir <폴더>` 로 위치를 바꾼다. 개발 옵션 실행(9절 목록)인데 `--save-dir` 가 없으면 사용자 저장 파일을 **읽지도 쓰지도 않는다** — 기본값(창 모드, 스테이지 1 만 열림, 기록 없음)으로 시작하고 메모리에만 저장한다.
   읽기까지 막는 이유: 사용자가 켜 둔 전체 화면이 검증 실행에서 화면을 덮고, 사용자의 해금 상태에 따라 자동 조작이 고르는 스테이지가 달라지기 때문이다(brief 7절).
@@ -2422,10 +2786,12 @@ public interface IAutoplayDriver { AppTick Now { get; } bool Ready(IScene scene)
 |---|---|
 | `--seed <n>` | 시뮬레이션 씨앗. 없으면 시각에서 만들고 로그 첫 줄에 적음 |
 | `--autoplay` | 자동 조작(기획 15절). 메뉴도 넘김(각 화면 0.5s 뒤). `--background` 를 함께 켬. 실제 키보드·마우스는 읽지 않음. **안개를 무시한다**(v0.5): `AutoplayPolicy` 는 `World.Visibility` 를 읽지 않고 월드 전체로 판단한다(기획 10.7·15절) — 봇 판단이 그리기 상태에 묶이지 않고, 적 규칙의 시야 조건은 봇이든 사람이든 같다 |
-| `--stage <id>` | 타이틀·선택을 건너뛰고 바로 시작(잠금 무시). `stage_cathedral`, `stage_catacombs` |
+| `--stage <id>` | 타이틀·선택을 건너뛰고 바로 시작(잠금 무시). `stage_cathedral`, `stage_catacombs`. v0.6: 꺼진 스테이지(헬파이어 묶음 없음, 6.17)면 시작하지 않고 로그에 이유 + 종료 코드 5 |
+| `--hero <id>` (v0.6) | 그 직업으로 시작(`AppOptions.HeroClass`, 직업 고르기 화면을 건너뜀 — 기획 15절). 없으면 저장의 `last_hero`(개발 옵션 실행은 저장을 안 읽으므로 `rules.hero.class` = `sorcerer`). 없는 ID 는 옵션 오류(64, 데이터를 읽은 뒤 판정), 꺼진 직업은 종료 코드 5 와 이유. 개발 옵션 판정(저장 보호)에 든다 |
+| `--autoplay-visit rooms` (v0.6) | `--autoplay` 와 함께만(아니면 옵션 오류). 자동 조작이 이동 규칙에 더해 맵의 방 기준점(`room_*`)을 이름 순으로 차례로 들른다(기준점 쪽 가중 0.8, 반경 60 안에 닿으면 다음 방, 끝나면 처음부터 — 기획 15절). **v0.6.1**: 기준점 쪽 방향은 직선이 아니라 **길 방향**(`INavWorld.TryPathStep(주인공, 기준점, 14)` 의 다음 꺾임점, 0.5초마다 다시 구함 — 문이 반대쪽 벽에 있는 방에서 벽에 붙어 미끄러지지 않게), 40초 안에 못 닿으면 다음 방으로 넘어간다. 정책 인스턴스가 기록(`Events` — 닿음·넘김 각각 방 ID·스테이지 틱, `RoomStats` — 방마다 들른 수·넘긴 수·방 안에 있던 틱·그동안 받은 피해)을 가지고, WP6 이 새 기록마다 로그 `VISIT room=<id> stage_tick=…` 또는 `VISIT_SKIP room=<id> stage_tick=…` 를, 판 끝에 방마다 `VISITS room=<id> visits=… skips=… inside_s=… damage=…` 를 쓴다(기획 15절). "방 안" 은 방 바닥 칸(v0.6.3: `World.Rooms.IndexAt(주인공 자리)` 가 그 방 — 방 체류 압박과 같은 계산, 6.11). `AppOptions.AutoplayVisit`(Core `AutoplayVisit` 열거형) → WP6 이 `new AutoplayPolicy(visit)` 로 판마다 하나 만듦. 기준점이 없는 맵이면 경고 한 줄 뒤 보통 자동 조작. 결정적이다(봇 입력이 시뮬레이션에 들어가므로 같은 씨앗·같은 옵션이면 같은 해시 — 방 번호 상태는 정책 인스턴스에, 시뮬레이션 상태가 아님). v0.6.3: 이 옵션과 상관없이 판 끝에 방마다 `ROOMS room=<id> doors=… inside_s=… damage=… supplies=…`(WP7, `World.RoomPresence` — 기획 10.1 첫 플레이 로그) |
 | `--start-at <mm:ss>` | 그 시각부터. 지난 이벤트는 건너뜀 — 단 **상태형 이벤트(`light_change`)는 그 시각 이전 것을 시간 순서로 차례로 적용한 뒤 시작**(v0.5.1 — 12:00 에서 시작한 스테이지 2 의 어둠·기억 밝기·시야 반경이 보통 판과 같게), 구간·배율은 그 시각 값. **보스 시각 이후면 보스를 바로 내보내고 보스 시계(광폭화)를 (시작 시각 − 보스 시각)으로 맞춘다**. 중간 보스는 건너뜀 |
 | `--time-scale <n>` | 실제 시간 n 배속. 결과는 n 과 상관없이 같다(3.4) `[해석]` |
-| `--god`, `--level <n>`, `--weapons <id:lv,…>`, `--passives <id:lv,…>` | 기획 15절 |
+| `--god`, `--level <n>`, `--weapons <id:lv,…>`, `--passives <id:lv,…>` | 기획 15절. v0.6: 고른 직업이 고를 수 없는 무기(`classes`)는 옵션 오류(64, 데이터를 읽은 뒤) |
 | `--stress <적 수>[,<투사체 수>]` | 상한을 그 값으로 올리고 스테이지 구성 가중치대로 맵 전체·생성 띠에 즉시 채운다(`--god` 함께 켬, 생성 출처 `Stress`). 투사체 수를 주면 그 수를 유지하는 시험용 발사를 더함 |
 | `--freeze-ai` | 적 생각·이동을 멈춘다(렌더 정적 장면, `--stress` 와 함께) |
 | `--capture <png>` | 캡처 파일 경로. 상대 경로는 현재 폴더 기준. 원작 그림이 찍히므로 **저장소 밖**(스크래치·임시 폴더)에 둔다(R24 — 저장소의 `out/`·`logs/` 는 `.gitignore` 로 막지만 다른 곳은 못 막는다) |
@@ -2450,12 +2816,12 @@ public interface IAutoplayDriver { AppTick Now { get; } bool Ready(IScene scene)
 | `--log-hash <csv>` | 스테이지 틱 60마다 `app_tick, stage_tick, hash`(3.4 `StateHasher`) |
 | `--save-dir <폴더>` | 8.3 |
 
-- **사용자 데이터 보호**(brief 7절): 개발 옵션(`--autoplay`·`--stage`·`--capture*`·`--preview`·`--validate-data`·`--stress`·`--reveal`·`--god`·`--level`·`--weapons`·`--passives` 중 하나라도 — v0.5.1 에 뒤의 다섯을 더함)이 있고 `--save-dir` 가 없으면
+- **사용자 데이터 보호**(brief 7절): 개발 옵션(`--autoplay`·`--stage`·`--capture*`·`--preview`·`--validate-data`·`--stress`·`--reveal`·`--god`·`--level`·`--weapons`·`--passives`·`--hero` 중 하나라도 — v0.5.1 에 다섯, v0.6 에 `--hero` 를 더함)이 있고 `--save-dir` 가 없으면
   저장 파일을 **읽지도 쓰지도 않고** 기본값으로 시작한다(창 모드, 해금 = 스테이지 1 만, 기록 없음). `--window` 는 저장된 전체 화면 설정보다 늘 우선한다. 같은 조건이면 소리도 기본 무음이다.
 - 자동 실행에서 데이터 오류가 나면 DataError 화면을 띄우지 않고 종료 코드 2 로 끝난다(입력을 기다리며 멈추지 않게). 자원이 없거나 낡았으면 종료 코드 5(1.4 끝 — `--autoplay` 없이 캡처만 주면 안내 화면을 캡처한 뒤 5).
 - 개발 옵션 실행은 `new GameApp()` 전에 환경 변수 `SDL_WINDOW_NO_ACTIVATION_WHEN_SHOWN=1`(`--background`)과 `ALSOFT_DRIVERS=null`(`--sound-device default` 가 없을 때, 7.9)을 둔다.
 - 종료 코드: 0 정상, 1 처리 안 된 예외(로그에 스택), 2 데이터 오류, 3 요청한 캡처가 하나라도 안 생김, 4 벽시계 시간 초과, 5 자원 없음·낡음, 64 옵션 오류.
-- 고정 로그 문장(판정용): 첫 줄 재현 정보(3.4), `ASSETS manifest=… format=… stage=… textures=… vram_mb=…`, `SCENE <이름> app_tick=…`, `RESULT stage=… outcome=victory|defeat stage_time=… level=… kills=… seed=…`,
+- 고정 로그 문장(판정용): 첫 줄 재현 정보(3.4 — v0.6: `hero=<직업 ID>` 포함), `ASSETS manifest=… format=… stage=… textures=… vram_mb=… bundles=… skipped=… disabled=…`(v0.6 — 만든 묶음, 건너뛴 묶음, 꺼진 스테이지·직업 ID), `SCENE <이름> app_tick=…`, `RESULT stage=… hero=… outcome=victory|defeat stage_time=… level=… kills=… seed=…`, `VISIT room=… stage_tick=…`·`VISIT_SKIP room=… stage_tick=…`·`VISITS room=… visits=… skips=… inside_s=… damage=…`(v0.6.1, `--autoplay-visit rooms`),
   `AUDIO device="…"`, `AUDIO muted=… requested=… played=… dropped_cap=… dropped_interval=… dropped_offscreen=…`,
   `FOG stage_tick=… in_sight=… explored=… enemies_drawn=… enemies_hidden=… reveal=0|1`(v0.5.1 — 캡처마다, 그 프레임의 시야 안 칸·가 본 칸·그린 적·숨긴 적 수. `--reveal` 이면 `enemies_hidden=0`), 끝 줄 `EXIT code=…`.
 - 실행 파일은 WinExe 다. **Windows GUI 실행 파일은 셸이 끝나기를 기다리지 않으므로** 종료 코드는 아래처럼 받고, 판정 근거는 로그 파일로 한다.
@@ -2480,32 +2846,35 @@ $p.ExitCode
 | 폴더 | 무엇을 | 담당 |
 |---|---|---|
 | `Common` | `FacingMath.ToColumn`(8방향: 남 0, 서 2, 북 4, 동 6 / 16방향 / **등각 보정: 화면 (−32, 16) → 8방향 열 1**, 보정 끔이면 45° 열), **`FromColumn` 왕복 8·12·16방향(등각 보정 포함)**, **`ToVector(SouthWest)` → 8방향 열 1·16방향 열 2**, `SimRandom` 재현, `StableHash`, `EntityStore` 핸들(지운 뒤 낡은 핸들은 무효)·압축, 풀 재사용, `AnimClock`(이벤트 프레임 1부터·넘김, 재생 배율), `CameraMath`, `TickAccumulator`(틱 상한·버린 틱·캡처 멈춤, `--time-scale` 1 과 8 이 같은 앱 틱 열), `DefRef` 한 번만 채움, `StageStepper`(히트 스톱·늘임·`AwaitingChoice`) | WP1, WP1b |
-| `Map` | `IsoMath` 칸 중심 ↔ 칸 번호 왕복, 외곽 상자(N 40 → 2560×1408, N 44 → 2816×1536), 바깥 마름모 안/밖, `ArenaLayout.Expand`(합성 타일셋: 테두리 여덟 자리·문 2칸 + 끝 조각·`place`·`line`·바닥 섞기 결정적·둘레 표시), 성질 → 하위 칸(**v0.5: 8글자 → 걷기·시야·투사체 비트, 격자 밖은 시야를 막지 않음, `Prop` 왕복**), `LayoutHash` 가 배치가 같으면 같고 기둥 하나 옮기면·성질 표 한 칸 바꾸면(**시야 글자만 `x` → `X` 여도**) 다름, 성질 표에 없는 메가타일 오류·쓰지 않는 메가타일이 표에 있으면 오류, `MapDataReader`(작은 JSON: 두 종류만 읽음·다른 종류의 오류와 무관·타일셋 연결·`extends` 오류), `ResolvedMap`(타일 → 월드 px, 입구·기준점·시작) | WP1b |
-| `Assets` | `SpriteMeta` 읽기·검사(사각형이 페이지 밖·개수 ≠ 방향 × 프레임·없는 페이지 번호면 오류), `ImportTable`(표 8개 엄격 읽기·모르는 속성 오류, 이름 목록: 묶음 × 변종 페이지, 마법 방향 묶기, 아이콘, 소리 `vars` 펼치기 → `d1/sound/…`, 동작별 `width`·`shadow_alpha` 덮어쓰기 순서), `ArenaArt`(바닥 조각 이름 규칙 — 합성 배치에서 손으로 센 조각 목록과 같음, `cells` frame 1부터), manifest 판 대조. **13.5-10**: ① 표 → 이름 목록(기본) ② 실제 정의가 가리키는 이름 ⊂ 표가 만드는 이름 + `exe.json`(`Integration`, WP7 로더 필요). **도구 경로와 게임 경로의 `LayoutHash` 가 같음**(실제 `Data/`, `Integration`). 자원이 있으면(`DDR_ASSETS`) manifest·메타·PNG IHDR 를 정의와 대조, 없으면 건너뜀 표시, 판·표 해시가 다르면 "낡음" 건너뜀 표시(1.3) | WP1b(형), WP0(이름 대조) |
-| `Data` | 규칙별 고장 난 작은 JSON(`Fixtures/`)으로 각 오류가 정확한 파일·경로로 나오는지. `extends` 병합·순환, `*_add`·`*_patch`, **페이즈 누적 풀기(patch → add → remove, 같은 ID 자리 지킴)**, 모르는 속성, 비슷한 ID 제안, 항목마다 오류 모음, `rules` 하위 키 합치기·중복, **파일 목록을 뒤섞어 읽어도 `GameDefs` 해시가 같다**, 가중치가 JSON 순서 배열, 변종이 그림 묶음에 없으면 오류 | WP7 |
+| `Map` | `IsoMath` 칸 중심 ↔ 칸 번호 왕복, 외곽 상자(N 40 → 2560×1408, N 44 → 2816×1536), 바깥 마름모 안/밖, `ArenaLayout.Expand`(합성 타일셋: 테두리 여덟 자리·문 2칸 + 끝 조각·`place`·`line`·바닥 섞기 결정적·둘레 표시), 성질 → 하위 칸(**v0.5: 8글자 → 걷기·시야·투사체 비트, 격자 밖은 시야를 막지 않음, `Prop` 왕복**), `LayoutHash` 가 배치가 같으면 같고 기둥 하나 옮기면·성질 표 한 칸 바꾸면(**시야 글자만 `x` → `X` 여도**) 다름, 성질 표에 없는 메가타일 오류·쓰지 않는 메가타일이 표에 있으면 오류, `MapDataReader`(작은 JSON: 두 종류만 읽음·다른 종류의 오류와 무관·타일셋 연결·`extends` 오류), `ResolvedMap`(타일 → 월드 px, 입구·기준점·시작). **v0.6**: `grid` 놓기(`.` 건너뜀·없는 이름 오류·`piece` 와 같이 쓰면 오류), `over_border`(테두리 칸 덮음·둘레 표시 남음·문 칸이면 오류, 없으면 테두리 겹침 오류 그대로), `marks` 번호가 이름 붙인 번호 밖이면 오류·`marks` 를 바꿔도 `LayoutHash` 같음, 13.5-19(`open_center` 안 기둥 셋 → 오류·둘 → 통과·벽 → 오류, `closed_door` 놓기 경고·`decor_why` 면 없음, 방 기준점이 막힌 칸이면 오류). **v0.6.1**: `grid` 줄의 공백 여러 개·줄마다 다른 칸 수, `marks` 의 `closed_door` 키 읽기, `over_border` 막힘 줄어듦(둘레 왼쪽 열에 `wall_h` → 오류, 모서리 → 통과), 하위 칸 검사(모서리 자리에 가로·세로 조각만 둔 방 → 하위 1칸 틈 오류·모서리 조각 → 통과, 둘레 바로 옆 메가 벽 줄의 끝을 막은 띠 → 갇힌 바닥 오류, 아치 문 → 1칸 틈 오류), **6.11 예 배치 좌표 그대로 만든 합성 맵(합성 타일셋 이름)이 13.5-19 전체 통과**(예와 검사가 다시 어긋나지 않게), `ValidateRooms` 의 경고가 `MapDataReader` 결과에 `DataSeverity.Warning` 으로. **v0.6.3**: `room_areas` 읽기, `RoomFloors`(6.11 예: 문 수 피 방·창살 방 1·ㄱ 안·Γ 안 2, 피 방 바닥 81칸 — 오른쪽 벽 바깥 반 칸·문 틈 빠짐, 칸·월드 px 의 방 번호, 같은 입력 같은 결과, 영역 없으면 `Empty`), 방 영역 오류(없음·키·맵 밖·겹침·기준점 밖·문 0), 빈 `grid`·`.` 만 있는 `grid` 오류 | WP1b, v0.6 WP1d |
+| `Assets` | `SpriteMeta` 읽기·검사(사각형이 페이지 밖·개수 ≠ 방향 × 프레임·없는 페이지 번호면 오류), `ImportTable`(표 8개 엄격 읽기·모르는 속성 오류, 이름 목록: 묶음 × 변종 페이지, 마법 방향 묶기, 아이콘, 소리 `vars` 펼치기 → `d1/sound/…`, 동작별 `width`·`shadow_alpha` 덮어쓰기 순서), `ArenaArt`(바닥 조각 이름 규칙 — 합성 배치에서 손으로 센 조각 목록과 같음, `cells` frame 1부터), manifest 판 대조. **13.5-10**: ① 표 → 이름 목록(기본) ② 실제 정의가 가리키는 이름 ⊂ 표가 만드는 이름 + `exe.json`(`Integration`, WP7 로더 필요). **도구 경로와 게임 경로의 `LayoutHash` 가 같음**(실제 `Data/`, `Integration`). 자원이 있으면(`DDR_ASSETS`) manifest·메타·PNG IHDR 를 정의와 대조, 없으면 건너뜀 표시, 판·표 해시가 다르면 "낡음" 건너뜀 표시(1.3). **v0.6**: 표 `bundle`·`prefer` 엄격 읽기(`optional` 은 모르는 속성 오류), `OutputBundles(arenas)`(묶음 항목 이름 → 묶음, 기본 → null, **v0.6.1: 합성 `l5` 타일셋 항목 `bundle: hellfire` 를 쓰는 맵의 `arena.json`·`floor_*`·`columns.*`·`minimap.png` → hellfire**), manifest `skipped_bundles`(이유 넷)·파일 `bundle`·`sources` 읽기, `ContentAvailability`(빈 `skipped_bundles` → 모두 있음, `hellfire` 건너뜀 → `requires: [hellfire]` 스테이지만 `MissingFor` 비지 않음, `Disabled(defs)` 가 꺼진 스테이지·직업만·`hfmusic` 만 없으면 `Any` 거짓, `Skipped` 가 이유를 돌려줌), 13.5-10 묶음판(`Integration` — 맵 그림·소리 연결 줄 귀속 규칙 포함) | WP1b(형), WP0(이름 대조), v0.6 WP1d(형·`ContentAvailability`) |
+| `Data` | 규칙별 고장 난 작은 JSON(`Fixtures/`)으로 각 오류가 정확한 파일·경로로 나오는지. `extends` 병합·순환, `*_add`·`*_patch`, **페이즈 누적 풀기(patch → add → remove, 같은 ID 자리 지킴)**, 모르는 속성, 비슷한 ID 제안, 항목마다 오류 모음, `rules` 하위 키 합치기·중복, **파일 목록을 뒤섞어 읽어도 `GameDefs` 해시가 같다**, 가중치가 JSON 순서 배열, 변종이 그림 묶음에 없으면 오류. **v0.6**: `hero_classes` 종류 읽기·연결, 13.5-20(기본 스테이지 구간표에 `requires: [hellfire]` 적 → 오류, `requires: [hfvoice]` → 오류, `rules.hero.class` 가 묶음 직업 → 오류, 음악 `fallback` 이 다시 묶음 → 오류), 13.5-21(시작 무기 `classes` 밖·클립 없음·`attack` 클립 없음 → 오류), 소리 연결 `hero` 가 직업 ID 키. **v0.6.1**: 기본 스테이지의 `unlock` 이 묶음 스테이지 → 오류, 특성 패시브가 `trait` 아님·`classes` 밖 → 오류, 맵 정의에 `requires` → 모르는 속성 오류, `StageReach.Enemies`(합성: 소환으로만 나오는 적·분열체의 분열체·페이즈 패턴 소환 포함, 고리가 있어도 끝남, 결정적 순서)와 그것을 쓴 13.5-20(기본 스테이지의 적이 `requires: [hellfire]` 적을 소환 → 오류) | WP7 |
 | `Data`(실제, `Integration`) | 실제 `Data/` 를 엄격 모드로 읽어 오류 0(모든 모듈 검사기 포함 — 길 검사·소리 연결 표). 모든 모듈 등록이 필요하므로 통합 때 기본으로 옮김 | WP7 작성, WP6 통합 |
 | `Geometry` | 원·사각형·다각형(오목 포함) 부호 거리, 밀어내기 방향, 선분 교차, 원 중심에 놓인 점 | WP2 |
 | `Visibility` (v0.5) | `VisibilityField`(합성 맵): 빈 방에서 반경 안 칸 모두 보임·`R + 64` 밖 안 보임, 시야 막힘 벽 뒤 칸 가림·벽 칸 자신은 보임, **꼭짓점 규칙**(대각선으로 이은 벽 새지 않음·기둥 하나 모서리 스침은 안 막음), `x` 기둥 뒤 보임·`X` 기둥 뒤 가림, 맵 밖 칸은 문 틈으로만 보임(둘레 벽 뒤 맵 밖 안 보임), **선 걷기 = 느린 기준 구현**(무작위 격자 200개 × 모든 칸), 같은 칸 안 이동은 다시 계산 안 함(횟수 계측)·칸·반경 바뀜은 다시, 계산 범위 밖으로 나간 칸 `InSight` 거짓, 가 본 칸 N×N 만·단조 증가·6틱 주기·`ExploredVersion`·`ExploredHash`(같은 집합 같은 값, 개수가 같고 집합이 다르면 다른 값), **두 줄 벽(v0.5.1)**: 합성 `XXXX` 메가타일 두 줄 벽에서 안쪽 줄이 보이면 바깥 줄도 보임·가 본 칸, 옆 메가타일로 퍼지지 않음, `L`·`M` 칸은 함께 보임에 들지 않음, `IsClearlyVisible` 경계(R − 40, 화면 안쪽 16px — 아래 254, **위는 몸 위 끝** `pos.y − top`, top 0 이면 254)·`ClearReach`(양옆 = R − 40, 정위 = 254 − top, 대각선은 사각형·원 교점), `Enabled` 거짓이면 질의 늘 참·`ClearReach` +∞, **반경 바뀜은 다음 틱부터**(`light_change` 가 바꾼 틱의 질의는 옛 반경, 다음 틱 새 반경), **첫 계산은 첫 `BeginTick`**(생성자 뒤 `Setup` 이 주인공을 옮기면 옮긴 자리 둘레만 가 본 칸), 첫 계산 `ChangedTick = −9`, **바뀜 값 잇기**(9틱 안에 왕복하면 `ChangedTick = t − (9 − a)`), 할당 0(`Update` 1,000번), `Perf`: 스테이지 1 크기 다시 계산 1회 ≤ 0.1ms. `FogMath`: 칸 바뀜 9틱 경사, **9틱 안 왕복 시 `CellLevel` 연속**(바뀐 틱 앞뒤 차이 ≤ 1/9, 매 틱 뒤집혀도 0·1 로 튀지 않음), 경계 흐림 알파, 그리기용 오버로드(주인공 위치를 바꾸면 알파가 그 위치 기준), 보스·닿은 적(`TouchReach` 가 `touch_margin` 보다 큰 적은 그 거리까지)·`ForceShown` 1, 꺼짐 1 | WP1c |
-| `Nav` | `ArenaCollision`: 평행사변형 합집합 = 막힌 칸 합집합(점 표본 1만 개), `w` 칸은 걷기만·투사체 통과, 시야 글자는 도형에 영향 없음(**합성 타일셋 시험** — 실제 MVP 맵에는 걷기만 막는 칸이 없다, 4.2), 둘레 도형 `IsBoundary` 는 `phase_through` 도 막음. clearance 알려진 점 값(바깥 마름모 경계 포함), 작은 손 격자에서 플로우 방향, A* 최적성(무작위 격자 200개에서 다익스트라와 비교 — **끈 당기기 전** 경로), 코너 자르기 없음, 다듬은 경로가 막힌 곳을 지나지 않음, 목표 못 갈 때 가장 가까운 곳, 시작이 3칸 밖까지 막힘. **두 스테이지 실제 맵 전수(자원 없이)**: (a) 모든 통과 칸에서 `dir` 을 따라가면 칸 수 이하 걸음에 시작점(고리 없음) (b) 모든 통과 칸 중심의 점 유닛이 이중선형 방향으로 10초 안에 주인공 120px 안 (c) 마름모 네 꼭짓점 쪽·기둥 옆·(스테이지 2) 협로 안에 주인공을 둬도 `S`·`M` 필드가 모든 통과 칸에서 dist < 65535 (d) 13.5-4~6 | WP2 |
+| `Nav` | `ArenaCollision`: 평행사변형 합집합 = 막힌 칸 합집합(점 표본 1만 개), `w` 칸은 걷기만·투사체 통과, 시야 글자는 도형에 영향 없음(**합성 타일셋 시험** — v0.6 부터 실제 스테이지 1 의 창살 칸으로도), 둘레 도형 `IsBoundary` 는 `phase_through` 도 막음. clearance 알려진 점 값(바깥 마름모 경계 포함), 작은 손 격자에서 플로우 방향, A* 최적성(무작위 격자 200개에서 다익스트라와 비교 — **끈 당기기 전** 경로), 코너 자르기 없음, 다듬은 경로가 막힌 곳을 지나지 않음, 목표 못 갈 때 가장 가까운 곳, 시작이 3칸 밖까지 막힘. **두 스테이지 실제 맵 전수(자원 없이)**: (a) 모든 통과 칸에서 `dir` 을 따라가면 칸 수 이하 걸음에 시작점(고리 없음) (b) 모든 통과 칸 중심의 점 유닛이 이중선형 방향으로 10초 안에 주인공 120px 안 (c) 마름모 네 꼭짓점 쪽·기둥 옆·(스테이지 2) 협로 안·(v0.6) 각 안쪽 방 기준점에 주인공을 둬도 `S`·`M` 필드가 모든 통과 칸에서 dist < 65535 (d) 13.5-4~6. **v0.6**: 갇힌 바닥 칸(합성: 둘레 바로 옆 메가 벽 줄 → 오류, `over_border` 겹침·하위 3칸 띄움 → 통과, 사방이 막힌 방 → 오류), 26·34 등급 진입점 → 모든 `room_*`(문을 2칸 → 1칸으로 좁힌 합성 방 → 34 오류), (v0.6.1) 합성 T 자 접합(세로 벽이 가로 벽 밑에 붙는 메가에 세로 조각만) → 13.5-4 80px 오류·모서리 조각 → 통과, 진입점 60px 규칙, `w` 창살 칸: 걷기 도형만·투사체 선 통과·길 검사에서 막힘, `PathLength`(트인 선 = 직선 거리, 벽 너머 방 안 = 문 돌아가는 길이, `maxLength` 넘으면 +∞, 결정적) | WP2 |
 | `Spatial` | 무작위 점 집합에서 해시 질의 = 전수 비교 결과(거리로 거른 정확한 집합), 결과 순서 결정적, **한 칸에 200개 몰아 넣었을 때 넘침 규칙**(돌려준 개수·반경 줄여 다시) = 전수 | WP2 |
-| `Movement` | 두 적 같은 좌표 → 1틱 뒤 둘 다 유한·떨어짐, 20마리 같은 점 행진 → 진입 2초 뒤 모두 유한·겹침 해소, 기둥(평행사변형) 중심 소환 → 밖으로 나옴, 입장 중 적은 해시·분리에서 빠짐, 이동 의도 6종, `PlacementResolver`(마름모 모서리·기둥 옆 소환 → 모두 통과 칸, 생략 수 결정적) | WP2 |
+| `Movement` | 두 적 같은 좌표 → 1틱 뒤 둘 다 유한·떨어짐, 20마리 같은 점 행진 → 진입 2초 뒤 모두 유한·겹침 해소, 기둥(평행사변형) 중심 소환 → 밖으로 나옴, 입장 중 적은 해시·분리에서 빠짐, 이동 의도 6종, `PlacementResolver`(마름모 모서리·기둥 옆 소환 → 모두 통과 칸, 생략 수 결정적. **v0.6** `PlaceReach`: 문이 반대쪽인 방 벽 바로 너머 후보는 버리고 다음 후보, 문이 기준 쪽인 방 안은 허용, `Detour` 1.5) | WP2 |
 | `Invariants` | 계측기가 일부러 만든 NaN·맵 밖(바깥 마름모)·장애물 안·멈춘 적을 센다 | WP2 |
 | `Combat` | `DamageMath` — 기획 4.2 예(오라+함성 = ×1.55, 반올림 마지막, 방어 후 최소 1, 치명), `damage_pct` 한 번만, 발사 시점 고정, 시간 배율 제외 대상, 등급 배율, 피격 무적, `--god`, 승리 대기 중 주인공 피해 무시, 입장 중 적만 있는 월드에서 매직 미사일이 쏘지 않음·장판 위를 지나도 HP 그대로, **투사체 `on_end` 장판(맞음·사거리 끝·장애물)**, 신호(`WeaponFired` 발동당 하나, 피격 무적 중 `HeroHurt` 없음) | WP3 |
 | `Weapons` | `WeaponStats.Resolve`(count+projectile_count, area_pct 는 선언된 키에만, 쿨 상한 0.6/마력 폭주 0.8, **damage 는 damage_pct 와 무관**, `null` = 상시), 조준 5종, 패턴별 발사 결과(발 수·퍼짐각·궤도 위치·접선 `Vel`), 관통·튕김이 같은 적을 두 번 안 때림, 적별 타격 간격 | WP3 |
-| `Progression` | 경험치 곡선(1→5, 2→15, 19→185, 20→198, 40→461), 레벨업 후보(가중치·칸 참·초반 보장·채움·3장 미만), 재추첨 수, 상자(진화 우선·중간 보스 3회·강화 없으면 금화), 레벨업 밀어내기(반경 150, 80px) | WP3 |
+| `Progression` | 경험치 곡선(1→5, 2→15, 19→185, 20→198, 40→461), 레벨업 후보(가중치·칸 참·초반 보장·채움·3장 미만), 재추첨 수, 상자(진화 우선·중간 보스 3회·강화 없으면 금화), 레벨업 밀어내기(반경 150, 80px). **v0.6 직업**: 주인공 만들기(기본 능력치 → 직업 덮어쓰기 → 특성 더하기 — 합성 직업 둘로 `max_hp`·`cooldown_pct` 값), 시작 무기 = 직업 것, `classes` 가 다른 직업의 무기는 후보에 안 나옴, `requires` 가 스테이지·직업 밖인 무기는 후보에 안 나옴, 특성은 슬롯을 쓰지 않음. **v0.6.1**: 특성 = `trait` 패시브(1레벨 `per_level` 이 능력치에 더해짐, 레벨업·상자 후보에 안 나옴), 특성 둘을 단 합성 직업, 패시브·진화 `classes` 거르기 | WP3 |
 | `Enemies` | **전수 연기 시험**(6.13), 점화 중 죽으면 폭발 없음, 분열 3마리 일반 등급·튕김 80px(장애물에서 멈춤)·0.3s 대기, 대장 죽음 → **그 대장의 호위만** 공포 1.5s, 호위 없는 대장 죽음 → 주변 해골 공포 없음, **`panic_on_ally_death`(반경 150 안 같은 종 죽음 → 0.8s 도망, 1.5s 안에 다시 안 겁먹음, 정예는 안 겁먹음, `Collapse`·`Culled` 로는 안 겁먹음)**, `escort` 대형 120·풀림 250·출처별 호위 수(이벤트 값 / 기본 8 / 구간 0), 행진 직진 시간 뒤 보통 행동(`toward`·`toward_entry`), `kite` 거리 띠·물러날 수 없으면 제자리 사격, `shoot_projectile` 가리면 안 쏨, **시야 조건(v0.5): 또렷이 보이지 않는 궁수는 쏘지 않고 다가옴(시야 막힘 벽 뒤·R − 40 밖·화면 위아래 밖 세 경우), 보이게 되면 그 틱부터 쏨, 돌진은 또렷이 보일 때만 시작·돌진 중 안 보여도 안 끊김, 보스 패턴·근접·자폭은 시야 무관**. v0.5.1 — 시야 조건이 판정을 바꾸는지 드러나게 짠다: 벽 뒤 경우는 **시야만 막는 `L` 줄**(걷기·투사체는 트임) 뒤에 궁수·돌진 적을 둔다(`X` 벽이면 `ProjectileLineClear`·`HasClearLine` 이 먼저 막아 `SeenClearly` 를 빼먹어도 통과한다). R − 40 밖 경우는 `TestWorldBuilder` 로 빛 반경을 띠 최대 + 20 쯤으로 낮춘다(13.5-15 를 거치지 않음). 화면 위 경우는 몸 위 끝이 화면 안쪽 16px 밖이고 발은 안인 자리. **각 시험은 같은 배치에서 시야를 끈 월드(`Enabled = false`)로 쏘거나 돌진하는지 대조군을 같이 본다**. **떨림(R29)**: 주인공 바로 위에 궁수를 두고 ① 주인공이 위로 다가갈 때 ② 멈춰 있을 때 10초 동안 `kite` 상태(다가감·물러남·쏨) 전환 수 ≤ 6, ③ 주인공이 아래로 물러날 때 궁수가 따라옴, 위쪽 궁수가 그 자리에서 쏨(위쪽 한계가 띠 최소보다 작아도). **자폭 점화 중 `ForceShown`**, 생성 때 `BodyTop`·`TouchReach`(사거리 여분 + 10 이 16 을 넘는 합성 근접 적). **중간 보스(v0.5.3)**: `clear_sight` 패턴은 `L` 줄 뒤(대조군: 시야 끈 월드에서는 시작)·R − 40 밖에서 시작하지 않고 조건 없는 패턴(사방 산성 분출)은 시작함, 시작 뒤 이벤트 프레임 전에 주인공을 `L` 줄 뒤로 옮기면 투사체 0·쿨은 씀(`shoot_projectile` 도 같은 시험), `clear_sight` 패턴 투사체의 `SightGated` 가 참, `rank: miniboss` 의 `kite` 가 `L` 줄 뒤에서 다가옴(시야 끈 대조군은 멈추고 쏨), 클립 없는 `trigger: cooldown` 동작이 그 틱의 이동 의도를 막지 않음(걷는 중 2s 마다 장판), 중간 보스 `split_on_death` → 머드맨 3 일반 등급·`Source = Split`·같은 틱 `EnemyKilled` 하나·히트 스톱 5틱, `Collapse` 면 분열 없음, `BossBars` 가 등장 순서·죽으면 빠짐(최종 보스는 `Final`). **함성 대상(결정 C)**: `buff_area` 를 쓰는 `rank: miniboss` 적이 자기 자신과 반경 안 다른 중간 보스·보스에게 버프를 걸지 않음, 오버로드 정예 함성 반경 안 도살자의 식칼 피해가 35 그대로(`DamageMath` 까지 통과한 값), 돌진 예고·시간, `ground_hazard` 동시 20 상한, `war_cry` 겹치지 않음(큰 값 하나), 버프 면역(`slow`), `phase_through` 경계만 막힘·`alpha_over`, `heavy_strike` 넉백, `summon` 상한 30·절대 상한 360, 보스 페이즈 50% 1회·패턴 덮어쓰기·쿨다운이 같은 패턴에 남음·`voice` 신호, 패턴 `actions` 두 개가 같은 프레임, 접두사 합치기·제외 조건, `attack_cooldown_pct` 가 모든 능력 쿨에, 승리 때 `Collapse`(분열·폭발·드롭 없음) | WP4 |
-| `Director` | 누적기(무리 1~3, `spawn_group`, 최대 수에서 3 고정), 생성 위치가 생성 띠 안·걸을 수 있음·여유 거리(v0.5 의 "보이지 않음" 조건은 v0.5.1 에서 뺌 — 6.12), 12번 실패 → 먼 입구, **마름모 모서리 주인공에서 입구 대체 비율 기록**(R23), 상한 300/360 과 출처별 막는 순서·지우는 순서(`Culled` 는 보상·시체 없음), 포위 고리 반경 줄이기·생략(마름모 밖 자리), 정예 종류 뽑기에서 `elite_eligible: false` 제외, `--start-at` 이 지난 이벤트 건너뜀·**지난 `light_change` 는 차례로 적용**(12:00 시작 스테이지 2 의 `World.Lighting` = 처음부터 돈 판의 12:00 값)·보스 시각 이후면 보스 바로, **생성 수**: 상한 무한·처치 없음 월드에서 구간마다 `floor(초당 × 구간 길이)` ± 3, **중간 보스 이벤트(v0.5.3)**: 앞 중간 보스가 살아 있어도 다음 `miniboss` 가 제 시각에 나옴, 13.5-18 검사기가 고장 난 작은 스테이지 셋(간격 1:30, 중간 보스 구간이 앞보다 큼, 같은 묶음 중간 보스 둘)에서 경고 하나씩·실제 두 스테이지에서 경고 0 | WP4 |
+| `Director` | 누적기(무리 1~3, `spawn_group`, 최대 수에서 3 고정), 생성 위치가 생성 띠 안·걸을 수 있음·여유 거리(v0.5 의 "보이지 않음" 조건은 v0.5.1 에서 뺌 — 6.12), 12번 실패 → 먼 입구, **마름모 모서리 주인공에서 입구 대체 비율 기록**(R23), 상한 300/360 과 출처별 막는 순서·지우는 순서(`Culled` 는 보상·시체 없음), 포위 고리 반경 줄이기·생략(마름모 밖 자리, v0.6: 벽 너머 방 안 자리 — 길 거리 > 직선 × 1.5), 정예 종류 뽑기에서 `elite_eligible: false` 제외, `--start-at` 이 지난 이벤트 건너뜀·**지난 `light_change` 는 차례로 적용**(12:00 시작 스테이지 2 의 `World.Lighting` = 처음부터 돈 판의 12:00 값)·보스 시각 이후면 보스 바로, **생성 수**: 상한 무한·처치 없음 월드에서 구간마다 `floor(초당 × 구간 길이)` ± 3, **중간 보스 이벤트(v0.5.3)**: 앞 중간 보스가 살아 있어도 다음 `miniboss` 가 제 시각에 나옴, 13.5-18 검사기가 고장 난 작은 스테이지 셋(간격 1:30, 중간 보스 구간이 앞보다 큼, 같은 묶음 중간 보스 둘)에서 경고 하나씩·실제 두 스테이지에서 경고 0 | WP4 |
 | `Audio` | `SoundMixer`: 전체 24·같은 소리 3·최소 간격 0.05·몬스터 맞음 0.08s 한 번·죽음 4·같은 종 0.1s·보석 0.06s, 자리가 없으면 새 소리를 버리고 높은 우선순위가 먼저 자리를 얻음, **자리는 길이 색인의 끝 틱에 빔(높낮이 배율 반영)**, 화면 밖 버림(분류별), 좌우 값, 같은 입력 같은 결과, **같은 신호 열 → 무음과 소리 켬의 `AUDIO` 수가 같음**. 연결 표 검사기(없는 대상·없는 소리·없는 분류 → 오류, 소리 없는 그림 묶음 → 경고). **`Sim/` 소스 파일이 `Core.Audio` 를 참조하지 않음**(저장소 소스 문자열 검사) | WP8 |
 | `Art` | 아틀라스 메타·PNG 대조 검사기(자원 있을 때만), PNG IHDR 읽기 | WP5 |
-| `Dev`·`Save` | `DevOptions` 파싱(값 형식, 여러 캡처 시각, 오류 메시지, 개발 옵션이면 저장 안 읽음·기본 무음 판정 — **`--reveal`·`--god`·`--level`·`--weapons`·`--passives` 하나만 줘도 개발 옵션**(v0.5.1), `--sound`/`--mute`, `--preview fog`), `StateHasher` 가 같은 상태에 같은 값·가 본 칸 집합만 다르면 다른 값, 저장 직렬화·버전(음량 셋 포함) | WP7 |
-| `Sim` | **결정성**: 같은 씨앗·자동 조작으로 30초(기본) / 3분(`Scenario`) 두 번의 상태 해시 열이 같다. **묶음 독립성**: `TickAccumulator` 로 프레임당 1틱 / 4틱으로 묶어 `StageStepper` 를 돌려도 해시 열이 같다(레벨업 오버레이 흉내 포함). **표시 이벤트 켬/끔**(`Presentation.Enabled`)과 상관없이 해시 같음. **시야(v0.5)**: 같은 씨앗 두 번의 가 본 칸 수 열이 같음, `Sim/Autoplay/` 소스가 `Visibility` 를 참조하지 않음(소스 문자열 검사 — 봇은 안개 무시). **할당**: 정상 상태 틱 1,000번 동안 증가 0. `Scenario`: `stage_cathedral` 10분(자동 조작 + `--god`, 예외 없음, 불변식 기준 통과 — 공정성 열 포함). **공정성 합성 맵**(v0.5.1, `Scenario`): 안쪽 `L`·`X` 벽과 문 틈이 있는 `TestDefs` 합성 맵 + 궁수·돌진·자폭·근접 섞은 구간표로 자동 조작 + `--god` 3분, 공정성 세 열 0·`kite_switches` 기준(아래). `Perf`: 4.9 표 | WP4 |
+| `Dev`·`Save` | `DevOptions` 파싱(값 형식, 여러 캡처 시각, 오류 메시지, 개발 옵션이면 저장 안 읽음·기본 무음 판정 — **`--reveal`·`--god`·`--level`·`--weapons`·`--passives` 하나만 줘도 개발 옵션**(v0.5.1), `--sound`/`--mute`, `--preview fog`), `StateHasher` 가 같은 상태에 같은 값·가 본 칸 집합만 다르면 다른 값, 저장 직렬화·버전(음량 셋 포함). **v0.6**: `--hero`(개발 옵션 판정, 없는 ID·꺼진 직업), `--autoplay-visit rooms`(`--autoplay` 없으면 오류), 저장 기록 스테이지 × 직업·`last_hero`·옛 판(직업 없는 기록)을 `sorcerer` 아래로 읽음. **v0.6.1 저장 왕복**: 합성 직업 둘(`a`·`b`)로 같은 스테이지 `RecordResult` → 다시 읽어 `BestRecord(stage, a)`·`(stage, b)` 가 따로 남음, `SetLastHero` → `LastHero` 왕복 | WP7 |
+| `Sim` | **결정성**: 같은 씨앗·자동 조작으로 30초(기본) / 3분(`Scenario`) 두 번의 상태 해시 열이 같다. **묶음 독립성**: `TickAccumulator` 로 프레임당 1틱 / 4틱으로 묶어 `StageStepper` 를 돌려도 해시 열이 같다(레벨업 오버레이 흉내 포함). **표시 이벤트 켬/끔**(`Presentation.Enabled`)과 상관없이 해시 같음. **시야(v0.5)**: 같은 씨앗 두 번의 가 본 칸 수 열이 같음, `Sim/Autoplay/` 소스가 `Visibility` 를 참조하지 않음(소스 문자열 검사 — 봇은 안개 무시). **묶음(v0.6)**: `Sim/` 소스가 `ContentAvailability`·`AssetManifest` 를 참조하지 않음(소스 문자열 검사 — 시뮬레이션은 묶음을 모름), 같은 씨앗을 `World(…, heroClass)` 의 합성 직업 둘로 돌리면 해시가 다르고 같은 직업이면 같음. **할당**: 정상 상태 틱 1,000번 동안 증가 0. `Scenario`: `stage_cathedral` 10분(자동 조작 + `--god`, 예외 없음, 불변식 기준 통과 — 공정성 열 포함). **공정성 합성 맵**(v0.5.1, `Scenario`): 안쪽 `L`·`X` 벽과 문 틈이 있는 `TestDefs` 합성 맵 + 궁수·돌진·자폭·근접 섞은 구간표로 자동 조작 + `--god` 3분, 공정성 세 열 0·`kite_switches` 기준(아래). `Perf`: 4.9 표 | WP4 |
 
 | 프로젝트 `DiabloAssetImporter.Tests` | 무엇을 | 담당 |
 |---|---|---|
 | `Formats` | 시험 인코더로 만든 CL2: 그룹/평면 판별(그룹 머리가 평면 표로도 읽히는 경우), RLE 세 종류, 32줄 건너뛰기 표로 폭 추정(표 `width` 와 다르면 종료 코드 4 경로), 줄이 넘어가는 런. 레벨 CEL 조각 여섯 종류(삼각형 패딩 앞/뒤), MIN 뒤집기, TIL 펴기(0 기반), SOL 세 비트 대조(`sol & 7` → 8글자, v0.5 — 다른 비트·함정 128 무시, SOL 13 → `x`·15 → `X`·159/175/191 → `X`), TRN → PAL 순서, 색인 0 → 그림자 알파(값이 없는 표는 검정 그대로), WAV 8비트 → 16비트 값·머리·소리 색인 값 | WP0 |
 | `Bake` | 잘라 묶기: 겹침 없음·페이지 안·순서 고정·빈 프레임·**그림자만 있는 줄이 사각형 안에 남음(알파 > 0 기준)**·페이지 넘침 → 다음 페이지, 변종끼리 메타 같음, 마법 16파일 → 방향, `arrows` 프레임 → 방향, 아이콘 겹침, 아레나 바닥 조각 경계·이름 = `ArenaArt.FloorChunks`·기둥 중복 제거, **`IsoMath` 로 놓은 기둥 아래 줄과 구운 바닥 마름모가 같은 줄에서 맞닿음(1px 틈·겹침 없음)**, 성질 대조(표 ≠ SOL → 실패, `sol_known_diffs` 면 통과, **시야 비트만 다른 칸도 실패**) | WP0 |
-| `Pipeline` | 시험이 만든 작은 MPQ(War3Net 으로 생성)로 전체 실행: 두 번 = manifest 같음, **`--jobs 1` = `--jobs 8`**, 캐시 적중 결과 = 새로 만든 결과, `--force`, **표에 있는데 원본에 없는 항목 → 종료 코드 3·manifest 없음·없는 목록 전부 보고**, 원본에 표 밖 파일이 많아도 성공, `d1/` 밖 파일 안 건드림, 원본 MPQ 파일 바이트·시각 그대로, **다른 현재 폴더에서 실행해도 저장소 뿌리 기준 `--out`**, 저장소 안 무시되지 않는 `--out` 거절. **실제 표 전체 경우**: 실제 `Table/*.json` 이 펼치는 모든 원본 경로에 합성 파일(프레임 수는 정의 JSON 값, TRN 256바이트, TIL 은 쓰는 메가타일 번호보다 크게)을 넣은 MPQ + 실제 `Data/maps`·`tilesets` 로 종료 코드 0, 만든 이름 = 13.5-10 이름 목록. 합성 MPQ 는 War3Net 이 쓸 수 있는 범위에서 원본과 같은 플래그(암호화·파일 이름 키 fix key·PKWARE implode)로 만든다 — 못 쓰는 플래그(파형 압축 등)는 "실제 원본 실행에서만 확인"(WP0 완료 기준) | WP0 |
-| `RealMpq`(선택) | 환경 변수 `DDR_DIABDAT` 가 있을 때만 돈다(없으면 건너뜀 표시): 표의 원본 항목이 모두 열리고 머리(CL2 그룹 수·WAV RIFF·SOL 크기)가 맞음, 출력은 임시 폴더. 원본 바이트는 시험 출력에 남기지 않는다 | WP0 |
+| `Pipeline` | 시험이 만든 작은 MPQ(War3Net 으로 생성)로 전체 실행: 두 번 = manifest 같음, **`--jobs 1` = `--jobs 8`**, 캐시 적중 결과 = 새로 만든 결과, `--force`, **표에 있는데 원본에 없는 항목 → 종료 코드 3·manifest 없음·없는 목록 전부 보고**, 원본에 표 밖 파일이 많아도 성공, `d1/` 밖 파일 안 건드림, 원본 MPQ 파일 바이트·시각 그대로, **다른 현재 폴더에서 실행해도 저장소 뿌리 기준 `--out`**, 저장소 안 무시되지 않는 `--out` 거절.
+  **묶음(v0.6)**: 시험 표에 `bundle` 항목을 넣고 ① 묶음 MPQ 없음 → 그 항목 없음·`skipped_bundles` 기록·종료 코드 0 ② `--skip-bundles hellfire` → 같은 결과 ③ (v0.6.1) 묶음 MPQ 는 있는데 파일 없음 → 그 묶음 전체 건너뜀(`판 다름: <목록>`)·기본 항목 그대로·종료 코드 0·끝 보고 `경고:` 줄, 같은 MPQ 를 `--hellfire` 로 직접 주면 3 ④ 같은 이름이 diabdat·묶음 MPQ 에 있으면 diabdat 바이트 ⑤ `prefer` 묶음이 있으면 그 바이트, 없으면 다음 순서 ⑥ 묶음을 켰다 끈 두 실행에서 기본 항목 출력 바이트 같음 ⑦ `--hellfire` 기본 = `--diabdat` 폴더(대문자 파일 이름도 찾음)
+  ⑧ (v0.6.1) 깨진 묶음 MPQ(머리를 망친 파일) → `열 수 없음` 건너뜀·종료 코드 0, `--hellfire` 직접 지정이면 2 ⑨ (v0.6.1) 합성 `l5` 타일셋 항목 `bundle: hellfire` + 그것을 쓰는 합성 맵 → 묶음 건너뜀이면 그 맵 그림 없음·기본 맵 그림 그대로, 그 manifest 로 시작 검사 시험(WP7)이 꺼짐 1·오류 0
+  ⑩ (v0.6.1) 파일 줄 `sources`: diabdat TRN + 묶음 CL2 출력 → 두 이름 정렬. **`audit` DUN 대조**: 시험 인코더로 만든 합성 DUN(우리 배열을 4×4 그대로 담은 것 → 4, 바닥만·벽 모서리 하나만 같은 것 → 0). **실제 표 전체 경우**: 실제 `Table/*.json` 이 펼치는 모든 원본 경로에 합성 파일(프레임 수는 정의 JSON 값, TRN 256바이트, TIL 은 쓰는 메가타일 번호보다 크게)을 넣은 MPQ + 실제 `Data/maps`·`tilesets` 로 종료 코드 0, 만든 이름 = 13.5-10 이름 목록. 합성 MPQ 는 War3Net 이 쓸 수 있는 범위에서 원본과 같은 플래그(암호화·파일 이름 키 fix key·PKWARE implode)로 만든다 — 못 쓰는 플래그(파형 압축 등)는 "실제 원본 실행에서만 확인"(WP0 완료 기준) | WP0 |
+| `RealMpq`(선택) | 환경 변수 `DDR_DIABDAT` 가 있을 때만 돈다(없으면 건너뜀 표시): 표의 원본 항목이 모두 열리고 머리(CL2 그룹 수·WAV RIFF·SOL 크기)가 맞음, 출력은 임시 폴더. 원본 바이트는 시험 출력에 남기지 않는다. **v0.6.1**: `DDR_HELLFIRE_DIR`(묶음 MPQ 폴더)가 있으면 묶음마다 대표 항목(`plrgfx\monk\mlt\mltas.cl2`, `sfx\monk\monk69.wav` — hfmonk·hfvoice 둘 다, `nlevels\l5data\l5.sol`, `music\dlvle.wav`, `monsters\nkr\nkrn.cl2` 등)이 War3Net 으로 열리고 머리가 맞음 — MVP 표에 묶음 항목이 없어 WP9·WP10 전까지 아무도 실제 묶음 항목을 읽지 않는 빈틈을 메움 | WP0 |
 
 - 도구 시험의 바이트 픽스처는 **시험 코드의 인코더**(CL2·CEL·MIN·TIL·SOL·WAV 를 쓰는 작은 함수)가 만든다. 원본에서 잘라 낸 바이트를 저장소에 넣지 않는다(R24).
 
@@ -2520,6 +2889,8 @@ $p.ExitCode
   - `hidden_hits`: `DamageResolve`(WP3)가 주인공 피해를 적용할 때(`--god`·피격 무적으로 피해를 버리기 전에 센다 — `--god` 시나리오에서도 셈) 원인이 적 본체(근접·자폭·돌진 — 적 투사체·장판·예고 패턴은 뺌)이고 보스·중간 보스가 아니며 그 순간 `FogMath.EnemyAlpha`(틱 값) = 0.
     자폭은 점화 중 `ForceShown` 이라 폭발 순간 1 이다 — 점화를 시야 밖에서 시작해도 번쩍임이 보이므로 맞다.
   - `kite_switches`: `kite` 상태 전환 수(6.6). 기준은 살아 있는 `kite` 적 하나당 초당 ≤ 1(떨림이면 수십). 10.2 "안개 흐름" 실행의 `--log-ticks` 에서도 숫자로 본다.
+  - v0.6: 스테이지 1 에 안쪽 방이 생겨 실제 맵에서도 벽 가림이 생긴다(기획 10.7). `stage_cathedral` 10분 `Scenario` 를 **방 들르기 자동 조작**(`AutoplayPolicy` 의 rooms 모드 = `--autoplay-visit rooms`)으로 한 번 더 돌려 세 열 0 을 본다. 창살 너머 원거리 적 시나리오 하나(궁수를 창살 방 안에 두고 주인공이 창살 앞 — 쏘고 `unseen_shots` 0, 주인공 투사체도 창살을 지나 맞음).
+    **v0.6.1 — 빈 통과 막기**: 세 열 0 이 "벽 가림 경우가 생기지 않아서" 나온 것이 아님을 같이 본다. ① 그 실행에서 정책의 `RoomStats` 가 **모든 `room_*` 를 2번 이상**(넘김 수·방 안 시간·받은 피해는 따로 보고), ② `InvariantChecker` 의 새 열 `occluded`(60틱마다 표본: 입장 중이 아닌 일반 적(보스·중간 보스 아님) 중 주인공에서 시야 반경 R 안인데 `Visibility.IsVisible` 이 거짓인 적 수, 합계) **> 0** — 실제로 벽 너머 적이 있었다는 증거. 둘 중 하나라도 못 미치면 통과가 아니다.
   - 이 열은 `stage_cathedral` 10분 `Scenario`, 공정성 합성 맵 3분 `Scenario`(`Sim` 행), 10.2 "길찾기" 실행에 들어간다. 합성 맵에는 `L` 벽 모서리 + 자폭 적 배치를 넣어 `hidden_hits` 가 그 경우를 실제로 잡는지 확인한다(점화 중 `ForceShown` 을 쓰지 않는 시험 전용 자폭 부품으로 바꿔 등록하면 > 0).
 
 ### 10.2 실행 캡처로 확인하는 것 (게임 실행, 검증 담당 — 자원이 있어야 한다)
@@ -2542,6 +2913,8 @@ $p.ExitCode
 | 안개 흐름 (v0.5.1) | `--stage stage_cathedral --autoplay --god --seed 7 --check --log-ticks <csv> --capture-at 1,20,60` 과 같은 명령에 `--reveal` 을 더한 실행 + `--debug-nav sight` 한 장 | 1초: 방 가운데 원만 보이고 둘레가 검정. 20·60초: 지나온 자리가 흐린 기억(바닥·벽만, 적·시체·보석 없음), 보이는 곳 경계가 칸 계단 없이 부드러움, 예고·적 투사체·적 장판이 안개 위에 보임. 숨김이 맞는지는 그림 대신 `FOG` 줄로 대조(그린 적 + 숨긴 적 = `--reveal` 실행의 그린 적). `--log-ticks` 의 공정성 열 0·`kite_switches` 기준(10.1). `--reveal` 캡처는 안개 없음 |
 | 안개 재현 | 위 두 실행(`--reveal` 유무)의 `--log-hash`·`AUDIO` 줄 | CSV 같음, `AUDIO` 수 같음(안개는 그리기만 바꾼다) |
 | 미니맵 기억 (v0.5.1, WP6·단계 2) | "안개 흐름" 과 같은 명령, `--capture-at 20,60` | 미니맵이 가 본 곳만(앞 턱 바깥 줄 포함 — 두 줄 벽 규칙), `--reveal` 이면 전체. 점 규칙(8.2) |
+| 안쪽 방 (v0.6) | `--preview tiles` + `--stage stage_cathedral --autoplay --autoplay-visit rooms --god --seed 7 --check --log-ticks <csv> --capture-at 20,60,120` + `--debug-nav entries,tiles` 한 장 | 피 방·창살 방·짧은 벽이 원작처럼 맞물리고 둘레에 겹친 바깥 벽에 틈·겹침 그림 없음, 방 문 틈 끝이 벽 끝 기둥으로 마무리, 성질 겹침의 창살 칸이 걷기만 색, 방 안·벽 뒤가 안개로 가려지고 창살 너머는 보임, 자동 조작이 방 안까지 들어갔다 나옴(v0.6.1: 캡처가 아니라 로그 `VISIT` 줄로 판정 — 120초 안에 모든 `room_*` 가 한 번 이상, `VISIT_SKIP` 이 있으면 그 방 이름을 적음), `--log-ticks` 의 공정성 세 열 0·`occluded` > 0·`stuck`·`in_obstacle` 기준 통과 |
+| 헬파이어 없음 (v0.6) | 도구 `import --skip-bundles all --out <저장소 밖 임시 폴더>`(원작 exe PNG 는 지금 `Assets` 뿌리에서 그 폴더로 복사) → 그 폴더로 빌드한 exe(`-p:DdrAssetDir=<그 폴더> -o <임시>`)로 `--autoplay --stage stage_cathedral --quit-after 30` 과 `--capture-at 1 --quit-after 2` | 가져오기 종료 코드 0·`import.log` 에 묶음 넷 "건너뜀", 게임 종료 코드 0(꺼짐만 있으면 안내 화면 아님), `ASSETS … skipped=hellfire,hfmonk,hfmusic,hfvoice disabled=`(MVP 는 꺼질 정의 없음), 같은 씨앗의 묶음 있는 실행과 `--log-hash` CSV 같음. 헬파이어 정의가 생긴 뒤에는 타이틀 한 줄·꺼진 카드 캡처를 더함 |
 | 혼합 비교 | `--preview blend` | 무기마다 보통/가산 두 칸이 나란히 보임 — 판정은 기획 담당(열린 질문 10) |
 | 길찾기 | `--stage stage_catacombs --start-at 07:00 --stress 180 --debug-nav flow,shapes --god --check --capture-at 5,20` | 앞쪽 협로로 몰리는 흐름, 큰 유닛 우회, 로그의 `stuck`·`in_obstacle` 기준(10.1) 통과 |
 | 전투·손맛 | `--start-at 04:00 --level 15 --weapons …` | 투사체(원작 마법 그림·16방향)·폭발·피해 숫자·번쩍임이 보임 |
@@ -2570,7 +2943,8 @@ $p.ExitCode
 
 ## 11. 구현 작업 묶음 (Work Package)
 
-- 순서: **WP1(끝남, 커밋 `ec851d6`) → WP1b(계약 갱신, 끝남, 커밋 `02c3b8b`) → WP1c(시야 계약 갱신, 끝남, 커밋 `ceddc36` — v0.5) → WP1d(중간 보스 계약 보탬, 아주 짧게 — v0.5.3, WP0a 와 동시 가능) → WP0a(최소 실제 데이터, 짧게) → WP0·WP2~WP8 이 서로 파일이 겹치지 않고 동시에**. 통합(실제 데이터 엄격 시험, `PlayScene` 완성, 단계 끝 실행)은 WP6 이 맡는다.
+- 순서: **WP1(끝남, 커밋 `ec851d6`) → WP1b(계약 갱신, 끝남, 커밋 `02c3b8b`) → WP1c(시야 계약 갱신, 끝남, 커밋 `ceddc36` — v0.5) → WP1d-형(계약 보탬의 모양·빈 본문 — v0.5.3 중간 보스 + v0.6 헬파이어 묶음·직업·안쪽 방 + v0.6.3 방 바닥·방 보급, 짧게 — **형·구현 끝남**, 커밋은 `git log --grep WP1d`) → WP0a(최소 실제 데이터, 짧게) → WP0·WP2~WP8 이 서로 파일이 겹치지 않고 동시에**. v0.6.1: **WP1d-구현**(순수 로직)은 WP1d-형 뒤 WP0a·WP2~WP8 과 동시에 간다 — 그것을 기다리는 완료 기준만 11.1 에 적었다. 통합(실제 데이터 엄격 시험, `PlayScene` 완성, 단계 끝 실행)은 WP6 이 맡는다.
+  MVP 다음에 **WP9(직업 고르기)**·**WP10(헬파이어 스테이지)** 이 온다(v0.6 — 기획 14.2 이후 확장 1·2). 둘 다 계약을 고치지 않고 데이터·씬·패턴만 더하는 것이 WP1d 의 목표다.
 - **자원 파일이 없어도 Core 시험은 모두 돈다**(실제 데이터 검사·길 검사·시나리오·성능 포함, 4.2·6.14). 자원이 필요한 것은 게임 실행 확인(캡처)과 자원 대조 검사(13.5-7 실제 쪽)뿐이다.
   다만 실제 맵 길 검사·단계 1 시나리오가 쓰는 **데이터**는 세 묶음에 나뉘어 있고(타일 번호·성질 = 원본 SOL 을 봐야 채움, 맵 배치, 그림 묶음의 프레임 수), 그중 원본으로 확인해야 하는 값이 있다.
   그래서 그 최소분을 **WP0a** 가 먼저 저장소에 넣는다. WP0a 뒤에는 WP0(가져오기 도구 본체)이 늦어도 WP2·WP3·WP4·WP7·WP8 의 Core 쪽은 막히지 않는다. WP5·WP6 의 화면 확인은 WP0 의 단계별 출력을 기다린다.
@@ -2580,7 +2954,9 @@ $p.ExitCode
 - 맡는 파일은 "맡는 것" 이 전부다. 다른 묶음의 파일을 고쳐야 하면 그 묶음 담당에게 요청한다. 계약(WP1·WP1b 파일) 변경은 11.3.
 
 ```
-WP1 (끝남) ── WP1b (끝남) ── WP1c (끝남) ── WP1d·WP0a ─────────────────┬── WP0 가져오기 도구·가져오기 표·타일셋 ────────┐   (자원: 게임 화면 확인에 필요)
+WP1 (끝남) ── WP1b (끝남) ── WP1c (끝남) ── WP1d-형 ── WP0a ──────────┬── WP0 가져오기 도구·가져오기 표·타일셋 ────────┐   (자원: 게임 화면 확인에 필요)
+                                         └─ WP1d-구현(WP1d-형 뒤, 나란히 — ContentAvailability·배치 풀기·13.5-19·OutputBundles·StageReach·합성 방 맵)
+                                                                      │
                                                                       ├── WP2 내비·충돌(타일 충돌 포함)·공간·시야 ─────┤
                                                                       ├── WP3 주인공·전투·무기·성장 ───────────────────┤
                                                                       ├── WP4 적·감독·자동 조작 ────────────────────────┼── 통합(WP6) ── 검증
@@ -2588,6 +2964,7 @@ WP1 (끝남) ── WP1b (끝남) ── WP1c (끝남) ── WP1d·WP0a ──�
                                                                       ├── WP6 화면·UI·입력 ─────────────────────────────┤
                                                                       ├── WP7 앱 셸·데이터 로더·개발 도구·자원 검사 ────┤
                                                                       └── WP8 소리 ─────────────────────────────────────┘
+                                                                                                    MVP 뒤 ── WP9 직업 고르기 ── WP10 헬파이어 스테이지
 ```
 
 ### 11.1 묶음별 맡는 것·계약·완료 기준
@@ -2661,19 +3038,60 @@ v0.3 결정 때문에 바뀌는 **계약 변경** 전부를 한 묶음에 모은
   **옛 글자 점검**: `rg -n "\"[.WMX]{4}\"|'W'|'M'" src tests tools Data` 로 저장소의 `W`·`M` 성질 글자를 모두 찾아 줄마다 새 뜻(걷기 + 시야 / 시야 + 투사체)이 맞는지 확인한 결과를 완료 보고에 적는다(6.11 "주의").
   이 문서(4.11 코드 조각, 6.6 `Enemy` 새 필드, 6.10 `rules.sight`, 6.11 글자 표, 9절 `--reveal`·`--preview fog`)의 시그니처·모양이 계약 파일에 빠짐없이 있다. `git diff` 에 실제 `Data/` 변경 없음.
 
-#### WP1d — 중간 보스 계약 보탬 (v0.5.3, WP1c 뒤·WP2~WP8 앞, 혼자, 아주 짧게)
+#### WP1d — 계약 보탬: 중간 보스(v0.5.3) + 헬파이어 묶음·직업·안쪽 방(v0.6) — v0.6.1: **WP1d-형**(WP1c 뒤·WP2~WP8 앞, 혼자, 짧게) + **WP1d-구현**(WP1d-형 뒤, WP0a·WP2~WP8 과 동시) — v0.6.3: 형·구현 끝남
 
-기획 v0.6.2 의 중간 보스 늘리기(9.4)가 바꾸는 **계약** 두 곳. 둘 다 기본값이 있는 필드 더하기라 기존 코드·시험이 그대로 컴파일된다.
-WP2~WP8 이 시작하기 전이라 11.3 의 "모아서 다음 갱신" 을 기다리지 않고 메인 세션이 바로 낸다. 파일이 겹치지 않아 WP0a 와 동시에 해도 된다. 실제 `Data/` 는 쓰지 않는다.
+기획 v0.6.2 의 중간 보스 늘리기(9.4, #1~#3)와 기획 v0.7 의 사용자 결정 H·K·M(#4~#20)이 바꾸는 **계약**을 한 묶음에 모은다. 아직 구현 전이라 v0.6 에 합쳤다(기획 26절 권고) —
+WP2~WP8 이 시작하기 전에 들어가야 "직업을 더해도 계약을 다시 고치지 않는다"(결정 K)가 선다. WP2~WP8 이 시작하기 전이라 11.3 의 "모아서 다음 갱신" 을 기다리지 않고 메인 세션이 바로 낸다.
+실제 `Data/` 는 쓰지 않는다. #1~#3 은 기본값이 있는 필드 더하기다.
+
+**둘로 나눈다**(v0.6.1 — v0.6 의 "혼자, WP2~WP8 앞" 에 17항목과 순수 로직 구현까지 얹으면 주 경로가 길어진다):
+- **WP1d-형**(짧게, WP2~WP8 앞): 아래 표의 형·시그니처·JSON 모양 전부와 컴파일. 순수 로직 본문은 비워 둔다(`throw new NotImplementedException("WP1d-구현 …")`, 배치 풀기의 `grid` 놓기는 `LayoutError` "WP1d-구현 전").
+  형을 읽는 지금 코드는 `World.cs`(33줄 `HeroRulesDef.Radius` — #10 이 지우고 #12 가 같이 고침)와 `ArenaLayout.cs`(155줄 `place.Piece` — #14 가 nullable 로 바꾸고 #15 가 같이 고침)뿐이다(v0.6.1 저장소 확인 — v0.6 의 "그 형을 쓰는 구현이 없다" 는 틀린 문장이었다).
+  그 밖에 #5(`SoundBindingsDef.Hero`)·#6(`optional` → `bundle`)은 시험 픽스처만 고친다.
+- **WP1d-구현**(WP1d-형 뒤, WP0a·WP2~WP8 과 동시): 여러 묶음이 읽고 자원·그래픽과 무관한 순수 로직을 WP1b·WP1c 처럼 **구현과 시험까지** — #6 `OutputBundles(arenas)`·표 검사, #8 `ContentAvailability`, #15 `grid`·`over_border`(막힘 줄어듦 포함)·`ValidateRooms`(13.5-19 + 하위 칸 검사), #19 `StageReach`, #17 합성 맵·정의.
+  맡는 파일(`Map/ArenaLayout.cs`, `Assets/ImportTable.cs`·`ContentAvailability.cs`, `Data/Registry/StageReach.cs`, `TestKit/`)은 WP2~WP8 이 쓰지 않는다. **기다리는 것**: WP0a 완료 기준(13.5-19), WP2 의 방 맵 시험(#17 합성 방 맵), WP4 의 13.5-15 검사기(`StageReach`), WP7 의 시작 검사·13.5-20(`ContentAvailability`·`OutputBundles`·`StageReach`) — 각 묶음은 그 시험을 WP1d-구현 뒤에 켠다.
+  v0.6.3: WP1d-형·WP1d-구현은 끝났다(#21 의 방 바닥 `RoomFloors` 포함). 위 기다리는 시험을 모두 켜도 된다 — 따로 알림을 기다리지 않는다.
 
 | # | 파일·형 | 바꾸는 것 | 이유 | 영향 |
 |---|---|---|---|---|
 | 1 | `Defs/EnemyDefs.cs` `PatternDef` | `bool ClearSight`(`clear_sight`, 기본 `false`), 주석 "참이면 시작·이벤트 프레임에 `SeenClearly`(6.6)" | 패턴 조건(6.5). 로더가 모르는 속성을 오류로 내므로 형에 있어야 데이터에 적을 수 있다 | WP4·WP7 |
 | 2 | `Sim/Contracts/Queries.cs` `EnemyProjectileSpawn` | 끝에 `bool SightGated = false` — "시야 조건을 지켜야 하는 발사(`shoot_projectile`, `clear_sight` 패턴)" | 공정성 `unseen_shots` 가 `clear_sight` 패턴 투사체를 보스 제외에서 빼고 셈(10.1) | WP3(셈)·WP4(채움) |
 | 3 | `Sim/Contracts/WorldState.cs` `FairnessCounters.UnseenShots` 주석 | "(보스·중간 보스 제외)" → "(보스·중간 보스 제외, 단 `SightGated` 발사는 셈)" | 2 와 맞춤 | — |
+| 4 | 새 `Defs/ContentBundle.cs` | `enum ContentBundle { Hellfire, Hfmonk, Hfmusic, Hfvoice }`(JSON 소문자), `ContentBundles.MpqName` | 묶음 이름 한 곳(H, 1.4·6.17) | WP0·WP6·WP7·WP8 |
+| 5 | `Defs/EnemyDefs.cs`·`StageDefs.cs`·`WeaponDefs.cs`·`AudioDefs.cs` | `EnemyDef.Requires`·`StageDef.Requires`·`WeaponDef.Requires`·`MusicDef.Requires`(`IReadOnlyList<ContentBundle>`, 기본 빈), `MusicDef.Fallback`(`DefRef<MusicDef>?`), `WeaponDef.Classes`(`IReadOnlyList<DefRef<HeroClassDef>>`, 기본 빈 = 모두), `WeaponDef.CastClip` 주석에 `attack`(근접), **`SoundBindingsDef.Hero` → `IReadOnlyDictionary<string, HeroSoundsDef>`(키 = 직업 ID)** | 정의의 묶음 조건(6.17), 직업 전용 무기·근접 시전 클립(6.8), 직업 소리(6.15) | WP3·WP4·WP7·WP8 |
+| 6 | `Assets/ImportTable.cs` | 모든 항목 종류의 `Optional` → **`Bundle`**(`ContentBundle?`, 타일셋 항목에도), 소리·음악 항목 `Prefer`(`IReadOnlyList<ContentBundle>`), 표 검사(`bundle: hfvoice` 금지, `prefer` 는 소리·음악만), **`OutputBundles(IEnumerable<ArenaGrid> arenas)`**(이름 → 묶음, 기본 null — v0.6.1: 맵 그림 이름(`ArenaArt.OutputNames(grid)`)은 `grid.Tileset.Id` 의 타일셋 항목 `bundle` 로. 인자 없는 v0.6 판은 두지 않음), 타일셋 항목 `AuditDun`(`audit_dun`, 원작 경로 목록 — v0.6.1, 13.5-22) — 구현과 시험 WP1d-구현 | 가져오기 표 묶음(1.4), 시작 검사 "꺼짐"(1.4 끝), 13.5-10 묶음판 | WP0·WP7 |
+| 7 | `Assets/AssetManifest.cs`·`AssetFormat.cs` | `ManifestSource.Bundle`(`ContentBundle?`), `AssetManifest.SkippedBundles`(`ManifestSkippedBundle(Bundle, Mpq, Reason)` 목록 — `Reason` 은 1.4 의 넷 중 하나, `판 다름` 이면 빠진 경로 목록 포함), `ManifestFile.Bundle`·**`Sources`**(v0.6.1: MPQ 이름 목록, 서수 정렬 — v0.6 의 `Source` 하나를 대신함). `AssetFormat.Version` +1(manifest 모양 바뀜) | 도구(쓰기)와 시작 검사(읽기)의 약속(1.4) | WP0·WP7 |
+| 8 | 새 `Assets/ContentAvailability.cs` | 6.17 의 형 전부(v0.6.1: `Disabled(defs) → DisabledContent`·`Skipped(b)`, v0.6 의 `DisabledInDefs` 없앰) — 구현과 시험 WP1d-구현 | 꺼진 스테이지·직업 판정을 WP6·WP7·WP8·WP9 가 같은 함수로(6.17) | WP6·WP7·WP8 |
+| 9 | 새 `Defs/HeroDefs.cs`, `Defs/WeaponDefs.cs` | `HeroClassDef`(6.16 — v0.6.1: 특성은 `Traits`(`IReadOnlyList<DefRef<PassiveDef>>`), `HeroTraitDef` 는 만들지 않음). `PassiveDef.Trait`(bool)·`PassiveDef.Classes`·`EvolutionDef.Classes`(`IReadOnlyList<DefRef<HeroClassDef>>`, 기본 빈 = 모두) | 직업 정의(K), 특성 = 패시브(기획 리뷰 — 특성 둘·`on_acquire`·직업 전용 패시브·진화를 형 변경 없이) | WP3·WP5·WP6·WP7·WP8 |
+| 10 | `Defs/RulesDefs.cs` | **`HeroRulesDef`**: `Sprites`·`Radius`·`StartWeapons` 삭제, `required DefRef<HeroClassDef> Class` 추가(`Stats` = 모든 직업 기본값·`InvulnAfterHit`·`CrowdSlow` 그대로). `SpawnRulesDef.PathDetour`(기본 1.5) | `rules.hero` = 공통 규칙 + 고른 직업(6.10), 자리 고르기(4.10) | WP3·WP4·WP7 |
+| 11 | `Data/Registry/GameDefs.cs` | `Kinds` 에 `hero_classes`, `HeroClasses`(`DefTable<HeroClassDef>`) | 새 종류(6.1) | WP7 |
+| 12 | `Sim/World.cs` | 생성자 끝 인자 `HeroClassDef? heroClass = null`, `World.HeroClass`(= 인자 ?? `Rules.Hero?.Class.Def`), `Hero.Radius = HeroClass?.Radius ?? 14` | 월드가 고른 직업 하나를 가짐(6.16) — 주인공 코드는 이것만 읽음 | WP3·WP5·WP6·WP7·WP8 |
+| 13 | 게임 `App/Contracts/AppServices.cs` | `AppOptions.HeroClass`(`string?`, `--hero`), `AppOptions.AutoplayVisit`(Core `Sim/Autoplay/AutoplayVisit` 열거형 `None`/`Rooms` — v0.6.1: Core 로 옮겨 `Scenario` 시험도 씀). **v0.6.1 저장**: `RunResult` 에 `HeroClassId`(StageId 다음), 새 `StageRecord`, `ISaveService.LastHero`·`SetLastHero(string)`·`BestRecord(stageId, heroClassId)`(8.3) | 9절 옵션 — 파싱 WP7, 쓰기 WP6. 저장 = 스테이지 × 직업을 형이 강제(WP9 에서 AppServices.cs 를 다시 고치지 않게 — R31) | WP6·WP7 |
+| 14 | `Defs/MapDefs.cs` | `PiecePlacementDef`: `Piece` → `string?`, `Grid`(`IReadOnlyList<string>?`)·`Origin`(`Int2?`)·`Id`(`string?`)·`OverBorder`(bool)·`DecorWhy`(`string?`). `TilesetDef.Marks`(`IReadOnlyDictionary<TileMark, IReadOnlyList<int>>`, 새 `enum TileMark { Pillar, Grate, ClosedDoor, Arch }` — v0.6.1: 값마다 `JsonStringEnumMemberName`(`pillar`·`grate`·`closed_door`·`arch`), `StatKey` 와 같은 방식). `MapDef.OpenCenter`(`RectI?`). `MapDef` 에 `Requires` 는 **두지 않음**(1.4 "타일셋 묶음과 맵"). `TilesetDef.Props` 주석의 v0.4 4글자 설명을 8글자(6.11)로 고침 | 안쪽 방 배치(M, 6.11) | WP0·WP2·WP5 |
+| 15 | `Map/ArenaLayout.cs`·`MapDataReader.cs` | 배치 풀기 4단계에 `grid`(줄 `Split(' ', RemoveEmptyEntries)`, 줄 길이 자유)·`over_border`(둘레 표시 유지, 문 칸 오류, **막힘 줄어듦 오류** — v0.6.1), `ValidateTileset` 에 `marks` 번호 검사, 새 `ValidateRooms(MapDef, ArenaGrid, ICollection<LayoutError>)`(13.5-19 + v0.6.1 하위 칸 검사 ①②). `LayoutError` 에 `bool Warning = false`(v0.6.1 — `TryExpand`·`ValidateTileset`·`ValidateRooms` 가 같은 형), 부르는 곳 = `MapDataReader.Read`(펼친 뒤 `ValidateRooms` 를 부르고 `Warning` 을 `DataSeverity.Warning` 으로 바꿈). `LayoutHash` 에 `marks` 를 넣지 않음 — 구현과 시험 WP1d-구현 | 6.11 배치 풀기·13.5-19 | WP0·WP2·WP5·WP7 |
+| 16 | `Sim/Contracts/Queries.cs`·`Nav/PlacementResolver.cs` | `INavWorld.PathLength(from, to, radius, maxLength)`·**`PathLengthToHero(from, radius, maxLength)`**·**`TryPathStep(from, to, radius, out next)`**(v0.6.1), `PlaceReach(From, Detour, FromHero)` record·`TryPlace(…, PlaceReach, out)` 겹지정(빈 본문 → WP2) | 자리 고르기 길 거리(4.10), 방 들르기 길 방향(9절) | WP2(구현)·WP4(부름) |
+| 17 | `TestKit/TestDefs.cs`·`TestWorldBuilder.cs`·`StraightNav.cs` | 합성 직업 `test_hero`(그림 묶음·시작 무기·특성 패시브)와 `rules.hero.class`, `TestWorldBuilder.WithHeroClass`, `StraightNav.PathLength`·`PathLengthToHero`(트인 선이면 직선 거리, 아니면 +∞)·`TryPathStep`(트인 선이면 목표), 합성 타일셋 `marks`·창살 조각(`Xw..`)·모서리 조각, **합성 방 맵**(① 둘레 바로 옆 메가 벽 줄 — 갇힌 띠 ② 같은 벽 `over_border` ③ 문 하나 방 + `room_a` 기준점 ④ (v0.6.1) **6.11 예 배치 좌표 그대로**(합성 이름) ⑤ (v0.6.1) 모서리 자리에 가로·세로 조각만 둔 방 ⑥ (v0.6.1) 둘레 왼쪽 열을 가로 조각으로 덮은 `over_border`) — WP1d-구현의 13.5-19 시험과 WP2 의 13.5-4·5 시험이 쓴다 | 묶음이 실제 데이터 없이 시험 | 모두 |
+| 18 | `Sim/Autoplay/AutoplayPolicy.cs` (v0.6.1) | 정적 클래스 → **`sealed class AutoplayPolicy(AutoplayVisit visit)`**: `Vector2 Move(World)`, `int PickCard(LevelUpOffer)`, `IReadOnlyList<RoomVisit> Events`, `IReadOnlyList<RoomVisitStats> RoomStats`. 새 `enum AutoplayVisit { None, Rooms }`, `readonly record struct RoomVisit(string RoomId, int StageTick, bool Skipped)`, `readonly record struct RoomVisitStats(string RoomId, int Visits, int Skips, int TicksInside, float DamageInside)`. 방 번호·다시 구할 시각 상태는 인스턴스에 둔다(시뮬레이션 상태 아님 — 같은 씨앗·같은 옵션이면 같은 입력). 본문 → WP4 | 방 들르기 모드·기록(9절)을 WP4(본문)와 WP6(호출)이 각자 시그니처를 바꾸며 부딪히지 않게 | WP4·WP6 |
+| 19 | `Defs/PartDef.cs`, 새 `Data/Registry/StageReach.cs` (v0.6.1) | `PartDef.ReferencedEnemies`(`IReadOnlyList<DefRef<EnemyDef>>`, 기본 빈 — 로더 WP7 이 연결 단계에서 채움), `StageReach.Enemies(StageDef, GameDefs)`(6.14 "나오는 적 계산") — 구현과 시험 WP1d-구현, 그 뒤 소유 WP4 | 13.5-15·13.5-20·안 나오는 적·`TextureStore`·`SoundBank`·시작 검사가 같은 닫힘 계산을 씀 | WP4·WP5·WP7·WP8 |
+| 21 | `Defs/MapDefs.cs`, 새 `Map/RoomFloors.cs`, `Map/ArenaLayout.cs` (v0.6.3) | `MapDef.RoomAreas`(`room_areas`, 기준점 ID → `RectI` 메가 사각형), `RoomFloors.Compute(MapDef, ArenaGrid)`·`RoomFloors.Empty`·`IndexAt(tx, ty)`·`IndexAt(Vector2)`·`TryGet`, `RoomFloor(Id, Area, Cells, Doors)`·`OneDoor`, `ValidateRooms` 에 방 영역 검사(13.5-19) — 구현과 시험 WP1d-구현 | 방 바닥(6.11) — 방 체류 압박·방 보급 검사·방 들르기 "방 안" 이 같은 계산 | WP0a·WP4·WP7 |
+| 22 | `Sim/World.cs`, `Sim/Contracts/WorldState.cs` (v0.6.3) | `World.Rooms`(`RoomFloors`, 생성자에서 `Arena` 로 계산 — 맵 없으면 `Empty`), `World.RoomPresence`(새 `RoomPresence`: `Current`·`EnteredTick`·방마다 `TicksInside`·`DamageInside`·`SuppliesTaken`, `Reset(roomCount)`) | 방 체류 압박 상태와 판 끝 `ROOMS` 로그를 WP4(씀)·WP7(읽음)이 같은 형으로 | WP4·WP7 |
+| 23 | `Sim/Entities/Pickup.cs`, `Sim/Contracts/Queries.cs`·`TickEvents.cs` (v0.6.3) | `Pickup.SupplyRoom`(`string?`, `Reset` 에서 null), `readonly record struct PickupSpawn(PickupDef Def, Vector2 Pos, int Value = 0, string? SupplyRoom = null)`, `ICombatSpawner.SpawnPickup(in PickupSpawn)`, 틱 이벤트 `SupplyCollected(string RoomId, PickupDef Def, Vector2 Pos)`(`TickEventSet.SupplyCollected`) | `room_supply`(WP4)가 WP3 저장소에 획득물을 놓고 "안 주운 보급" 을 판정. 지금 `ICombatSpawner` 구현이 없어 메서드를 더해도 깨지는 코드가 없다 | WP3(구현)·WP4(부름)·WP6·WP7 |
+| 24 | `Defs/RulesDefs.cs` (v0.6.3) | `SpawnRulesDef.RoomPressure`(`RoomPressureDef?` — `required` `After`·`EveryNth`·`MinDistance`, null = 끔) | 방 체류 압박 값(6.10·6.12) | WP4 |
+| 20 | 새 `Assets/DefAssetNames.cs` (v0.6.1) | `DefAssetNames.For(GameDefs, IEnumerable<ArenaGrid>) → IReadOnlyList<DefAsset>`, `readonly record struct DefAsset(IDef? Owner, string File)`(v0.6.2: null = 기본 내용) — 정의가 가리키는 파일과 주인 D(6.14 13.5-10 귀속 규칙). 빈 본문 → WP7 | 13.5-10 ②(WP0 시험)와 시작 검사 ③ 교차 확인(WP7)이 같은 추출을 씀 | WP0·WP7 |
 
 - 하지 않는 것: `SeenClearly`·`PatternAbility` 조건·발사 프레임 재확인(WP4, 6.6), `unseen_shots` 세기(WP3), 보스 막대 줄 순서(WP4 씀·WP6 그림 — `BossBar` 형은 그대로, 8.2).
-- **완료 기준**: `dotnet build -p:SkipAssetCheck=true` 통과, `dotnet test` 통과. 새 시험 둘: 공용 STJ 옵션(`DefJson`, WP1b #21)으로 `{ "clear_sight": true }` 를 `PatternDef` 로 읽으면 `ClearSight` 참·생략하면 거짓, `EnemyProjectileSpawn` 의 `SightGated` 기본 거짓.
+  v0.6: 가져오기 도구의 묶음 찾기·건너뛰기(WP0), 시작 검사 "꺼짐"·`--hero`·`--autoplay-visit` 파싱·13.5-20·21 정의 검사·저장 모양(WP7), 주인공 만들기·레벨업 후보 거르기(WP3), `PathLength`·`TryPlace(PlaceReach)`·갇힌 칸·방 기준점 길 검사(WP2),
+  자리 고르기를 부르는 쪽·방 들르기 자동 조작(WP4), 꺼짐 카드·타이틀 한 줄(WP6), 직업 소리·음악 대체(WP8), `melee_arc`·직업 고르기 씬(WP9), L5·L6 타일셋(WP10). 각 묶음 v0.6 줄에 넣었다.
+  v0.6.1: `DefAssetNames` 본문·`PartDef.ReferencedEnemies` 채우기·저장 구현(WP7), `AutoplayPolicy` 본문·방 들르기 기록(WP4)과 `VISIT` 로그 줄(WP6), `PathLengthToHero`·`TryPathStep` 본문·`occluded` 열(WP2).
+  v0.6.3: `room_supply` 이벤트 부품·방 체류 압박·`RoomPresence` 채우기·`AutoplayPolicy` 의 "방 안"(WP4), `SpawnPickup` 구현·보급 수명 빼기·`SupplyCollected` 내기(WP3), 미니맵 흰 점(WP6), 방 보급 검사·`ROOMS` 로그·`StateHasher` 의 `SupplyRoom`·`RoomPresence`(WP7), 실제 `cathedral_arena` 의 `room_areas`(WP0a).
+- **완료 기준 — WP1d-형**: `dotnet build -p:SkipAssetCheck=true` 통과, `dotnet test` 통과(빈 본문을 부르는 기존 시험이 없음). 새 시험: (v0.5.3) 공용 STJ 옵션(`DefJson`, WP1b #21)으로 `{ "clear_sight": true }` 를 `PatternDef` 로 읽으면 `ClearSight` 참·생략하면 거짓, `EnemyProjectileSpawn` 의 `SightGated` 기본 거짓.
+  (v0.6) `DefJson` 으로 `HeroClassDef`(6.16 예 두 개 — `requires: ["hfmonk"]` → `ContentBundle.Hfmonk`, 모르는 묶음 이름 → 오류, v0.6.1: `traits` 목록)·`PassiveDef`(`trait`·`classes`)·`rules.hero`(`class` 없으면 오류)·`MusicDef`(`fallback`)·`WeaponDef`(`classes`)·`MapDef`(`open_center`·`grid` 놓기, `requires` 는 모르는 속성 오류)·**`TilesetDef.Marks`(`closed_door` 키 → `TileMark.ClosedDoor`, 모르는 키 오류)** 읽기,
+  `SoundBindingsDef.Hero` 가 직업 ID 키, `World(…, heroClass)` 의 `HeroClass`·`Hero.Radius`, 10.1 `Assets` 의 표 `bundle`·`prefer`·`optional` 오류·manifest(`sources`·`skipped_bundles`) 읽기.
+  (v0.6.3) `MapDef.RoomAreas`(`room_areas`) 읽기, `rules.spawn.room_pressure`(없으면 null, 있으면 세 값 필수) 읽기.
+  이 문서(4.10 `PlaceReach`·`PathLength`·`PathLengthToHero`·`TryPathStep`, 6.11 배치·`marks`·`open_center`, 6.14 `StageReach`, 6.16·6.17 코드 조각, 6.15 `hero`, 1.4 manifest 칸, 8.3 저장 계약, 9절 `AutoplayPolicy`)의 시그니처·모양이 계약 파일에 빠짐없이 있다. `git diff` 에 실제 `Data/` 변경 없음.
+  **옛 모양 점검**: `rg -n "Optional|optional|StartWeapons|HeroRulesDef|HeroSoundsDef|HeroTraitDef|AutoplayPolicy\.|RunResult\(" src tests tools` 결과를 줄마다 새 모양으로 확인해 완료 보고에 적는다.
+- **완료 기준 — WP1d-구현**: `dotnet test` 통과. 새 시험: 10.1 `Map` 의 v0.6·v0.6.1 시험 전부(합성 방 맵 ④ 가 13.5-19 통과, ⑤ 가 하위 1칸 틈 오류, ⑥ 이 막힘 줄어듦 오류), 10.1 `Assets` 의 `OutputBundles(arenas)`(합성 `l5` 맵 그림 → hellfire)·`ContentAvailability`(`Disabled`·`Skipped`), 10.1 `Data` 의 `StageReach` 합성 시험.
+  (v0.6.3) 10.1 `Map` 의 방 영역·방 바닥 시험과 빈 `grid` 오류.
 
 #### WP0a — 최소 실제 데이터 (WP1c 뒤, WP2~WP8 앞, 짧게)
 
@@ -2685,12 +3103,21 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
     v0.5.1: 시제품 `d1map probe` 의 출력은 **`sol` 값(또는 `sol & 7`) 그대로** 받아 6.11 표로 바꿔 적는다 — 시제품이 v0.4 의 4글자(`.WMX`)를 내면 그 글자를 옮기지 않는다(`W`·`M` 뜻이 바뀌어 잘못된 시야 비트가 된다).
   - `Data/rules/sight.json`(v0.5): 6.10 의 값 그대로(기획 23절 "정한 수치"). 원본 유래 값이 아니고 첫 판일 뿐이다 — 그 뒤 소유는 WP5.
   - `Data/maps/cathedral_arena.json`: 배치·입구·기준점·주인공 시작(6.11 예 값, 칸 중심 규칙).
+    v0.6: **안쪽 방 배치**(기획 10.3 — 피 방·창살 방·ㄱ·Γ 짧은 벽·기둥 다섯, `open_center` [6,6,13,13], `room_blood`·`room_grate` 기준점 — v0.6.1: + 구역 기준점 `room_west`·`room_south`). 피 방·창살 방의 둘레 쪽 벽은 `over_border` 로 둘레 자리에 겹친다(갇힌 띠 없음).
+    v0.6.1: 6.11 예(= 기획 v0.7.1 10.3)가 첫 값이다 — 벽이 꺾이거나 둘레에 겹쳐 꺾이는 자리는 모서리 조각(6.11 "벽 맞물림"), ㄱ 벽은 둘레와 떼어 [3..5,13], Γ 는 [13,13] 부터(`open_center` 밖), Γ 안 기둥 셋은 [15,16]·[17,15]·[17,17], 창살은 두 칸.
+    시제품의 ㄱ [1..5,13]·Γ [12,12]·기둥 [16,13] 은 13.5-19·13.5-4 에 걸리므로 옮기지 않는다.
+    v0.6.3: `room_areas` 도 6.11 예 그대로 적는다(13.5-19 방 영역 검사 — 피 방·창살 방 문 하나, ㄱ 안·Γ 안 문 둘).
+    그래서 `tilesets/l1.json` 에 방 조각 번호·이름(벽 1·2, Γ 모서리 4, 벽 끝 6·7, 창살 36(또는 35), 피 방 166~174 — 피 묻은 모서리 167 포함, 장식 닫힌 문 98)과 그 성질(세 비트, `sol` 값 그대로 받아 바꿈)·`marks`(`pillar` 15, `grate`, `closed_door` 98 — 이름 붙인 번호만, 13.5-12)를 더 적는다.
+    번호는 견본(`out-sheets`)으로 고르고, 꺾임·모서리의 그림 맞물림은 견본 그림으로 본다(조사 함정 8). **원작 DUN 은 칸마다 옮기지 않는다**(v0.6.1, 6.11 "원작 방 본뜨기" — 크기·문 방향·벽 재료만 따르고 칸 배열은 이름으로 새로 짬, 기획 19.1). 시제품의 `rnd6` 찍기도 옮기지 않는다.
   - `Data/sprites/monsters.json`·`hero.json` 의 **단계 1 그림 묶음**(기획 14.1 의 단계 1 적 5종 + 주인공): 프레임 수·방향·칸은 `scan` 값, 이벤트 프레임·프레임 시간은 원작 동작 값(출처 주석, 1.4).
     (v0.5.3) `set_skelbow` 는 단계 1 판이라 `variants` 에 `bashtb`·클립에 `special` 을 아직 넣지 않는다 — 블랙애시(단계 2)를 넣을 때 WP5 가 더한다(값은 `scan`: `sklbws` 16프레임).
 - **소유**: `tilesets/` 는 WP0a 뒤에도 WP0. `maps/`·`sprites/` 는 WP0a 가 첫 판을 쓰고 **WP5 로 넘긴다**(WP5 가 미리보기로 기준점·입구·`origin` 을 맞춘다, 11.3). WP0a 는 한 담당이 혼자 한다(WP0 담당 권장).
 - **완료 기준**: `dotnet test` 통과(`MapDataReader` 로 실제 두 파일을 읽어 오류 0, `Expand` 성공, 13.5-4 배치 검사 통과), 세 파일의 원본 유래 값마다 출처 주석 — **원문 문자열 시험 `Data/SourceCommentTests`(6.14 13.5-16, 기본 분류)를 WP0a 가 써서 통과**,
   `git diff` 에 원작 바이트·덤프 없음(성질 표 키 = 타일셋이 이름 붙인 번호, 13.5-12).
   v0.5: 실제 `cathedral_arena` 로 만든 `VisibilityField` 에서 주인공 시작 자리의 시야가 방 안을 덮고 둘레 벽 뒤 맵 밖은 문 틈 쪽만 보임(시험 하나, 기둥이 `x` 면 기둥 뒤도 보임).
+  v0.6: 실제 `cathedral_arena` 가 13.5-19(`ArenaLayout.ValidateRooms`, WP1d-구현 — v0.6.1: 하위 칸 검사 ①② 와 `over_border` 막힘 검사 포함)를 통과, 같은 시야 시험에서 가운데 자리에서 피 방 안·창살 방 안(창살 칸 너머 빼고)이 가려짐(조사 시제품 시야와 같은 모양).
+  v0.6.1: v0.6 의 "시제품 길 검사를 다시 돌림" 은 뺐다 — 시제품은 저장소 배치(`cathedral_arena.json`)를 읽지 않고 자기 코드의 옛 배치를 찍으므로 확인이 되지 않는다. 자원 없이 도는 13.5-19 하위 칸 검사가 그 자리를 맡고(WP1d-구현 뒤 켬), 반경 14 격자 검사(13.5-5)는 WP2 가 그 위에 더한다. 시제품 그림은 근거로만 언급한다.
+  `audit` 의 DUN 배열 대조(1.4)는 WP0 의 도구가 생긴 뒤 이 맵에 다시 돈다(WP0 완료 기준).
   단계 3 의 L2·`catacombs_arena` 는 WP0a 범위가 아니다(그때까지 WP2 는 합성 맵).
 
 #### WP0 — 가져오기 도구 (WP0a 뒤, 다른 묶음과 동시)
@@ -2701,12 +3128,17 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   `ArenaLayout.Expand` 로 펼친다(직접 파싱·펼치기를 하지 않는다). 굽기 결과가 바뀌는 변경은 `AssetFormat.Version` 을 올린다(1.4 캐시). 부록 A 의 형식 규칙을 따른다.
 - **단계**: 1 = 몬스터 5종 묶음·변종, 주인공 한 벌, 무기 3종 마법·아이콘, L1 타일셋·아레나. 2 = 나머지 스테이지 1 몬스터·보스, 무기 3종, 이펙트 전부, **소리·음악**. 3 = L2 타일셋(번호 조사, 기획 열린 질문 15)·지하묘지 몬스터.
   v0.5.3 중간 보스(기획 9.4): 단계 2 에 `skelbow` 변종 `bashtb` + 동작 `special`(`s`) + 소리 `sklbws*`, 단계 3 에 `acid` 변종 `bfds` + 동작 `special` + 소리 `acids*`(`monsters\acid\`), `fat` 변종 `bsm`.
+  v0.6 헬파이어 묶음(1.4 "헬파이어 묶음"): 단계 1 에 **묶음 구조**(`--hellfire` 기본 = diabdat 폴더, 묶음 MPQ 찾기·`prefer` 순서·`--skip-bundles`, 없는 MPQ 건너뛰기, manifest `skipped_bundles`·파일 `bundle`·`sources`(v0.6.1), 끝 보고) — MVP 표에는 묶음 항목이 없으므로 시험(합성 MPQ)과 이 PC 의 "네 MPQ 다 있음 / `--skip-bundles all`" 두 실행으로 확인한다.
+  묶음 내용(수도사 한 벌·헬파이어 몬스터·L5·L6·헬파이어 음악·대사)은 그것을 쓰는 정의가 생기는 WP9·WP10 에 표 줄을 더한다. 단계 1 의 L1 타일셋에 안쪽 방 조각(WP0a 가 넣은 것)의 성질 대조가 든다.
   고유 TRN 경로는 `monsters\monsters\<이름>.trn`(세 파일 모두 diabdat 원본 목록에서 확인, 256바이트). 새 그림 묶음은 없고 변종 페이지만 셋 는다(R7 의 `vram_mb` 에 조금 더해짐).
 - **완료 기준**: 도구 시험 통과(10.1 `DiabloAssetImporter.Tests` — 합성 바이트·시험이 만든 MPQ, 결정론·캐시·실패 시 manifest 없음).
   이 PC 실제 실행(창 없음): 단계 목록 전부 생성·종료 코드 0, 두 번 돌려 manifest 같음, 두 번째가 캐시로 빠름(두 시간을 1.4 에 적음), 원본 폴더 파일들의 수정 시각 그대로,
   일부러 없는 경로 하나를 표에 넣으면 종료 코드 3·manifest 없음. `contact` 견본(좀비 원색·`bluered`, 파이어볼 16방향, L1 아레나 바닥 + 벽, 마법사 시전)을 스크래치에 만들어 **눈으로 봄** 을 기록.
   실제 원본 실행이 PKWARE implode·암호화·파형 압축 경로를 덮는다(합성 MPQ 시험이 못 덮는 것, 10.1 `Pipeline`) — 두 번 같음이 그 확인이다. 첫 실행·캐시 실행 시간과 묶음별 페이지 수·크기를 1.4 에 적는다.
   `audit` 가 종료 코드 0(추적 파일에 manifest 출력·원본 항목과 같은 해시 없음, 확장자 목록 없음, `Assets/d1/**` 없음 — R24).
+  v0.6: 이 PC 실행 끝 보고에 묶음 넷 "만듦", `--skip-bundles all` 실행(다른 `--out`, 저장소 밖)이 종료 코드 0·넷 "건너뜀"·기본 항목 출력 해시가 같음. 묶음 MPQ 의 원본 줄(`sources`)이 manifest 에 있음(크기·SHA-256 — R18).
+  v0.6.1: 쓸 수 없는 묶음 MPQ 건너뛰기(1.4 — `판 다름`·`열 수 없음`, `--hellfire` 직접 지정일 때만 2·3)와 실패 문구의 우회 명령, `import-all.ps1` 의 `-Hellfire`·`-SkipBundles`, 타일셋 묶음을 건너뛰면 그 맵 굽기도 건너뜀, 파일 줄 `sources`.
+  `RealMpq` 를 `DDR_HELLFIRE_DIR` 로 이 PC 에서 돌려 결과(묶음마다 대표 항목이 열림)를 완료 보고에 적는다. `audit` 의 DUN 배열 대조가 실제 `cathedral_arena` 에 종료 코드 0(거짓 실패가 나면 기준 상수를 고치고 그 이유를 1.4 에 적음).
 
 #### WP2 — 길찾기·충돌·공간
 
@@ -2715,28 +3147,35 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   테스트 `Geometry/ Nav/ Spatial/ Movement/ Invariants/ Visibility/`.
 - **계약**: `ArenaCollision.Build(ArenaGrid) → IReadOnlyList<CollisionShape>`(4.2 — `CollisionShape` 는 WP1b 계약 형, `INavDebugView` 로 WP5 가 읽는다. `Geometry/` 다각형은 이것에서 변환), `NavWorld.Build(World) : INavWorld`(외곽 상자 격자·바깥 마름모 경계), `SpatialHash : ISpatialQuery`, `ObstacleIndex`, `Navigation / Locomotion / Collision / SpatialRebuild` 시스템,
   이동 의도 → 희망 속도(4.4 끝), `Enemy.MoveBlockedTime`·`Hero.TouchingCount` 쓰기, `INavDebugView`(충돌 도형·격자·필드·경로·하위 칸 성질), `InvariantChecker`(`SpatialRebuild` 안에서 60틱마다, 10.1).
+  v0.6(안쪽 방): `INavWorld.PathLength`(플로우 필드 거리 / 자른 A*, 4.10)·`PlacementResolver.TryPlace(…, PlaceReach)`, 13.5-5 **갇힌 바닥 칸**(6.14)·26·34 등급 → 모든 `room_*`, 13.5-6 진입점 60px, 창살 `w` 칸(걷기 도형만).
 - **완료 기준**: 테스트 통과(무작위 A* 최적성, 해시 = 전수·넘침, **실제 맵의 길 검사·전수 성질 — 자원 없이**(단계 1: WP0a 가 넣은 `cathedral_arena`), 겹친 점, 둘레 도형이 `phase_through` 를 막음, `ArenaCollision` 의 평행사변형 합집합 = 막힌 칸 합집합(점 표본)). 그래픽 없는 측정: 적 500 을 맵에 흩어 플로우로 주인공에게 모으는 3,600틱이
   Navigation+Locomotion+Collision 평균 ≤ 1.0ms(4.9 표), 불변식 기준 통과. 단계 3 전까지는 스테이지 2 맵 대신 시험용 합성 맵으로.
+  v0.6: 10.1 `Nav`·`Movement` 의 v0.6 시험(WP1d 합성 방 맵 — 갇힌 띠가 16px 격자에서 잡힘, v0.6.1: 맵 ⑤ 의 모서리 구멍이 13.5-4 80px 로도 잡힘), 실제 `cathedral_arena`(안쪽 방 배치)가 13.5-4~6 통과(갇힌 칸 0, 26·34 가 모든 `room_*` 까지 — v0.6.1: 구역 둘 포함), 위 측정을 안쪽 방 배치로 다시(필드 통과 칸이 조금 준다).
+  v0.6.1: `PathLengthToHero`(필드 등급·통과 칸 조건, 아니면 A*)·`TryPathStep` 본문, `InvariantChecker` 의 `occluded` 열(10.1 공정성).
 
 #### WP3 — 주인공·전투·무기·성장
 
 - **맡는 것**: Core `Sim/Hero/`, `Sim/Combat/`, `Sim/Weapons/`(`IFirePattern`·`ITargeting`·`WeaponStats`·`CombatModule.cs`), `Sim/Projectiles/`, `Sim/Hazards/`, `Sim/Pickups/`, `Sim/Progression/`,
   이 폴더들의 조각 파일(`Enemy.Combat.cs`, `Hero.Combat.cs`, `World.Combat.cs`, `WeaponPatternState.Combat.cs`, `RunStats` 조각 …).
-  Data `weapons/`, `passives.json`, `evolutions.json`, `pickups.json`, `drop_tables.json`, `rules/hero.json`. 테스트 `Combat/ Weapons/ Progression/ Hero/`.
+  Data `weapons/`, `passives.json`, `evolutions.json`, `pickups.json`, `drop_tables.json`, `rules/hero.json`, `heroes/`(v0.6 — MVP 는 `sorcerer.json` 하나). 테스트 `Combat/ Weapons/ Progression/ Hero/`.
 - **계약**: 발사 패턴 6종·조준 5종·무기 효과 부품 등록, `DamageMath`, `HeroControl`·`Weapons`·`Projectiles`·`Hazards`·`DamageResolve`·`DeathRewards`·`Pickups` 시스템,
   `ICombatSpawner`·`IProgression`·`IHostileQuery`(MVP: 주인공만) 구현, `RunStats` 채우기, `IRunSetup`(`--god`·`--level`·`--weapons`·`--passives`).
   v0.3: 무기 `cast_clip` 재생, 투사체 `Vel` 에 그림 방향(도는 구체는 접선), **`ProjectileDef.OnEnd` 장판**, 신호 `WeaponFired`·`EnemyHit`·`HeroHurt`·`HeroDied`·`PickupCollected`·`PickupDropped`(7.9).
   v0.5: 무기 조준은 시야를 보지 않는다(기획 5.1 — 바꾸기로 하면 조준 후보 거르기에 `World.Visibility.IsVisible` 하나, 기획 열린 질문 23).
   v0.5.1: 공정성 수 세기 — `ICombatSpawner` 의 적 진영 투사체 생성에서 `Fairness.UnseenShots`, `DamageResolve` 의 주인공 피해에서 `Fairness.HiddenHits`(10.1 공정성 열). 피해 요청에 원인 종류(적 본체 / 투사체 / 장판 / 예고 패턴)가 있어야 가른다.
+  v0.6(직업): 주인공 만들기는 `World.HeroClass` 만 읽는다(능력치 = `rules.hero.stats` → 직업 덮어쓰기 → 특성 더하기, 시작 무기, 그림 묶음 — 6.16), 시전 클립을 직업 그림 묶음에서(`attack` 포함, 5.3),
+  레벨업 후보·상자·`--weapons` 가 무기 `classes` 와 `requires ⊆ 스테이지 ∪ 직업`(6.8)으로 거름, `heroes/sorcerer.json`(특성 마력 친화 `cooldown_pct` +0.05 — 기획 4.1). `melee_arc` 는 WP9.
+  v0.6.1: 특성 = `trait` 패시브(`passives.json` 의 `trait_arcane_affinity`, 아이콘 없음 — 6.16), 주인공 만들기가 `HeroClass.Traits` 를 1레벨로 붙이고 슬롯을 쓰지 않음, 레벨업·상자·`--passives` 후보에서 `trait` 를 뺌, 패시브·진화 `classes` 거르기.
+  v0.6.3(방 보급): `ICombatSpawner.SpawnPickup` 구현(드롭도 같은 길, `PickupDropped` 신호), `Pickup.SupplyRoom` 채우기, 보급은 수명·상한 정리에서 뺌, 주우면 틱 이벤트 `SupplyCollected`(6.12).
 - **완료 기준**: 테스트 통과. 그래픽 없는 시나리오(`Scenario`): 해골 50 마리 + 매직 미사일 Lv8 로 60초 → 처치·경험치·레벨업 대기가 생김(`TestKit` 공간 질의로 먼저, WP2 가 들어오면 실제 해시로도).
-  `on_end` 시험(맞음·사거리 끝·장애물 세 경우 모두 장판 하나), 신호 시험(무기 발동 한 번에 `WeaponFired` 하나, 피격 무적 중 `HeroHurt` 없음).
+  `on_end` 시험(맞음·사거리 끝·장애물 세 경우 모두 장판 하나), 신호 시험(무기 발동 한 번에 `WeaponFired` 하나, 피격 무적 중 `HeroHurt` 없음). v0.6: 10.1 `Progression` 의 직업 시험, 실제 `heroes/sorcerer.json` 으로 만든 주인공의 쿨다운 감소 0.05.
 
 #### WP4 — 적·감독·자동 조작
 
 - **맡는 것**: Core `Sim/Enemies/`(생애 상태·부품 계약과 구현·보스 패턴·페이즈·등급·접두사·버프 적용·`EnemyFactory`·`EnemyModule.cs`·`Enemy.Behavior.cs` 조각), `Sim/Director/`(+ `World.Director.cs` 조각), `Sim/Autoplay/`.
   Data `enemies/`, `affixes.json`, `buffs.json`, `stages/`, `rules/enemies.json`. 테스트 `Enemies/ Director/ Sim/`(결정성·시나리오·Perf), `Fixtures/variants/`, `Fixtures/perf_scenario.json`.
 - **계약**: 부품 등록(일반 13 + 동작 7 + `TriggeredAction`·`PatternAbility`·`PhaseController`), 이벤트 종류 9개(`PartKind.StageEvent`), `Director`·`EnemyThink`·`DeathHooks` 시스템, 승리 처리(3.5),
-  `World.ViewRect` 를 쓰는 생성 위치, `AutoplayPolicy`(`Move(World) → Vector2`, `PickCard(offer) → int` — 메뉴 넘김은 WP6), `IRunSetup`(`--start-at`·`--stress`·`--freeze-ai`), `Visual`·`CorpseSpawned` 값 채우기,
+  `World.ViewRect` 를 쓰는 생성 위치, `AutoplayPolicy`(v0.6.1: 인스턴스 `new AutoplayPolicy(visit)` 의 `Move(World) → Vector2`, `PickCard(offer) → int`, `Events`·`RoomStats` — 메뉴 넘김은 WP6), `IRunSetup`(`--start-at`·`--stress`·`--freeze-ai`), `Visual`·`CorpseSpawned` 값 채우기,
   `World.Lighting`·`BossBars`·`Banner` 쓰기.
   v0.3: 적 17종 + 보스 4 데이터(그림 묶음·변종, 6.13), 새 부품 `panic_on_ally_death`, `phase_through.alpha_over`, 신호 `EnemyAttack`·`EnemySpecial`·`EnemyShot`·`BossArrived`·`BossPhase`·`ElitePack`, 단계 1 판 스테이지(6.12).
   v0.5: `EnemyCtx.SeenClearly` 와 `shoot_projectile`·`kite`·`charge` 의 시야 조건(6.6), 13.5-15 검사기(`kite` 띠 최대, 6.14), `include_bosses: false` 확정(데이터에 `true` 없음 — v0.5.1 경고 검사).
@@ -2746,6 +3185,11 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   v0.5.3(기획 v0.6.2 중간 보스): 단계 2 에 `blackash`, 단계 3 에 `deathspit`·`baron_sludge` 정의(6.5·6.13 — 중간 보스 5·보스 2), 두 스테이지 구간표·이벤트(기획 10.3·10.4), 해골왕 `hp` 9000·도살자 18000,
   `SeenClearly` 등급 예외 없앰·`PatternAbility` 의 `clear_sight`·`shoot_projectile`·`clear_sight` 패턴의 발사 프레임 재확인과 `SightGated` 채우기(6.6), 즉시 끝나는 `trigger: cooldown` 동작,
   중간 보스 죽음 순서·히트 스톱(`DeathHooks`), `BossBars` 등장 순서(8.2), 13.5-18 검사기(6.14).
+  v0.6(안쪽 방): 포위 고리·`summon`·`telegraphed_blast` 지점·정예 무리·호위 대형 자리를 `TryPlace(…, PlaceReach(기준, rules.spawn.path_detour))` 로(4.10), `rules/enemies.json` 의 `spawn.path_detour` 1.5,
+  `AutoplayPolicy` 의 방 들르기 모드(`--autoplay-visit rooms` — 기준점 이름 순, 가중 0.8, 반경 60, 9절). 스테이지 정의 `requires`(MVP 빈 목록).
+  v0.6.1: 방 들르기의 길 방향(`TryPathStep`)·40초 넘김·`Events`/`RoomStats` 기록, 자리 고르기에서 기준이 주인공이면 `PlaceReach(…, FromHero: true)`, `StageReach.Enemies` 소유(WP1d-구현 뒤 — 13.5-15·13.5-18 검사기가 이것을 씀).
+  v0.6.3: `room_supply` 이벤트 부품(`anchor`·`pickup`, 살아 있는 보급이 있으면 생략)과 두 스테이지 보급 시각표(기획 10.3·10.4), 방 체류 압박(`rules.spawn.room_pressure` 8·3·150)·`World.RoomPresence` 갱신과 누적(6.12), `AutoplayPolicy` 의 "방 안" = `World.Rooms`(9절).
+  시험: 합성 방 맵(③ 문 하나 방)에서 보급 생략·방 안 등장 칸이 바닥 안이고 주인공에서 150px 이상·방을 나오면 멈춤(10.1 `Director`).
 - 실제 맵·그림 묶음 정의는 WP0a(타일셋·맵·단계 1 그림 묶음)와 WP5 가 낸다. WP4 는 그 파일을 고치지 않고, 단계 1 판 적 정의는 WP0a 의 그림 묶음 ID 를 가리킨다.
   부품 시험은 처음부터 `TestKit` 합성 맵·합성 그림 묶음으로 한다(실제 데이터를 기다리지 않는다).
 - **완료 기준**: 테스트 통과(부품·생성기·전수 연기 시험·변형 픽스처·결정성 30초, 오라·함성이 `include_bosses: false` 면 보스에 안 걸림,
@@ -2755,6 +3199,7 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   `rules/sight.json` 의 시뮬레이션 값(`edge`·`view_inset`·`refresh_ticks`·`ranged_margin`)이 바뀌면 `Scenario`·13.5-15 를 다시 돌린다(6.10).
   v0.5.3: 10.1 `Enemies` 의 "중간 보스" 시험과 `Director` 의 중간 보스 이벤트·13.5-18 시험 통과. 단계 2: `stage_cathedral` 전체 판 10분 `Scenario`(블랙애시 포함)에서 공정성 세 열 0·`kite_switches` 기준, 실제 두 스테이지 13.5-18 경고 0.
   단계 3: 같은 `Scenario` 를 `stage_catacombs` 12분으로(중간 보스 셋이 겹쳐도 예외 없음·상한 360 안).
+  v0.6: 단계 1 의 `stage_cathedral` 10분 `Scenario` 를 방 들르기 모드로도 한 번(공정성 세 열 0·`stuck` 기준 — 방 문·벽 모서리, v0.6.1: 모든 `room_*` 2번 이상·`occluded` > 0 — 빈 통과 막기, 10.1), 창살 너머 궁수 시나리오(10.1 공정성 열), 10.1 `Director` 의 포위 고리 길 거리 시험.
 
 #### WP5 — 렌더·그림·미리보기
 
@@ -2768,6 +3213,8 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   `RenderContext.ScreenToWorld` 구현 — WP6 이 HUD·마우스 이동에 쓴다. 기획 열린 질문 7 의 기준점·입구 칸·크기 배율, 10(혼합), 11(그림자 값 — 표는 WP0 에 요청), 18(늘린 그림)을
   `--preview`·`--debug-nav` 로 맞춰 데이터에 반영.
   v0.5.3: 그림 묶음 `variants`·클립 보탬 — `set_skelbow` 에 `bashtb`·`special`(단계 2), `set_acid` 에 `bfds`·`special`, `set_fat` 에 `bsm`(단계 3). 표 줄은 WP0 에 요청(11.3). 새 고유 TRN 색과 ×1.5 크기는 `--preview enemies` 로 본다(기획 열린 질문 16·18).
+  v0.6: `maps/cathedral_arena.json` 의 안쪽 방 배치(첫 판 WP0a)를 `--preview tiles`·`--debug-nav tiles,entries` 로 맞춤(±1 메가 — 기획 10.3), 주인공 그림은 `World.HeroClass.Sprites`(마법사 그대로),
+  창살·방 벽의 4층 정렬·가림(7.4 — 이웃 판정 그대로), `--preview sprites` 에 직업 그림 묶음 행(MVP 는 마법사 하나). 단계 3 의 `catacombs_arena` 뒤쪽 방 둘(기획 10.4).
 - **완료 기준**: `Art` 테스트 통과. `--preview sprites/enemies/effects/tiles/blend` 캡처를 10.2 의 "통과 =" 문장으로 검증 담당이 판정(못 한 것은 "판정 못 함").
   `--stress 300 --freeze-ai` 장면에서 4.9 표의 렌더 기준 — **렌더 CPU p99 와 `draw_calls` ≤ 600 둘 다 단계 1 완료 조건**(단계 1 은 `stage_cathedral`, 10.3). 스테이지 시작 로그의 `vram_mb` 를 R7 에 적는다.
   10.2 의 "뒷벽·앞 턱·아치"·"예고·빛" 행. v0.5: 10.2 "안개 고정 장면"·"안개 흐름"·"안개 재현" 행(안개는 기획 14.1 단계 1 범위 — 고정 장면의 빛 값 대조 ①·⑤·⑥ 포함),
@@ -2780,6 +3227,11 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   자동 조작 메뉴 넘김(`AutoStep(IAutoplayDriver)`), `SCENE`·`RESULT` 로그 문장, 레벨업 오버레이를 같은 앱 틱에 올림(3.3).
   v0.3: 씬별 음악·UI 소리(`IAudioServices`), 일시정지에서 `SetPaused`, **`PlayScene` 프레임 끝 소비 순서 `FxSystem.Consume → Audio.Consume → Presentation.Clear`**, 자원 없음 안내 화면(DataError 화면 재사용, 1.4 끝).
   v0.5.3: 보스 막대 여러 줄(8.2 — `Final` 위 큰 막대, 나머지 등장 순서로 작은 막대, 최대 4줄). 단계 3 에 10.2 "중간 보스 겹침" 행.
+  v0.6: 고른 직업 정하기(`AppOptions.HeroClass` → 저장 `last_hero` → `rules.hero.class`, 꺼졌으면 기본 직업 — 6.16)와 `World` 생성에 넘기기, 타이틀 한 줄·스테이지 카드 꺼짐 표시(`ContentAvailability`, 8.1),
+  최고 기록 표시는 고른 직업 것, `AutoplayDriver` 가 `AppOptions.AutoplayVisit` 으로 `AutoplayPolicy` 를 만듦. 10.2 "안쪽 방" 행(통합 뒤).
+  v0.6.1: 판 시작 때 `Save.SetLastHero`, 결과에 `HeroClassId = World.HeroClass.Id` 를 채워 `RecordResult`, StageSelect 가 `Save.BestRecord(stage, hero)`(8.3). `AutoplayDriver` 가 판마다 `new AutoplayPolicy(visit)` 하나를 만들고 `Events` 가 늘 때마다 `VISIT`·`VISIT_SKIP`, 판 끝에 `VISITS` 로그 줄(9절).
+  타이틀 한 줄은 `ContentAvailability.Disabled(defs).Any` 일 때만, 앞말은 `Skipped(b).Reason` 으로(1.4 끝).
+  v0.6.3: 미니맵에 방 보급(`Pickup.SupplyRoom` 이 있는 획득물)을 흰 점으로 — 가 본 곳이 아니어도(6.12, 8.2).
 - **완료 기준**: `--autoplay --seed 1 --quit-after 30` 이 타이틀 → 선택 → 플레이까지 사람 입력 없이 감(`SCENE` 로그 세 줄). 캡처 4장(타이틀, 플레이 HUD, 레벨업 창, 결과)을 10.2 문장으로 판정.
   단계 2: 10.2 "미니맵 기억" 행(v0.5.1 — WP5 의 단계 1 안개 행에서 옮김).
   통합 뒤: 실제 데이터 엄격 시험 통과, 10.2 "단계 끝" 행 통과. 키보드로 한 판(사람)·소리를 귀로 듣기는 "동작 확인 못 함" 으로 따로 적는다.
@@ -2794,10 +3246,18 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   **시작 자원 검사**(1.4 끝 ①~⑤, 종료 코드 5, 캡처만 있으면 안내 화면 캡처), `DataLoader` 가 `tilesets`·`maps` 를 `MapDataReader` 로 받음(6.2), GameApp 이 `AudioServices.Create` 를 부름.
   v0.5: `--reveal`·`--debug-nav sight` 파싱(`AppOptions.Reveal`), `StateHasher` 에 `Visibility.ExploredHash`(가 본 칸 집합, 3.4·4.11 — v0.5.1), "스테이지가 있는데 `rules.sight` 없음" 오류·13.5-15 의 380·화면 반폭 쪽(6.14).
   v0.5.1: `--preview fog` 파싱, 저장 보호 판정에 `--reveal`·`--god`·`--level`·`--weapons`·`--passives`(9절), 캡처 때 `FOG` 로그 줄(값은 WP5 렌더가 넘김)과 `_light.png` 저장 경로.
+  v0.6: 로더의 `hero_classes` 종류·13.5-20(정의 쪽)·13.5-21 검사(6.14), 시작 검사 ③ 의 **"꺼짐"**(꺼진 묶음 파일은 오류 아님, 1.4 끝)과 `ASSETS … bundles= skipped= disabled=` 줄, `--hero`·`--autoplay-visit` 파싱·검사(없는 ID 64, 꺼진 직업·스테이지 5),
+  저장 보호에 `--hero`, 저장 모양 스테이지 × 직업·`last_hero`(8.3), 첫 로그 줄·`RESULT` 의 `hero=`, `StateHasher` 첫 값에 직업 ID. `ContentAvailability.cs` 소유(WP1d 뒤 — 11.3).
+  v0.6.1: `SaveStore` 가 `LastHero`·`SetLastHero`·`BestRecord` 구현(`RunResult.HeroClassId` 아래에 기록 — "늘 `sorcerer`" 를 가정하지 않음), 로더 연결 단계가 `PartDef.ReferencedEnemies` 를 채움, `DefAssetNames.For` 본문(13.5-10 귀속 규칙),
+  시작 검사 ③ 의 `OutputBundles(arenas)`·교차 확인(꺼짐 파일에 켜진 스테이지·직업이 닿으면 오류), 13.5-20 의 해금 사슬 규칙, `ASSETS disabled=` 는 꺼진 스테이지·직업만.
+  v0.6.3: 13.5-19 의 방 보급 검사(`room_supply` → 그 맵의 `OneDoor` 방·있는 획득물), 판 끝 `ROOMS` 로그(9절), `StateHasher` 에 `Pickup.SupplyRoom`·`RoomPresence.Current`·`EnteredTick`.
 - **완료 기준**: 테스트 통과(로더 규칙·뒤섞은 파일 순서·옵션 파싱·페이즈 누적 풀기). 게임 실행: 빈 씬으로 창이 뜨고 `--quit-after 2 --capture x.png --capture-at 1` 이 PNG 를 쓰고 종료 코드 0(`Start-Process -Wait -PassThru`),
   가장 큰 텍스처(4096 폭 아틀라스, 550×3240)의 만들기 성공(`HiDef` 확인), 개발 옵션 실행 전후 사용자 `save.json` 시각 같음, `--background` 실행 전후 포그라운드 창 같음,
   `-p:DdrAssetDir=<빈 폴더> -p:SkipAssetCheck=true -o <임시>` 로 만든 exe 의 자동 실행이 종료 코드 5 와 없는 파일 목록 로그, 같은 exe 의 캡처만 준 실행이 안내 화면 PNG + 종료 코드 5(10.2),
   가져오기 표 한 줄을 바꾼 뒤 빌드한 exe 가 "가져오기 표가 바뀌었다" 로 종료 코드 5. 개발 옵션 실행 로그에 `AUDIO device="No Output"`.
+  v0.6: 10.2 "헬파이어 없음" 행(`--skip-bundles all` 자원으로 종료 코드 0·안내 화면 없음·`skipped=` 넷·같은 씨앗 해시 같음), 시작 검사 시험(합성 manifest 에 `skipped_bundles: [hellfire]` + `requires: [hellfire]` 합성 스테이지 정의 → 꺼짐 1·오류 0, 같은 파일이 기본 내용이면 오류).
+  v0.6.1 시작 검사 시험 더: 합성 `l5` 타일셋(표 항목 `bundle: hellfire`)을 쓰는 맵의 그림이 manifest 에 없음 → 꺼짐·오류 0, **기본 스테이지의 적이 묶음 소리(`sprite_sets.<s>` 줄)를 가리킴 + 그 묶음 건너뜀 → 오류**(교차 확인), `hfmusic` 만 건너뜀 → 타이틀 한 줄 없음·`AUDIO … fallback=`.
+  10.1 `Dev`·`Save` 의 저장 왕복(합성 직업 둘의 기록이 따로 남음).
   최소화·숨긴 창에서도 `--capture-at` PNG 가 생기는지 확인해 결과를 R8 에 적는다.
 
 #### WP8 — 소리 (단계 2)
@@ -2806,9 +3266,28 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   테스트 `Audio/`.
 - **계약**: 6.15 데이터 모양과 검사, 7.9 의 신호 → 소리 규칙·고르기·재생·무음·로그, `IAudioServices` 구현.
   v0.5.3: 소리 연결 `sprite_sets.set_skelbow.special`(단계 2)·`set_acid.special`(단계 3)과 그 소리 정의(6.15). 새 중간 보스는 그림 묶음 연결을 그대로 쓰고 분류만 `boss` 로 오른다.
+  v0.6: 연결 표 `hero` 를 직업 ID 키로(`hero.sorcerer`), `AudioSystem` 이 `World.HeroClass.Id` 로 고름, 직업마다 `hero.<id>` 가 없으면 경고(13.5-21), `MusicPlayer` 의 `requires`·`fallback`(6.15·7.9 — MVP 곡은 모두 기본이라 대체 없음, 시험은 합성 곡).
 - **완료 기준**: `Audio` 시험 통과(10.1). 게임 실행(개발 옵션, null 장치): `--sound` 를 준 자동 조작 실행이 오류 없이 끝나고 `AUDIO` 로그 줄의 수가 기준 안(맞음 소리 0.08s 제한 → 초당 ≤ 12.5 등) —
   **기준은 `--mute` 와 `--sound` 어느 쪽이든 같은 수**(같은 씨앗이면 두 실행의 `AUDIO` 수가 같다, 7.9), 로그에 `AUDIO device="No Output"`, 두 실행의 `--log-hash` CSV 같음(10.2 "재현").
   장면 바뀜 프레임에 `slow_frames` 가 늘지 않음(음악 읽기, 7.9). 소리를 귀로 확인하는 것은 사용자 몫(`--sound-device default`, 동의를 받고 — "동작 확인 못 함" 으로 적음).
+
+#### WP9 — 직업 고르기 (v0.6, MVP 다음 — 기획 14.2 이후 확장 1, 사용자 결정 K)
+
+계약은 WP1d 가 이미 냈다. 이 묶음은 **데이터·씬·패턴만** 더한다 — 계약 파일을 고쳐야 하면 WP1d 의 목표가 깨진 것이니 메인 세션에 알린다.
+
+- **하는 것**: 가져오기 표에 `warrior\wms`(죽기 `wmn\wmndt`)·`rogue\rlb`(`rln\rlndt`)·`monk\mlt`(죽기 자기 벌, `bundle: hfmonk`) 한 벌씩 + 맞음·죽음 소리(수도사 `prefer: [hfvoice]`)(WP0 에 요청),
+  그림 묶음 셋(WP5 — 시전 클립 `event_frame` 14·12·13, 출처 주석), 직업 정의 셋(6.16 — 기획 4.5 표)과 특성 패시브(`trait`, WP3), 특성 아이콘 그림 정의(WP5 — 원작 exe PNG 나 주문 아이콘, v0.6.1), 발사 패턴 `melee_arc`(WP3, 6.8)와 무기 `cleave`·`staff_sweep`(`classes` 로 묶음),
+  `HeroSelectScene`(8.1 — 카드 4장, 꺼진 직업 어둡게), 소리 연결 `hero.<id>`(WP8), `--preview sprites` 의 직업 행.
+- **완료 기준**: 네 직업 각각 `--hero <id> --autoplay --god --stage stage_cathedral --exit-on-result` 가 10분 끝까지 감(시작 무기·그림·소리 신호), 같은 씨앗·직업이면 해시 같음,
+  `--skip-bundles hfmonk` 자원에서 수도사 카드가 어둡고 `--hero monk` 가 종료 코드 5, 기획 열린 질문 27(직업 균형)·29(수도사 색·직업 소리)를 사람이 보는 캡처·로그 목록.
+
+#### WP10 — 헬파이어 스테이지 (v0.6, MVP 다음 — 기획 14.2 이후 확장 2, 사용자 결정 H)
+
+- **하는 것**: 지하실(L5) 먼저(기획 10.6 — L1 이름·배치를 거의 그대로), 그다음 둥지(L6, 번호 조사 새로). `Table/tilesets.json` 의 `l5`·`l6`(`bundle: hellfire`, 경로 `nlevels\…`, 덧그림 번호표는 그때 원본으로 확인),
+  `tilesets/l5.json`·`l6.json`(성질은 그 층 SOL), 맵(`requires` 없음 — 맵 그림 묶음은 타일셋 항목 `bundle`, v0.6.1)·스테이지(`requires: [hellfire]`, 해금은 기본 스테이지 사슬의 곁가지 — 6.12), 헬파이어 몬스터 표 줄·그림 묶음·정의(`requires: [hellfire]`, 고유 셋은 `genrl` 변종, 스컬윙은 `skelt`), 음악(`requires: [hfmusic]`·`fallback`), 나크룰 방(우리 `grid`).
+  스컬윙·본 데몬은 원작 소리가 없으므로 헬파이어 소리를 빌려 소리 연결을 단다(그렇지 않으면 6.14 "소리 없는 적" 경고, v0.6.1).
+  헬파이어 몬스터와 투사체(`ms_*`·`ex_*`)의 연결은 그때 원본으로 확인한다(기획 8.5).
+- **완료 기준**: 13.5-20 오류 0, `--skip-bundles hellfire` 자원에서 스테이지 카드가 어둡고 `--stage stage_crypt` 가 종료 코드 5, `--skip-bundles hfmusic` 이면 대체 곡으로 돎(`AUDIO music=… fallback=…`), 지하실 10분 `Scenario`.
 
 ### 11.2 공용 형의 필드와 소유 (partial 조각)
 
@@ -2840,14 +3319,18 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 | `Projectile` | `Def`, `Faction`, `Pos`, `PrevPos`, `Vel`(그림 방향), `Radius`, `Tint`, `Scale`, `Age`, `TimeLeft`, `Duration`, `Owner`, `WeaponSlot`, `SpawnTick` | WP3(WP4 는 `ICombatSpawner` 로 생성만) | WP4(자기가 만든 것 세기), WP5(그리기) | `Sim/Entities/Projectile.cs` (WP1) |
 | `Hazard` | `Effect`, `Tint`, `EffectScale`, `Faction`, `Pos`, `PrevPos`, `Radius`, `Age`, `TimeLeft`, `Duration`, `Owner`, `SpawnTick` | WP3 | WP4, WP5(그리기·조각), WP8(반복 소리) | `Sim/Entities/Hazard.cs` (WP1) |
 | `Telegraph`·`Pickup` | 정의·진영·위치·이전 위치·반경·나이·남은 시간·진행 비율·출처 적 ID(1.1 파일 그대로) | WP3 | WP4, WP5 | `Sim/Entities/*.cs` (WP1) |
+| `Pickup` | `SupplyRoom`(`string?`, v0.6.3 — 방 보급의 방 기준점 ID) | WP3(`SpawnPickup` 이 `PickupSpawn.SupplyRoom` 으로 채움, 넘기는 쪽 WP4) | WP4("안 주운 보급"), WP6(미니맵 흰 점), WP7(해시) | `Sim/Entities/Pickup.cs` (WP1d) |
 | | 맞은 목록·궤적 상태·피해 값·`on_end` 명세 | WP3 | — | `Sim/Projectiles/…` 등 조각 |
-| `World` | `Defs`, `Stage`, `Map`, `Arena`(`ArenaGrid`, v0.3), `Resolved`(`ResolvedMap` — 입구·기준점·시작 월드 px, v0.4), `MapSize`(외곽 상자), `ViewSize`, `Rng`, `Tick`, `Dt`, 저장소 5개, `Hero`, `Events`, `Presentation`, `Damage`(요청 큐), `Outcome`, `OutcomeTick`, `AwaitingChoice`, `ViewRect`, `FreezeTicks`, `SlowMoScale`·`SlowMoAppTicks`·`SlowMoStretch`, `Seed`, `Simulation` | WP1(틀), 각 단계 | 모두 | `Sim/World.cs` (WP1) |
+| `World` | `HeroClass`(`HeroClassDef?`, v0.6 — 생성자 인자, 바뀌지 않음) | 앱(WP6)·시험이 생성 때 | WP3(주인공 만들기·후보 거르기), WP5(그림), WP8(소리), WP7(해시·로그) | `Sim/World.cs` (WP1d) |
+| | `Defs`, `Stage`, `Map`, `Arena`(`ArenaGrid`, v0.3), `Resolved`(`ResolvedMap` — 입구·기준점·시작 월드 px, v0.4), `MapSize`(외곽 상자), `ViewSize`, `Rng`, `Tick`, `Dt`, 저장소 5개, `Hero`, `Events`, `Presentation`, `Damage`(요청 큐), `Outcome`, `OutcomeTick`, `AwaitingChoice`, `ViewRect`, `FreezeTicks`, `SlowMoScale`·`SlowMoAppTicks`·`SlowMoStretch`, `Seed`, `Simulation` | WP1(틀), 각 단계 | 모두 | `Sim/World.cs` (WP1) |
 | | `Command`(`PlayerCommand`) | `StageStepper`(앱 쪽이 넘김) | WP3 `HeroControl` | 〃 |
 | | `Options`(`RunOptions`) | `ModuleContext.ApplyRunSetups` | 모두(`--god` 등) | 〃 |
 | | `Nav : INavWorld`, `Spatial : ISpatialQuery` | WP2(모듈이 넣음) | 모두 | 〃 |
 | | `Hostiles : IHostileQuery`, `Spawner : ICombatSpawner`, `Progression : IProgression?`, `RunStats` | WP3(모듈이 넣음) | WP4, WP6 | 〃 |
 | | `Lighting`(`LightingState`: 주변광·어둠·주인공 빛·점 빛), `BossBars`, `Banner`(`BannerState`) | WP4 | WP5, WP6(`Banner` 는 HUD 문구의 유일한 출처), `Visibility`(반경) | 〃 |
 | | `Visibility`(`VisibilityField`, v0.5 — 4.11) | `BeginTick` 만(WP1c 구현, 그 뒤 WP2) | WP4(사격·돌진), WP3(공정성 수 세기만), WP5(안개), WP6(미니맵), WP7(해시). WP3 조준·WP8 소리·`AutoplayPolicy` 는 읽지 않음 | 〃 (형은 `Sim/Visibility/`) |
+| | `Rooms`(`RoomFloors`, v0.6.3 — 방 바닥, 생성자에서 한 번) | 생성자(WP1d) | WP4(방 체류 압박·방 보급·`AutoplayPolicy` "방 안"), WP7(검사·로그) | `Sim/World.cs` (WP1d) |
+| | `RoomPresence`(`RoomPresence`, v0.6.3 — 주인공이 선 방·방마다 누적) | WP4(`Director`) | WP4(`AutoplayPolicy`), WP7(`ROOMS` 로그·해시) | 〃 (형은 `Sim/Contracts/WorldState.cs`) |
 | | `Fairness`(`FairnessCounters`, v0.5.1 — 10.1 공정성 열) | WP3(`UnseenShots`·`HiddenHits`), WP4(`UnseenCharges`·`KiteSwitches`) | WP2(`InvariantChecker` 가 열로 냄), WP7(로그) | 〃 (WP1c) |
 | | `Presentation.Cues`(`CueEvent`, 7.9) | WP3, WP4(신호를 내는 단계) | WP8 | `Sim/Contracts/Presentation.cs` (WP1b) |
 | | 감독 상태(누적기·다음 무리·정예 판정·이벤트 위치) | WP4 | — | `Sim/Director/World.Director.cs` |
@@ -2857,7 +3340,7 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 
 - WP1b 가 끝나기 전에는 다른 묶음이 코드를 쓰지 않는다. WP1b 는 계약을 이 문서 그대로 적는다. 이 문서에 없는 한 묶음 상태는 그 묶음이 자기 조각에 둔다.
 - 계약(WP1·WP1b 파일) 형을 바꿔야 하면 메인 세션이 바꾸고 알린다. 다른 묶음은 계약 파일을 직접 고치지 않는다. 자기 조각 파일에 필드를 더하는 것은 자유다.
-  WP2~WP8 진행 중에 생기는 계약 변경은 모아서 다음 갱신 묶음(WP1e — v0.5.3 에 WP1d 는 중간 보스 계약 보탬으로 썼다)으로 낸다 — 한 번에 하나씩 흩어 고치지 않는다.
+  WP2~WP8 진행 중에 생기는 계약 변경은 모아서 다음 갱신 묶음(WP1e — WP1d 는 v0.5.3 중간 보스·v0.6 헬파이어·직업·안쪽 방 계약 보탬으로 썼다)으로 낸다 — 한 번에 하나씩 흩어 고치지 않는다.
   (v0.5 의 WP1c 는 기획 v0.6 의 시야 계약을 WP2~WP8 시작 전에 넣는 묶음이다. WP1b 와 같은 규칙으로 혼자 하고, 끝나기 전에는 다른 묶음이 코드를 쓰지 않는다.)
 - 한 묶음만 구현·사용하는 형은 그 묶음 소유다(`IFirePattern`·`ITargeting`·`WeaponStats` → WP3, 부품 계약·`PartSlot`·`ActionState`·`MoveOrder` → WP4, `Navigator`·`NavAgentState` → WP2,
   `SoundMixer` → WP8). WP1 은 레지스트리 등록 지점만 가진다.
@@ -2869,11 +3352,14 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 - `FogMath`(v0.5.1): 구현은 WP1c, 소유는 WP5(그리기 규칙). 함수 시그니처는 WP3·WP4(계측)·WP6 이 부르므로 계약으로 보고 바꿀 때 이 절 규칙(메인 세션)을 따른다. 안의 값(보스 늘 보임·닿은 거리·흐림 띠)을 바꾸는 것은 WP5 가 한다.
 - **최소 실제 데이터 선행**(v0.4): `tilesets/l1.json`·`maps/cathedral_arena.json`·단계 1 그림 묶음(v0.5: + `rules/sight.json`)은 WP0a 가 WP2~WP8 시작 전에 낸다(11.1). 그 뒤 소유는 아래 그대로다.
   다른 묶음이 기다리지 않으려고 남의 소유 파일에 임시 맵·그림 정의를 만들지 않는다 — 실제 데이터가 아직 없는 시험은 `TestKit` 합성 정의로 한다.
-- 데이터 파일 소유(v0.3): 타일셋 `tilesets/` = WP0(번호·성질은 원본으로 확인), 맵 `maps/` = WP5(배치·입구·기준점은 미리보기로 맞춤), 그림·이펙트 `sprites/`·`effects/` = WP5,
+- 데이터 파일 소유(v0.3): 타일셋 `tilesets/` = WP0(번호·성질은 원본으로 확인 — v0.6 의 `marks` 도), 맵 `maps/` = WP5(배치·입구·기준점·`open_center` 은 미리보기로 맞춤), 직업 `heroes/` = WP3(v0.6), 그림·이펙트 `sprites/`·`effects/` = WP5,
   소리 `audio/`·`rules/audio.json` = WP8(연결 표가 다른 종류의 ID 를 가리키지만 그 파일들은 고치지 않는다), 가져오기 표 `Table/` = WP0.
   WP5 가 새 그림 묶음·변종이 필요하면 WP0 에 표 한 줄을 요청한다. 13.5-10 시험이 어긋남을 잡는다.
 - 맵 배치를 바꾸면(WP5) 사용자 PC 의 맵 그림이 낡는다. 시작 검사가 `layout_hash` 로 잡고 가져오기를 다시 돌리라고 알린다(1.4). 검증 담당에게 "다시 가져오기 필요" 를 적어 넘긴다.
 - `SimPhase` 순서표(3.5)는 WP1 소유. 단계를 더하려면 요청.
+- (v0.6) WP1d 가 구현한 순수 로직의 소유: `Assets/ContentAvailability.cs` → WP7(시작 검사가 주 사용처), `Map/ArenaLayout.cs` 의 `grid`·`over_border`·`ValidateRooms` → 그대로 계약(바꾸면 WP0 굽기·WP2 충돌이 같이 바뀜 — 메인 세션).
+  (v0.6.1) `Data/Registry/StageReach.cs` → WP4(부품이 참조하는 적을 아는 쪽), `Assets/DefAssetNames.cs` → WP7(본문). WP1d-구현이 끝나기 전에는 그 파일을 WP1d-구현 담당만 고친다.
+  직업·묶음 데이터를 더하는 WP9·WP10 은 계약 파일을 고치지 않는다. 고쳐야 하면 11.3 의 다음 갱신 묶음(WP1e)으로 모은다.
 - 개발 옵션은 WP7 이 파싱만 하고, 적용은 `IRunSetup` 을 등록한 묶음이 한다(WP3: 주인공 쪽, WP4: 시각·부하·AI 멈춤). 소리 옵션(`--mute`·`--sound`)은 `AppOptions.Muted` 로 WP8 이 읽는다.
 
 ### 11.4 WP1 코드가 정한 시그니처 (v0.2 문서에 없거나 다르던 것)
@@ -2965,13 +3451,16 @@ AppServices.Render (RenderContext?)    // GameApp 이 그래픽 장치 뒤에 �
 | R15 | partial 조각에 필드를 아무 데나 둠 | 소유가 흐려져 같은 필드를 두 묶음이 씀 | 11.2 표에 없는 공용 필드는 계약 변경 절차(11.3). 각 묶음 조각에는 그 묶음만 쓰는 필드만 |
 | R16 | 몬스터를 늘렸는데 구별이 안 되거나 어느 스테이지에도 안 나옴 | 사용자 요구 8 이 화면에서 안 보임 | 6.14 경고 두 개(같은 묶음·변종·덧입힘, 안 나오는 적) + `--preview enemies` 고정 배치 캡처를 검증 담당이 판정(10.2) |
 | R17 | 원작 형식 해석 오류(CL2 그룹·평면 겹침, 프레임 폭 추정, MIN 뒤집기, 삼각형 패딩, 0/1 기반 섞임) | 그림이 깨지거나 밀림 | 시제품이 확인한 규칙을 저장소의 부록 A 로 옮겨 정본으로 둠(조사 문서·시제품은 임시 폴더라 사라질 수 있음), 시험 인코더로 만든 바이트 시험(10.1), 폭은 파일 추정 + 표 대조(1.4), WP0 `contact` 견본을 눈으로 확인 |
-| R18 | 사용자 원본 판이 다름(다른 설치본, 파일 이름·크기 차이) | 가져오기 실패 또는 다른 그림 | `diabdat.mpq` 에만 기댐, 없는 파일은 목록과 종료 코드 3, manifest 에 원본 크기·SHA-256 을 적어 문제 보고 때 비교 |
+| R18 | 사용자 원본 판이 다름(다른 설치본, 파일 이름·크기 차이) | 가져오기 실패 또는 다른 그림 | 기본 내용은 `diabdat.mpq` 에만 기댐, 없는 파일은 목록과 종료 코드 3, manifest 에 원본 크기·SHA-256 을 적어 문제 보고 때 비교. v0.6: 헬파이어 MPQ 도 원본 줄에 적고, **있는 묶음 MPQ 의 빠진 파일은 "없음" 으로 덮지 않고 실패**(1.4) — 판이 다른 MPQ 로 반쯤 켜진 묶음이 생기지 않게 |
+| R30 | (v0.6) 헬파이어 묶음 유무가 PC 마다 다름 | 같은 씨앗의 결과·최고 기록이 PC 마다 달라짐, 기본 스테이지에 헬파이어 몬스터가 섞이면 없는 PC 에서 소리·그림 없는 적 | 시뮬레이션은 묶음을 모름(6.17 — 소스 문자열 시험), 꺼짐 단위 = 스테이지·직업, 13.5-20 이 `requires` 를 위로 덮게 함(기본 내용이 묶음 내용을 못 가리킴), 레벨업 후보는 정의로 거름(6.8). 10.2 "헬파이어 없음" 행이 같은 씨앗 해시를 비교 |
+| R31 | (v0.6) 직업을 더할 때 계약을 다시 고침(결정 K 의 반대) | WP2~WP8 끝난 뒤 계약 변경 묶음 | 형·월드 인자·소리 키·저장 모양을 WP1d 에서 직업 단위로 정함. MVP 도 `sorcerer` 정의 하나로 돌려 경로를 매일 씀. 남는 위험: `melee_arc` 의 맞음 판정·근접 시전 클립 재생 — WP9 에서 처음 쓰임(패턴 등록·무기 정의는 데이터라 계약 밖). v0.6.1: 저장 계약에 직업(`RunResult.HeroClassId`·`LastHero`·`BestRecord`), 특성 = 패시브(`Traits`, 6.16) — 능력치 키로 안 되는 특성 효과는 패시브 일반의 확장(효과 부품)이라 직업 계약 밖이지만 그때 `PassiveDef` 를 고친다 |
+| R32 | (v0.6) 안쪽 방 배치의 갇힌 바닥 띠·좁은 틈 | 그림은 바닥인데 아무도 못 감, 큰 적이 방에 못 들어가 주인공이 숨음 | `over_border` 로 둘레에 겹쳐 놓기(6.11), 13.5-5 갇힌 바닥 칸 오류(자동 막힘 처리 안 함)·26·34 → 방 기준점, 13.5-4 의 80px 규칙, 합성 띠 시험(WP1d 맵 → WP2). v0.6.1: 벽 맞물림 규칙(꺾이는 자리 = 모서리 조각, 6.11)·`over_border` 막힘 줄어듦 오류·13.5-19 하위 칸 검사(갇힌 바닥·하위 1칸 틈 — 자원·격자 없이 WP0a 에서 바로)·6.11 예 배치를 그대로 쓴 합성 맵 시험, 그 위에 WP2 가 실제 격자로 확인. 시제품 길 검사는 저장소 배치를 읽지 않으므로 확인 수단에서 뺐다 |
 | R19 | 타일 성질 표가 원본 SOL 과 어긋남 | 충돌과 그림이 어긋남(요구 3) | 가져오기가 대조해 실패(1.4), 의도한 차이는 `sol_known_diffs` 에 이유와 함께. `--preview tiles` 겹침 캡처 |
 | R20 | 등각 y 정렬 규칙 오류(벽이 유닛을 잘못 가림, 아치 아래 유닛, 길게 이어진 벽) | 화면이 이상해 보임 | 둘레 벽은 정렬 밖 단계(0b·5층), 안쪽 기둥만 y 정렬, 아치 덧그림 칸 안 유닛 키 당김(7.4), `--preview tiles` 와 기둥·뒷벽 둘레를 도는 자동 캡처(10.2). 협로 벽이 틀리면 줄 단위 무리로 뺌 |
 | R21 | 소리 장치 없음·8비트 WAV·긴 음악 메모리·MonoGame 이 늘 장치를 엶 | 시작 실패·소리 없음·검증 실행이 스피커를 씀 | 가져오기에서 16비트로 변환(7.9), 개발 옵션 실행은 `ALSOFT_DRIVERS=null`, 장치 초기화 예외는 null 드라이버로 다시 만들기, 못 열면 무음으로 계속 + 로그, 음악은 두 곡까지·읽기는 작업 스레드 |
 | R22 | 자원이 낡음(형식 판 올림, 가져오기 표 바뀜, 굽기 코드 바뀜, 가져오기 중간 실패 뒤 섞인 출력) | 낡은 `Assets` 로 조용히 이상하게 그려짐 | 캐시 키 = 도구·Core 어셈블리 해시, 굽기 결과가 바뀌면 `AssetFormat.Version` 올림(WP0 규칙), 시작 검사 ①~⑤(판·표 해시·이름·파일 크기·`layout_hash`(타일셋 포함)) → 안내 화면, 원본 manifest 가 없으면 빌드가 출력 manifest 를 지움(1.3·1.4) |
 | R23 | 마름모 맵에서 생성 띠의 큰 부분이 맵 밖 | 주인공이 모서리에 있으면 12번 시도가 자주 실패 → 입구로만 들어와 흐름이 바뀜 | WP4 가 모서리 주인공 시험에서 입구 대체 비율을 잼. 높으면 띠 후보를 "띠 ∩ 맵 경계 상자" 에서만 뽑거나 시도 수를 늘린다(`rules.spawn.tries`) |
-| R24 | 저작물·사용 조건(Blizzard 자원, DevilutionX "Sustainable Use License") | 공개 저장소에 올라가면 문제 | ① 자원: `.gitignore`(`Assets/*`, `out/`, `logs/`, 원작 형식 확장자), 도구 출력 경로가 저장소 안 무시되지 않는 곳이면 거절(1.4), 캡처·견본·로그는 저장소 밖에(9절·10.2, `docs/media` 포함), 도구 시험 픽스처는 시험 인코더가 만듦(원본에서 자른 바이트 금지), `audit` 명령(추적 파일 해시를 출력·원본 항목 해시와 대조 + 확장자 목록)을 WP0 완료 기준에. ② DevilutionX: 도구·게임이 `*.tsv`·DUN 을 읽거나 저장소에 넣지 않는다. **원작 게임 동작을 재현하는 사실 수치만**(칸 폭·프레임 간격·타격 프레임·SOL 보정 칸·아치 덧그림 번호표) 우리가 확인해 손으로 적고, 파일·코드·표 구조·주석은 옮기지 않으며, 값마다 출처 주석(`원본 확인`/`DevilutionX 참고`)을 남긴다(1.4). 성질 표 키 ⊆ 쓰는 메가타일 검사가 SOL 덤프를 막는다(6.11). 수치 사실을 이 범위로 옮기는 것은 **사용자가 확인했다**(v0.5, 기획 열린 질문 19 닫힘·기획 19.1). 배포할 일이 생기면 다시 정함 |
+| R24 | 저작물·사용 조건(Blizzard 자원, DevilutionX "Sustainable Use License") | 공개 저장소에 올라가면 문제 | ① 자원: `.gitignore`(`Assets/*`, `out/`, `logs/`, 원작 형식 확장자), 도구 출력 경로가 저장소 안 무시되지 않는 곳이면 거절(1.4), 캡처·견본·로그는 저장소 밖에(9절·10.2, `docs/media` 포함), 도구 시험 픽스처는 시험 인코더가 만듦(원본에서 자른 바이트 금지), `audit` 명령(추적 파일 해시를 출력·원본 항목 해시와 대조 + 확장자 목록)을 WP0 완료 기준에. ② DevilutionX: 도구·게임이 `*.tsv`·DUN 을 읽거나 저장소에 넣지 않는다(v0.6.1 예외 하나: `audit` 가 유출 대조를 위해 원본 DUN 을 메모리에서만 읽음 — 내용을 출력·저장하지 않음). **원작 방을 본뜬 배치는 크기·문 방향·벽 재료만 따르고 칸 배열은 우리 조각 이름으로 새로 짠다 — DUN 을 칸마다 옮겨 적지 않는다**(6.11 "원작 방 본뜨기", 1.4 `audit` 의 4×4 배열 대조. `Data/maps/*.json` 은 13.5-16 출처 주석 검사 대상이 아니므로 이 대조가 유일한 자동 그물이다). **원작 게임 동작을 재현하는 사실 수치만**(칸 폭·프레임 간격·타격 프레임·SOL 보정 칸·아치 덧그림 번호표) 우리가 확인해 손으로 적고, 파일·코드·표 구조·주석은 옮기지 않으며, 값마다 출처 주석(`원본 확인`/`DevilutionX 참고`)을 남긴다(1.4). 성질 표 키 ⊆ 쓰는 메가타일 검사가 SOL 덤프를 막는다(6.11). 수치 사실을 이 범위로 옮기는 것은 **사용자가 확인했다**(v0.5, 기획 열린 질문 19 닫힘·기획 19.1). 배포할 일이 생기면 다시 정함 |
 | R25 | `Assets` 복사 양(출력 폴더마다) | 빌드가 느림·디스크 | `PreserveNewest`. 느리면 하드 링크 복사를 켬(1.3). 다른 출력 폴더(`-o`) 빌드가 잦으면 잰 뒤 판단 |
 | R26 | MPQ 를 여러 스레드가 같이 읽음 | 바이트가 섞여 그림·소리가 깨지거나 실행마다 다름(캐시 키도 깨진 바이트로) | 원본 읽기는 주 스레드에서 차례로 `byte[]`, 병렬은 해독·굽기·압축만(1.4), 시험 `--jobs 1` = `--jobs 8` |
 | R27 | 핀드(장애물 통과)가 둘레 벽 칸 안으로 들어감 | 벽에 가려 안 보이고 투사체로 못 맞히는 자리에서 공격 | 둘레 도형 `IsBoundary` 는 통과 유닛도 막음(4.2·4.7) |
@@ -3023,6 +3512,13 @@ AppServices.Render (RenderContext?)    // GameApp 이 그래픽 장치 뒤에 �
 | 10.7·12.6 닿은 적·자폭 (v0.5.1) | 주인공에 닿은 적은 늘 보임, 근접·자폭은 닿아야 맞음 | 닿은 거리는 적마다 `TouchReach`(최소 `touch_margin`, 근접 사거리 여분 + 10 까지), 자폭 점화 중 적은 늘 그림 | 근접 사거리가 긴 적이 1칸 벽 너머에서, 점화한 자폭 적이 벽 모서리 너머에서 숨은 채 때리지 않게(공정성 3·5) |
 | 10.7 피해 숫자·표시 이펙트 | 피해 숫자는 시야 밖 적이면 숨김, 주인공 무기 이펙트는 늘 | 피해 숫자는 대상의 안개 알파, 표시 이펙트(`FxSystem`)는 적 쪽도 늘 그림(적 등장 연출·죽는 그림·시체만 숨김) | 적 쪽 이펙트는 위험(폭발·강타)이라 안개에 가리지 않는 쪽이 공정성(기획 10.7)에 맞다. `FxSystem` 이 이펙트 주인을 몰라도 된다(7.10) |
 | 9.4·10.7·25절 `clear_sight` (v0.5.3) | 이 조건을 단 패턴과 그 적의 `kite` 는 등급과 상관없이 실제 시야 | `SeenClearly` 의 등급 예외를 통째로 없앰 — 시야 조건이 있는 일반 부품(`shoot_projectile`·`kite`·`charge`)은 어느 등급이든 실제 시야, 보스 패턴은 `clear_sight` 만 | 규칙 하나로 같은 결과. MVP 의 다른 중간 보스·보스는 이 부품을 쓰지 않는다. E 단계에 보스가 일반 원거리·돌진 부품을 쓰면 그것도 시야를 본다(기획 10.7 공정성과 같은 방향) `[해석]` |
+| 4.5·13.1 시전 맞춤 자리 (v0.6) | 직업 정의에 시전 길이·발동 프레임 | 그 직업 그림 묶음의 시전 클립(`frames`·`event_frame`, 출처 주석 — 6.3) | 원본 유래 수치는 그림 묶음 클립 한 곳에 둔다(1.4·13.5-16). 규칙은 쓰지 않는 그림 맞춤 값이라 직업 정의의 칸이 되면 두 곳이 어긋날 수 있다 `[해석]` |
+| 4.1·4.5 기본 능력치 자리 (v0.6) | `rules.hero` 에서 `stats` 를 직업 정의로 옮기고 `rules.hero` 는 공통 규칙과 고른 직업만 | `rules.hero.stats` = 모든 직업의 기본값(기획 4.1 표)으로 남기고, 직업 `stats` 는 덮어쓸 키만 | 기획 4.1 "다른 직업은 몇 키를 덮어쓴다" 와 같은 모양. 직업마다 키 열다섯 개를 다 적지 않아도 된다(마법사는 빈 객체) `[해석]` |
+| 5.1·13.1 근접 시전 그림 `at` (v0.6) | `cast_clip: at` | `"cast_clip": "attack"`(`ClipKind.Attack`) | 클립 이름은 정의 전체가 `idle`·`walk`·`attack`… 으로 통일돼 있고 원작 글자(`at`)는 가져오기 표만 안다(6.3) |
+| 19.4 `hfvoice` 묶음 (v0.6) | 묶음 넷, 정의의 `requires` 는 묶음 목록 | `hfvoice` 는 원본 우선순위(`prefer`)에만, `requires`·표 `bundle` 에 쓰면 오류 | hfvoice 가 없어도 8비트판이 같은 이름을 만들어 꺼지는 내용이 없다 — `requires` 에 쓰면 내용을 쓸데없이 끈다 `[해석]` |
+| 13.5-5 갇힌 칸 (v0.6) | 반경 14 로 걸을 수 있는 칸인데 시작에서 닿지 않는 칸 | 걷기 막힘 없는 하위 칸에 시작에서 닿는 반경 14 몸이 걸칠 수 없으면 오류 | 하위 1칸 띠는 clearance 가 14 언저리라 "걸을 수 있는 칸" 기준이면 격자 표본에 따라 놓친다(6.14) `[해석]` |
+| 19.4 음악 대체 (v0.6) | 음악에 `requires`·대체 곡 | `MusicDef.Requires`·`Fallback`, 스테이지 `requires` 에는 `hfmusic` 을 넣지 않음 | 음악은 없어도 스테이지를 끄지 않는다(기획 표 "대체 곡으로 돈다") — 꺼짐 단위(스테이지·직업)와 섞지 않게 |
+| 10.1 방 기준점 (v0.6) | 맵에 방 기준점 `room_<이름>` | `anchors` 의 키 이름 규칙(`room_` 접두) — 새 칸 없음 | 기준점은 이미 `anchors` 이고 다른 묶음(행진 목표·빛)도 같은 표를 읽는다 |
 | 8.1·10.7 "또렷이 보일 때만 쏜다" (v0.5.3) | 쏘는 조건(시점은 적지 않음) | 시작 조건 + **발사 프레임에 다시 봄**, 그때 안 보이면 그 발사만 버림(클립은 끝까지, 쿨은 씀). `shoot_projectile`·`clear_sight` 패턴 둘 다 | 시작에서 발사까지(약 0.5s) 주인공이 움직여 안 보이게 되면 공정성 `unseen_shots`(투사체가 생기는 순간을 셈)가 0 이 안 된다(6.6·10.1) `[해석]` |
 
 ---
@@ -3032,6 +3528,7 @@ AppServices.Render (RenderContext?)    // GameApp 이 그래픽 장치 뒤에 �
 13.1~13.3 은 v0.2 의 세 리뷰 지적마다 처리를 한 줄로 적은 것이다(높음·중간은 모두 반영, 일부만 반영하거나 보류한 것은 이유). 당시 이름(`bone_brute`, `kind_lights` 등)은 기록으로 그대로 둔다.
 13.4 는 v0.3 변경(기획서 v0.4·WP1 구현)의 처리다. 13.5 는 v0.3 리뷰(구현·검증·기획 담당 합본)의 처리다.
 13.6 은 기획서 v0.5 와 맞춘 것, 13.7 은 WP1b 구현 리뷰, 13.8 은 기획서 v0.6(전장의 안개)과 사용자 결정의 처리다. 13.9 는 그 안개 설계의 리뷰 처리다.
+13.10 은 WP1c 구현, 13.11 은 기획서 v0.6.2(중간 보스), 13.12 는 기획서 v0.7(헬파이어·직업·안쪽 방)의 처리다.
 
 ### 13.1 기획 담당 (`docs/reviews/architecture-planner.md`)
 
@@ -3369,6 +3866,113 @@ WP1c(커밋 전) 코드가 문서와 다르게 또는 더 정한 것. 코드가 
 2. 발사 프레임 재확인으로 버려지는 발사 수 — `kite_switches` 처럼 로그 열로 볼지는 WP4 첫 `Scenario` 결과를 보고 정한다(많으면 화면 위아래 궁수가 헛손질처럼 보일 수 있다).
 3. 기획 열린 질문 16·18(새 고유 TRN 색, ×1.5 크기)·24(상자 수와 보스 HP)·25(원거리·장판 중간 보스의 손맛)는 첫 플레이·`--preview enemies` 로 본다.
 
+### 13.12 v0.6 — 기획서 v0.7(헬파이어·직업·안쪽 방) 반영
+
+사용자 결정 H(헬파이어 자원 정식)·K(직업 4개)·M(넓은 방 + 안쪽 방), brief 요구 12~14. 기획 26절 "설계에 넘기는 것" 의 처리. 계약 1~3 은 기획 권고대로 아직 구현 전인 **WP1d 에 합쳤다**(11.1 WP1d #4~#17).
+
+| # | 넘긴 것 | 처리 | 자리 |
+|---|---|---|---|
+| 1 | 직업 정의 `HeroClassDef`, 직업마다 파일, `rules.hero` 는 공통 규칙 + 고른 직업 ID, 주인공 코드는 직업 정의만 읽음 | `HeroClassDef`·`HeroTraitDef`, 종류 `hero_classes`, `Data/heroes/<id>.json`, `HeroRulesDef.Class`, `World.HeroClass`(생성자 인자). 기본 능력치는 `rules.hero.stats` 에 남기고 직업은 덮어쓰기(12.1 `[해석]`), 시전 길이·발동 프레임은 그림 묶음 클립(12.1 `[해석]`) | 6.10·6.16·6.3·WP1d #9~#12 |
+| 2 | 무기 `cast_clip` 에 `at`, `classes`, 주인공 소리 키 = 직업 ID | `"cast_clip": "attack"`(12.1), `WeaponDef.Classes`, `SoundBindingsDef.Hero` 를 직업 ID 사전으로. 레벨업 후보·`--weapons` 가 `classes` 로 거름 | 5.3·6.8·6.15·WP1d #5 |
+| 3 | 자원 묶음: 정의 `requires`, 음악 대체 곡, 표 `optional` → `bundle`, manifest 의 만든·건너뛴 묶음, 시작 검사 "꺼짐", 저장 키 = 스테이지 × 직업 | `ContentBundle`, 적·스테이지·직업·무기·음악 `Requires`, `MusicDef.Fallback`, 표 `Bundle`·`Prefer`·`OutputBundles()`, manifest `SkippedBundles`·파일 `Bundle`·`Source`, `ContentAvailability`(꺼짐 단위 = 스테이지·직업), 시작 검사 ③ 의 꺼짐, 저장 `records[스테이지][직업]`·`last_hero` | 1.4·6.15·6.17·8.3·WP1d #4~#8 |
+| 4 | 가져오기 도구: `--hellfire` 기본 = diabdat 폴더, 없는 MPQ 건너뛰기, 헬파이어 경로 `nlevels\…`, 큰 칸 폭, 프레임 수는 파일에서 | 1.4 "헬파이어 묶음"(찾는 순서 `prefer` → diabdat → 묶음 MPQ, 있는 MPQ 의 빠진 파일은 실패, `--skip-bundles` 검증용), 칸 폭 가정 금지 문장, 종료 코드·끝 보고·캐시 | 1.4·WP0 |
+| 5 | 배치 데이터(WP0a): 스테이지 1 안쪽 방, 층별 타일 조각 이름, `open_center`, 방 기준점, 창살 성질 | 배치 놓기 `grid`·`origin`·`over_border`·`id`·`decor_why`, `MapDef.OpenCenter`, 방 기준점 = `anchors` 의 `room_*`(12.1), `TilesetDef.Marks`, 창살 = 기존 `w` 글자(성질 표가 이미 세 비트). 층별 이름 = 층마다 타일셋 파일 | 6.11·WP0a·WP1d #14·#15 |
+| 6 | 길 검사: 갇힌 칸 = 오류, 큰 적 → 방 기준점, 갇힌 띠 합성 시험 | 13.5-5 "갇힌 바닥 칸"(주인공 몸이 걸칠 수 있는가 — 12.1), 26·34 → 모든 `room_*`, 13.5-6 진입점 60px, 합성 방 맵 셋(WP1d) → WP2 시험 | 6.14·10.1·WP2 |
+| 7 | 자리 고르기(포위·소환·예고 지점) | `INavWorld.PathLength`, `PlaceReach`·`TryPlace` 겹지정, `rules.spawn.path_detour` 1.5. 분열·일반 생성은 쓰지 않음 | 4.10·6.10·6.12·WP2·WP4 |
+| 8 | 공정성: `--autoplay-visit rooms` 로 스테이지 1 방 문·벽 모서리 | `AppOptions.AutoplayVisit`, `AutoplayPolicy` 방 들르기 모드, 스테이지 1 10분 `Scenario` 한 번 더, 창살 너머 궁수 시나리오, 10.2 "안쪽 방" 행 | 9절·10.1·10.2·WP4 |
+| 9 | 검증 13.5-19~21, 13.5-10 묶음판 | 6.14 표 세 행(19 = `ArenaLayout.ValidateRooms` WP1d, 20 = WP7 + WP0 시험, 21 = WP7 + 소리 WP8), 13.5-10 ② 묶음판 | 6.14 |
+| 10 | 마법사 고정·"헬파이어 선택" 문장 | 1.4 "diabdat 에만 기댄다"·`optional`, 5.3 시전 클립, 5.6 주인공 죽음, 6.3 주인공 그림 묶음, 6.10 `rules.hero` 예, 4.2·6.11 "MVP 맵에 `w` 없음", 1.4 변환 규칙 주인공 행을 v0.7 에 맞춤. 역사 기록(13.4~13.11·WP1b 표)은 당시 문장 그대로 | 여러 곳 |
+
+**더 정한 것**: 무기 `requires`(헬파이어 마법 그림 무기 — 레벨업 후보는 `requires ⊆ 스테이지 ∪ 직업` 으로 걸러 PC 와 무관, 6.8), `hfvoice` 는 `prefer` 전용(12.1), 벽 무리 나누기에 안쪽 방·창살(7.4), `--hero` 를 저장 보호 판정에(9절),
+작업 묶음 WP9(직업 고르기)·WP10(헬파이어 스테이지)(11.1), 위험 R30~R32.
+
+**원본으로 확인한 것**(조사 담당 2차 조사, 세션 작업 폴더 `diablo-inv/inventory-hellfire.md`·`inventory-rooms.md`, 읽기만 — 이 문서 작성 때 다시 읽지 않고 조사 결과를 옮겼다):
+MPQ 항목 hellfire 584(이름 찾음 476)·hfmonk 336·hfvoice 90(88)·hfmusic 2. 헬파이어 일반 몬스터 TRN 없음. L5 = `nlevels\l5data`(CEL 1,836·MIN 650 × 10칸·TIL 217, `l5base.pal`), L6 = `nlevels\l6data`(CEL 1,763·MIN 606·TIL 166, `l6base1~5`).
+헬파이어 팔레트 색인 128~255 = `l1.pal`. 수도사 칸 폭 112/130/98/114/160·27벌 모두 자기 죽기. L1 창살 35·36 = 기둥 칸만 셋 다·나머지 걷기만, 닫힌 문 25·26·98 = 벽, 아치 11·12 = 틈 하위 1칸, 벽 메가타일 1·2 는 반만 막힘.
+
+**남은 열린 질문**
+1. 기둥 시야(기획 열린 질문 22): v0.7 기본 = 원본대로(`x`, 안 막음). 바꾸면 `design_diffs` 가 아니라 `sol_known_diffs`(출처: DevilutionX 참고)에 `{ tile: 15, sub: 0, sol: "x", use: "X" }` 를 더한다(기획 v0.7 — 6.11 문장도 이에 맞춰 고쳤다).
+   L5 기둥은 DevilutionX 도 보정하지 않으므로 바꿔도 L1 만이다.
+2. 13.5-5 갇힌 바닥 칸의 "14px 안" 기준이 실제 L1 벽 모서리에서 거짓 오류를 내지 않는지 — WP2 가 실제 `cathedral_arena` 로 처음 돌릴 때 본다. 내면 기준을 "칸 중심에서 반경 14 + 하위 칸 반대각" 으로 넓힌다(데이터 아닌 검사 상수).
+3. `PathLength` 의 A* 펼침 수 상한(소환 1회당) — WP2 가 `--stress` 와 보스 소환이 겹친 틱으로 재서 4.9 예산 안인지 적는다.
+4. 기획 열린 질문 26~30(헬파이어 보스 거리·직업 균형·해금 순서·직업 그림·소리·안쪽 방 손맛)은 기획·첫 플레이 몫이다. 30 의 대안("핀드는 기둥·창살만 넘음")을 고르면 충돌 도형에 "안쪽 벽" 표시가 하나 더 필요하다
+   (지금 `ArenaCollision` 은 둘레/안쪽 둘만 가른다, 4.2) — 계약 변경이라 그때 WP1e 로 모은다.
+
+### 13.13 v0.6.1 — v0.6 리뷰 반영 (`docs/reviews/architecture-v06-review.md`)
+
+구현(I1~I11)·검증(V1~V9)·기획(P1~P9) 담당 지적 29개. 높음·중간은 모두 반영했고, 낮음도 모두 반영했다(받아들이지 않은 낮음 없음). 같은 문제를 여러 담당이 짚은 것은 한 번에 고쳤다.
+"둘 다" 지적의 기획서 쪽은 기획 담당이 v0.7.1 로 고쳤고(같은 시점), 이 문서는 그 판(10.1 "벽이 꺾이고 만나는 자리", 10.3 새 배치, 13.5-21·22, 15절 `VISIT`·`VISIT_SKIP`, 특성 패시브 `trait`)에 맞췄다.
+
+| 지적 | 처리 | 자리 |
+|---|---|---|
+| 높음 I1 맵에 `requires` 칸이 없고 맵 그림 이름의 묶음을 알 수 없음 → 헬파이어 없는 PC 에서 L5·L6 맵 그림이 "꺼짐" 이 아니라 오류 | 반영(지적의 ② 안). 맵에는 `requires` 를 두지 않고, 맵 그림의 묶음 = 그 타일셋 표 항목의 `bundle`. `ImportTable.OutputBundles(arenas)` 가 맵 그림 이름도 묶음에 잇는다. 도구는 타일셋 묶음을 건너뛰면 그 맵 굽기도 건너뜀. 13.5-10 묶음판에 "맵 그림 → 그 맵을 쓰는 스테이지 D" 귀속(= 스테이지 `requires` ⊇ 타일셋 묶음). 합성 `l5` 시험(도구 ⑨·시작 검사 꺼짐 1·오류 0). ① 안(`MapDef.Requires`)을 고르지 않은 이유: 같은 사실(타일셋이 어느 MPQ 에 있나)을 표와 맵 두 곳에 적게 되어 어긋날 수 있다 | 1.4 "타일셋 묶음과 맵"·시작 검사 ③, 6.11 헬파이어 층, 6.14 13.5-10·20, WP1d #6·#14, WP10, 10.1 `Assets`·`Pipeline` |
+| 높음 I2 `RunResult`·`ISaveService` 에 직업이 없음 → WP9 에서 다른 직업 판이 마법사 기록으로 조용히 저장되거나 계약 파일을 다시 고침 | 반영. `RunResult.HeroClassId`, `StageRecord`, `ISaveService.LastHero`·`SetLastHero`·`BestRecord(stage, hero)`. 저장 왕복 시험(합성 직업 둘의 기록이 따로) | 8.3, WP1d #13, WP6·WP7, 10.1 `Dev`·`Save`, R31 |
+| 중간 I3 `AutoplayPolicy` 가 정적 클래스라 방 들르기 상태를 둘 곳이 없음 | 반영. `sealed class AutoplayPolicy(AutoplayVisit)`, `AutoplayVisit` 열거형을 Core 로, 방 번호 상태는 인스턴스에(시뮬레이션 상태 아님) | 9절, WP1d #18, 8.1, WP4·WP6 |
+| 중간 I4·V2·V3·P1·P2 스테이지 1 예 배치가 자기 검사에 걸림(`open_center` 안 Γ 모서리, 꺾이는 자리 1칸 구멍 넷, 둘레 구멍, Γ 끝 ↔ 기둥 28.6px) | 반영. 기획 v0.7.1 10.3 배치로 예를 바꿈: 꺾이는 자리(T·├·Γ)는 모서리 조각, ㄴ 은 가로 조각, Γ 는 [13,13] 부터(`open_center` [6,6,13,13] 7×7 그대로), 기둥 [15,16]·[17,15]·[17,17], ㄱ 벽은 둘레와 뗌, 창살 두 칸. 6.11 에 "벽 맞물림" 규칙. 설계 담당이 v0.6 예와 새 예를 하위 칸으로 풀어 확인했다 — v0.6 예: 1칸 틈 다섯·둘레 막힘 줄어듦 하나·`open_center` 하나·80px 미만 여섯, 새 예: 모두 0(80px 는 마름모 거리 근사, 저장소 밖 스크립트) | 6.11, WP0a, 10.1 `Map`·`Nav` |
+| 중간 I5·P4 쓸 수 없는 묶음 MPQ(깨짐·판 다름)가 기본 내용까지 "자원 없음" 으로 만듦, 우회 수단이 `import-all.ps1` 에 없음 | 반영. 그 묶음 전체 건너뜀(`열 수 없음`·`판 다름: <목록>`), 종료 코드 0 + 끝 보고 `경고:` 줄. 2·3 은 diabdat 와 `--hellfire` 직접 지정일 때만, 그 문구에 `--skip-bundles` 우회 명령. `import-all.ps1` 에 `-Hellfire`·`-SkipBundles`. 타이틀 한 줄의 앞말을 이유로 가름. 경고 전용 종료 코드(예 6)는 두지 않음 — 기본 내용이 다 만들어졌으면 성공이고, 종료 코드만 보는 호출자(`import-all.ps1`)가 실패로 오해하지 않게 | 1.4, 6.17, 10.1 `Pipeline` ③⑧, WP0 |
+| 중간 I6 "스테이지에서 나올 수 있는 적" 계산이 13.5-15(WP4)·13.5-20(WP7)·`TextureStore` 에 따로 → 엇갈림 | 반영. Core `StageReach.Enemies(StageDef, GameDefs)` 하나, `PartDef.ReferencedEnemies`(로더가 연결 단계에서 매개변수의 `DefRef<EnemyDef>` 를 모음 — `IPartFactory` 에 메서드를 더하는 안보다 부품 묶음 코드가 늘지 않음). 구현·시험 WP1d-구현, 소유 WP4 | 6.14, 7.5·7.9, WP1d #19, 11.3 |
+| 낮음 I7 `PathLength` 가 어느 끝이 주인공인지 모름, 필드·A* 고르기가 모호 | 반영. `PathLengthToHero` 를 따로, `PlaceReach.FromHero`, "반경 ≤ 등급 반경인 필드가 있고 후보가 통과 칸일 때만 필드, 아니면 자른 A*" | 4.10, WP1d #16 |
+| 낮음 I8 `grid` 공백·줄 길이, `ValidateRooms` 오류 형, `TileMark` 사전 키 | 반영. `Split(' ', RemoveEmptyEntries)`·줄 길이 자유, `LayoutError.Warning` 을 더해 세 검사가 같은 형·부르는 곳 `MapDataReader.Read`, `TileMark` 에 `JsonStringEnumMemberName` 과 읽기 시험 | 6.11, WP1d #14·#15 |
+| 낮음 I9·P6 스컬윙·본 데몬 소리 문장이 사실과 다름, 스컬윙 `skelt` 변종 누락 | 반영. 소리는 펠트윈만 hellfire, 두 적은 원작 소리 없음(WP10 에서 빌림). 스컬윙 변종 `skelt` 예외 | 1.4, 6.13, A.2, WP10 |
+| 낮음 I10 manifest `source` 하나로는 여러 MPQ 출처를 못 적음, 음악만 대체돼도 타이틀 한 줄이 뜰 수 있음 | 반영. `sources`(MPQ 이름 목록, 정렬). `ContentAvailability.Disabled(defs)`(꺼진 스테이지·직업)로 바꾸고 `Any` 일 때만 한 줄·`ASSETS disabled=`. 음악만이면 `AUDIO … fallback=` | 1.4, 6.17, 8.1, WP1d #7·#8 |
+| 낮음 I11 WP1d 가 17항목 + 구현으로 커져 주 경로가 김, "그 형을 쓰는 구현이 없다" 가 사실과 다름 | 반영. WP1d-형(짧게, WP2~WP8 앞) / WP1d-구현(WP0a·WP2~WP8 과 동시, 기다리는 시험을 적음). 문장을 "형을 읽는 코드는 `World.cs`·`ArenaLayout.cs` 뿐, #12·#15 가 같이 고침" 으로 | 11절 머리·그림, WP1d |
+| 높음 V1 원작 방 "손으로 옮겨 적기" 가 DUN 칸 배열을 공개 저장소에 옮기는 것과 같고 막는 검사가 없음 | 반영. "본뜬다" = 크기·문 방향·벽 재료만, 칸 배열은 우리 조각 이름으로 새로 짬(6.11·R24·1.4 같은 뜻). `audit` 의 방 배열 대조 13.5-22(표 `audit_dun` 의 DUN 을 메모리에서만 읽어 4×4 창 비교). 지적의 "4×4 이상 같으면 실패" 에 **바닥 아닌 칸 ≥ 8** 조건을 더했다 — 벽 모서리 하나(7칸)처럼 어느 방에나 생기는 모양으로 거짓 실패가 나지 않게(WP0 이 실제 배치로 상수를 확인). 이 경계는 사용자 확인을 기다린다(아래 열린 질문 1) | 1.4, 6.11, 6.14 13.5-22, R24, A.3, WP0a·WP0, 10.1 |
+| 중간 V4·P9 방 들르기에 실제로 들어갔는지 보는 수·로그가 없음, 직선 가중이라 문이 반대쪽인 방에 못 들어감 | 반영. 길 방향(`INavWorld.TryPathStep`, 0.5초마다), 40초 넘김, 정책 기록 `Events`·`RoomStats`, 로그 `VISIT`·`VISIT_SKIP`·`VISITS`. `Scenario` 통과 조건에 "모든 `room_*` 2번 이상" 과 `InvariantChecker` 의 `occluded` > 0. 들른 수를 지적의 `RunStats.RoomVisits` 가 아니라 정책에 둔 이유: `RunStats` 는 시뮬레이션 쪽(해시·결과)이고 봇 기록은 시뮬레이션 밖이다. `occluded` 는 매 틱 대신 60틱 표본(기준이 "> 0" 이라 충분) | 4.10, 9절, 10.1 공정성, 10.2 "안쪽 방", WP1d #16·#18, WP2·WP4·WP6 |
+| 중간 V5 WP0a 의 "시제품 길 검사 다시 돌림" 은 저장소 배치를 검사하지 않음 | 반영. 자원·격자 없이 도는 하위 칸 검사(13.5-19 ① 4이웃 채우기 갇힌 바닥 ② 하위 1칸 틈)를 `ValidateRooms` 에. WP0a 완료 기준을 이것으로 바꿈, 시제품은 근거로만 | 6.14 13.5-19, WP0a, R32 |
+| 중간 V6 시작 검사 ③ "꺼짐" 이 그 파일을 실제로 꺼진 정의만 쓰는지 안 봄, 소리 연결 표 줄의 귀속이 없음 | 반영. 13.5-10 묶음판에 귀속 규칙(`hero`·`enemies`·`sprite_sets`·`weapons`·`music`·`projectiles`·`ui`…), 정의 → 파일 추출을 Core `DefAssetNames.For` 하나로, 시작 검사 ③ 교차 확인(꺼짐 파일에 켜진 스테이지·직업이 닿으면 오류)과 WP7 합성 시험 | 1.4 끝, 6.14 13.5-10, WP1d #20, WP7 |
+| 낮음 V7 실제 헬파이어 MPQ 항목을 WP9·WP10 까지 아무도 안 읽음 | 반영. `RealMpq` 에 `DDR_HELLFIRE_DIR` 와 묶음마다 대표 항목 | 10.1 `RealMpq`, WP0 |
+| 낮음 V8 MVP `sorcerer.json` 예가 만들어지지 않는 아이콘을 가리킴 | 반영. 예에서 아이콘을 뺌. 특성이 패시브가 되어(P5) 아이콘은 `PassiveDef.Icon`(nullable) — 직업 단계에 WP5 가 | 6.16, WP9 |
+| 낮음 V9 직업 반경이 14 를 넘으면 길 검사가 못 잡음 | 반영(기획 v0.7.1 13.5-21 안): 13.5-21 에 "직업 `radius` ≤ 14" 오류. 지적의 다른 안(13.5-5 등급 = 최댓값)은 고르지 않음 — 등급을 데이터로 움직이면 플로우 필드 등급(16)과의 관계까지 같이 봐야 한다 | 6.14 13.5-5·21 |
+| 중간 P3 헬파이어 스테이지가 해금 사슬 중간에 끼면 헬파이어 없는 PC 에서 뒤 기본 스테이지가 영원히 잠김 | 반영. 기본 스테이지의 `unlock` 은 기본 스테이지만 가리킴(13.5-20 오류), 헬파이어 스테이지는 곁가지 | 6.12, 6.14 13.5-20, WP10 |
+| 중간 P5 특성 모양이 좁음(능력치 키 하나, 특성 하나) | 반영. 특성 = `trait` 패시브(`HeroClassDef.Traits`), `PassiveDef.Trait`·`Classes`, `EvolutionDef.Classes`. `HeroTraitDef` 는 만들지 않음. 능력치 키로 안 되는 특성 효과(반격 등)는 패시브 일반의 확장이라 직업 계약 밖(R31 남는 위험) | 6.16, 6.14 13.5-21, WP1d #9, WP3, 10.1 `Progression` |
+| 낮음 P7 창살 한 칸이면 보이는 창이 하위 1칸 | 반영. 예 배치에 창살 두 칸 | 6.11, WP0a |
+| 낮음 P8 큰 적 길 검사가 방이 아닌 반쯤 막힌 구역을 안 봄 | 반영. 구역에도 `room_` 기준점(`room_west`·`room_south`) | 6.11, 6.14 13.5-5 |
+
+**더 정한 것**: 1.4 의 DUN 형식 한 줄(부록 A.3 — `audit` 전용), `audit` 실패를 종료 코드 4 에 넣음, 저장소 밖에서 배치를 하위 칸으로 풀어 본 검사 결과(위 I4 줄), `VISITS` 판 끝 줄의 "방 안" 은 방 체류 압박의 방 바닥 계산이 정해지기 전까지 기준점 반경 60(v0.6.3 에서 방 바닥으로 바꿈 — 13.15).
+
+**남은 열린 질문**
+1. **원작 방 본뜨기의 경계**(사용자 확인 필요 — 기획 열린 질문 31): "크기·문 방향·벽 재료만 따르고 칸 배열은 새로 짠다, 장식 번호(피 묻은 벽 166~170 등)는 이름을 붙여 쓴다, `audit` 가 4×4 배열 대조" 로 좋은지. 칸 배열도 옮겨도 되면 13.5-22 를 빼고, 더 엄하면 피 방을 보통 벽 1·2·4 로 바꾼다.
+2. 13.5-22 의 "바닥 아닌 칸 ≥ 8" 기준 상수 — WP0 이 실제 `cathedral_arena` 와 알려진 DUN 으로 거짓 실패 0 을 확인한다. 실제 원본 DUN 의 칸 값이 우리 `pieces` 번호 체계와 같은지도 WP0 이 `rnd6` 으로 확인(A.3).
+3. ~~기획 v0.7.1 이 새로 넘긴 **방 보급 이벤트 `room_supply`**·**방 체류 압박**~~ — v0.6.3 에서 닫았다(13.15). WP1d 를 커밋하기 전에 형(`room_areas`·`RoomFloors`·`World.Rooms`·`RoomPresence`·`SpawnPickup`·`Pickup.SupplyRoom`·`SupplyCollected`·`room_pressure`)과 방 바닥 계산을 WP1d 에 넣었다.
+4. ┘ 자리(가로·세로 벽이 꼭짓점으로만 닿음, 기획 10.1 표 마지막 줄)는 13.5-19 ② 가 잡지 않는다 — 걷기는 코너 자르기 금지가, 시야는 4.11 꼭짓점 규칙이 막으므로 남는 것은 그림뿐이다(WP0a 견본). 스테이지 1 에는 없다.
+5. 13.12 의 남은 열린 질문 1~4 는 그대로다.
+
+### 13.14 v0.6.2 — WP1d 구현이 정한 것
+
+WP1d(형·구현, 커밋 전) 코드가 문서와 다르게 또는 더 정한 것. 코드가 정본이다(11.4 와 같은 규칙).
+
+| 자리 | 문서 | 코드 | 이유 |
+|---|---|---|---|
+| 6.14 13.5-10·WP1d #20 `DefAsset` | `DefAsset(IDef Owner, string File)`, 6.14 는 `For(GameDefs)` | `DefAsset(IDef? Owner, string File)`(null = 기본 내용), `For(GameDefs, IEnumerable<ArenaGrid>)` — 6.14 문장을 #20 에 맞춤 | 귀속 규칙에 주인 없는 줄(`ui`·`pickups`·`music.title`)이 있다. 맵 그림 이름은 펼친 격자가 있어야 계산된다 |
+| 6.11 4단계 문 칸 | "문 칸은 여전히 오류" | `over_border` 가 아닌 놓기가 테두리(문 칸 포함)에 오면 지금처럼 "테두리와 겹친다", `over_border` 놓기만 "문 칸" 오류 | 기존 오류 문구·시험을 그대로 둔다 |
+| 6.11·13.5-19 `ValidateRooms` 더 본 것 | — | 주인공 시작 칸이 걷기 막힘이면 오류(① 채우기를 못 함, 격자 밖은 `MapDataReader` 의 기존 오류), `marks` 의 빈 번호 목록 오류(`ValidateTileset`), `open_center` 안 잘못된 메가는 메가마다 한 줄 | 검사가 조용히 건너뛰지 않게 |
+| 1.4 manifest 쓰기 | 예의 diabdat 줄에 `bundle` 없음 | 원본·파일 줄 `bundle` 이 null 이면 쓰지 않음, `ManifestSkippedBundle.Unreadable` 은 계산 속성이라 쓰지 않음 | 예 모양 그대로, 왕복 같은 바이트 |
+| WP1d-형 완료 기준 "`DefJson` 으로 읽기" | 공용 옵션 | 공용 옵션 + 시험용 참조 변환기(`TestKit/TestJson` — ID 문자열 → 연결 안 된 `DefRef`). `MapDef`·`TilesetDef` 는 `MapDataReader` 로 | 공용 옵션에는 `DefRef` 변환기가 없다(연결은 로더 WP7 5단계) |
+| WP1d #17 합성 타일셋·방 맵 | 합성 타일셋에 `marks`·창살·모서리 | 기존 `TestDefs.Tileset()` 은 `marks.pillar` 만 더함. 방 시험은 새 `TestDefs.RoomTileset()`(6.11 예의 조각 이름, 번호는 가짜, 문 끝 조각 없음, 아치 `X...`)과 방 맵 ①~⑥(`RoomMapStrip`·`RoomMapOverBorder`·`RoomMapOneDoor`·`RoomMapExample`·`RoomMapNoCorners`·`RoomMapBorderNotch`) | 기존 시험의 번호·해시를 건드리지 않는다. ① 띠의 두 끝은 둘레 자리에 겹친 모서리로 막았다 — L1 식 반 칸 둘레는 둘레를 덮지 않고는 띠 끝을 막을 수 없다 |
+| WP1d #17 기본 정의 | — | `TestDefs.Basic` 에 합성 직업 `test_hero`(= `rules.hero.class`, 시작 무기·특성 패시브 하나씩), `StraightNav.HeroPos`(빌더가 주인공 위치로 이음) | 기본 시험 월드의 `World.HeroClass` 가 null 이 아니게, `PathLengthToHero` 가 주인공을 알게 |
+| 10.1 `Sim` "`Sim/` 이 묶음을 모름" 소스 문자열 시험 | WP4 | WP1d 가 `Assets/BundleTests` 에 먼저 둠 | 형을 낸 쪽이 바로 지킨다. WP4 는 옮기거나 그대로 쓴다 |
+| 6.17 `ContentBundle` JSON 이름 | 소문자 | 공용 열거형 변환기가 대소문자를 가리지 않아 `"Hellfire"` 도 읽힌다(모든 열거형 공통, 기존 동작) | 공용 변환기는 바꾸지 않는다. `"diabdat"`·숫자는 오류 |
+
+### 13.15 v0.6.3 — WP1d 검증 지적 반영
+
+WP1d(형·구현, 커밋 전) 검증이 남긴 지적 셋(중간 1, 낮음 2)을 처리했다. 높음은 없었다.
+
+| 지적 | 처리 | 바뀐 곳 |
+|---|---|---|
+| 중간 — 13.13 열린 질문 3(방 보급 `room_supply`·방 체류 압박)이 "WP1d-형을 내기 전에 정하기를 권한다" 인데 설계되지 않은 채 WP1d 계약이 나옴. 방 바닥·획득물 놓기·"안 주운 보급" 이 계약을 건드려 WP2~WP8 시작 뒤 다시 고칠 수 있음(결정 K·M 의 "계약을 다시 고치지 않는다" 와 어긋남) | 반영 — 계약 변경이 필요하다고 판단했다(방 바닥에는 맵 데이터가, 보급에는 WP4 → WP3 저장소 경로가 필요). WP1d 커밋 전에 형과 방 바닥 계산을 넣었다: 맵 `room_areas`(메가 사각형) + Core `RoomFloors`(사각형 안 4이웃 채우기, 문 수 = 사각형 밖 이웃 무리 수) → `World.Rooms`, 상태 `World.RoomPresence`, `ICombatSpawner.SpawnPickup(PickupSpawn)`·`Pickup.SupplyRoom`("안 주운 보급" 은 이 필드 하나)·틱 이벤트 `SupplyCollected`, `rules.spawn.room_pressure`(`After`·`EveryNth`·`MinDistance`), 13.5-19 방 영역·방 보급 검사. 이벤트 매개변수는 WP4 몫이지만 검사가 읽으므로 `anchor`·`pickup` 으로 고정 | 6.10·6.11·6.12·6.14·9절·10.1 `Map`, 11.1 WP1d #21~#24·WP0a·WP3·WP4·WP6·WP7 |
+| 낮음 — 빈 `grid`·`.` 만 있는 `grid` 를 오류 없이 받아 아무것도 놓지 않음 | 반영. 놓은 칸이 0개면 `$.layout.place[i].grid` "grid 에 놓을 조각이 하나도 없다" 오류(다른 모양 오류와 같게) | `ArenaLayout.PlacementCells`, 10.1 `Map` |
+| 낮음 — 11절 순서 줄과 WP1d 제목에 진행 상태가 없어 11장만 읽는 묶음 담당이 기다리는 시험을 켜도 되는지 모름 | 반영. 순서 줄·WP1d 제목에 "형·구현 끝남, 커밋 전", "기다리는 것" 끝에 "WP1d 가 커밋되면 모두 켜도 된다". 해시는 커밋할 때 적는다(커밋 전이라 아직 없음) | 11절 머리, 11.1 WP1d |
+
+**더 정한 것**
+- 방 바닥의 반경 14 는 하위 칸 4이웃 채우기로 대신한다 — 13.5-19 ② 가 하위 1칸 틈을 막으므로 사각형 안에서 반경 14 가 못 지나는 걷기 칸 띠가 남지 않는다. WP2 의 반경 등급 격자를 기다리지 않아 WP1d-구현에서 끝난다.
+- 방 바닥을 `ResolvedMap` 이 아니라 `World.Rooms` 에 둔다 — `ResolvedMap.Resolve` 는 격자를 받지 않는다(시그니처 그대로).
+- 방 체류 압박의 "셋 중 하나" 는 확률이 아니라 감독의 무리 순번(`every_nth`)으로 센다 — 결정적이고 시험이 쉽다. 방 안 자리 고르기가 다 실패하면 그 무리는 보통 자리에 낸다.
+- 방 누적(`RoomPresence`)은 자동 조작의 `RoomVisitStats` 와 따로 시뮬레이션 쪽에 둔다 — 기획 10.1 의 "첫 플레이 로그" 는 사람이 하는 판이라 정책 인스턴스에 둘 수 없다. `RunStats` 에 넣지 않은 것은 결과 화면·저장에 쓰지 않아서다.
+- 9절 `VISITS` 의 "방 안" 은 기준점 반경 60 대신 방 바닥이다(13.13 "더 정한 것" 의 임시 규칙을 바꿈). 방에 "닿음"(다음 방으로 넘어감)은 그대로 반경 60.
+- 시험 픽스처: `TestDefs.RoomMap` 에 `roomAreas` 인자, ③·④ 에 영역(④ 는 6.11 예 그대로). 기존 `room_*` 기준점 시험 셋에 영역을 더했다(없으면 이제 오류).
+
+**남은 열린 질문**: 13.13 의 1·2·4·5 그대로. 방 체류 압박의 8초·셋 중 하나·150px 는 기획 열린 질문 30 의 첫 값이다.
+
 ---
 
 ## 부록 A. 원작 형식 규칙 (조사 문서·시제품에서 옮김)
@@ -3382,6 +3986,9 @@ WP1c(커밋 전) 코드가 문서와 다르게 또는 더 정한 것. 코드가 
 - `diabdat.mpq`(이 PC 판 517MB, MPQ 형식 0, `(listfile)` 없음). 경로 구분자는 `\`, 대소문자 무관(War3Net `MpqArchive.Open` + `OpenFile`).
 - 파일 목록이 없으므로 이름은 표가 안다(1.4). 저장 단계의 압축(PKWARE implode·파형 압축)과 파일 이름 키 암호화는 War3Net 이 푼다 — 소리 1435개의 RIFF 길이가 실제 길이와 모두 맞았다.
 - 같은 이름이 `diabdat.mpq` 와 `hellfire.mpq` 양쪽에 있는 것이 있다 — diabdat 를 먼저 본다.
+- (v0.6, 2차 조사) 헬파이어 MPQ 넷: `hellfire.mpq` 항목 584개(이름 찾음 476), `hfmonk.mpq` 336개(전부), `hfvoice.mpq` 90개(88), `hfmusic.mpq` 2개. 역시 `(listfile)` 이 없어 이름은 표가 안다.
+  헬파이어 층 폴더는 `nlevels\l5data`·`nlevels\l6data` — 실행 파일에 남은 문자열 `Levels/L5Data/…` 로 찾으면 없다고 나온다.
+  수도사 목소리·헬파이어 대사는 같은 이름이 `hfvoice`(16비트)와 `hfmonk`·`hellfire`(8비트)에 둘 다 있다(찾는 순서는 1.4 `prefer`).
 
 ### A.2 스프라이트 CL2·CEL
 
@@ -3398,6 +4005,13 @@ WP1c(커밋 전) 코드가 문서와 다르게 또는 더 정한 것. 코드가 
   마법은 방향이 있으면 `missiles\{이름}{1..N}.cl2`(파일 하나 = 방향 하나, 1번 = 아래, 시계 방향), 없으면 `missiles\{이름}.cl2`. `arrows.cl2` 는 파일 하나에 프레임 번호가 방향.
   주인공 `plrgfx\{직업}\{c}{갑옷}{무기}\{c}{갑옷}{무기}{동작}.cl2`(마법사 `sorceror` 철자 그대로, 동작 as·aw·at·ht·lm·fm·qm·dt, 죽기는 맨손 벌 `{c}{갑옷}n` 에만).
 - **표와 실제 파일이 다를 수 있다**: 표에 0프레임인데 파일이 있음(좀비 `s`), 13프레임 중 11만 씀(`firewal2`), 빈 파일(`dmagew.cl2`). 프레임 수는 파일에서 읽고, 쓸 범위만 표로 정한다.
+  (v0.6) 주인공도 그렇다: 전사 `hn`·`mn` 벌 죽기 15프레임, 활 벌 서기 8프레임처럼 DevilutionX 표와 파일이 다른 곳이 있다.
+- (v0.6) **주인공 네 직업**: 시전 파일 프레임·칸 = 전사 20·96, 도적 16·96, 마법사 12·128, 수도사 18·114(원본 확인). 세 시전 파일(`fm`·`lm`·`qm`)에는 효과가 그림에 박혀 있다.
+  죽기는 전사·도적·마법사가 맨손 벌(`{c}{갑옷}n`)에만 있고 **수도사는 27벌 모두 자기 죽기·막기**가 있다 — "죽기는 맨손 벌에서" 를 공통 규칙으로 두지 않고 표 항목마다 경로를 적는다(1.4).
+  수도사 `plrgfx\monk\` 291개(48.2MB)는 칸 폭이 동작마다 다르다(서기·걷기 112, 공격 130, 맞기·막기 98, 시전 114, 죽기 160).
+- (v0.6) **헬파이어 몬스터**: 그림 묶음 24개(hellfire.mpq) + 그림은 diabdat 의 것을 쓰는 셋(펠트윈 `tsneak`, 스컬윙·본 데몬 `demskel`). hellfire.mpq 의 그림 묶음에는 TRN 이 없다.
+  (v0.6.1 바로잡음) 그 셋의 소리: 펠트윈만 hellfire 에 있고(`newsfx\ftwin`), 스컬윙·본 데몬의 원작 소리 묶음 `demskel\demskl` 은 원본 어디에도 없다(0/8). 스컬윙은 diabdat `monsters\skelaxe\skelt.trn` 변종을 쓴다(본 데몬은 원색).
+  칸 폭은 나크룰 226(서기 2프레임), 마법 폭발 `ex_red3`·`ex_blu3` 292 까지 — 원작 최대 160 을 넘는다. 헬파이어 팔레트도 색인 128~255 가 `l1.pal` 과 같아 스프라이트는 `l1.pal` 하나로 풀린다.
 
 ### A.3 레벨 타일 TIL·MIN·레벨 CEL
 
@@ -3416,6 +4030,13 @@ WP1c(커밋 전) 코드가 문서와 다르게 또는 더 정한 것. 코드가 
 | 5 | 오른쪽 사다리꼴 | 32×32 | 오른쪽 삼각형 아래 16행 + 위 16행 평면. 800바이트 |
 
 - 삼각형 두 장(왼·오른)이 바닥 마름모 64×31 을 만든다(맨 위 1행은 비어 있음) → 칸 중심 C 기준 마름모 줄은 `C.y − 15 .. C.y + 15`(7.6).
+- (v0.6) **헬파이어 층**: L5(지하실) CEL 1,836장·MIN 650개 × 10칸·TIL 217개·팔레트 `l5base.pal` 하나, L6(둥지) CEL 1,763장·MIN 606개·TIL 166개·팔레트 `l6base1~5`(조각 수는 WP10 이 MIN 크기 / SOL 크기로 확인).
+  **번호 함정**: L5 는 L1 메가타일 번호 1~43 과 바닥 13 만 같은 구실이고 44 이상은 다르다(L1 바닥 변종 162·163 이 L5 에서는 기둥). L6 은 L3 번호와 아예 맞지 않는다. 그래서 타일셋은 층마다 따로다(6.11).
+  헬파이어 미리 만든 방(모퉁이 돌, 나크룰 방)은 MPQ 에 없다. 색 순환이 있는 층이다(이 게임은 멈춘 그림).
+- (v0.6) **벽 메가타일은 반만 막힌다**(L1 1 = 왼쪽 열, 2 = 위 줄). 그래서 벽 메가 두 개를 바로 이웃에 두면 사이에 하위 1칸 바닥 띠가 남는다(6.11 `over_border`, 13.5-5).
+  (v0.6.1) 같은 이유로 가로·세로 벽이 만나는 메가에 한쪽 조각만 두면 하위 1칸 구멍이 남는다 — 위 줄과 왼쪽 열을 둘 다 막는 조각은 모서리 4(7770)·피 묻은 모서리 167(6.11 "벽 맞물림").
+- (v0.6.1) **DUN**(`audit` 대조에만, 1.4): `u16 폭, u16 높이`(메가타일 수) 뒤에 칸마다 `u16`(줄 = y, 칸 = x 순), 0 = 비움, 그 밖 = 메가타일 번호(우리 타일셋 `pieces`·`floor` 번호와 같은 체계 — WP0 이 `rnd6` 으로 확인).
+  그 뒤에 물체·몬스터 층이 더 있을 수 있으나 읽지 않는다. 내용은 출력·저장하지 않는다.
 - 덧그림 CEL(L1S): 폭 64, 아래 행부터, 바이트 `b < 0x80` 이면 b 개 색 복사, 아니면 `256 − b` 개 투명. 프레임 머리말 없이 바로 데이터.
 - 투영(원작 기준점): 하위 타일 (x, y) 의 바닥 마름모 왼쪽 아래 = 화면 `((x − y)·32, (x + y)·16)`. 벽 기둥은 기준점에서 위로 `(조각 수 / 2)·32`px(L1 160px).
   이 게임의 월드 좌표는 4.1 `IsoMath` 가 정본이고, 이 식은 해석 확인용이다.
@@ -3444,3 +4065,5 @@ WP1c(커밋 전) 코드가 문서와 다르게 또는 더 정한 것. 코드가 
 - 모두 RIFF PCM(형식 1), RIFF 안에 ADPCM 없음. diabdat: 모노 8비트 22050Hz 1004개, 모노 16비트 22050Hz 91개, 모노 8비트 11025Hz 4개, 모노 8비트 44100Hz 1개, 스테레오 16비트 3개(음악 등).
 - 변환: 8비트(부호 없음) → 16비트 `(b − 128) << 8`, 표준 44바이트 머리로 다시 씀, 다른 덩어리 버림(1.4). 소리 색인의 표본 수 = 데이터 바이트 ÷ (채널 × 2).
 - 음악 `music\dlvl{a..f}.wav`·`dtowne`·`dintro`(이미 16비트 스테레오), `dlvlb` 가 가장 길다(약 15MB PCM).
+- (v0.6) 헬파이어 음악 `dlvle`(둥지)·`dlvlf`(지하실)는 `hfmusic.mpq`(스테레오 16비트). 헬파이어 몬스터 소리 `monsters\newsfx\*`, 대사 `sfx\hellfire\nakrul1~6`·`defiler6~8`.
+  주인공 소리는 직업 폴더마다 철자가 섞여 있다(전사 `warior`·`wario`), 수도사는 `monk72` 가 없다. 소리는 머리만 읽었고 듣지 않았다(기획 열린 질문 29).

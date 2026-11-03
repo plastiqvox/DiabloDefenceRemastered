@@ -10,8 +10,14 @@ public sealed record StageDef : IDef
     public required string Id { get; init; }
     public string Name { get; init; } = "";
     public required DefRef<MapDef> Map { get; init; }
-    /// <summary>해금 조건(먼저 깨야 하는 스테이지 ID). null = 처음부터 열림.</summary>
+    /// <summary>해금 조건(먼저 깨야 하는 스테이지 ID). null = 처음부터 열림. <c>requires</c> 가 빈 스테이지는 빈 스테이지만 가리킨다(13.5-20, v0.6.1).</summary>
     public string? Unlock { get; init; }
+    /// <summary>
+    /// 이 스테이지가 쓰는 자원 묶음(v0.6, 6.17). 묶음 MPQ 가 없는 PC 에서는 스테이지가 통째로 꺼진다(<c>ContentAvailability.MissingFor</c>).
+    /// 맵에는 <c>requires</c> 가 없다 — 맵 그림의 묶음은 타일셋 표 항목의 <c>bundle</c> 이고, 이 목록이 그것을 덮는지는 13.5-10 묶음판이 본다.
+    /// 음악 묶음(<c>hfmusic</c>)은 넣지 않는다 — 음악은 꺼지지 않고 <c>fallback</c> 으로 바뀐다.
+    /// </summary>
+    public IReadOnlyList<ContentBundle> Requires { get; init; } = [];
     public LightingDef Lighting { get; init; } = new();
     public VictoryDef Victory { get; init; } = new();
     public StageScaling Scaling { get; init; } = new();

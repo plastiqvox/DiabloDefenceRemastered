@@ -1,4 +1,5 @@
 using DiabloDefenceRemastered.Core.Assets;
+using DiabloDefenceRemastered.Core.Sim.Autoplay;
 using FontStashSharp;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -30,12 +31,17 @@ public sealed record GameSettings
     public float? MusicVolume { get; init; }
 }
 
-/// <summary>한 판 결과(저장·RESULT 로그).</summary>
-public sealed record RunResult(string StageId, bool Victory, float StageTime, int Level, int Kills, int Gold);
+/// <summary>한 판 결과(저장·RESULT 로그). <paramref name="HeroClassId"/> = <c>World.HeroClass.Id</c>(v0.6.1 — 기록은 스테이지 × 직업, 8.3).</summary>
+public sealed record RunResult(string StageId, string HeroClassId, bool Victory, float StageTime, int Level, int Kills, int Gold);
+
+/// <summary>스테이지 × 직업 하나의 최고 기록(v0.6.1, 8.3 — 저장 <c>records.&lt;스테이지&gt;.&lt;직업&gt;</c>).</summary>
+public sealed record StageRecord(float BestTime, int BestLevel, int Kills, bool Victory);
 
 /// <summary>
 /// 저장(WP7 SaveStore 가 구현, 설계서 8.3). 개발 옵션 실행인데 --save-dir 가 없으면 사용자 파일을 읽지도 쓰지도 않고
 /// 기본값(창 모드, 스테이지 1 만 열림, 기록 없음)으로 메모리에만 둔다 — 그 판단은 구현 쪽.
+/// 기록은 스테이지 × 직업이다(v0.6). 구현은 "늘 sorcerer" 를 가정하지 않는다 — 직업은 <see cref="RunResult.HeroClassId"/> 로 실려 온다.
+/// 해금은 스테이지 단위(직업과 무관). 옛 판(직업 없는 기록)은 sorcerer 아래로 읽는다(WP7).
 /// </summary>
 public interface ISaveService
 {
@@ -43,7 +49,14 @@ public interface ISaveService
     int TotalGold { get; }
     bool IsUnlocked(string stageId);
     void SaveSettings(GameSettings settings);
+    /// <summary>기록만 쓴다(<c>records.&lt;StageId&gt;.&lt;HeroClassId&gt;</c>·해금·금화). 마지막 직업은 <see cref="SetLastHero"/>.</summary>
     void RecordResult(RunResult result);
+    /// <summary>저장의 <c>last_hero</c>(없으면 null). 데이터에 없거나 꺼진 직업이면 앱이 <c>rules.hero.class</c> 로 시작한다(기록은 지우지 않음).</summary>
+    string? LastHero { get; }
+    /// <summary>직업 고르기(WP9)·<c>--hero</c> 없는 판 시작 때.</summary>
+    void SetLastHero(string heroClassId);
+    /// <summary>StageSelect 의 고른 직업 최고 기록(WP6). 없으면 null.</summary>
+    StageRecord? BestRecord(string stageId, string heroClassId);
 }
 
 /// <summary>
@@ -105,12 +118,22 @@ public interface IAudioServices
 /// </summary>
 public sealed record AppOptions
 {
-    /// <summary>개발 옵션 실행(--autoplay·--stage·--capture*·--preview·--validate-data·--stress·--reveal·--god·--level·--weapons·--passives 중 하나라도 — 9절, 판정은 WP7).</summary>
+    /// <summary>개발 옵션 실행(--autoplay·--stage·--capture*·--preview·--validate-data·--stress·--reveal·--god·--level·--weapons·--passives·--hero 중 하나라도 — 9절, 판정은 WP7).</summary>
     public bool DevRun { get; init; }
     public bool Autoplay { get; init; }
     public bool Background { get; init; }
     public ulong Seed { get; init; }
     public string? StageId { get; init; }
+    /// <summary>
+    /// --hero(v0.6): 그 직업으로 시작(직업 고르기 화면을 건너뜀). null 이면 저장의 last_hero → rules.hero.class.
+    /// 없는 ID 는 옵션 오류(64, 데이터를 읽은 뒤), 꺼진 직업은 종료 코드 5(9절). 개발 옵션 판정에 든다.
+    /// </summary>
+    public string? HeroClass { get; init; }
+    /// <summary>
+    /// --autoplay-visit(v0.6): <see cref="AutoplayVisit.Rooms"/> 면 자동 조작이 방 기준점(room_*)을 차례로 들른다. --autoplay 와 함께만(아니면 옵션 오류).
+    /// WP6 이 판마다 <c>new AutoplayPolicy(AutoplayVisit)</c> 를 만든다.
+    /// </summary>
+    public AutoplayVisit AutoplayVisit { get; init; }
     /// <summary>--preview 대상(sprites / enemies / effects / tiles / blend / fog).</summary>
     public string? Preview { get; init; }
     /// <summary>--debug-nav 층(grid / flow / astar / shapes / entries / tiles / sight, 빈 목록 = 끔, "all" = 전부).</summary>

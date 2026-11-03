@@ -52,6 +52,9 @@ public readonly record struct LevelUpReady(int NewLevel);
 /// <summary>보스(rank: boss)가 Damage 로 죽었다.</summary>
 public readonly record struct BossDefeated(EntityId Id, int DefIndex, Vector2 Pos);
 
+/// <summary>방 보급을 주웠다(v0.6.3, WP3 Pickups 15 가 낸다 — <c>Pickup.SupplyRoom</c> 이 있는 획득물). WP4 가 다음 틱에 <c>RoomPresence.SuppliesTaken</c> 에 센다.</summary>
+public readonly record struct SupplyCollected(string RoomId, PickupDef Def, Vector2 Pos);
+
 /// <summary>한 틱 동안 쓴 이벤트 묶음.</summary>
 public sealed class TickEventSet
 {
@@ -61,6 +64,7 @@ public sealed class TickEventSet
     public EventList<XpGained> XpGained { get; } = new(32);
     public EventList<LevelUpReady> LevelUpReady { get; } = new(4);
     public EventList<BossDefeated> BossDefeated { get; } = new(2);
+    public EventList<SupplyCollected> SupplyCollected { get; } = new(2);
 
     public void Clear()
     {
@@ -70,6 +74,7 @@ public sealed class TickEventSet
         XpGained.Clear();
         LevelUpReady.Clear();
         BossDefeated.Clear();
+        SupplyCollected.Clear();
     }
 }
 

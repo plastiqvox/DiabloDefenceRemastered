@@ -23,7 +23,7 @@ public interface IScene
 
 /// <summary>
 /// 자동 조작 메뉴 넘김(WP6 AutoplayDriver 가 구현). 씬은 이것에 물어 정해진 앱 틱 수 뒤에 다음으로 넘긴다.
-/// 카드 고르기는 Core <c>AutoplayPolicy.PickCard</c>(WP4) 의 답을 쓴다.
+/// 카드 고르기는 Core <c>AutoplayPolicy</c>(WP4, 판마다 인스턴스 하나 — v0.6.1) 의 <c>PickCard</c> 답을 쓴다.
 /// </summary>
 public interface IAutoplayDriver
 {

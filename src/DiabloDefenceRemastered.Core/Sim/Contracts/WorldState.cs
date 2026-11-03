@@ -82,6 +82,36 @@ public sealed class LightingState
     }
 }
 
+/// <summary>
+/// 주인공이 선 방과 방마다 누적 (v0.6.3, <c>World.RoomPresence</c> — 기획 10.1 방 체류 압박·첫 플레이 로그). 방 번호 = <c>World.Rooms.Rooms</c> 의 순서.
+/// 쓰기: WP4 Director(2단계 — 주인공 칸의 방 번호로 <see cref="Current"/>·<see cref="EnteredTick"/>, 누적은 앞 틱의 <c>HeroDamaged</c>·<c>SupplyCollected</c> 로).
+/// 읽기: WP4 방 체류 압박·<c>AutoplayPolicy</c>("방 안"), WP7 로그 <c>ROOMS</c>(판 끝 방마다 체류 시간·받은 피해·주운 보급)·<c>StateHasher</c>(<see cref="Current"/>·<see cref="EnteredTick"/>).
+/// 사람이 하는 판에도 센다(자동 조작의 <c>RoomVisitStats</c> 와 따로).
+/// </summary>
+public sealed class RoomPresence
+{
+    /// <summary>지금 주인공이 선 방 번호. 방 밖이면 −1.</summary>
+    public int Current { get; set; } = -1;
+    /// <summary><see cref="Current"/> 에 들어간 스테이지 틱(방 체류 압박의 머문 시간 = 지금 틱 − 이것).</summary>
+    public int EnteredTick { get; set; }
+    /// <summary>방마다 바닥 안에 있던 틱 수.</summary>
+    public int[] TicksInside { get; private set; } = [];
+    /// <summary>방마다 바닥 안에 있는 동안 받은 피해 합.</summary>
+    public float[] DamageInside { get; private set; } = [];
+    /// <summary>방마다 주운 보급 수(<c>SupplyCollected</c> 의 방 ID 로 셈).</summary>
+    public int[] SuppliesTaken { get; private set; } = [];
+
+    /// <summary>방 수에 맞춰 비운다(월드 생성 때 한 번).</summary>
+    public void Reset(int roomCount)
+    {
+        Current = -1;
+        EnteredTick = 0;
+        TicksInside = new int[roomCount];
+        DamageInside = new float[roomCount];
+        SuppliesTaken = new int[roomCount];
+    }
+}
+
 /// <summary>보스 막대 하나. 체력은 렌더가 그 적에서 읽는다. Final = 최종 보스(위 막대).</summary>
 public readonly record struct BossBar(EntityId Id, string Name, bool Final);
 
@@ -114,7 +144,7 @@ public struct BannerState
 /// </summary>
 public sealed class FairnessCounters
 {
-    /// <summary>적 진영 투사체를 만드는 순간 쏜 적(보스·중간 보스 제외)이 또렷이 보이지 않았던 수.</summary>
+    /// <summary>적 진영 투사체를 만드는 순간 쏜 적(보스·중간 보스 제외, 단 <see cref="EnemyProjectileSpawn.SightGated"/> 발사는 셈)이 또렷이 보이지 않았던 수.</summary>
     public int UnseenShots { get; set; }
     /// <summary>돌진을 시작하는 순간 같은 조건이었던 수.</summary>
     public int UnseenCharges { get; set; }

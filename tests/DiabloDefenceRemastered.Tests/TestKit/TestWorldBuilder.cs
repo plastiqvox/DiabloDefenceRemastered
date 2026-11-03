@@ -1,7 +1,7 @@
 namespace DiabloDefenceRemastered.Tests.TestKit;
 
 /// <summary>
-/// 시험 월드 만들기 (WP1 TestKit, WP1b·WP1c 갱신, 설계서 10.1). 시야는 기본 꺼짐 — <see cref="WithSight"/> 로 켠다. 코드로 만든 작은 합성 타일셋·맵(<see cref="ArenaGrid"/> 로 푼 등각 아레나)·정의
+/// 시험 월드 만들기 (WP1 TestKit, WP1b·WP1c·WP1d 갱신, 설계서 10.1). 시야는 기본 꺼짐 — <see cref="WithSight"/> 로 켠다. 코드로 만든 작은 합성 타일셋·맵(<see cref="ArenaGrid"/> 로 푼 등각 아레나)·정의
 /// + 전수 공간 질의 + 직선 내비(바깥 마름모 경계). 주인공은 맵의 <c>hero_start</c>(<c>World.Resolved</c>)에서 시작한다.
 /// 각 묶음은 다른 묶음 없이 자기 시스템만 넣어 시험한다(R9).
 /// <code>
@@ -20,6 +20,7 @@ public sealed class TestWorldBuilder
     private SightRulesDef? _sightRules;
     private IReadOnlyList<PiecePlacementDef>? _place;
     private bool _presentation;
+    private HeroClassDef? _heroClass;
     private readonly List<(SimPhase Phase, Func<World, ISimSystem> Create)> _systems = [];
     private readonly List<Action<World, SimulationBuilder>> _installers = [];
     private readonly List<Action<World>> _setups = [];
@@ -48,6 +49,12 @@ public sealed class TestWorldBuilder
     /// <summary>기본 정의 맵의 안쪽 조각(기본 기둥 넷 대신). 빈 목록이면 빈 방.</summary>
     public TestWorldBuilder WithPlace(params PiecePlacementDef[] place) { _place = place; return this; }
 
+    /// <summary>
+    /// 고른 직업(v0.6 — <c>World(…, heroClass)</c>). 없으면 정의의 <c>rules.hero.class</c>(기본 정의는 <see cref="TestDefs.HeroClassId"/>).
+    /// 넘긴 직업은 정의 표에 없어도 된다 — 월드는 그 정의만 읽는다.
+    /// </summary>
+    public TestWorldBuilder WithHeroClass(HeroClassDef heroClass) { _heroClass = heroClass; return this; }
+
     /// <summary>표시 이벤트를 쌓을지(기본 끔 — 그래픽 없는 실행).</summary>
     public TestWorldBuilder WithPresentation(bool enabled = true) { _presentation = enabled; return this; }
 
@@ -75,9 +82,11 @@ public sealed class TestWorldBuilder
             throw new InvalidOperationException("WithSight·WithPlace 는 기본 정의에만 쓴다 — WithDefs 에는 TestDefs.Basic(sight:, heroLight:, place:) 로 넣는다");
         var defs = _defs ?? TestDefs.Basic(_megaTiles, _victory, sight: _sightRules, heroLight: _sightRadius, place: _place);
         var stage = defs.Stages.Count > 0 ? defs.Stages[0] : null;
-        var world = new World(defs, _seed, stage);
+        var world = new World(defs, _seed, stage, _heroClass);
         world.Presentation.Enabled = _presentation;
-        world.Nav = world.Arena is { } arena ? new StraightNav(arena.Iso) : new StraightNav(world.MapSize);
+        var nav = world.Arena is { } arena ? new StraightNav(arena.Iso) : new StraightNav(world.MapSize);
+        nav.HeroPos = () => world.Hero.Pos;
+        world.Nav = nav;
         world.Spatial = new BruteForceSpatial(world);
         foreach (var setup in _setups) setup(world);
 

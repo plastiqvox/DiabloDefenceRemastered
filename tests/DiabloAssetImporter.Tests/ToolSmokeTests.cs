@@ -7,6 +7,7 @@ public class ToolSmokeTests
     public void Tool_IsReferenced_AndSharesCore()
     {
         Assert.Equal("DiabloAssetImporter", typeof(Program).Assembly.GetName().Name);
-        Assert.Equal(1, DiabloDefenceRemastered.Core.Assets.AssetFormat.Version);
+        // 2: v0.6(WP1d) manifest 모양 바뀜 — bundle·sources·skipped_bundles
+        Assert.Equal(2, DiabloDefenceRemastered.Core.Assets.AssetFormat.Version);
     }
 }

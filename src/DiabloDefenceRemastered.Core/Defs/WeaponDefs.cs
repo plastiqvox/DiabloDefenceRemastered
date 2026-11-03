@@ -13,8 +13,18 @@ public sealed record WeaponDef : IDef
     public required string Id { get; init; }
     public string Name { get; init; } = "";
     public IconDef? Icon { get; init; }
-    /// <summary>발동할 때 주인공이 재생할 시전 그림(기획 5.1). cast_fire / cast_lightning / cast_magic.</summary>
+    /// <summary>
+    /// 발동할 때 주인공이 재생할 시전 그림(기획 5.1). cast_fire / cast_lightning / cast_magic, 근접 무기는 attack(v0.6, 직업 단계).
+    /// 클립은 고른 직업의 그림 묶음에서 찾는다(5.3).
+    /// </summary>
     public ClipKind CastClip { get; init; } = ClipKind.CastMagic;
+    /// <summary>이 무기를 고를 수 있는 직업(v0.6, 6.8). 비면 모든 직업. 레벨업 후보·<c>--weapons</c> 가 <c>World.HeroClass</c> 로 거른다.</summary>
+    public IReadOnlyList<DefRef<HeroClassDef>> Classes { get; init; } = [];
+    /// <summary>
+    /// 이 무기가 쓰는 자원 묶음(v0.6, 6.17 — 헬파이어 마법 그림). 레벨업 후보는 <c>requires ⊆ 스테이지 requires ∪ 직업 requires</c> 인 무기만 —
+    /// PC 의 묶음이 아니라 정의로 거르므로 후보가 묶음 유무로 바뀌지 않는다(결정성).
+    /// </summary>
+    public IReadOnlyList<ContentBundle> Requires { get; init; } = [];
     /// <summary>
     /// 발사 패턴 type(<see cref="PartKind.FirePattern"/> 등록 이름). 진화 무기는 비워 재료 무기 것을 쓴다.
     /// 로더는 등록 여부만 검사하고, 레벨 표 키·단조성(13.5-2)은 WP3 검사기가 본다.
@@ -67,6 +77,13 @@ public sealed record PassiveDef : IDef
     public int MaxLevel { get; init; }
     public IReadOnlyDictionary<StatKey, float> PerLevel { get; init; } = new Dictionary<StatKey, float>();
     public OnAcquireDef? OnAcquire { get; init; }
+    /// <summary>
+    /// 직업 특성(v0.6.1, 6.16): 참이면 레벨업·상자·<c>--passives</c> 후보에 안 나오고 직업 <c>traits</c> 로만 붙는다(1레벨, 슬롯을 쓰지 않음).
+    /// 13.5-21: 특성은 <c>max_level</c> 1·진화의 짝 패시브가 아님.
+    /// </summary>
+    public bool Trait { get; init; }
+    /// <summary>이 패시브를 고를 수 있는 직업(v0.6.1). 비면 모든 직업.</summary>
+    public IReadOnlyList<DefRef<HeroClassDef>> Classes { get; init; } = [];
 }
 
 public sealed record OnAcquireDef
@@ -81,6 +98,8 @@ public sealed record EvolutionDef : IDef
     public required DefRef<WeaponDef> Weapon { get; init; }
     public required DefRef<PassiveDef> Passive { get; init; }
     public required DefRef<WeaponDef> Result { get; init; }
+    /// <summary>이 진화를 쓸 수 있는 직업(v0.6.1). 비면 모든 직업.</summary>
+    public IReadOnlyList<DefRef<HeroClassDef>> Classes { get; init; } = [];
 
     [JsonIgnore]
     public string Id => Result.Id;
