@@ -5501,6 +5501,56 @@ WP8(소리) 코드가 문서와 다르게 또는 더 정한 것. 코드가 정�
 3. 단계 2·3 줄: 무기 셋·진화 둘·몬스터 묶음·`special`(`set_skelbow` 블랙애시, `set_acid`)·보스 대사·`hazard_loops`(`fx_hellfire_pool` → `wallloop`)·정예 상자·물약 보상·성소·액트 2 곡.
 4. 실행 확인(합친 뒤): `--sound`/`--mute` 수 같음·`device="No Output"`·`--log-hash` 같음·장면 바뀜 `slow_frames`·방 이동 앞뒤 수·`AUDIO music=` 액트마다 한 줄. 귀로 듣기는 사용자 몫.
 
+### WP6 구현 기록
+
+WP6(화면·UI·입력 — 11.1 WP6) 코드가 문서와 다르게 또는 더 정한 것. 코드가 정본이다(11.4 와 같은 규칙). 계약 파일(`App/Contracts/`·Core)은 고치지 않았다 — 필요한 자리는 WP6 파일 안에서 우회하고 아래 "WP1g 요청" 에 모았다.
+다른 묶음 본문(WP3 성장·WP4 `AutoplayPolicy`·WP5 그리기·WP7 `GameApp`·`FrameLoop`)이 아직 없어 게임 창을 띄우는 완료 기준은 합친 뒤에 본다.
+
+| 자리 | 문서 | 코드 | 이유 |
+|---|---|---|---|
+| 8.1 화면 공용 맥락 | 씬이 `AppServices` 만 받음 | `Scenes/GameFlow.cs` — `GameFlow.Of(app)`(앱 하나에 하나): `Autoplay`(`AutoplayDriver?`)·`Now`(앱 틱)·`Content`(`ContentAvailability`)·`NextSeed`·`Moment` 이벤트(`--capture-on` 이름 `levelup`·`chest`·`boss`·`result`·`doors`·`reward`)·`QuitRequested`·`SettingsChanged`·`RequestPause()`·`Canvas`(그림 서비스가 있을 때만 `UiCanvas`) | 계약 `AppServices` 를 고치지 않고 씬끼리·앱(WP7)과 넘길 것을 한 곳에 |
+| 8.1 `SCENE` 로그 | "씬이 바뀔 때마다"(`SceneStack.Entered`) | 씬이 `Enter` 에서 `GameFlow.LogScene` 으로 쓴다. 이름: `Title`·`HeroSelect`·`Play`·`Result`·`DataError`·`LevelUp`·`Reward`(보상 창 — 같은 오버레이)·`Chest`·`Pause`·`Settings`. 오버레이도 쓴다. `app_tick` = 그 Push 가 일어난 앱 틱 | `Entered` 는 앱 틱을 모른다. WP7 은 `Entered` 로 `SCENE` 을 또 쓰지 않는다 |
+| 9절 `SceneFactory` | `CreateStart(app)`·`CreateDataError(app)` | `CreateStart(app, ContentAvailability? content = null)`(선택 인자 — 기존 호출 그대로), 더함 `CreateAssetError(app, problems)`(자원 없음 안내 = DataError 화면 + 가져오기 명령 한 줄). `CreateStart` 가 시작 음량(`SetVolumes` — 저장에 없으면 `rules.audio.defaults`)을 넣고 `NextSeed = --seed` | 시작 검사 결과를 받을 계약 자리가 없다(WP1g 요청 1) |
+| 8.1 `AutoplayDriver` | `IAutoplayDriver` 구현 | `new AutoplayDriver(AutoplayVisit)`, 앱은 앱 틱마다 `FixedTick` 뒤 `Step(stack, now)` 하나(시각 맞춤 + `stack.AutoStep`). `Ready` 의 0.5s 는 그 씬이 **처음 물어 온 앱 틱**부터. `BeginRun()` = 판마다 `AutoplayPolicy` 하나(`PlayScene.Enter` — 이어 하기도 새 판으로 셈), `PickCard` 는 그 정책 답을 카드 범위로 자름 | 씬이 들어온 앱 틱을 운전자가 따로 듣지 않아도 되게 |
+| 8.1 자동 조작 명령 | "명령은 `policy.Next(world)`" | `PlayScene` 이 오버레이·어두워짐이 없는 **앱 틱마다** `Next(world)` 한 번 → `StageStepper.AppTick`(히트 스톱·늘임 틱에도 부름 — 그 명령은 버려짐) | WP4 `Scenario` 가 같은 호출 순서여야 게임과 해시가 같다(WP4 에 넘김) |
+| 8.1·3.5 표시 이벤트 소비 | 프레임 끝 `FxSystem.Consume → Audio.Consume → Clear` | **스텝 끝**(`StageStep.Stepped` 마다) 같은 순서. `Advance` 앞에서 한 번 더(옛 월드 틱으로). `BossArrived` 신호를 보면 화면 신호 `boss` | 그리지 않는 앱 틱(캡처 멈춤·그래픽 없는 실행)·방 이동 앞에서 빠지거나 쌓이지 않게. `FxSystem.Consume(buffer, world.Tick)` 의 틱은 스텝 뒤 값 |
+| 7.11 `IWorldBound` 순서 | `WorldRenderer → FxSystem → Hud·미니맵 → 소리` | 그 순서. 빈 연결 파일의 `WorldRenderer`·`FxSystem` 은 `IWorldBound` 가 없어 `(object)x is IWorldBound` 로 부른다(달면 저절로 불림) | WP5 파일을 고치지 않음 |
+| 3.6·8.1 방 이동 어두워짐 | 0.5s 가운데 `Advance` | 길이 = `rules.rooms.transition`(고른 출구 `NextFloor` ≠ 0 이면 `transition_floor`)을 앱 틱으로 반올림(최소 2), `RoomExit` 앱 틱이 1, `총/2` 앱 틱에 `Advance` — 옛 월드 `INNER_ROOMS` → `Advance` → 새 `ROOM` 줄 → `Attach` → 액트가 바뀌면 `PreloadStage`·`PlayMusic` | — |
+| 8.1 `포기` | "패배 처리" | `World.Outcome = Defeat`·`OutcomeTick = Tick` 을 앱이 직접 쓴다(앱이 Core 상태를 쓰는 유일한 곳) → 다음 앱 틱 `Finished` → `Conclude`(같은 길) | 판이 끝나는 길을 하나로 |
+| 8.1 HeroSelect | "직업 단계면" | 켜진 직업 ≥ 2 이고 `--hero` 가 없고 자동 조작이 아닐 때. 자동 조작은 `ResolveHero`(9절 완료 기준 "SCENE 두 줄"). HeroSelect 의 고르기가 `SetLastHero` 를 바로 씀 | 단계 1 데이터는 직업 하나라 지금은 안 나옴 |
+| 8.1 다시 하기 씨앗 | "새 씨앗" | `GameFlow.Reseed(seed)`(64비트 LCG 한 걸음, 결정적). 타이틀 새 게임도 `NextSeed` 를 쓰고 한 걸음 — 첫 판 = `--seed` | 같은 씨앗의 자동 실행이 둘째 판도 같게 |
+| 8.1 결과 `RecordResult` | 결과 화면이 열릴 때 | `PlayScene` 이 `Conclude` 직후 `ResultSummary.From`(그때 `BestRecord` 를 먼저 읽음) → `ResultScene.Enter` 가 `RESULT` → `RecordResult`(직업 ID 가 빈 시험 데이터면 건너뜀) → 음악 `title` → 신호 `result`. `새 기록` 은 `RunText.IsNewRecord`(8.3 비교 키 — WP7 저장과 같은 순서를 화면에도 둠) | 저장 뒤에 읽으면 늘 "같음" |
+| 12.4 도달한 곳 | 승리면 `도살자 처치` | 승리면 **그 판 마지막 액트의 마지막 방 보스 이름 + 처치**, 보스 방이 없는 판(단계 1 `slice`)은 `대성당 8 / 8 정리`. 결과 `ReachedActId` = 판이 끝난 액트(`Depth` 는 늘 지금 액트 안) | 단계 1 판에는 보스가 없다 |
+| 8.1 보상 창 건너뛰기·성소 카드 | 그 보상의 `skip`, 카드에 `+2Lv · 최대 체력 −10%` | 회복량 = `World.Room.Reward.Skip.Heal`(이 방의 보상 = 주운 마법서·성소), 성소 창 카드 둘째 줄 = `RunText.ShrineLine(Room.Reward.Shrine)`(`pick_weapon` + 대가 능력치) | `RewardOffer()` 가 보상 정의를 주지 않는다(WP1g 요청 3) |
+| 8.2 미니맵 지형 | `minimap.png` + 가 본 칸 | 경로 = 출력 폴더 `Assets/<map.art>/minimap.png`(없으면 어두운 판만), AI 확대 그림이면 그림 폭 ÷ 맵 폭으로 배율을 셈, 가림 = `MinimapMask`(픽셀 가운데 월드 점). 그리기는 `UiCanvas.Begin` 이 연 `RenderContext.Batch` 에 `ToScreen` 좌표로 직접 | `UiCanvas` 에 텍스처 그리기가 없다(WP5 에 넘김) |
+| 8.2 체력 구슬·허리띠 | 원 마스크 + 돌 테, 허리띠 번쩍임 | 사각 채움(비율만큼 아래부터) + 테, 허리띠 칸 = `rules.hero.belt.slots`(없으면 2). `BeltPotion` 신호는 `PlayScene` 이 소비 전에 읽어 `Hud.OnBeltPotion` — 0.3s(스테이지 틱 18) 번쩍임 | `UiCanvas` 에 원·텍스처가 생기면 바꿈(WP5) |
+| 8.2 HUD 경고 | 4줄 넘으면 경고 한 번 | 앱 틱에서 봄(`Hud.Tick`) — 그리기와 무관 | 그래픽 없는 실행에서도 로그가 같게 |
+| 9절 `INNER_ROOMS` | v0.6.3 문장은 WP7, 11.1 WP6 v0.7 은 WP6 | WP6(`PlayScene` — 방이 끝날 때마다, 판 끝·계단 저장 포함) | 방 끝을 아는 곳이 `PlayScene` |
+| 8.3 이어 하기 실패 | 불일치 예외만 | `TakeRun()` 이 null(없음·깨짐 — 파일은 저장 구현이 `.bad` 로)이어도 같은 한 줄 `이어 할 판을 읽지 못했다` + 로그 `이어 하기 못 함: …` | 사람에게는 같은 일 |
+| 3절 입력 | 키 표 | `InputMap.Map`(순수 함수): Esc = `Pause \| Cancel`, P = `Pause`, Backspace = `Cancel`, Alt+Enter = `Fullscreen`(그때는 `Confirm` 아님), 숫자 패드 1~3 도. 비활성 창은 키를 읽지 않음. `KeyboardMouseSource` 는 키 이동이 0 이고 왼쪽 버튼이면 커서 쪽, 커서 6px 안이면 서 있음 | 커서 위에서 떨지 않게 |
+| 8.1 `PlayScene` 생성자 | — | `PlayScene(flow, session, continued = false, IInputSource? input = null)` — 명령 출처를 바꿔 끼움(그래픽 없는 흐름 시험·다시 보기) | 자동 조작 정책(WP4 본문)이 없어도 판 흐름을 끝까지 돌려 봄 |
+
+**확인한 것**(그래픽 없는 흐름 시험 — 저장소 밖 임시 xunit 프로젝트가 게임 프로젝트·TestKit 을 참조, 시험 프로젝트가 게임을 참조하지 않는 1.1 규칙 때문에 저장소에는 넣지 않음, WP1g 요청 4):
+타이틀 Enter → Play(`SCENE` 두 줄, 음악 `title` → 액트 미리 읽기·음악), 자동 조작 타이틀 → Play 가 0.5s 뒤, 레벨업 대기가 켜진 **같은 앱 틱**에 오버레이·입력 잠금 동안 무시·고른 뒤 스테이지 틱이 멈춰 있었음,
+합성 두 액트 판을 끝까지(가짜 성장·`FakeHeroCarry`) — `ROOM` 줄 수 = `RunState.Rooms`, `RESULT` 한 줄(`outcome=victory depth=` 판 깊이)·`RecordResult` 한 번·`run_time` = 방 틱 합, 방마다 새 월드에 `Attach`, 계단 뒤 액트 2 미리 읽기 한 번,
+어두워짐 가운데 앱 틱에 `Advance`, 포기 → `outcome=defeat depth=1:1`, 일시정지 메뉴의 `저장하고 끝내기` 가 생존 단계에 없고 보스 방 문 단계에만 → 타이틀 `이어 하기 (합성 액트 2)` → 이어 하기(파일 지워짐, 액트 2 의 1번 방),
+새 게임 때 한 번 묻고 `DiscardRun`, 불일치 저장 → 안내 한 줄, `--room 1:4` 바로 시작, 설정 음량이 rules 기본 80% 에서 10% 단위, 로그 문장 모양·`MinimapMask`·`InputMap`·`MenuList`·기록 비교 키. 22개 통과.
+
+**확인 못 함 — 합친 뒤**: 11.1 WP6 완료 기준 전부(게임 실행 `--autoplay --seed 1 --quit-after 30`·캡처 4장·10.2 "방 흐름"·"미니맵 기억"·"계단 저장"·"단계 끝") — `GameApp`(WP7)·그리기(WP5)·정책(WP4)·성장(WP3) 본문이 필요하다. 키보드로 한 판·소리는 "동작 확인 못 함" 으로 따로.
+
+**WP1g 요청**
+1. `AppServices` 에 시작 검사 결과(`ContentAvailability`·자원 문제 목록)를 둘 자리 — 지금은 `SceneFactory.CreateStart(app, content)`·`CreateAssetError(app, problems)` 인자로 우회.
+2. 화면 신호(`--capture-on`)·종료 요청·창 비활성 일시정지를 앱과 씬이 주고받는 계약 자리 — 지금은 WP6 `GameFlow` 의 이벤트로 우회(WP7 이 `GameFlow.Of(app)` 를 부름).
+3. `LevelUpOffer` 에 보상 창의 `RewardDef?`(건너뛰기 문구·성소 카드 문구 `+2Lv · 최대 체력 −10%`) — 지금은 `World.Room.Reward` 로 우회.
+4. 게임 쪽 시험 프로젝트(게임 프로젝트를 참조하는 xunit — 씬 흐름·`InputMap`·`HudModel`·로그 문장) — 1.1 "시험은 Core 만 참조" 를 바꾸는 일이라 메인 세션이 정함. 위 임시 시험을 그대로 옮길 수 있다.
+
+**다른 묶음에 넘길 것**
+- WP7: `FrameLoop` 이 사람 실행에서만 `InputMap.Sample(frame, 창 크기, 활성)`, 앱 틱마다 `FixedTick` 뒤 `GameFlow.Of(app).Autoplay?.Step(stack, now)`, `Moment` 로 `--capture-on`·`--exit-on-result`(이름 그대로, 처음 것만 고름), `QuitRequested` → 종료 0, `SettingsChanged` → 전체 화면, 창 비활성(사람 실행) → `RequestPause()`, `UiButtons.Fullscreen` 처리, `SCENE` 을 `Entered` 로 또 쓰지 않음.
+- WP5: `WorldRenderer`·`FxSystem` 에 `IWorldBound`, `UiCanvas` 에 텍스처·원 그리기(미니맵·체력 구슬), 그림 정의 `TITLE`·`LOGO`(6.3 grid), 문 위 이름은 `RunText.DoorLabel` 을 쓸 수 있음, 피해 숫자·화면 흔들림 설정(`Save.Settings`)은 그리는 쪽이 읽음.
+- WP4: 위 "자동 조작 명령" 줄의 호출 순서(`Scenario` 도 앱 틱마다 `Next` → `AppTick`), `Events`·`DoorSkips`·`RewardStalls` 는 늘기만 하는 목록이어야 함(WP6 이 센 수 뒤만 로그).
+- WP8: `Consume` 은 스텝마다(프레임마다가 아님), `PlayUi` 키 `menu_move`·`menu_select`·`level_up`·`chest_open`, `PlayMusic("title")`·액트 ID(액트가 바뀔 때만), 일시정지 `SetPaused`, 시작 때 `SetVolumes`.
+- WP3: 선택 뒤 대기가 남지 않으면 `AwaitingChoice = None`(남으면 `PlayScene` 이 다음 앱 틱에 새 창), `Reroll` 뒤 `Offer()` 가 새 카드.
+
 ---
 
 ## 부록 A. 원작 형식 규칙 (조사 문서·시제품에서 옮김)
