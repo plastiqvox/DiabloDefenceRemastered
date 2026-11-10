@@ -132,11 +132,23 @@ public sealed class Hud(AppServices app) : IWorldBound
 
     public Minimap Minimap { get; } = new(app);
 
+    /// <summary>허리띠 번쩍임 길이(스테이지 틱, 0.3s).</summary>
+    public const int BeltFlashTicks = 18;
+
+    private int _beltFlashTick = int.MinValue / 2;
+
     public void Attach(World world)
     {
         _world = world;
         _warnedBossBars = false;
+        _beltFlashTick = int.MinValue / 2;
     }
+
+    /// <summary>허리띠 물약을 저절로 마심(<c>CueKind.BeltPotion</c> — <c>PlayScene</c> 이 표시 이벤트를 소비할 때 알림). 그 신호의 스테이지 틱부터 번쩍임.</summary>
+    public void OnBeltPotion(int stageTick) => _beltFlashTick = stageTick;
+
+    /// <summary>허리띠 칸이 번쩍이는 중인가(스테이지 틱 — 멈추면 같이 멈춤).</summary>
+    public bool BeltFlashing => _world is { } w && w.Tick - _beltFlashTick < BeltFlashTicks;
 
     /// <summary>앱 틱마다(<c>PlayScene</c>): 보스 막대가 4줄을 넘으면 로그 경고 한 번(8.2) — 그리지 않는 실행에서도 같게 틱에서 본다.</summary>
     public void Tick()
@@ -225,6 +237,7 @@ public sealed class Hud(AppServices app) : IWorldBound
             c.Fill(r, Theme.Panel, 0.9f);
             Ui.Outline(c, r, Theme.PanelEdge);
             if (i < m.Belt) c.Fill(Shrink(r, 6), Theme.Red, 0.95f);
+            if (BeltFlashing) c.Fill(r, Theme.White, 0.5f);
         }
 
         // 체력 30% 아래 붉은 가장자리(1초 주기 — 앱 틱이 아니라 스테이지 틱으로, 멈추면 같이 멈춤)

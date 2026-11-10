@@ -158,12 +158,20 @@ public sealed class PlayScene : IScene
         _stack?.Push(overlay);
     }
 
-    /// <summary>표시 이벤트 소비(7.9): <c>FxSystem.Consume</c> → <c>Audio.Consume</c> → <c>Clear</c>. 보스 등장 신호면 화면 신호 <c>boss</c>.</summary>
+    /// <summary>
+    /// 표시 이벤트 소비(7.9): <c>FxSystem.Consume</c> → <c>Audio.Consume</c> → <c>Clear</c>. 그 전에 HUD 가 볼 신호만 읽는다 —
+    /// 보스 등장이면 화면 신호 <c>boss</c>, 허리띠 물약이면 허리띠 칸 번쩍임(8.2).
+    /// </summary>
     private void Consume(World world)
     {
         var buffer = world.Presentation;
+        var boss = false;
         foreach (var cue in buffer.Cues.AsSpan())
-            if (cue.Kind == CueKind.BossArrived) { _flow.Signal("boss"); break; }
+        {
+            if (cue.Kind == CueKind.BossArrived) boss = true;
+            else if (cue.Kind == CueKind.BeltPotion) _hud.OnBeltPotion(cue.Tick);
+        }
+        if (boss) _flow.Signal("boss");
         _renderer?.Fx.Consume(buffer, world.Tick);
         _flow.App.Audio?.Consume(buffer, world);
         buffer.Clear();

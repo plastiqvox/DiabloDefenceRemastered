@@ -5301,9 +5301,9 @@ WP6(화면·UI·입력 — 11.1 WP6) 코드가 문서와 다르게 또는 더 �
 | 8.1 다시 하기 씨앗 | "새 씨앗" | `GameFlow.Reseed(seed)`(64비트 LCG 한 걸음, 결정적). 타이틀 새 게임도 `NextSeed` 를 쓰고 한 걸음 — 첫 판 = `--seed` | 같은 씨앗의 자동 실행이 둘째 판도 같게 |
 | 8.1 결과 `RecordResult` | 결과 화면이 열릴 때 | `PlayScene` 이 `Conclude` 직후 `ResultSummary.From`(그때 `BestRecord` 를 먼저 읽음) → `ResultScene.Enter` 가 `RESULT` → `RecordResult`(직업 ID 가 빈 시험 데이터면 건너뜀) → 음악 `title` → 신호 `result`. `새 기록` 은 `RunText.IsNewRecord`(8.3 비교 키 — WP7 저장과 같은 순서를 화면에도 둠) | 저장 뒤에 읽으면 늘 "같음" |
 | 12.4 도달한 곳 | 승리면 `도살자 처치` | 승리면 **그 판 마지막 액트의 마지막 방 보스 이름 + 처치**, 보스 방이 없는 판(단계 1 `slice`)은 `대성당 8 / 8 정리`. 결과 `ReachedActId` = 판이 끝난 액트(`Depth` 는 늘 지금 액트 안) | 단계 1 판에는 보스가 없다 |
-| 8.1 보상 창 건너뛰기 | 그 보상의 `skip` | 회복량 = `World.Room.Reward.Skip.Heal`(이 방의 보상 = 주운 마법서·성소) | `RewardOffer()` 가 보상 정의를 주지 않는다(WP1g 요청 3) |
+| 8.1 보상 창 건너뛰기·성소 카드 | 그 보상의 `skip`, 카드에 `+2Lv · 최대 체력 −10%` | 회복량 = `World.Room.Reward.Skip.Heal`(이 방의 보상 = 주운 마법서·성소), 성소 창 카드 둘째 줄 = `RunText.ShrineLine(Room.Reward.Shrine)`(`pick_weapon` + 대가 능력치) | `RewardOffer()` 가 보상 정의를 주지 않는다(WP1g 요청 3) |
 | 8.2 미니맵 지형 | `minimap.png` + 가 본 칸 | 경로 = 출력 폴더 `Assets/<map.art>/minimap.png`(없으면 어두운 판만), AI 확대 그림이면 그림 폭 ÷ 맵 폭으로 배율을 셈, 가림 = `MinimapMask`(픽셀 가운데 월드 점). 그리기는 `UiCanvas.Begin` 이 연 `RenderContext.Batch` 에 `ToScreen` 좌표로 직접 | `UiCanvas` 에 텍스처 그리기가 없다(WP5 에 넘김) |
-| 8.2 체력 구슬·허리띠 | 원 마스크 + 돌 테, 허리띠 번쩍임 | 사각 채움(비율만큼 아래부터) + 테, 허리띠 칸 = `rules.hero.belt.slots`(없으면 2). `BeltPotion` 번쩍임은 아직 없음 | `UiCanvas` 에 원·텍스처가 생기면 바꿈(WP5) |
+| 8.2 체력 구슬·허리띠 | 원 마스크 + 돌 테, 허리띠 번쩍임 | 사각 채움(비율만큼 아래부터) + 테, 허리띠 칸 = `rules.hero.belt.slots`(없으면 2). `BeltPotion` 신호는 `PlayScene` 이 소비 전에 읽어 `Hud.OnBeltPotion` — 0.3s(스테이지 틱 18) 번쩍임 | `UiCanvas` 에 원·텍스처가 생기면 바꿈(WP5) |
 | 8.2 HUD 경고 | 4줄 넘으면 경고 한 번 | 앱 틱에서 봄(`Hud.Tick`) — 그리기와 무관 | 그래픽 없는 실행에서도 로그가 같게 |
 | 9절 `INNER_ROOMS` | v0.6.3 문장은 WP7, 11.1 WP6 v0.7 은 WP6 | WP6(`PlayScene` — 방이 끝날 때마다, 판 끝·계단 저장 포함) | 방 끝을 아는 곳이 `PlayScene` |
 | 8.3 이어 하기 실패 | 불일치 예외만 | `TakeRun()` 이 null(없음·깨짐 — 파일은 저장 구현이 `.bad` 로)이어도 같은 한 줄 `이어 할 판을 읽지 못했다` + 로그 `이어 하기 못 함: …` | 사람에게는 같은 일 |

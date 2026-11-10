@@ -124,6 +124,32 @@ public static class RunText
     public static string SkipLine(float heal) =>
         heal > 0f ? string.Create(Inv, $"[X] 건너뛰기 (+{heal:0.#} 체력)") : "[X] 건너뛰기";
 
+    /// <summary>
+    /// 매혹의 성소 카드에 붙는 줄(기획 12.2 — <c>+2Lv · 최대 체력 −10%</c>): 고른 무기 레벨 더하기 + 성소 대가 능력치. 대가 키 이름은 아는 것만 한국어, 나머지는 키 그대로.
+    /// </summary>
+    public static string ShrineLine(ShrineDef shrine)
+    {
+        var parts = new List<string>();
+        if (shrine.PickWeapon > 0) parts.Add(string.Create(Inv, $"+{shrine.PickWeapon}Lv"));
+        foreach (var (key, value) in shrine.Stats.OrderBy(kv => kv.Key))
+        {
+            var pct = key is StatKey.MaxHpPct or StatKey.DamagePct or StatKey.CooldownPct or StatKey.MovePct or StatKey.AreaPct;
+            var amount = pct ? value * 100f : value;
+            var sign = amount < 0 ? "−" : "+";
+            var name = key switch
+            {
+                StatKey.MaxHpPct or StatKey.MaxHp => "최대 체력",
+                StatKey.DamagePct => "피해",
+                StatKey.CooldownPct => "쿨",
+                StatKey.MovePct or StatKey.MoveSpeed => "이동",
+                StatKey.Armor => "방어",
+                _ => key.ToString(),
+            };
+            parts.Add(string.Create(Inv, $"{name} {sign}{MathF.Abs(amount):0.#}{(pct ? "%" : "")}"));
+        }
+        return string.Join(" · ", parts);
+    }
+
     /// <summary>음량 10% 단위(0~100).</summary>
     public static string Percent(float volume) => string.Create(Inv, $"{(int)MathF.Round(Math.Clamp(volume, 0f, 1f) * 100f)}%");
 }

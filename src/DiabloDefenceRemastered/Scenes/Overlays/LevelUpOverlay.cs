@@ -159,7 +159,9 @@ public sealed class LevelUpOverlay(GameFlow flow, World world, bool reward) : IS
             if (i == _focus) Ui.Outline(c, r, Theme.Focus, rise);
             Ui.Icon(c, world.Defs, card.Icon, new RectF(r.X0 + 10, r.Y0 + 14, r.X0 + 58, r.Y0 + 62), rise);
             c.Text($"[{i + 1}] {card.Name}", new Vector2(r.X0 + 66, r.Y0 + 16), Theme.BodyText, Theme.Text, rise);
-            c.Text(RunText.CardLevel(card), new Vector2(r.X0 + 66, r.Y0 + 38), Theme.SmallText, Theme.TextDim, rise);
+            var level = RunText.CardLevel(card);
+            if (_offer.Source == OfferSource.Shrine && world.Room?.Reward?.Shrine is { } shrine) level = RunText.ShrineLine(shrine);
+            c.Text(level, new Vector2(r.X0 + 66, r.Y0 + 38), Theme.SmallText, Theme.TextDim, rise);
             var y = r.Y0 + 70;
             foreach (var line in card.Lines)
             {
