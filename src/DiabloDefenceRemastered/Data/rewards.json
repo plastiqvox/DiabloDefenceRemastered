@@ -1,0 +1,10 @@
+// 문 보상 (설계서 6.18, 기획 v0.8.1 11.4, 소유 WP3). 단계 1 = 마법서·보물 상자(상자의 허리띠 물약은 단계 2 부터 — belt_potions 0).
+// 단계 2 에 완전 회복 물약, 단계 3 에 성소 셋을 더한다. 아이콘은 대체 그림(물체와 같은 exe PNG — 열린 질문 32).
+{
+  "rewards": [
+    { "id": "reward_tome", "name": "마법서", "kind": "weapon_cards", "object": "obj_tome", "icon": { "sprite": "MagicMissileICon" },
+      "cards": { "owned_weapon": 100, "new_weapon": 100 }, "skip": { "heal": 10 } },
+    { "id": "reward_chest", "name": "보물 상자", "kind": "weapon_bundle", "object": "obj_chest", "icon": { "sprite": "GoldIcon" },
+      "bundle": { "weapon_levels": 1, "belt_potions": 0, "gold": [30, 60] } }
+  ]
+}

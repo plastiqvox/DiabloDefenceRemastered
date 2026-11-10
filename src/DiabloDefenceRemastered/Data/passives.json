@@ -1,0 +1,14 @@
+// 패시브 (설계서 6.9, 기획 6절, 소유 WP3). 단계 1 = 활력·마력 증폭·질주 + 마법사 특성. 아이콘은 원작 exe PNG(기획 6절).
+{
+  "passives": [
+    { "id": "vitality", "name": "활력", "icon": { "sprite": "IncHealth" }, "max_level": 5,
+      "per_level": { "max_hp": 20 }, "on_acquire": { "heal": 20 } },
+    { "id": "arcane_power", "name": "마력 증폭", "icon": { "sprite": "IncMana" }, "max_level": 5,
+      "per_level": { "damage_pct": 0.10 } },
+    { "id": "field_runner", "name": "질주", "icon": { "sprite": "FieldRunner" }, "max_level": 5,
+      "per_level": { "move_pct": 0.08, "pickup_pct": 0.20 } },
+    // 직업 특성(6.16) — 레벨업·상자·--passives 후보에 안 나오고 직업 traits 로만 붙는다(슬롯 밖, 1레벨). MVP 는 HUD 에 아이콘을 그리지 않음
+    { "id": "trait_arcane_affinity", "name": "마력 친화", "trait": true, "max_level": 1,
+      "per_level": { "cooldown_pct": 0.05 }, "classes": ["sorcerer"] }
+  ]
+}

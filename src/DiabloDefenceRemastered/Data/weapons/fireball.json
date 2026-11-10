@@ -1,0 +1,20 @@
+// 파이어볼 (기획 5.4·13.7, 설계서 6.8, 소유 WP3). 무기 하나 + 그 투사체.
+// 그림 fireba·아이콘 icon_fireball 은 sprites/(WP5·WP0), 폭발 이펙트 fx_fire_explosion 은 effects/(WP5) 가 정의한다.
+{
+  "weapons": [
+    { "id": "fireball", "name": "파이어볼", "icon": { "sprite": "icon_fireball" }, "cast_clip": "cast_fire",
+      "pattern": "straight_explode", "targeting": { "type": "random_in_radius", "radius": 400 }, "projectile": "pj_fireball",
+      "max_level": 8,
+      "base": { "speed": 380, "range": 450, "knockback": 40 },
+      "levels": {
+        "damage":   [20, 20, 28, 28, 36, 36, 44, 56],
+        "radius":   [50, 60, 60, 60, 70, 80, 80, 90],
+        "cooldown": [2.5, 2.5, 2.5, 2.2, 2.2, 2.0, 2.0, 1.8],
+        "count":    [1, 1, 1, 2, 2, 2, 3, 3] } }
+  ],
+  "projectiles": [
+    { "id": "pj_fireball", "sprite": "fireba", "scale": 0.7, "blend": "alpha",
+      "radius": 8, "speed": 380, "turn_rate": 0, "range": 450, "blocked_by_obstacles": true, "pierce": 1,
+      "explosion": { "damage_mul": 1.0, "effect": "fx_fire_explosion" } }
+  ]
+}

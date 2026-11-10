@@ -1,0 +1,20 @@
+// 비전 구체 (기획 5.5·13.7, 설계서 6.8, 소유 WP3). 무기 하나 + 그 투사체. Lv8 은 상시(duration·cooldown null).
+// 그림 holy·아이콘 icon_arcane_orbit 은 sprites/(WP5·WP0) 가 정의한다.
+{
+  "weapons": [
+    { "id": "arcane_orbit", "name": "비전 구체", "icon": { "sprite": "icon_arcane_orbit" }, "cast_clip": "cast_magic",
+      "pattern": "orbit", "targeting": { "type": "none" }, "projectile": "pj_arcane_orb",
+      "max_level": 8,
+      "base": { "rotation": 180, "hit_interval": 0.5, "knockback": 30 },
+      "levels": {
+        "damage":       [8, 8, 11, 11, 14, 14, 17, 20],
+        "count":        [2, 3, 3, 3, 4, 4, 5, 5],
+        "orbit_radius": [70, 70, 80, 80, 90, 90, 100, 100],
+        "duration":     [3.0, 3.0, 3.5, 4.0, 4.0, 5.0, 5.0, null],
+        "cooldown":     [4.0, 4.0, 4.0, 3.5, 3.5, 3.0, 3.0, null] } }
+  ],
+  "projectiles": [
+    { "id": "pj_arcane_orb", "sprite": "holy", "scale": 0.6, "blend": "alpha",
+      "radius": 12, "blocked_by_obstacles": false, "pierce": 1 }
+  ]
+}

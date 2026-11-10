@@ -1,0 +1,21 @@
+// 매직 미사일 — 시작 무기 (기획 5.3·13.7, 설계서 6.8, 소유 WP3). 무기 하나 + 그 투사체.
+// 그림 miniltng·아이콘 icon_magic_missile 은 sprites/(WP5·WP0), 맞음 이펙트 fx_bolt_hit 은 effects/(WP5) 가 정의한다.
+{
+  "weapons": [
+    { "id": "magic_missile", "name": "매직 미사일", "icon": { "sprite": "icon_magic_missile" }, "cast_clip": "cast_lightning",
+      "pattern": "homing", "targeting": { "type": "nearest", "radius": 450 }, "projectile": "pj_magic_missile",
+      "max_level": 8,
+      "base": { "turn_rate": 360, "lifetime": 3.0, "burst_interval": 0.08, "knockback": 20 },
+      "levels": {
+        "damage":   [10, 10, 14, 14, 14, 18, 18, 22],
+        "cooldown": [1.2, 1.2, 1.2, 1.0, 1.0, 1.0, 0.85, 0.85],
+        "count":    [1, 2, 2, 2, 3, 3, 3, 4],
+        "pierce":   [1, 1, 1, 1, 1, 2, 2, 2],
+        "speed":    [300, 300, 300, 330, 330, 330, 360, 360] } }
+  ],
+  "projectiles": [
+    { "id": "pj_magic_missile", "sprite": "miniltng", "scale": 0.8, "blend": "alpha",
+      "radius": 6, "turn_rate": 360, "lifetime": 3.0, "blocked_by_obstacles": true, "pierce": 1,
+      "hit_effect": "fx_bolt_hit" }
+  ]
+}
