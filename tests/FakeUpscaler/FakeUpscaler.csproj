@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 가짜 확대 실행 파일 (설계서 1.4 "AI 확대 — 시험", 소유 WP0). 실제 프로그램과 같은 인자(-i -o -n -m -s -f -g -t)를 받아 최근접 4배로 쓴다.
+       환경 변수 DDR_FAKE_MODE 로 오류 종료·잠자기(진행 없음)·결과 하나 빼기·크기 틀림·0xC0000135 흉내를 고른다. 시험만 띄운다 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>

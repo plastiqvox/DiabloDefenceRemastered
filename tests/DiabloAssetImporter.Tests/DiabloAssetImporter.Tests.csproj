@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- 가져오기 도구 시험 (설계서 10.1, 소유 WP0). 합성 바이트·시험이 만든 작은 MPQ 로만 — 원작 자원 없이 돈다.
-       바이트 픽스처는 시험 코드의 인코더가 만든다(원본에서 잘라 낸 바이트를 넣지 않는다, R24) -->
+       바이트 픽스처는 시험 코드의 인코더가 만든다(원본에서 잘라 낸 바이트를 넣지 않는다, R24).
+       tests/FakeUpscaler 는 가짜 확대 실행 파일(1.4 "AI 확대 — 시험") — 빌드 순서만 잇고 어셈블리는 참조하지 않는다 -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
@@ -20,10 +21,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\tools\DiabloAssetImporter\DiabloAssetImporter.csproj" />
+    <ProjectReference Include="..\FakeUpscaler\FakeUpscaler.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Using Include="DiabloDefenceRemastered.Core.Common" />
+    <Using Include="DiabloDefenceRemastered.Core.Defs" />
+    <Using Include="DiabloDefenceRemastered.Core.Map" />
+    <Using Include="DiabloDefenceRemastered.Core.Assets" />
   </ItemGroup>
 
 </Project>
