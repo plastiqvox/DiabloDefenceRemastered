@@ -1,21 +1,21 @@
 // 단계 1 적 5종 (설계서 6.5, 기획 8.2·8.3 표 값). 소유 WP4. 그림 묶음·변종은 WP0a 의 sprites/monsters.json.
 // 수치는 기획 첫 값(원본 유래 아님). 타격·발사 프레임은 그림 묶음 클립 값을 쓴다(event_frame 생략).
-// 투사체 pj_enemy_arrow·이펙트 fx_*는 WP5 effects/ 의 정의를 가리킨다(기획 13.7). drop_table 은 WP3 드롭 표(dt_common)가 생기면 단다.
+// 투사체 pj_enemy_arrow·이펙트 fx_*는 WP5 effects/ 의 정의를 가리킨다(기획 13.7). 드롭은 모두 일반 드롭 표 dt_common(기획 11.1 — 금화 3%(1~5)·물약 등).
 {
   "enemies": [
     { "id": "skeleton", "name": "해골", "tags": ["skeleton", "undead"],
       "sprites": "set_skelaxe", "variant": "white",
-      "hp": 10, "speed": 70, "damage": 5, "armor": 0, "knockback_resist": 0, "xp": 1, "movement": "flow",
+      "hp": 10, "speed": 70, "damage": 5, "armor": 0, "knockback_resist": 0, "xp": 1, "movement": "flow", "drop_table": "dt_common",
       "behaviors": [ { "id": "melee", "type": "chase_melee", "cooldown": 1.0 } ] },
 
     { "id": "zombie", "name": "좀비", "tags": ["zombie", "undead"],
       "sprites": "set_zombie", "variant": "",
-      "hp": 28, "speed": 40, "damage": 8, "armor": 1, "knockback_resist": 0.3, "xp": 2, "movement": "flow",
+      "hp": 28, "speed": 40, "damage": 8, "armor": 1, "knockback_resist": 0.3, "xp": 2, "movement": "flow", "drop_table": "dt_common",
       "behaviors": [ { "id": "melee", "type": "chase_melee", "cooldown": 1.2 } ] },
 
     { "id": "skeleton_archer", "name": "해골 궁수", "tags": ["skeleton", "undead", "ranged"],
       "sprites": "set_skelbow", "variant": "white",
-      "hp": 14, "speed": 62, "damage": 6, "armor": 0, "knockback_resist": 0, "xp": 2, "movement": "flow",
+      "hp": 14, "speed": 62, "damage": 6, "armor": 0, "knockback_resist": 0, "xp": 2, "movement": "flow", "drop_table": "dt_common",
       "behaviors": [
         { "type": "kite", "range_band": [220, 320] },
         { "id": "shoot", "type": "shoot_projectile", "projectile": "pj_enemy_arrow", "clip": "attack",
@@ -23,14 +23,14 @@
 
     { "id": "burning_dead", "name": "불타는 해골", "tags": ["skeleton", "undead", "fire"],
       "sprites": "set_skelaxe", "variant": "", "glow": { "color": [255, 120, 40], "alpha": 0.2 },
-      "hp": 8, "speed": 100, "damage": 15, "armor": 0, "knockback_resist": 0, "xp": 1, "movement": "flow",
+      "hp": 8, "speed": 100, "damage": 15, "armor": 0, "knockback_resist": 0, "xp": 1, "movement": "flow", "drop_table": "dt_common",
       "behaviors": [
         { "type": "self_destruct", "trigger_range": 10, "fuse": 0.6, "radius": 60,
           "effect": { "effect": "fx_fire_explosion", "scale": 0.8 }, "fizzle_effect": "fx_spark" } ] },
 
     { "id": "ghoul", "name": "구울", "tags": ["zombie", "undead"],
       "sprites": "set_zombie", "variant": "bluered",
-      "hp": 22, "speed": 45, "damage": 10, "armor": 0, "knockback_resist": 0.2, "xp": 2, "movement": "flow",
+      "hp": 22, "speed": 45, "damage": 10, "armor": 0, "knockback_resist": 0.2, "xp": 2, "movement": "flow", "drop_table": "dt_common",
       "behaviors": [
         { "type": "charge", "range_band": [0, 260], "telegraph": { "effect": "fx_warning_line", "time": 0.5 },
           "speed": 280, "time": 1.0, "stun": 0.8, "cooldown": 4.0, "damage": 10 } ] }

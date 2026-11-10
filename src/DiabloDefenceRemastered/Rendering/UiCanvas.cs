@@ -15,6 +15,7 @@ public sealed class UiCanvas(AppServices app)
 {
     private RenderContext? _rc;
     private Texture2D? _pixel;
+    private Texture2D? _circle;
 
     /// <summary>가상 좌표 1 = 창 픽셀 몇 개.</summary>
     public float Scale => PresentMath.UiScale(Present);
@@ -32,6 +33,7 @@ public sealed class UiCanvas(AppServices app)
     {
         _rc = rc;
         _pixel ??= rc is GameRenderContext g ? g.Primitives.Pixel : MakePixel(rc.Device);
+        _circle ??= (rc as GameRenderContext)?.Primitives.Circle;
         rc.Batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp);
     }
 
@@ -64,6 +66,26 @@ public sealed class UiCanvas(AppServices app)
     {
         if (alpha <= 0f || _pixel is null) return;
         Batch.Draw(_pixel, ScreenRect(rect), color.ToXna(alpha));
+    }
+
+    /// <summary>
+    /// 원 채우기(가상 좌표 중심·반지름). <paramref name="fill"/> = 아래에서부터 찬 높이 비율(1 = 원 전체) — 체력 구슬의 액체(기획 12.1).
+    /// 원 텍스처(<see cref="Primitives.Circle"/>)의 아래쪽만 잘라 같은 자리에 그린다. 원 텍스처가 없으면(그래픽 없는 문맥) 사각형으로.
+    /// </summary>
+    public void Disc(Vector2 center, float radius, Rgb color, float alpha = 1f, float fill = 1f)
+    {
+        fill = Math.Clamp(fill, 0f, 1f);
+        if (alpha <= 0f || fill <= 0f || radius <= 0f) return;
+        var bottom = center.Y + radius;
+        if (_circle is null)
+        {
+            Fill(new RectF(center.X - radius, bottom - 2f * radius * fill, center.X + radius, bottom), color, alpha);
+            return;
+        }
+        const int size = Primitives.CircleSize;
+        var top = Math.Clamp((int)MathF.Round(size * (1f - fill)), 0, size - 1);
+        var dest = new RectF(center.X - radius, bottom - 2f * radius * (size - top) / size, center.X + radius, bottom);
+        Batch.Draw(_circle, ScreenRect(dest), new Rectangle(0, top, size, size - top), color.ToXna(alpha));
     }
 
     /// <summary>그림 정의 <paramref name="spriteId"/> 의 <paramref name="source"/> 영역(그림 픽셀, 원색 첫 페이지)을 그린다.</summary>

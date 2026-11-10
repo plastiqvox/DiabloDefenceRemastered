@@ -68,12 +68,14 @@ public sealed class HeroControlSystem : ISimSystem
     {
         if (world.Defs.Rules.LevelUpPush is not { Radius: > 0f, Distance: > 0f } push || world.Spatial is null) return;
         var hero = world.Hero;
-        var buf = world.Combat.Query;
-        var n = Math.Min(world.Spatial.Query(hero.Pos, push.Radius, buf), buf.Length);
-        for (var k = 0; k < n; k++)
+        // 공간 해시를 쓰지 않고 적 목록을 다 본다. 이 단계(HeroControl)는 SpatialRebuild 앞이라 해시가 지난 틱 것이고, 그 뒤 EndTick 이 적 목록을
+        // 당겨 써(Compact) 칸의 번호가 어긋난다 — 다른 적을 밀거나 목록 밖 번호로 터졌다(RealSpawnGapTests seed 7, 레벨업 창이 닫힌 틱). 레벨업마다 한 번이라 싸다.
+        var r2 = push.Radius * push.Radius;
+        for (var i = 0; i < world.Enemies.Count; i++)
         {
-            var e = world.Enemies[buf[k]];
+            var e = world.Enemies[i];
             var d = e.Pos - hero.Pos;
+            if (d.LengthSquared() > r2) continue;
             world.Damage.Push(e.Id, Faction.Hero, d.LengthSquared() > 1e-6f ? Vector2.Normalize(d) : new Vector2(0, 1), push.Distance);
         }
     }

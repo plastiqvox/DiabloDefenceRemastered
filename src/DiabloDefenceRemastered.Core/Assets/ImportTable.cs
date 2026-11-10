@@ -138,7 +138,14 @@ public sealed record ImportTable
             v.Bundle(icf, p, e.Bundle);
             v.Width(icf, $"{p}.width", e.Width);
             v.Alpha(icf, $"{p}.shadow_alpha", e.ShadowAlpha);
-            v.Dirs(icf, p, e.Cl2, e.Dirs, e.FramesAreDirs);
+            if ((e.Cl2 is null) == (e.Cel is null)) v.Add(icf, p, "cl2 와 cel 중 하나만 쓴다");
+            else if (e.Cel is { } cel)
+            {
+                if (e.Dirs is not null || e.FramesAreDirs is not null) v.Add(icf, p, "cel 아이콘은 방향(dirs·frames_are_dirs)을 쓰지 않는다");
+                if (Placeholders(cel).Count > 0) v.Add(icf, $"{p}.cel", $"cel 경로에는 자리표시를 쓰지 않는다('{cel}')");
+                v.SourcePath(icf, $"{p}.cel", cel);
+            }
+            else v.Dirs(icf, p, e.Cl2!, e.Dirs, e.FramesAreDirs);
             if (e.Layers.Count == 0) v.Add(icf, $"{p}.layers", "겹칠 그림(layers)이 하나도 없다");
             for (var k = 0; k < e.Layers.Count; k++)
             {
@@ -656,11 +663,15 @@ public sealed record ImportMissileEntry
             : [cl2];
 }
 
-/// <summary>아이콘 하나 → <c>out.png</c>. <c>layers</c> 는 그리는 순서.</summary>
+/// <summary>
+/// 아이콘 하나 → <c>out.png</c>. <c>layers</c> 는 그리는 순서. 그림 파일은 <c>cl2</c>(마법 CL2) 또는 <c>cel</c>(프레임 머리 없는 CEL — 원작 마법 아이콘
+/// <c>ctrlpan\spelicon.cel</c>) 중 하나다. <c>cel</c> 이면 방향 없이 <c>layers[].frame</c> 이 CEL 프레임 번호(1부터)다.
+/// </summary>
 public sealed record ImportIconEntry
 {
     public required string Out { get; init; }
-    public required string Cl2 { get; init; }
+    public string? Cl2 { get; init; }
+    public string? Cel { get; init; }
     public required int Width { get; init; }
     public int? Dirs { get; init; }
     public int? FramesAreDirs { get; init; }
@@ -670,7 +681,7 @@ public sealed record ImportIconEntry
 
     public int Directions => Dirs ?? FramesAreDirs ?? 1;
 
-    public IReadOnlyList<string> SourcePaths() => ImportMissileEntry.ExpandDirs(Cl2, Dirs);
+    public IReadOnlyList<string> SourcePaths() => Cel is { } cel ? [cel] : ImportMissileEntry.ExpandDirs(Cl2 ?? "", Dirs);
 }
 
 /// <summary>아이콘 겹침 한 장: <c>dir</c> = 방향(<b>0부터</b>, 1.4 마법 규칙의 방향 번호), <c>frame</c> = 프레임(<b>1부터</b>), <c>offset</c> 정수 이동, <c>rotate</c> 도.</summary>

@@ -5,7 +5,7 @@ namespace DiabloAssetImporter.Bake;
 
 /// <summary>
 /// 아이콘 (1.4 변환 규칙 "아이콘", 기획 5.9): 표 <c>layers</c> 의 (방향, 프레임)을 차례로 겹쳐(<c>rotate</c> = 가장 가까운 픽셀 회전, <c>offset</c> = 정수 이동)
-/// size×size 어두운 칸 가운데에 맞춰 줄인다(정수 상자 평균 — 결정적). 결과는 불투명.
+/// size×size 어두운 칸 가운데에 맞춰 줄인다(정수 상자 평균 — 결정적). 결과는 불투명. 그림이 size 안에 들면 줄이지 않고 1:1 로 옮긴다(CEL 마법 아이콘 56×56).
 /// </summary>
 internal static class IconBaker
 {
@@ -53,13 +53,14 @@ internal static class IconBaker
                         r += canvas.Pixels[i] * pa; g += canvas.Pixels[i + 1] * pa; bl += canvas.Pixels[i + 2] * pa; a += pa;
                     }
                 var t = ((oy + y) * size + ox + x) * 4;
-                // 미리 곱한 색 평균을 바탕 위에 덮는다(정수)
+                // 미리 곱한 색 평균(색 × 알파, 0..255²)을 바탕 위에 덮는다(정수).
+                // 합을 미리 255 로 나눠 넘기면 255 로 두 번 나뉘어 아이콘이 바탕색 가까이 검게 된다(플레이 관찰 — 레벨업 창 아이콘이 거의 검음)
                 var aa = a / n;
                 if (aa == 0) continue;
                 long Mix(long sum, byte bg) => (sum / n + bg * (255 - aa)) / 255;
-                result.Pixels[t] = (byte)Math.Clamp(Mix(r / 255, background.R), 0, 255);
-                result.Pixels[t + 1] = (byte)Math.Clamp(Mix(g / 255, background.G), 0, 255);
-                result.Pixels[t + 2] = (byte)Math.Clamp(Mix(bl / 255, background.B), 0, 255);
+                result.Pixels[t] = (byte)Math.Clamp(Mix(r, background.R), 0, 255);
+                result.Pixels[t + 1] = (byte)Math.Clamp(Mix(g, background.G), 0, 255);
+                result.Pixels[t + 2] = (byte)Math.Clamp(Mix(bl, background.B), 0, 255);
             }
         return result;
     }
