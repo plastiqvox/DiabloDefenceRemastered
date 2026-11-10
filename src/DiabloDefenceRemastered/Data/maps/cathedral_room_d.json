@@ -1,0 +1,39 @@
+// 본뜬 원작 방: 없음 — 대성당 작은 방 D "창살 방"(기획 10.8): 오른쪽 모서리(room_east)와 왼쪽 모서리(room_west)에 창살을 낀 출입구 둘짜리 방, 가운데에 기둥 둘.
+// 작은 방(설계서 6.11): 메가 16 = 하위 32×32. 둘레·문 넷·진입점은 방 A 와 같다(뒤 문 안쪽 4, 앞 문 N − 6 = 26).
+// 창살은 걷기만 막고 투사체는 지난다(성질 w) — 방 안 적이 홀을 쏘고 홀에서도 방 안을 맞힌다(큰 방의 창살 방과 같은 짜임).
+// 작은 방에는 문 하나짜리 막다른 방을 두지 않는다(기획 10.8, 13.5-19) — 두 방 모두 하위 4칸 틈 둘.
+// 오른쪽 방: 위는 뒤 둘레, 오른쪽은 앞 턱. 틈 = 왼쪽 벽 [11,1..2]·아래 벽 [13..14,4](앞 턱 옆), 왼쪽 틈 아래 벽은 마감된 위 끝, 아래 벽 └ 옆에 창살 한 메가.
+// 왼쪽 방: 왼쪽은 뒤 둘레, 아래는 앞 턱. 틈 = 위 벽 [1..2,11]·오른쪽 벽 [4,13..14](앞 턱 옆), 위 틈 오른쪽 벽은 마감된 왼쪽 끝, 오른쪽 벽 ┐ 아래에 세로 창살 한 메가.
+// 두 방 벽은 문 진입점에서 하위 6칸 넘게 떨어진다(13.5-23 150px). 기둥 둘은 open_center 안(상한 2, 13.5-19).
+{
+  "maps": [
+    {
+      "id": "cathedral_room_d", "tileset": "l1", "palette": "l1_1", "size": 16, "mirror": true,
+      "room_kinds": ["normal", "elite"],
+      "layout": {
+        "border": "arch_hall",
+        "gates": [ { "id": "gate_nw", "side": "nw" }, { "id": "gate_ne", "side": "ne" },
+                   { "id": "gate_se", "side": "se" }, { "id": "gate_sw", "side": "sw" } ],
+        "place": [
+          { "id": "d_room_east", "origin": [11, 0], "over_border": true,
+            "grid": [ "wall_corner",
+                      ".",
+                      ".",
+                      "wall_end_v",
+                      "wall_h grate_h . ." ] },
+          { "id": "d_room_west", "origin": [0, 11], "over_border": true,
+            "grid": [ "wall_corner . . wall_end_h wall_v",
+                      ".           . . .          grate_v" ] },
+          { "id": "d_pillars", "piece": "pillar", "at": [[6, 6], [9, 9]] } ] },
+      "open_center": [5, 5, 11, 11],
+      "entries": [ { "id": "gate_nw", "outside": [-4, 15.5], "inside": [4, 15.5] },
+                   { "id": "gate_ne", "outside": [15.5, -4], "inside": [15.5, 4] },
+                   { "id": "gate_se", "outside": [35, 15.5], "inside": [26, 15.5] },
+                   { "id": "gate_sw", "outside": [15.5, 35], "inside": [15.5, 26] } ],
+      "hero_start": { "tile": [15.5, 15.5], "facing": "south" },
+      "anchors": { "center": [15.5, 15.5], "room_east": [26, 4], "room_west": [4, 26] },
+      "room_areas": { "room_east": [11, 0, 15, 4], "room_west": [0, 11, 4, 15] },
+      "art": "d1/maps/cathedral_room_d"
+    }
+  ]
+}

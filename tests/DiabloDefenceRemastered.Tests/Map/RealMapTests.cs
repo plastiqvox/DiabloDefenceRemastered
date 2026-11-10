@@ -14,7 +14,7 @@ public class RealMapTests
         var r = RealData.Maps;
         Assert.True(r.Errors.Count == 0, string.Join("\n", r.Errors));
         Assert.Equal(["l1"], r.Tilesets.Select(t => t.Id));
-        Assert.Equal(["cathedral_arena"], r.Maps.Select(m => m.Id));
+        Assert.Contains("cathedral_arena", r.Maps.Select(m => m.Id));   // 작은 방 맵은 Nav/RealRoomMapTests
         Assert.Same(RealData.L1, RealData.Cathedral.Tileset.Def);
     }
 

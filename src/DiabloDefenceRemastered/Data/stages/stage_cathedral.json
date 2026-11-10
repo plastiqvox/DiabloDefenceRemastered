@@ -1,5 +1,7 @@
 // 스테이지 1 = 액트 1 대성당 — 단계 1 판 (설계서 6.12 "단계 1 세로 조각", 기획 10.3·14.1). 소유 WP4.
-// slice: 일반 방 여섯(순번 표 번호 1·2·3·4·6·8 그대로, 정예·보스 방 없음), 방 맵은 cathedral_arena 하나, 보상은 마법서·보물 상자 둘.
+// slice: 일반 방 여섯(순번 표 번호 1·2·3·4·6·8 그대로, 정예·보스 방 없음), 보상은 마법서·보물 상자 둘.
+// 방 맵 풀(기획 v0.9 V2): 일반 방은 손으로 만든 작은 방 다섯(cathedral_room_a~e, 거울판 포함 열 가지) 중 무작위. 보스 방 맵은 cathedral_arena 그대로 —
+// 이 판엔 보스 방이 없어 방 없는 월드(--stage 바로 시작·시험 판)가 이 맵을 쓴다(World.NoRoomMap). 작은 방의 생성 수는 rules 의 area_scale 이 줄인다.
 // 구간표는 기획 10.3 표에서 단계 1 에 없는 종(폴른 원·썩은 시체·핀드·불타는 해골 궁수)의 가중을 뺀 것 — 2:00–2:30·2:30–3:00 은 한 줄로 합침,
 // 5:00–6:00·7:30–8:30(정예 방 t)은 이 판에서 쓰이지 않지만 13.5-3(빈틈 없음)을 지키려고 남긴다.
 // 이벤트는 기획 10.3 표에서 단계 1 에 있는 적만: 3번 방 포위(불타는 해골 12), 2번 방 행진(해골 궁수 5), 4번 방 정예 무리(해골 4, 접두사 없음),
@@ -8,7 +10,8 @@
 {
   "stages": [
     { "id": "stage_cathedral", "name": "대성당", "slice": true,
-      "room_maps": { "normal": ["cathedral_arena"] },
+      "room_maps": { "normal": ["cathedral_room_a", "cathedral_room_b", "cathedral_room_c", "cathedral_room_d", "cathedral_room_e"],
+                     "boss": "cathedral_arena" },
       "rooms": [
         { "kind": "normal", "from": "00:00", "to": "01:00", "number": 1, "floor": 1 },
         { "kind": "normal", "from": "01:00", "to": "02:15", "number": 2, "floor": 1 },

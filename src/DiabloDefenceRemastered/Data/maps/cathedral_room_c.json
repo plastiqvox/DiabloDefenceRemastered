@@ -1,0 +1,40 @@
+// 본뜬 원작 방: 없음 — 대성당 작은 방 C "안쪽 방 둘"(기획 10.8): 뒤 모서리(위)와 앞 모서리(아래)에 출입구 둘짜리 작은 방, 가운데 홀에 기둥 둘.
+// 작은 방(설계서 6.11): 메가 16 = 하위 32×32. 둘레·문 넷·진입점은 방 A 와 같다(뒤 문 안쪽 4, 앞 문 N − 6 = 26).
+// 작은 방에는 문 하나짜리 막다른 방을 두지 않는다(기획 10.8, 13.5-19) — 두 방 모두 하위 4칸 틈 둘.
+// 위 방(room_north)은 큰 방의 피 방처럼 바깥 두 벽을 둘레 자리에 겹친다(over_border) — 안쪽 하위 1..7, 틈은 오른쪽 벽 [4,1..2]·아래 벽 [2..3,4],
+// 오른쪽 아래 ┘ 는 작은 모서리 기둥, 오른쪽 틈 아래 벽은 마감된 위 끝.
+// 아래 방(room_south)은 둘레 앞 턱에 붙인 Γ — 위 벽이 앞 둘레에, 왼쪽 벽이 아래 둘레에 붙고(13.5-4 붙음), 틈은 위 벽 [12..13,11]·왼쪽 벽 [11,12..13],
+// 틈 너머 벽 토막은 마감된 끝(wall_end_h·wall_end_v).
+// 두 방 벽은 문 진입점에서 하위 6칸 넘게 떨어진다(13.5-23 150px). 기둥 둘은 open_center 안(상한 2, 13.5-19).
+{
+  "maps": [
+    {
+      "id": "cathedral_room_c", "tileset": "l1", "palette": "l1_1", "size": 16, "mirror": true,
+      "room_kinds": ["normal", "elite"],
+      "layout": {
+        "border": "arch_hall",
+        "gates": [ { "id": "gate_nw", "side": "nw" }, { "id": "gate_ne", "side": "ne" },
+                   { "id": "gate_se", "side": "se" }, { "id": "gate_sw", "side": "sw" } ],
+        "place": [
+          { "id": "c_room_north", "origin": [0, 0], "over_border": true,
+            "grid": [ "wall_corner wall_h wall_h wall_h wall_corner",
+                      "wall_v      .      .      .      .",
+                      "wall_v      .      .      .      .",
+                      "wall_v      .      .      .      wall_end_v",
+                      "wall_corner wall_h .      .      wall_post  " ] },
+          { "id": "c_room_south", "piece": "wall_corner", "at": [[11, 11]] },
+          { "piece": "wall_end_h", "at": [[14, 11]] },
+          { "piece": "wall_end_v", "at": [[11, 14]] },
+          { "id": "c_pillars", "piece": "pillar", "at": [[6, 9], [9, 6]] } ] },
+      "open_center": [5, 5, 11, 11],
+      "entries": [ { "id": "gate_nw", "outside": [-4, 15.5], "inside": [4, 15.5] },
+                   { "id": "gate_ne", "outside": [15.5, -4], "inside": [15.5, 4] },
+                   { "id": "gate_se", "outside": [35, 15.5], "inside": [26, 15.5] },
+                   { "id": "gate_sw", "outside": [15.5, 35], "inside": [15.5, 26] } ],
+      "hero_start": { "tile": [15.5, 15.5], "facing": "south" },
+      "anchors": { "center": [15.5, 15.5], "room_north": [4, 4], "room_south": [26, 26] },
+      "room_areas": { "room_north": [0, 0, 4, 4], "room_south": [11, 11, 15, 15] },
+      "art": "d1/maps/cathedral_room_c"
+    }
+  ]
+}

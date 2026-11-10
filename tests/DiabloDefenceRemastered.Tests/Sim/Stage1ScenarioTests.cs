@@ -51,7 +51,12 @@ public sealed class Stage1ScenarioTests(ITestOutputHelper output)
             output.WriteLine($"VISITS map={s.MapId} room={s.RoomId} visits={s.Visits} skips={s.Skips} inside_s={s.TicksInside * World.Dt:0.0}");
         Assert.Equal(RunOutcome.Victory, r.Outcome);
         Assert.Empty(r.Policy.DoorSkips);
-        foreach (var id in new[] { "room_blood", "room_grate", "room_south", "room_west" })
-            Assert.True(r.Policy.RoomStats.Where(s => s.RoomId == id).Sum(s => s.Visits) >= 2, $"{id} 를 두 번 이상 들르지 않았다");
+        // 방 맵 풀이 작은 방 다섯(기획 v0.9 V2)이라 판마다 맵이 다르다 — 이 판에서 실제로 돈 맵의 안쪽 방(room_ 기준점)을 모두 한 번 이상 들른다
+        var expected = r.Run.Rooms.Select(x => x.MapId).Distinct()
+            .SelectMany(m => Wp4Data.Defs.Maps.Get(m).AnchorsTile.Keys.Where(k => k.StartsWith("room_", StringComparison.Ordinal)).Select(k => (Map: m, Room: k)))
+            .ToList();
+        Assert.NotEmpty(expected);                                           // 씨앗 3 은 안쪽 방이 있는 맵을 지난다
+        foreach (var (map, id) in expected)
+            Assert.True(r.Policy.RoomStats.Where(s => s.RoomId == id && s.MapId.StartsWith(map, StringComparison.Ordinal)).Sum(s => s.Visits) >= 1, $"{map} 의 {id} 를 들르지 않았다");
     }
 }
