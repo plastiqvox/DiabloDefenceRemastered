@@ -126,6 +126,13 @@ public sealed class GameApp : Game
         var capturing = _runner?.Capturing ?? false;
         _render.AppTick = _loop.Now;
         _render.Capturing = capturing;
+        // PresentRT 크기(설계서 7.1): --window 가 있으면 그 크기로 고정, 없으면 창(백버퍼) 크기 — 전체 화면·창 크기가 바뀌면 다음 프레임에 따라간다.
+        // 가상 960×540 그대로 두면 사람 실행 창에서 그림이 왼쪽 위 3/4 에만 그려졌다
+        if (_app.Options.Window is null)
+        {
+            var pp = GraphicsDevice.PresentationParameters;
+            if (pp.BackBufferWidth > 0 && pp.BackBufferHeight > 0) _render.PresentSize = new Point(pp.BackBufferWidth, pp.BackBufferHeight);
+        }
         _perf?.BeginDraw();
         _stack.Draw(_render, capturing ? 1f : _loop.Accumulator.Alpha);
         _perf?.EndDraw(_loop.Now.Value, _loop.Accumulator.DroppedTicks, (int)GraphicsDevice.Metrics.DrawCount);
