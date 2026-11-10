@@ -179,7 +179,7 @@ public sealed class PlayScene : IScene
 
     /// <summary>
     /// 새 월드에 붙이기(7.11 순서): <c>WorldRenderer</c>(WP5) → <c>FxSystem</c> → <c>Hud</c> → 미니맵 → 소리(WP8).
-    /// <c>WorldRenderer</c>·<c>FxSystem</c> 은 WP5 가 <see cref="IWorldBound"/> 를 달면 불린다(지금 빈 연결 파일에는 없음 — 13장 WP6 구현 기록).
+    /// <c>WorldRenderer</c>·<c>FxSystem</c> 은 WP5 가 단 <see cref="IWorldBound"/> 로 불린다(합친 뒤 — 13장 WP6 구현 기록의 요청이 들어옴).
     /// </summary>
     private void AttachAll(World world)
     {

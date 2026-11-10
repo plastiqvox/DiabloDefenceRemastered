@@ -473,4 +473,3 @@ internal static class DataRules
         private static string Snake<T>(T value) where T : struct, Enum => System.Text.Json.JsonNamingPolicy.SnakeCaseLower.ConvertName(value.ToString());
     }
 }
-
