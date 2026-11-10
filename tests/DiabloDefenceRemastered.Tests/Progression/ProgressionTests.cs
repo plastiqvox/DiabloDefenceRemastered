@@ -271,4 +271,68 @@ public class ProgressionTests
         Assert.Equal(9, w.RunStats.Kills);
         Assert.Equal(4f, w.RunStats.DamageByWeapon[2]);
     }
+
+    // ── 축복(v0.7)·진화 classes(v0.6.1) ─────────────────────────
+
+    private static GameDefs BlessingDefs(HeroClassDef? evoClass = null)
+    {
+        var basic = CombatKit.Defs();
+        var mm = basic.Weapons.Get(CombatKit.Mm);
+        var power = basic.Passives.Get(CombatKit.Power);
+        var storm = new WeaponDef { Id = "t_storm", Name = "비전 폭풍", BaseWeapon = DefRef<WeaponDef>.To(mm) };
+        var blessing = CombatKit.Passive("t_bless_armor", StatKey.Armor, 3, max: 2) with { Blessing = true };
+        var evo = new EvolutionDef
+        {
+            Weapon = DefRef<WeaponDef>.To(mm), Passive = DefRef<PassiveDef>.To(power), Result = DefRef<WeaponDef>.To(storm),
+            Classes = evoClass is null ? [] : [DefRef<HeroClassDef>.To(evoClass)],
+        };
+        return new GameDefs
+        {
+            Rules = basic.Rules, Sprites = basic.Sprites, SpriteSets = basic.SpriteSets, Projectiles = basic.Projectiles,
+            Weapons = new DefTable<WeaponDef>([.. basic.Weapons.All, storm]), Passives = new DefTable<PassiveDef>([.. basic.Passives.All, blessing]),
+            HeroClasses = basic.HeroClasses, Tilesets = basic.Tilesets, Maps = basic.Maps, Stages = basic.Stages, Enemies = basic.Enemies,
+            Rewards = basic.Rewards, Pickups = basic.Pickups, Evolutions = new DefTable<EvolutionDef>([evo]),
+        };
+    }
+
+    [Fact]
+    public void Blessing_NotInLevelUpOrChest_GoesToBlessingSlot_AddsStats()
+    {
+        var defs = BlessingDefs();
+        for (ulong seed = 1; seed <= 30; seed++)
+        {
+            var t = CombatKit.World(defs, seed);
+            P(t.World).AddXp(5);
+            Assert.DoesNotContain(t.World.Progression!.Offer().Cards, c => c.Id == "t_bless_armor");
+        }
+        var tw = CombatKit.World(defs);
+        var w = tw.World;
+        new Core.Sim.Heroes.HeroRunSetup().Apply(w, new RunOptions { Passives = [new("t_bless_armor", 2), new(CombatKit.Vitality, 1)] });
+        Assert.Equal("t_bless_armor", w.Hero.Blessings[0].Def!.Id);
+        Assert.Equal(CombatKit.Vitality, w.Hero.Passives[0].Def!.Id);                     // 축복은 패시브 칸을 쓰지 않음
+        Assert.True(w.Hero.Passives[1].IsEmpty);
+        Assert.Equal(6f, w.Hero.Stats[StatKey.Armor]);
+        CombatKit.SetWeapon(w, 0, CombatKit.Mm, 8);
+        for (var i = 0; i < 5; i++)
+        {
+            w.Combat.Chests.Add(1);
+            foreach (var item in w.Progression!.OpenChest().Items) Assert.NotEqual("t_bless_armor", item.Id);
+        }
+    }
+
+    [Fact]
+    public void Evolution_Classes_FilterChest()
+    {
+        var other = new HeroClassDef { Id = "t_other", Sprites = DefRef<SpriteSetDef>.To(CombatKit.Defs().SpriteSets[0]), StartWeapons = [] };
+        foreach (var (defs, evolves) in new[] { (BlessingDefs(), true), (BlessingDefs(other), false) })
+        {
+            var w = CombatKit.World(defs).World;
+            CombatKit.SetWeapon(w, 0, CombatKit.Mm, 8);
+            w.Hero.Passives[0] = new PassiveSlot { Def = w.Defs.Passives.Get(CombatKit.Power), Level = 1 };
+            w.Combat.Chests.Add(1);
+            var r = w.Progression!.OpenChest();
+            Assert.Equal(evolves, r.Items[0].Kind == ChestItemKind.Evolution);
+            Assert.Equal(evolves ? "t_storm" : CombatKit.Mm, w.Hero.Weapons[0].Def!.Id);
+        }
+    }
 }
