@@ -57,9 +57,17 @@ public static class Wp4Data
         }
 
         var enemies = new List<EnemyDef>();
+        var raw = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
         foreach (var file in Directory.GetFiles(Path.Combine(RealData.Dir, "enemies"), "*.json").Order(StringComparer.Ordinal))
             foreach (var n in (JsonArray)RealData.Read(Path.GetRelativePath(RealData.Dir, file))["enemies"]!)
-                enemies.Add(ReadEnemy((JsonObject)n!, registry));
+            {
+                raw[(string)n!["id"]!] = (JsonObject)n;
+                enemies.Add(ReadEnemy((JsonObject)n, registry));
+            }
+        // 코드 없는 변형 픽스처(6.13 — Fixtures/variants/): extends 를 시험 안에서 최소로 풀어 같은 표에 넣는다
+        foreach (var file in Directory.GetFiles(VariantsDir, "*.json").Order(StringComparer.Ordinal))
+            foreach (var n in (JsonArray)((JsonObject)DefJson.ParseNode(File.ReadAllText(file))!)["enemies"]!)
+                enemies.Add(ReadEnemy(ResolveVariant((JsonObject)n!, raw), registry));
 
         var affixes = ((JsonArray)RealData.Read("affixes.json")["affixes"]!).Select(n => ReadAffix((JsonObject)n!, registry)).ToList();
         var buffs = ((JsonArray)RealData.Read("buffs.json")["buffs"]!).Select(n => n!.Deserialize<BuffDef>(Options)!).ToList();
@@ -91,6 +99,49 @@ public static class Wp4Data
             Pickups = new DefTable<PickupDef>([.. linker.Stubs<PickupDef>(), .. linker.Stubs<RewardDef>().Select(r => r.Object.Def)]),
         };
         return new Loaded(defs, linker.StubNames);
+    }
+
+    /// <summary>변형 픽스처 폴더(<c>tests/…/Fixtures/variants/</c>).</summary>
+    public static string VariantsDir { get; } = Path.Combine(RealData.RepoRoot(), "tests", "DiabloDefenceRemastered.Tests", "Fixtures", "variants");
+
+    /// <summary>변형 픽스처 ID(시험이 실제 적과 나눠 볼 때).</summary>
+    public static IReadOnlyList<string> VariantIds =>
+        [.. Directory.GetFiles(VariantsDir, "*.json").Order(StringComparer.Ordinal)
+                     .SelectMany(f => ((JsonArray)((JsonObject)DefJson.ParseNode(File.ReadAllText(f))!)["enemies"]!).Select(n => (string)n!["id"]!))];
+
+    /// <summary>
+    /// 시험용 최소 <c>extends</c> 풀기(WP7 로더가 정본 — 6.13): 부모 원소를 복사해 자식 속성으로 덮고, <c>behaviors_add</c> 는 뒤에 붙이고,
+    /// <c>behaviors_patch</c> 는 같은 <c>id</c> 부품에 속성을 덮는다(자리 지킴). 부모는 실제 적 하나(한 단계).
+    /// </summary>
+    public static JsonObject ResolveVariant(JsonObject child, IReadOnlyDictionary<string, JsonObject> parents)
+    {
+        if (child["extends"] is not { } ext) return child;
+        var result = (JsonObject)parents[(string)ext!]!.DeepClone();
+        var behaviors = result["behaviors"] as JsonArray ?? [];
+        result.Remove("behaviors");
+        foreach (var (key, value) in child)
+        {
+            switch (key)
+            {
+                case "extends": break;
+                case "behaviors_add":
+                    foreach (var b in (JsonArray)value!) behaviors.Add(b!.DeepClone());
+                    break;
+                case "behaviors_patch":
+                    foreach (var patch in (JsonArray)value!)
+                    {
+                        var id = (string)patch!["id"]!;
+                        var target = behaviors.OfType<JsonObject>().Single(b => (string?)b["id"] == id);
+                        foreach (var (pk, pv) in (JsonObject)patch) target[pk] = pv?.DeepClone();
+                    }
+                    break;
+                default:
+                    result[key] = value?.DeepClone();
+                    break;
+            }
+        }
+        result["behaviors"] = behaviors;
+        return result;
     }
 
     // ── 정의 읽기 ──────────────────────────────────────────────────
