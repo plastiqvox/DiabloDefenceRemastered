@@ -1,31 +1,101 @@
+using DiabloDefenceRemastered.Core.Art;
+using DiabloDefenceRemastered.Loading;
+using FontStashSharp;
+using Microsoft.Xna.Framework.Graphics;
+using Rectangle = Microsoft.Xna.Framework.Rectangle;
+
 namespace DiabloDefenceRemastered.Rendering;
 
 /// <summary>
-/// UI 그리기 (설계서 7.3 9~10층, 소유 WP5). 좌표는 가상 960×540 이고 창 배율로 바꿔 그린다. 글꼴은 크기 × 배율로 요청해 늘 선명하다.
-/// HUD·메뉴·오버레이(WP6)가 쓴다. Begin/End 사이에서만 그린다.
-/// WP1 이 시그니처만 만든 빈 연결 파일 — WP6 이 먼저 부르고 컴파일한다. 본문은 WP5 가 채운다.
+/// UI 그리기 (설계서 7.3 9~10층, 소유 WP5). 좌표는 가상 960×540 이고 <c>PresentRT</c> 의 레터박스 사각형 배율로 바꿔 그린다(<see cref="PresentMath"/>).
+/// 글꼴은 크기 × 배율로 요청해 늘 선명하다(FontStashSharp 가 크기별로 굽는다). HUD·메뉴·오버레이(WP6)가 쓴다. Begin/End 사이에서만 그린다.
+/// 색은 premultiplied(<c>Rgb.ToXna(alpha)</c>).
 /// </summary>
-public sealed class UiCanvas
+public sealed class UiCanvas(AppServices app)
 {
-    public UiCanvas(AppServices app) => throw new NotImplementedException("WP5 UiCanvas");
+    private RenderContext? _rc;
+    private Texture2D? _pixel;
 
     /// <summary>가상 좌표 1 = 창 픽셀 몇 개.</summary>
-    public float Scale => throw new NotImplementedException("WP5 UiCanvas.Scale");
+    public float Scale => PresentMath.UiScale(Present);
 
-    public void Begin(RenderContext rc) => throw new NotImplementedException("WP5 UiCanvas.Begin");
-    public void End() => throw new NotImplementedException("WP5 UiCanvas.End");
+    private Int2 Present
+    {
+        get
+        {
+            var size = (_rc ?? app.Render)?.PresentSize ?? RenderContext.VirtualSize;
+            return new Int2(size.X, size.Y);
+        }
+    }
+
+    public void Begin(RenderContext rc)
+    {
+        _rc = rc;
+        _pixel ??= rc is GameRenderContext g ? g.Primitives.Pixel : MakePixel(rc.Device);
+        rc.Batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp);
+    }
+
+    public void End() => Batch.End();
+
+    private SpriteBatch Batch => (_rc ?? throw new InvalidOperationException("UiCanvas.Begin 밖에서 그렸다")).Batch;
 
     /// <summary>가상 좌표 → 창 좌표.</summary>
-    public Vector2 ToScreen(Vector2 virtualPos) => throw new NotImplementedException("WP5 UiCanvas.ToScreen");
+    public Vector2 ToScreen(Vector2 virtualPos) => PresentMath.VirtualToScreen(virtualPos, Present);
     /// <summary>창 좌표 → 가상 좌표(버튼 누르기 판정).</summary>
-    public Vector2 ToVirtual(Vector2 screenPos) => throw new NotImplementedException("WP5 UiCanvas.ToVirtual");
+    public Vector2 ToVirtual(Vector2 screenPos) => PresentMath.ScreenToVirtual(screenPos, Present);
 
     /// <summary><paramref name="size"/> = 가상 좌표 기준 글자 크기(px).</summary>
-    public void Text(string text, Vector2 pos, float size, Rgb color, float alpha = 1f) => throw new NotImplementedException("WP5 UiCanvas.Text");
-    public Vector2 MeasureText(string text, float size) => throw new NotImplementedException("WP5 UiCanvas.MeasureText");
+    public void Text(string text, Vector2 pos, float size, Rgb color, float alpha = 1f)
+    {
+        if (Font(size) is not { } font || string.IsNullOrEmpty(text) || alpha <= 0f) return;
+        var p = ToScreen(pos);
+        font.DrawText(Batch, text, new XnaVector2(MathF.Round(p.X), MathF.Round(p.Y)), color.ToXna(alpha));
+    }
 
-    public void Fill(RectF rect, Rgb color, float alpha = 1f) => throw new NotImplementedException("WP5 UiCanvas.Fill");
+    public Vector2 MeasureText(string text, float size)
+    {
+        if (Font(size) is not { } font || string.IsNullOrEmpty(text)) return Vector2.Zero;
+        var m = font.MeasureString(text);
+        var s = Scale;
+        return new Vector2(m.X / s, m.Y / s);
+    }
 
-    /// <summary>그림 정의 <paramref name="spriteId"/> 의 <paramref name="source"/> 영역을 그린다.</summary>
-    public void Sprite(string spriteId, RectI source, RectF dest, Rgb tint, float alpha = 1f) => throw new NotImplementedException("WP5 UiCanvas.Sprite");
+    public void Fill(RectF rect, Rgb color, float alpha = 1f)
+    {
+        if (alpha <= 0f || _pixel is null) return;
+        Batch.Draw(_pixel, ScreenRect(rect), color.ToXna(alpha));
+    }
+
+    /// <summary>그림 정의 <paramref name="spriteId"/> 의 <paramref name="source"/> 영역(그림 픽셀, 원색 첫 페이지)을 그린다.</summary>
+    public void Sprite(string spriteId, RectI source, RectF dest, Rgb tint, float alpha = 1f)
+    {
+        if (alpha <= 0f || app.Art is not ArtServices art) return;
+        if (!app.Defs.Sprites.TryGet(spriteId, out var def)) return;
+        if (!art.TryGetSprite(def, "", out var h)) return;
+        Batch.Draw(h.Texture, ScreenRect(dest), new Rectangle(source.X0, source.Y0, source.Width, source.Height), tint.ToXna(alpha));
+    }
+
+    private Rectangle ScreenRect(RectF rect)
+    {
+        var a = ToScreen(rect.Min);
+        var b = ToScreen(rect.Max);
+        var x0 = (int)MathF.Round(a.X);
+        var y0 = (int)MathF.Round(a.Y);
+        return new Rectangle(x0, y0, (int)MathF.Round(b.X) - x0, (int)MathF.Round(b.Y) - y0);
+    }
+
+    private SpriteFontBase? Font(float size)
+    {
+        if (app.Art is ArtServices { HasFont: false }) return null;
+        var fonts = app.Art?.Fonts;
+        if (fonts is null) return null;
+        return fonts.GetFont(Math.Max(1f, size * Scale));
+    }
+
+    private static Texture2D MakePixel(GraphicsDevice device)
+    {
+        var t = new Texture2D(device, 1, 1);
+        t.SetData([Microsoft.Xna.Framework.Color.White]);
+        return t;
+    }
 }
