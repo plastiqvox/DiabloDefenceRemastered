@@ -1,4 +1,45 @@
-// 소리 가져오기 표 (설계서 1.4·6.15, 소유 WP0). 소리는 기획 14.1 대로 단계 2 부터 — WP8 이 소리 정의를 더할 때 그 이름을 여기에 더한다.
+// 소리 가져오기 표 (설계서 1.4·6.15, 소유 WP0). 단계 1 소리 정의(Data/audio/sounds.json, WP8)가 가리키는 원작 경로를 한 줄씩 적는다.
+// 출력 = "d1/sound/" + 원작 경로 소문자·'/'. 소리 정의에 파일을 더하면 여기에도 더한다(13.5-10 이 대조).
 {
-  "sounds": []
+  "sounds": [
+    { "path": "sfx\\misc\\cbolt.wav" },
+    { "path": "sfx\\misc\\fbolt1.wav" },
+    { "path": "sfx\\misc\\holybolt.wav" },
+    { "path": "sfx\\misc\\firimp2.wav" },
+    { "path": "sfx\\misc\\elecimp1.wav" },
+    { "path": "sfx\\misc\\bfire.wav" },
+    { "path": "monsters\\skelaxe\\sklaxa1.wav" },
+    { "path": "monsters\\skelaxe\\sklaxa2.wav" },
+    { "path": "monsters\\skelaxe\\sklaxh1.wav" },
+    { "path": "monsters\\skelaxe\\sklaxh2.wav" },
+    { "path": "monsters\\skelaxe\\sklaxd1.wav" },
+    { "path": "monsters\\skelaxe\\sklaxd2.wav" },
+    { "path": "monsters\\skelbow\\sklbwa1.wav" },
+    { "path": "monsters\\skelbow\\sklbwa2.wav" },
+    { "path": "monsters\\skelbow\\sklbwh1.wav" },
+    { "path": "monsters\\skelbow\\sklbwh2.wav" },
+    { "path": "monsters\\skelbow\\sklbwd1.wav" },
+    { "path": "monsters\\skelbow\\sklbwd2.wav" },
+    { "path": "monsters\\zombie\\zombiea1.wav" },
+    { "path": "monsters\\zombie\\zombiea2.wav" },
+    { "path": "monsters\\zombie\\zombieh1.wav" },
+    { "path": "monsters\\zombie\\zombieh2.wav" },
+    { "path": "monsters\\zombie\\zombied1.wav" },
+    { "path": "monsters\\zombie\\zombied2.wav" },
+    { "path": "sfx\\sorceror\\mage69.wav" },
+    { "path": "sfx\\sorceror\\mage69b.wav" },
+    { "path": "sfx\\sorceror\\mage71.wav" },
+    { "path": "sfx\\items\\invgrab.wav" },
+    { "path": "sfx\\items\\gold.wav" },
+    { "path": "sfx\\items\\invpot.wav" },
+    { "path": "sfx\\items\\flippot.wav" },
+    { "path": "sfx\\items\\invbook.wav" },
+    { "path": "sfx\\items\\titlemov.wav" },
+    { "path": "sfx\\items\\titlslct.wav" },
+    { "path": "sfx\\items\\magic.wav" },
+    { "path": "sfx\\items\\magic1.wav" },
+    { "path": "sfx\\items\\chest.wav" },
+    { "path": "sfx\\items\\dooropen.wav" },
+    { "path": "sfx\\items\\readbook.wav" }
+  ]
 }

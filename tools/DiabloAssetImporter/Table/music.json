@@ -1,4 +1,7 @@
-// 음악 가져오기 표 (설계서 1.4·6.15, 소유 WP0). 음악은 단계 2 부터(기획 14.1).
+// 음악 가져오기 표 (설계서 1.4·6.15, 소유 WP0). 단계 1 음악 정의(Data/audio/sounds.json 의 music, WP8)가 가리키는 곡.
 {
-  "music": []
+  "music": [
+    { "path": "music\\dintro.wav" },
+    { "path": "music\\dlvla.wav" }
+  ]
 }
