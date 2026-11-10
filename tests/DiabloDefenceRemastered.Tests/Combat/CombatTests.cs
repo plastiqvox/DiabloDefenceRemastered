@@ -232,4 +232,21 @@ public class CombatTests
         Assert.Equal(7f, t.World.RunStats.DamageByWeapon[4]);
         Assert.Equal(13f, e.Hp);
     }
+
+    /// <summary>페이즈 전환 무적(WP4 <c>InvulnUntilTick</c>) 동안은 피해 요청을 버린다 — 그 틱이 지나면 다시 받는다(통합 때 이음).</summary>
+    [Fact]
+    public void EnemyPhaseInvuln_IgnoresDamageUntilTick()
+    {
+        var t = Quiet(presentation: false);
+        var e = t.AddEnemy(t.Hero.Pos + new Vector2(200, 0), CombatKit.Skeleton);
+        e.InvulnUntilTick = t.World.Tick + 2;
+        t.World.Damage.ToEnemy(e.Id, 7f, 0f, 0f, 0);
+        t.Step();
+        Assert.Equal(20f, e.Hp);
+        Assert.Equal(0f, t.World.RunStats.DamageByWeapon[0]);
+        t.Step();
+        t.World.Damage.ToEnemy(e.Id, 7f, 0f, 0f, 0);
+        t.Step();
+        Assert.Equal(13f, e.Hp);
+    }
 }

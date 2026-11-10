@@ -34,6 +34,8 @@ public sealed class DamageResolveSystem : ISimSystem
     private static void ToEnemy(World world, in DamageRequest r)
     {
         if (!world.Enemies.TryGet(r.Target, out var e) || !e.IsTargetable || e.Faction == r.From) return;
+        // 페이즈 전환 무적(WP4 Enemy.InvulnUntilTick — 통합 때 이음): 주인공 피격 무적처럼 요청 전체를 버린다(신호 없음)
+        if (world.Tick < e.InvulnUntilTick) return;
         var dir = r.KnockbackDir.LengthSquared() > 1e-6f ? Vector2.Normalize(r.KnockbackDir) : Vector2.Zero;
         if ((r.Flags & DamageFlags.NoDamage) == 0)
         {

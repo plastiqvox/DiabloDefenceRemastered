@@ -27,7 +27,7 @@ public sealed partial class Enemy
     /// <summary>이 틱까지 멈춰 있다(분열체 delay·등장 연출).</summary>
     public int WakeTick;
     /// <summary>
-    /// 페이즈 전환 무적이 끝나는 틱(이 틱 전에는 피해를 받지 않음). WP3 DamageResolve 가 읽어야 한다 — 공통 조각에 무적 필드가 없어 WP4 조각에 둔다(WP1g 요청).
+    /// 페이즈 전환 무적이 끝나는 틱(이 틱 전에는 피해를 받지 않음). WP3 DamageResolve 가 읽는다(통합 때 이음) — 공통 조각에 무적 필드가 없어 WP4 조각에 둔다(WP1g 요청)(WP1g 요청).
     /// </summary>
     public int InvulnUntilTick;
     /// <summary>입장(<see cref="LifeState.Entering"/>)의 목표 진입점(월드 px).</summary>
