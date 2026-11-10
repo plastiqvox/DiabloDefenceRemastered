@@ -5406,6 +5406,41 @@ WP4(적·감독·자동 조작) 단계 1 코드가 문서와 다르게 또는 �
 - WP6: `AutoplayPolicy.DoorSkips`·`RewardStalls`·`Events` 를 로그 줄로. 메뉴 오버레이가 `PickCard` 를 부르기 전에 그 판의 `Next` 가 한 번 이상 불렸어야 진화 재료 순위가 선다.
 - WP7: 로더가 생기면 `Wp4Data`·`ResolveVariant` 를 로더 호출로 바꾸고, `EnemyDataValidator`(이미 `EnemyModule` 이 `AddValidator`)가 실제 읽기에서 돈다.
 
+### WP0 구현 기록 (단계 1 — 커밋은 `git log --grep WP0`)
+
+WP0 이 다른 묶음과 동시에 일해서, 1.4 본문에 적기로 한 실측 값과 문서와 다르게 정한 것을 이 소절 하나에 모았다. 통합 때 1.4 해당 문단으로 옮긴다.
+
+**이 PC 실측**(단계 1 표, `--upscale` 끔, Debug 빌드, 창 없음)
+- 작업 11개·파일 35개·3.6MB. 첫 실행(캐시 0) 1.4초(원본 읽기 0.1초·굽기 0.5초, 나머지는 원본 MPQ 다섯의 SHA-256), 캐시 실행 0.9초(적중 11/11). 두 번 → manifest 바이트 같음. 원본 폴더 MPQ 의 수정 시각 그대로.
+  1.4 "캐시" 의 "첫 실행 수십 초 안팎" 은 단계 1 에서는 몇 초다 — 단계 2(소리·음악·이펙트 전부) 뒤 다시 잰다.
+- 페이지는 모두 한 장(2페이지 이상 묶음 없음): `hero/slt` 2048×1478(759KB), `monsters/skelaxe` 2048×860·`skelbow` 2048×979·`zombie` 2048×863(변종마다 약 290~330KB), `missiles/fireba`·`holy` 512×500, `miniltng` 128×79, 아이콘 48×48 셋,
+  `maps/cathedral_arena` 기둥 아틀라스 512×475·바닥 조각 13장·미니맵 160×88.
+- 네 MPQ 다 있음 → 끝 보고 묶음 넷 `만듦`. `--skip-bundles all`(저장소 밖 `--out`) → 종료 코드 0·넷 `건너뜀(--skip-bundles)`·기본 항목 출력 해시 차이 0. manifest `sources` 에 묶음 MPQ 넷의 크기·SHA-256.
+- 표에 없는 경로 하나(`sfx\misc\…`)를 넣은 실행 → 종료 코드 3·manifest 없음(표는 되돌림). 성질 대조(L1 안쪽 방 조각 포함) 통과.
+- `audit`(원본 있음) 종료 코드 0 — `cathedral_arena` 의 DUN 배열 대조에 거짓 실패 없음, 기준 상수(바닥 아닌 칸 8)는 그대로. `verify` 0.
+- `RealMpq`(`DDR_DIABDAT`·`DDR_HELLFIRE_DIR`) 8개 통과 — 묶음마다 대표 항목(`mltas.cl2`, `monk69.wav` hfmonk·hfvoice, `l5.sol`, `nkrn.cl2`, `dlvle.wav`)이 War3Net 으로 열리고 머리가 맞음.
+- `--upscale realesrgan-x4plus --upscale-bin <빈 폴더>`(저장소 밖 `--out`) → 종료 코드 6·`status: fallback`·이유 `확대 프로그램 파일 없음(…)`·출력 파일 35개 해시가 확대를 끈 실행과 같음(실행 파일을 띄우지 않음).
+- **도구 판이 커밋마다 바뀜**: .NET SDK 가 git 커밋 해시를 어셈블리 `InformationalVersion`(`1.0.0+<커밋>`)에 넣어, 소스가 같아도 커밋할 때마다 도구·Core 어셈블리 바이트 → 도구 판(1.4 "캐시") → 캐시 키·manifest `tool` 이 바뀐다.
+  같은 빌드 안의 "두 번 → manifest 같음" 은 그대로지만, 1.4 의 "같은 소스면 같은 값" 이 서지 않고 커밋 뒤 첫 가져오기는 캐시를 못 쓴다. 고치는 곳은 공통 `Directory.Build.props`(`IncludeSourceRevisionInInformationalVersion` 거짓) — WP1g 요청.
+- `contact` 견본(스크래치)을 눈으로 봄: L1 아레나 바닥·벽·아치 덧그림·창살·닫힌 문·기둥이 이음매·틈 없이 맞물림, 좀비 원색·`bluered` 걷기, 파이어볼 16방향(1번 = 아래, 시계 방향), 마법사 `cast_fire`.
+  안쪽 방 하나는 피 바닥·피 벽(172·166·168·169)으로 붉게 보인다 — 맵 데이터 그대로라 WP5 가 `--preview tiles` 로 볼 일.
+
+**다르게 정한 것**
+1. 1.4 ② 투명 칸 색 채우기: 몬스터 프레임·기둥의 색 판은 **반경 없이** 판 끝까지 채운다. 반경 32(4방향 거리)로는 불투명 칸에서 먼 여백 귀퉁이에 검정이 남았다 — "여백 폭 이상" 을 가장 단순하게 지킴. 바닥 조각의 넓힌 판은 32px 덧굽기 폭 × 2 그대로.
+2. 묶음 MPQ 를 열 때 War3Net 이 깨진 머리에 자기 예외형을 던져서, 메모리 부족 말고는 모두 `열 수 없음` 으로 받는다(1.4 v0.6.1 의 뜻 그대로 — 처리 안 된 예외 1 이 되지 않게).
+3. `import-all.ps1`: exe 단계가 실패하면 도구를 부르지 않고 1. 도구가 2·3 으로 끝나고 `-Hellfire` 를 직접 줬으면 `-SkipBundles` 우회 한 줄을 더 보인다. Windows PowerShell 5.1 용이라 BOM 있는 UTF-8.
+4. 13.5-10 ②(`ImportNamesTests`, `Integration`)는 WP7 데이터 로더 전이라 tilesets·maps 만 든 `GameDefs` 로 `DefAssetNames.For` 를 부른다 — 통합 때 실제 `Data/` 전체로 바꾸고 기본 분류로 옮긴다. ① 은 로더 없이 실제 그림 정의를 형으로 읽어 페이지 × 변종·메타·맵 그림 이름을 대조한다.
+
+**확인 못 함**
+- `--upscale realesrgan-x4plus` 실제 실행·`upscaler-check` 의 실제 장치 줄·확대 견본 눈으로 봄·`UpscaleBatchPixels`(16MP)·`UpscaleNoProgress`(2분) 첫 값 고치기 — 이번 작업 규칙상 내려받은 실행 파일을 띄우지 않았다(이 PC 의 기본 폴더에도 없음). 가짜 실행 파일로 `Process` 경로 전체와 `upscaler-check` 를 시험했다.
+- 오류 모드 물려받기(`vulkan-1.dll` 없는 실행에서 창이 안 뜨는지) — 이 PC 에서 꾸밀 수 없음. `SetErrorMode` 는 띄우기 전에 부른다.
+- `import-all.ps1` 실제 실행 — 원작 exe 단계가 옛 폴더를 읽어서 돌리지 않았다(구문 검사만). 도구 단계는 같은 옵션의 `import` 직접 실행으로 확인.
+
+**남은 것**: v0.8 ③ L1 짝 조각 — `probe tiles` 로 본 원본은 35 = 하위 62·63(1부터) SOL 25·0·25·0(`w.w.`, 36 `ww..` 의 전치 — MIN 조각 배치도 26↔25 와 같은 꼴이라 기둥 칸 = 위-왼), 25 = SOL 31·0·31·0(`X.X.`, 26 `XX..` 의 전치).
+  `pieces` 에 `grate_v` 35·`door_closed_v` 25, `props` 35 `X.w.`·25 `X.X.`, `marks` 에 35·25, 6.11 예와 같은 `mirror` 짝 표, 35 기둥 칸은 `design_diffs`(원작 수정판 보정 여부는 확인 못 함 — 보정이라 하지 않음)로 넣어 보면
+  실제 원본 성질 대조 통과·13.5-12 짝 검사 통과(`mirror: true` 인 `cathedral_arena` 가 오류 없이 거울판을 만듦)였다. 다만 지금 `MapMirrorTests.RealCathedral_MirrorTrue_ReportsMissingPairs_GrateAndClosedDoor`(짝 표가 없음을 기대)·
+  `RealMapTests.Tileset_PropsKeysAreNamedTiles_AndOriginValues`(`design_diffs` 가 빔을 기대)가 깨져서 — 둘 다 WP0 소유가 아님 — 넣지 않았다. 통합 때 두 시험을 같이 고치며 넣는다.
+
 ---
 
 ## 부록 A. 원작 형식 규칙 (조사 문서·시제품에서 옮김)

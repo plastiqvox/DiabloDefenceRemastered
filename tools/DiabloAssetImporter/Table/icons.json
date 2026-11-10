@@ -1,0 +1,14 @@
+// 무기 아이콘 가져오기 표 (설계서 1.4, 기획 5.9, 소유 WP0). 아이콘 = 마법 프레임 한 장 이상을 겹친 48×48 어두운 칸.
+// dir 은 0부터(방향 파일 n = 방향 n−1), frame 은 1부터. 기획 5.9: 매직 미사일 miniltng 4번째, 파이어볼 fireba13 7번째, 비전 구체 holy13 7번째.
+{
+  "size": 48,
+  "background": [16, 12, 10],
+  "icons": [
+    { "out": "d1/icons/arcane_orbit", "cl2": "missiles\\holy{d}.cl2", "dirs": 16, "width": 96,
+      "layers": [ { "dir": 12, "frame": 7 } ] },
+    { "out": "d1/icons/fireball", "cl2": "missiles\\fireba{d}.cl2", "dirs": 16, "width": 96,
+      "layers": [ { "dir": 12, "frame": 7 } ] },
+    { "out": "d1/icons/magic_missile", "cl2": "missiles\\miniltng.cl2", "width": 64,
+      "layers": [ { "dir": 0, "frame": 4 } ] }
+  ]
+}

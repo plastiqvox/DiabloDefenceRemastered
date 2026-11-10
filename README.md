@@ -28,11 +28,38 @@
 | docs/gdd.md | 기획서 (작성 중) |
 | docs/architecture.md | 설계서 (작성 중) |
 
-## 그림 자원
+## 그림·소리 자원
 
-디아블로 1 그림 자원은 Blizzard Entertainment 의 저작물이라 이 저장소에 넣지 않는다.
-원작 DiabloDefence 실행 파일을 가지고 있으면 아래 스크립트로 꺼내 `src/DiabloDefenceRemastered/Assets/` 를 채운다.
+디아블로 1 그림·소리는 Blizzard Entertainment 의 저작물이라 이 저장소에 넣지 않는다(가져온 결과도 `.gitignore` 로 막는다).
+원작 디아블로 1 의 `diabdat.mpq` 와 원작 DiabloDefence 실행 파일을 가지고 있으면, 클론한 뒤 한 번 아래 명령으로 `src/DiabloDefenceRemastered/Assets/` 를 채운다.
+원본 파일은 읽기만 한다.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\import-assets.ps1 -Source "<원작 경로>\bin\Debug\DiabloDefence.exe"
+powershell -ExecutionPolicy Bypass -File tools\import-all.ps1 -Diabdat "<디아블로 폴더>\diabdat.mpq" -Exe "<원작 경로>\bin\Debug\DiabloDefence.exe"
 ```
+
+- 원작 exe 그림(`tools\import-assets.ps1`)을 먼저, 그다음 `diabdat.mpq`(`tools\DiabloAssetImporter`)를 가져온다. 두 번째 실행부터는 캐시로 빨리 끝난다.
+- 헬파이어 MPQ(`hellfire.mpq`·`hfmonk.mpq`·`hfmusic.mpq`·`hfvoice.mpq`)는 `diabdat.mpq` 와 같은 폴더에 있으면 저절로 쓴다. 없으면 그 내용만 꺼진다.
+  다른 폴더면 `-Hellfire "<폴더>"`, 헬파이어 없이 가져오려면 `-SkipBundles all`.
+- 자세한 옵션·종료 코드는 `docs/architecture.md` 1.4.
+
+### AI 확대(선택)
+
+`-Upscale realesrgan-x4plus` 를 주면 맵 그림과 큰 몬스터를 [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) ncnn-vulkan 으로 확대한 그림으로 가져온다(기본은 끔 — 원본 픽셀).
+가져오기 도구는 이 프로그램을 내려받지 않는다. 쓰려면 직접 받는다.
+
+- 받는 곳: Real-ESRGAN 의 GitHub 릴리스 **v0.2.5.0** 의 Windows 판 `realesrgan-ncnn-vulkan-20220424-windows.zip`(BSD-3-Clause). 도구는 이 판의 파일 해시만 받아들인다.
+- 풀 곳: `%LOCALAPPDATA%\DiabloDefenceRemastered\realesrgan-ncnn-vulkan\`(기본값, 저장소 밖). 다른 폴더면 `-UpscaleBin "<폴더>"`.
+  `dotnet run --project tools/DiabloAssetImporter -- upscaler-check` 로 해시·Vulkan 런타임·GPU 를 먼저 확인할 수 있다.
+- 확대를 못 하면(파일 없음·해시 다름·Vulkan 런타임 없음·실패) 원본 픽셀로 가져오고 경고를 보인다.
+- 이 프로그램은 저장소·`Assets`·가져온 결과 어디에도 들어가지 않고 배포하지 않는다.
+
+## 제3자 고지
+
+| 구성 요소 | 쓰는 곳 | 라이선스 |
+|---|---|---|
+| [MonoGame](https://github.com/MonoGame/MonoGame) `MonoGame.Framework.DesktopGL` | 게임 | Ms-PL |
+| [FontStashSharp](https://github.com/FontStashSharp/FontStashSharp) | 게임 | Zlib |
+| [War3Net](https://github.com/Drake53/War3Net) `War3Net.IO.Mpq`(`War3Net.IO.Compression`·`War3Net.Common` 포함)·[SharpZipLib](https://github.com/icsharpcode/SharpZipLib) | 가져오기 도구(MPQ 읽기) | MIT |
+
+Real-ESRGAN ncnn-vulkan(BSD-3-Clause)은 사용자가 따로 받아 쓰는 선택 프로그램이라 이 저장소에 들어 있지 않다.

@@ -1,0 +1,12 @@
+// 원작 DiabloDefence exe 그림 이름 (설계서 1.4, 소유 WP0) — tools/import-assets.ps1 이 Assets 뿌리에 만드는 PNG 49장·커서. 이름 대조용(13.5-10), 그림은 없다.
+{
+  "files": [
+    "Arrow.png", "DIInop.cur", "Defence.png", "Dungeon1.png", "FieldRunner.png", "FireBall.png", "FireBallExplosion.png", "FireBallICon.png",
+    "Goatman.png", "GoatmanAttack.png", "GoatmanDie.png", "GoatmanWalk.png", "Gold.png", "GoldIcon.png", "HealingPotion.png", "HealingPotionIcon.png",
+    "Hero.png", "HeroAttack.png", "HeroCasting.png", "HeroDie.png", "HeroWalk.png", "IncHealth.png", "IncMana.png", "LOGO.png",
+    "MagicMissile.png", "MagicMissileExplosion.png", "MagicMissileICon.png", "ManaPotion.png", "ManaPotionIcon.png", "MeleeAttack.png", "MinimapDungeon1.png", "RegenMana.png",
+    "Skeleton.png", "SkeletonAttack.png", "SkeletonDie.png", "SkeletonWalk.png", "SkeletoneKing.png", "SkeletoneKingAttack.png", "SkeletoneKingCast.png", "SkeletoneKingDie.png",
+    "SkeletoneKingWalk.png", "Swordman.png", "SwordmanAttack.png", "SwordmanCast.png", "SwordmanWalk.png", "TITLE.png", "Zombie.png", "ZombieAttack.png",
+    "ZombieDie.png", "ZombieWalk.png"
+  ]
+}

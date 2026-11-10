@@ -1,0 +1,13 @@
+// 타일셋 원본 정보 (설계서 1.4, 소유 WP0 — 도구만 씀). 게임 정의 Data/tilesets 의 id 와 같은 키.
+// 경로는 이 PC 의 diabdat 를 probe 로 확인했다. audit_dun 은 audit 의 방 배열 대조(13.5-22)만 메모리에서 읽는다 — 내용을 출력·저장하지 않는다.
+{
+  "tilesets": [
+    { "id": "l1", "dir": "levels\\l1data", "cel": "l1.cel", "min": "l1.min", "til": "l1.til", "sol": "l1.sol",
+      "pieces_per_subtile": 10, "palettes": { "l1_1": "l1_1.pal", "l1_2": "l1_2.pal" },
+      "audit_dun": ["rnd6.dun", "banner1.dun", "banner2.dun", "skngdo.dun"],
+      "overlay": {                                      // 출처: DevilutionX 참고(아치 덧그림 번호표 — 하위 타일 번호 1 기반, 부록 A.5)
+        "cel": "l1s.cel",
+        "frames": { "1": [11, 70, 320, 210, 340, 417], "2": [10, 248, 324, 343, 330, 420],   // 출처: DevilutionX 참고
+                    "3": [252], "4": [254], "5": [258], "6": [266] } } }
+  ]
+}
