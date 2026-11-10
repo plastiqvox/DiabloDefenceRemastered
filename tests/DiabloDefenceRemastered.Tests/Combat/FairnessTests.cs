@@ -76,4 +76,19 @@ public class FairnessTests
         Assert.True(t.Hero.Hp < hp);
         Assert.Equal(1, w.Fairness.HiddenHits);
     }
+
+    [Fact]
+    public void WeaponTargeting_IgnoresSight()
+    {
+        // v0.5(기획 5.1): 무기 조준은 시야를 보지 않는다 — 안 보이는 먼 적도 매직 미사일이 노린다
+        var t = Sighted();
+        var w = t.World;
+        var far = t.AddEnemy(t.Hero.Pos + new Vector2(300, 0), CombatKit.Skeleton);
+        far.Hp = far.MaxHp = 1000f;
+        t.Step(10);
+        Assert.False(w.Visibility.IsClearlyVisible(far.Pos, far.BodyTop));
+        CombatKit.SetWeapon(w, 0, CombatKit.Mm, 1);
+        t.Step(120);
+        Assert.True(far.Hp < 1000f);
+    }
 }
