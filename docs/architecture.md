@@ -5294,6 +5294,9 @@ WP0 이 다른 묶음과 동시에 일해서, 1.4 본문에 적기로 한 실측
 - 표에 없는 경로 하나(`sfx\misc\…`)를 넣은 실행 → 종료 코드 3·manifest 없음(표는 되돌림). 성질 대조(L1 안쪽 방 조각 포함) 통과.
 - `audit`(원본 있음) 종료 코드 0 — `cathedral_arena` 의 DUN 배열 대조에 거짓 실패 없음, 기준 상수(바닥 아닌 칸 8)는 그대로. `verify` 0.
 - `RealMpq`(`DDR_DIABDAT`·`DDR_HELLFIRE_DIR`) 8개 통과 — 묶음마다 대표 항목(`mltas.cl2`, `monk69.wav` hfmonk·hfvoice, `l5.sol`, `nkrn.cl2`, `dlvle.wav`)이 War3Net 으로 열리고 머리가 맞음.
+- `--upscale realesrgan-x4plus --upscale-bin <빈 폴더>`(저장소 밖 `--out`) → 종료 코드 6·`status: fallback`·이유 `확대 프로그램 파일 없음(…)`·출력 파일 35개 해시가 확대를 끈 실행과 같음(실행 파일을 띄우지 않음).
+- **도구 판이 커밋마다 바뀜**: .NET SDK 가 git 커밋 해시를 어셈블리 `InformationalVersion`(`1.0.0+<커밋>`)에 넣어, 소스가 같아도 커밋할 때마다 도구·Core 어셈블리 바이트 → 도구 판(1.4 "캐시") → 캐시 키·manifest `tool` 이 바뀐다.
+  같은 빌드 안의 "두 번 → manifest 같음" 은 그대로지만, 1.4 의 "같은 소스면 같은 값" 이 서지 않고 커밋 뒤 첫 가져오기는 캐시를 못 쓴다. 고치는 곳은 공통 `Directory.Build.props`(`IncludeSourceRevisionInInformationalVersion` 거짓) — WP1g 요청.
 - `contact` 견본(스크래치)을 눈으로 봄: L1 아레나 바닥·벽·아치 덧그림·창살·닫힌 문·기둥이 이음매·틈 없이 맞물림, 좀비 원색·`bluered` 걷기, 파이어볼 16방향(1번 = 아래, 시계 방향), 마법사 `cast_fire`.
   안쪽 방 하나는 피 바닥·피 벽(172·166·168·169)으로 붉게 보인다 — 맵 데이터 그대로라 WP5 가 `--preview tiles` 로 볼 일.
 
