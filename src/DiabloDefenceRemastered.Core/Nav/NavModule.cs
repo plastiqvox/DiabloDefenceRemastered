@@ -14,6 +14,7 @@ public sealed class NavModule : IGameModule
     public void Register(ModuleContext ctx)
     {
         ctx.AddValidator(new NavPathValidator());
+        ctx.AddValidator(new FlowRadiusValidator());
         ctx.AddWorldInstaller(Install);
     }
 

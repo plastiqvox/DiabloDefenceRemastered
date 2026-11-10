@@ -135,6 +135,44 @@ public class RealMapNavTests
             for (var ty = s.Tiles.Y0; ty < s.Tiles.Y1; ty++)
                 for (var tx = s.Tiles.X0; tx < s.Tiles.X1; tx++)
                     Assert.Equal('w', grid.Prop(tx, ty));
+        // 창살 칸 하나를 ty 축으로 가로지르는 선(위·아래 이웃 칸은 바닥): 투사체는 지나고 걷기 길은 막힘(창살 너머 궁수 — 10.1 공정성)
+        var w = walkOnly[0].Tiles;
+        var (gx, gy) = (w.X0, w.Y0);
+        Assert.False(grid.BlocksProjectiles(gx, gy - 1) || grid.BlocksProjectiles(gx, gy + 1));
+        var a = grid.Iso.CellCenter(gx, gy - 1);
+        var b = grid.Iso.CellCenter(gx, gy + 1);
+        Assert.True(nav.ProjectileLineClear(a, b));
+        Assert.False(nav.HasClearLine(a, b, 1f));
+    }
+
+    [Fact]
+    public void RoomEnemies_FlowOutThroughDoors_ToHero()
+    {
+        // 안쪽 방 기준점마다 작은 몸(12)·큰 몸(24 — M 필드) 적을 두면 문으로 나와 주인공에게 온다(갇힌 바닥 칸 없음의 실제 결과, 6.12 끝). 불변식 기준 통과
+        var t = Movement.MovementPerfTests.CathedralNavWorld();
+        var basic = t.World.Defs;
+        var big = TestDefs.Enemy(basic.SpriteSets[0], "test_big", radius: 24f);
+        var anchors = ResolvedMap.Resolve(RealData.Cathedral).Anchors
+            .Where(a => a.Key.StartsWith("room_", StringComparison.Ordinal)).OrderBy(a => a.Key, StringComparer.Ordinal).ToList();
+        Assert.Equal(4, anchors.Count);
+        var list = new List<Enemy>();
+        foreach (var (_, at) in anchors)
+        {
+            var small = t.AddEnemy(at);
+            small.Intent = MoveIntent.SeekHero();
+            var large = t.AddEnemy(big, at + new Vector2(0, 30));
+            large.Intent = MoveIntent.SeekHero();
+            list.Add(small);
+            list.Add(large);
+        }
+        var checker = new Core.Sim.Movement.Invariants.InvariantChecker(t.World, (NavWorld)t.World.Nav) { Enabled = true };
+        for (var i = 0; i < 60 * 40; i++)
+        {
+            t.Step();
+            if (i % 60 == 0) checker.Sample();
+        }
+        foreach (var e in list) Assert.True(Vector2.Distance(e.Pos, t.Hero.Pos) < 120f, $"{e.Def.Id} {e.Pos} → 주인공 {t.Hero.Pos}");
+        Assert.True(t.World.Invariants.Passed, t.World.Invariants.Format(t.World.Fairness));
     }
 
     internal static FlowField[] FieldsAt(NavWorld nav, Vector2 hero)
