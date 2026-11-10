@@ -5303,9 +5303,9 @@ WP4(적·감독·자동 조작) 단계 1 코드가 문서와 다르게 또는 �
 | 10.1 `Director` 포위 고리 길 거리 | 벽 너머 방 안 자리 = 길 거리 > 직선 × 1.5 → 버림 | 시험은 실제 `cathedral_arena` 진입점 넷에서 최소 거리 ≥ 300·생략 비율 로그만 — 길 거리는 `StraightNav` 가짜(벽 무시) | WP2 `Navigator.PathLength` 본문 뒤에 같은 시험을 실제 내비로 |
 
 **단계 1 완료 기준**(11.1 WP4) — 됨: 부품·생성기·전수 연기 시험(`Enemies/PartsSmokeTests` — 등록 목록 = 시험 목록), 변형 픽스처, 결정성 30초·표시 이벤트 켬/끔(`Sim/Wp4SimTests`), 오라·함성 `include_bosses`·함성 대상(`Enemies/EnemyRulesTests`),
-우두머리 썩은 시체 1.6·22(합성 — 정의는 단계 2), 실제 적의 13.5-13·실제 스테이지의 13.5-15·13.5-18 고장 픽스처(`Enemies/EnemyDataValidatorTests`), 목표 문 행진 풀림·돌진 시작 조건(`Enemies/EnemyBehaviorTests`), 궁수 시야 조건 세 경우 중 `L` 줄 뒤·R − 40 밖(대조군 포함, `SightWallTests`·`EnemyRulesTests`),
-정위 궁수 떨림 ②(멈춘 주인공), 단계 1 판 `RunSession` 실행·방 들르기(`Sim/Stage1ScenarioTests`), 상한 무한 월드 생성 수·마름모 모서리 입구 대체 로그(`Director/DirectorTests`), 공정성 합성 맵 3분, 자동 조작 카드·문 우선순위(`Sim/AutoplayPolicyTests`).
-못 함: 화면 위아래 밖 궁수 경우·떨림 ①③(주인공이 다가감·물러남), 창살 너머 궁수 시나리오(주인공 투사체가 WP3), 실제 내비로 고리 길 거리. 확인 못 함 — 합친 뒤: 불변식 기준·`unseen_shots`·`hidden_hits`, 실제 이동·충돌로 도는 단계 1 판.
+우두머리 썩은 시체 1.6·22(합성 — 정의는 단계 2), 실제 적의 13.5-13·실제 스테이지의 13.5-15·13.5-18 고장 픽스처(`Enemies/EnemyDataValidatorTests`), 목표 문 행진 풀림·돌진 시작 조건(`Enemies/EnemyBehaviorTests`), 궁수 시야 조건 세 경우(`L` 줄 뒤·R − 40 밖·머리가 화면 위 밖 — 대조군 포함, `SightWallTests`·`EnemyRulesTests`),
+정위 궁수 떨림 ①②③(③ 은 궁수가 주인공보다 느려 "아래로 300px 넘게 따라옴" 으로 봄), 단계 1 판 `RunSession` 실행·방 들르기(`Sim/Stage1ScenarioTests`), 상한 무한 월드 생성 수·마름모 모서리 입구 대체 로그(`Director/DirectorTests`), 공정성 합성 맵 3분, 자동 조작 카드·문 우선순위(`Sim/AutoplayPolicyTests`).
+못 함: 창살 너머 궁수 시나리오(주인공 투사체가 WP3), 실제 내비로 고리 길 거리. 확인 못 함 — 합친 뒤: 불변식 기준·`unseen_shots`·`hidden_hits`, 실제 이동·충돌로 도는 단계 1 판.
 
 **WP1g 요청**
 1. `Enemy` 공통 조각에 `InvulnUntilTick`(페이즈 전환 무적 끝 틱) — 지금은 WP4 조각. WP3 `DamageResolve` 가 읽는다.

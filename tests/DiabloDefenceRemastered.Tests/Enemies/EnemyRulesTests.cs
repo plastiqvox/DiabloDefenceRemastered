@@ -163,4 +163,56 @@ public sealed class EnemyRulesTests(ITestOutputHelper output)
         Assert.True(t.World.Fairness.KiteSwitches <= 6, $"kite 전환 {t.World.Fairness.KiteSwitches} > 6");
         Assert.True(Spawner(t).Projectiles.Count > 0, "위쪽 궁수가 그 자리에서 쏘지 않았다");
     }
+
+    [Theory]
+    [InlineData(-1f)]   // ① 주인공이 위(궁수 쪽)로 다가감
+    [InlineData(1f)]    // ③ 주인공이 아래로 물러남 — 궁수가 따라옴
+    public void Kite_archer_above_moving_hero_does_not_jitter(float dirY)
+    {
+        var archer = Archer("jitter_archer2");
+        var t = World(Defs([archer], megaTiles: 20, sight: TestDefs.Sight, heroLight: 420f));
+        var a = Spawn(t, "jitter_archer2", t.Hero.Pos + new Vector2(0f, -230f), source: SpawnSource.Escort);
+        var startY = a.Pos.Y;
+        for (var i = 0; i < 600; i++)
+        {
+            t.World.Command = new PlayerCommand(new Vector2(0f, dirY));
+            t.Step();
+        }
+        var moved = a.Pos.Y - startY;
+        output.WriteLine($"dir={dirY} kite_switches={t.World.Fairness.KiteSwitches} archer_dy={moved:0} shots={Spawner(t).Projectiles.Count}");
+        Assert.True(t.World.Fairness.KiteSwitches <= 6, $"kite 전환 {t.World.Fairness.KiteSwitches} > 6");
+        // 궁수(62px/s)는 주인공(95px/s)보다 느리다 — 10초 동안 아래로 300px 넘게 따라왔으면 따라온 것
+        if (dirY > 0f) Assert.True(moved > 300f, $"물러나는 주인공을 따라오지 않았다(아래로 {moved:0}px)");
+    }
+
+    [Fact]
+    public void Archer_with_head_above_screen_top_does_not_shoot()
+    {
+        // 화면 위 경우: 발은 화면 안쪽인데 몸 위 끝(BodyTop 72)이 화면 안쪽 16px 밖 — 또렷이 보이지 않음. 대조군(시야 끔)은 같은 자리에서 쏨.
+        int Shots(bool sight, out int total)
+        {
+            var archer = Archer("top_archer") with { Behaviors = [B("kite", new KiteParams { RangeBand = [150f, 300f] }),
+                B("shoot_projectile", new ShootProjectileParams { Projectile = DefRef<ProjectileDef>.To(Arrow), Cooldown = 0.5f, Range = 320f })] };
+            var t = World(Defs([archer], megaTiles: 20, sight: sight ? TestDefs.Sight : null, heroLight: 420f));
+            t.Step();
+            var view = t.World.ViewRect;
+            var a = Spawn(t, "top_archer", new Vector2(t.Hero.Pos.X, view.Y0 + 30f), source: SpawnSource.Escort);
+            var sp = Spawner(t);
+            var hidden = 0;
+            for (var i = 0; i < 180; i++)
+            {
+                var headOut = a.Pos.Y - a.BodyTop < t.World.ViewRect.Y0 + TestDefs.Sight.ViewInset;
+                var before = sp.Projectiles.Count;
+                t.Step();
+                if (headOut) hidden += sp.Projectiles.Count - before;
+            }
+            total = sp.Projectiles.Count;
+            return hidden;
+        }
+        var lit = Shots(sight: true, out var litTotal);
+        var dark = Shots(sight: false, out _);
+        output.WriteLine($"shots while head above screen: sight={lit} (total {litTotal}) control={dark}");
+        Assert.True(dark > 0, "대조군이 머리가 화면 밖인 자리에서 쏘지 않아 대조가 되지 않는다");
+        Assert.Equal(0, lit);
+    }
 }
