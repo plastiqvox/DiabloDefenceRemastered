@@ -1,10 +1,13 @@
 // 마법 그림 가져오기 표 (설계서 1.4, 소유 WP0). 단계 1 = 무기 3종(기획 5.2): 매직 미사일 miniltng(방향 없음 8프레임, 폭 64),
 // 파이어볼 fireba1..16(16방향 14프레임, 폭 96), 비전 구체 holy1..16(16방향 14프레임, 폭 96). 폭은 이 PC 의 diabdat 를 probe 로 확인.
+// 폭발(기획 13.7): 큰 폭발 bigexp(방향 없음 16프레임, 폭 160), 불화살 폭발 firarwex(방향 없음 6프레임, 폭 64) — 폭·프레임 수는 probe cl2 로 확인.
 {
   "palette": "levels\\l1data\\l1.pal",
   "missiles": [
     { "out": "d1/missiles/fireba",   "cl2": "missiles\\fireba{d}.cl2", "dirs": 16, "width": 96 },
     { "out": "d1/missiles/holy",     "cl2": "missiles\\holy{d}.cl2", "dirs": 16, "width": 96 },
-    { "out": "d1/missiles/miniltng", "cl2": "missiles\\miniltng.cl2", "width": 64 }
+    { "out": "d1/missiles/miniltng", "cl2": "missiles\\miniltng.cl2", "width": 64 },
+    { "out": "d1/missiles/bigexp",   "cl2": "missiles\\bigexp.cl2",   "width": 160 },
+    { "out": "d1/missiles/firarwex", "cl2": "missiles\\firarwex.cl2", "width": 64 }
   ]
 }

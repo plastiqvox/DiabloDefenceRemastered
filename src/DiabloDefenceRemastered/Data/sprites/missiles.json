@@ -6,14 +6,16 @@
     { "id": "fireba",   "source": "atlas", "file": "d1/missiles/fireba.png",   "frame": [96, 96], "directions": 16, "frames": 14, "origin": [48, 48] },
     { "id": "holy",     "source": "atlas", "file": "d1/missiles/holy.png",     "frame": [96, 96], "directions": 16, "frames": 14, "origin": [48, 48] },
     { "id": "miniltng", "source": "atlas", "file": "d1/missiles/miniltng.png", "frame": [64, 64], "directions": 1,  "frames": 8,  "origin": [32, 32] },
+    // 폭발(기획 13.7). bigexp 는 원작처럼 칸 아래를 땅에 두는 그림이라, 파이어볼(fireba 칸 96·origin 48 = 칸 아래에서 48 위)과 같은 높이 관계로 origin y = 160 − 48
+    { "id": "bigexp",   "source": "atlas", "file": "d1/missiles/bigexp.png",   "frame": [160, 160], "directions": 1, "frames": 16, "origin": [80, 112] },
+    { "id": "firarwex", "source": "atlas", "file": "d1/missiles/firarwex.png", "frame": [64, 64], "directions": 1,  "frames": 6,  "origin": [32, 32] },
 
     { "id": "icon_magic_missile", "source": "grid", "file": "d1/icons/magic_missile.png", "sheet": [56, 56], "frame": [56, 56], "color_key": null, "origin": [28, 28] },
     { "id": "icon_fireball",      "source": "grid", "file": "d1/icons/fireball.png",      "sheet": [56, 56], "frame": [56, 56], "color_key": null, "origin": [28, 28] },
     { "id": "icon_arcane_orbit",  "source": "grid", "file": "d1/icons/arcane_orbit.png",  "sheet": [56, 56], "frame": [56, 56], "color_key": null, "origin": [28, 28] },
 
-    // 대체 그림(원작 DiabloDefence exe PNG — objects.json 과 같은 방식). 아래 이펙트·투사체의 원작 그림(lghning·bigexp·firarwex·arrows, 기획 13.7)은
+    // 대체 그림(원작 DiabloDefence exe PNG — objects.json 과 같은 방식). 아래 투사체의 원작 그림(arrows, 기획 13.7)은
     // 아직 가져오기 표에 없다 — WP0 이 표에 넣고 WP5 가 effects/common.json 을 그 그림으로 바꾼다.
-    { "id": "exe_fireball_explosion", "source": "grid", "file": "FireBallExplosion.png", "sheet": [96, 1536], "frame": [96, 96], "frames": 16, "origin": [48, 48] },
     { "id": "exe_arrow",              "source": "grid", "file": "Arrow.png",             "sheet": [1536, 96], "frame": [96, 96], "directions": 16, "origin": [48, 48] }
   ]
 }
