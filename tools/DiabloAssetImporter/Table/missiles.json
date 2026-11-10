@@ -12,8 +12,8 @@
     { "out": "d1/missiles/fireba",   "cl2": "missiles\\fireba{d}.cl2", "dirs": 16, "width": 96 },
     { "out": "d1/missiles/holy",     "cl2": "missiles\\holy{d}.cl2", "dirs": 16, "width": 96 },
     { "out": "d1/missiles/miniltng", "cl2": "missiles\\miniltng.cl2", "width": 64 },
-    { "out": "d1/missiles/bigexp",   "cl2": "missiles\bigexp.cl2",   "width": 160 },
-    { "out": "d1/missiles/firarwex", "cl2": "missiles\firarwex.cl2", "width": 64 },
+    { "out": "d1/missiles/bigexp",   "cl2": "missiles\\bigexp.cl2",   "width": 160 },
+    { "out": "d1/missiles/firarwex", "cl2": "missiles\\firarwex.cl2", "width": 64 },
 
     // 바닥 아이템(기획 11.1·11.4 V8): 떨어짐 애니 전부(마지막 프레임 = 바닥에 놓임). 책 13·금화 10·물약 16프레임, 칸 96×160.
     // 물약 색은 이름 끝 글자: fbttlebr 붉은(체력 물약), fbttlebb 파란(마력 폭주). 나머지 fbttle·bl·by·db·dy·or·wh 는 쓰지 않음
