@@ -5305,10 +5305,10 @@ WP7(앱 셸·데이터 로더·개발 도구·자원 검사, 단계 1) 코드가
 | 8.3 `run.json` | `RunSnapshot` | 감싸개 `{ version: 1, run: … }`, 위치 record 인자가 빠지면 `.bad`(STJ 가 기본값으로 채우므로 키를 직접 봄) | `RunSnapshot` 이 모르는 속성을 오류로 봄 |
 
 **남은 것**(계약에 길이 없어 잇지 못한 것 — 아래 WP1g 요청)
-1. 사람 입력(`KeyboardMouseSource`, WP6)과 자동 조작 메뉴 넘김(`AutoplayDriver`, WP6)을 `FrameLoop` 에 넘기는 길 — 지금 `GameApp` 은 입력 없이(`readInput: null`, 봇 없음) 돈다.
+1. ~~사람 입력과 자동 조작 메뉴 넘김을 `FrameLoop` 에 넘기는 길~~ — **통합 때 이음**: `GameApp.Update` 가 `InputMap.Sample`(WP6)로 `readInput` 을 채우고(자동 조작이면 null), 앱 틱마다 `FixedTick` 뒤 `GameFlow.Of(app).Autoplay?.Step(stack, t)`(`FrameLoop.Ticked`). `GameFlow.QuitRequested` → 창 닫기, 개발 실행이 아니면 `SettingsChanged`·F11 → 전체 화면, 창 비활성 → `RequestPause`(3.3). `KeyboardMouseSource` 는 `PlayScene` 이 만든다.
 2. `--capture-on`·`--exit-on-result`·`RESULT`: 씬이 "그 일이 일어나 화면이 다 열림"·"결과 화면 열림" 을 앱에 알리는 길. 지금은 `--capture-on` 캡처가 늘 "안 생김"(3).
 3. `--log-ticks` 의 월드 쪽 열(`stage_s`·적·투사체·장판 수·단계 시간)과 `--log-hash`: 판을 가진 씬이 `Simulation.Profiler`·월드를 앱에 보이는 길. 지금은 0.
-4. 꺼진 묶음(`ContentAvailability`)과 `ASSETS disabled=` 결과를 씬(타이틀 한 줄·직업 카드)에 넘기는 길 — `AppServices` 에 칸이 없다.
+4. 꺼진 묶음(`ContentAvailability`)을 씬에 넘기는 길 — **통합 때 이음**: `Program` 이 `BootResult.Assets.Availability` 를 `GameApp` 에 넘기고 `SceneFactory.CreateStart(app, content)`(WP6)로 준다. `AppServices` 칸(WP1g 요청)은 그대로 남음.
 
 **WP1g 요청**: `AppServices` 에 `ContentAvailability Availability`·`DisabledContent Disabled`(자원 검사 결과), 앱 개발 실행 훅 `IDevHooks`(`CaptureEvent(string kind)` — 화면이 다 열린 프레임, `ResultShown(RunResult)` — `--exit-on-result`, `AttachProfiler(Simulation)`·`HashRow(World, RunState)` — `--log-ticks`·`--log-hash`),
 `SceneFactory.CreateInput(AppServices) → IInputSource?`(자동 조작이면 null)·`SceneFactory.CreateAutoplayDriver(AppServices) → IAutoplayDriver?` 또는 같은 뜻의 연결 파일 함수. `RunSnapshot` 위치 인자의 `required`(STJ `JsonRequired`) — 지금은 `SaveBook` 이 키를 직접 본다.

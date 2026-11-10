@@ -71,13 +71,13 @@ public static class Program
         GameApp app;
         try
         {
-            app = new GameApp(boot.Services!, o, boot.Screen);
+            app = new GameApp(boot.Services!, o, boot.Screen, boot.Assets?.Availability);
         }
         catch (Exception e) when (WindowControl.FallBackToNullAudio())
         {
             log.Warn("SHELL 장치 초기화 실패 — ALSOFT_DRIVERS=null 로 다시 만든다: " + e.Message);
             log.Info("AUDIO device=\"No Output\" fallback=1");
-            app = new GameApp(boot.Services!, o, boot.Screen);
+            app = new GameApp(boot.Services!, o, boot.Screen, boot.Assets?.Availability);
         }
         using (app)
         {
