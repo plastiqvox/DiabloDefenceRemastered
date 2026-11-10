@@ -15,21 +15,27 @@ namespace DiabloDefenceRemastered.Core.Sim.Run;
 /// </list>
 /// </summary>
 /// <param name="NextActRoomsHash">다음 액트 <c>rooms</c> 표 해시(<see cref="RoomsHash"/> — 8.3 깊이 기록과 같은 식).</param>
+/// <param name="MerchantsMet">v0.9: 이 판에 들어간 상인 방의 상인 ID(서수 순 — <c>RunState.MerchantsMet</c>). 액트마다 세는 상인 수는 다음 액트에서 0 이라 넣지 않는다.</param>
 public sealed record RunSnapshot(int Format, ulong Seed, string StartActId, string? HeroClassId, string NextActId, int NextActNumber, string NextActRoomsHash,
-                                 HeroCarry? Carry, RunStats Stats, FairnessCounters Fairness, int ElapsedTicks, RunDepth Depth, IReadOnlyList<RoomRecord> Rooms)
+                                 HeroCarry? Carry, RunStats Stats, FairnessCounters Fairness, int ElapsedTicks, RunDepth Depth, IReadOnlyList<RoomRecord> Rooms,
+                                 IReadOnlyList<string> MerchantsMet)
 {
-    /// <summary>지금 저장 모양의 판(v0.8.1). 모양 지문 시험의 기대 값(<see cref="ShapeFingerprint"/>)과 함께 올린다.</summary>
-    public const int CurrentFormat = 1;
+    /// <summary>
+    /// 지금 저장 모양의 판(v0.8.1 → v0.9 WP1g: 2 — 짐에 장비·지갑·물약 칸·만렙 순번, <c>RunStats.GoldSpent</c>·<c>PotionsDrunk</c>, <c>RoomRecord</c> 새 열, <c>MerchantsMet</c>).
+    /// 모양 지문 시험의 기대 값(<see cref="ShapeFingerprint"/>)과 함께 올린다. 옛 판 1 의 <c>run.json</c> 은 불일치로 버려진다(8.3 — 단계 1 은 계단 저장을 쓰지 않음).
+    /// </summary>
+    public const int CurrentFormat = 2;
 
     /// <summary>
     /// <see cref="CurrentFormat"/> 의 모양 지문(v0.8.1, R41) — <see cref="ComputeShapeFingerprint"/> 가 이 값이어야 한다(시험). WP3·WP4 가 <c>RunStats</c> 조각에 멤버를 더하거나
     /// 짐 모양을 바꾸면 계산 값이 달라져 시험이 깨진다 → 고치는 사람이 <see cref="CurrentFormat"/> 을 올리고 이 값을 새 계산 값으로 바꾼다(옛 저장은 버려진다).
     /// </summary>
-    public const string ShapeFingerprint = "7c149bd4";   // v0.8.2 검증 반영: 열거형 JSON 이름을 더해 다시 계산(CurrentFormat 1 그대로 — 아직 저장된 판 없음)
+    public const string ShapeFingerprint = "4bf0bbef";   // v0.9 WP1g(CurrentFormat 2): 장비·지갑·물약 칸·만렙 순번·GoldSpent·PotionsDrunk·RoomRecord 새 열·MerchantsMet
 
     /// <summary>모양 지문에 드는 형(<see cref="RunSnapshot"/> 에서 닿는 형 전부).</summary>
     public static IReadOnlyList<Type> ShapeTypes { get; } =
         [typeof(RunSnapshot), typeof(HeroCarry), typeof(CarriedSlot), typeof(CarriedStat), typeof(CarriedEffect),
+         typeof(CarriedEquip), typeof(EquipItem), typeof(RolledAffix),
          typeof(RunStats), typeof(FairnessCounters), typeof(RoomRecord), typeof(RunDepth)];
 
     /// <summary>
@@ -78,7 +84,8 @@ public sealed record RunSnapshot(int Format, ulong Seed, string StartActId, stri
     }
 
     /// <summary>
-    /// 저장 파일 STJ 옵션: 공용 규칙(<see cref="DefJson"/> — snake_case·모르는 속성 오류·열거형 문자열) + <b>필드 포함</b>(<c>RunStats</c> 조각이 공개 필드를 더해도 왕복 — 3.6 "저장 멤버 규칙").
+    /// 저장 파일 STJ 옵션: 공용 규칙(<see cref="DefJson"/> — snake_case·모르는 속성 오류·열거형 문자열) + <b>필드 포함</b>(<c>RunStats</c> 조각이 공개 필드를 더해도 왕복 — 3.6 "저장 멤버 규칙")
+    /// + v0.9(WP1g — WP7 요청): 위치 record 의 기본값 없는 생성자 인자는 필수(<c>RespectRequiredConstructorParameters</c> — 빠지면 <see cref="JsonException"/>, 기본값으로 조용히 채우지 않음).
     /// </summary>
     public static JsonSerializerOptions JsonOptions { get; } = CreateJsonOptions();
 
@@ -109,6 +116,7 @@ public sealed record RunSnapshot(int Format, ulong Seed, string StartActId, stri
     {
         var o = DefJson.CreateOptions();
         o.IncludeFields = true;
+        o.RespectRequiredConstructorParameters = true;
         o.MakeReadOnly(populateMissingResolver: true);
         return o;
     }
@@ -117,6 +125,7 @@ public sealed record RunSnapshot(int Format, ulong Seed, string StartActId, stri
 /// <summary>
 /// 이어 하기 정의 불일치(v0.8 → v0.8.1, 3.6 "정의가 안 맞으면"): <c>Format</c> 다름, 시작·다음 액트·직업 없음, <c>rooms_hash</c>·액트 번호 다름, 짐의 정의 ID 없음,
 /// <c>DamageByWeapon</c> 길이 ≠ 6, <c>IHeroCarry</c> 등록 여부와 <c>Carry</c> null 여부가 다름, <c>IHeroCarry.Validate</c> 가 이유를 돌려줌. 모두 <c>Restore</c> 전에 본다.
+/// v0.9: 짐 장비의 기본 아이템·접사 ID, 만난 상인 ID 가 없음도 불일치.
 /// 앱은 저장을 버리고(이미 <c>TakeRun</c> 이 지움) 로그 한 줄 + 타이틀 한 줄(8.3).
 /// </summary>
 public sealed class RunSnapshotMismatchException(string message) : Exception(message);

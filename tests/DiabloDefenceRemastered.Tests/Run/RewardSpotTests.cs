@@ -95,7 +95,7 @@ public class RewardSpotTests
         var defs = TestDefs.Basic();
         var elite = TestDefs.Room(RoomKind.Elite, 60f, 120f, 2);
         var t = new TestWorldBuilder().WithRoom(RoomPhase.Cleanup, 3600, elite, TestDefs.Room(RoomKind.Normal, 120f, 180f, 3),
-                                                reward: defs.Rewards.Get(TestDefs.RewardPotionId)).WithPresentation().Build();
+                                                reward: defs.Rewards.Get(TestDefs.RewardChestId)).WithPresentation().Build();
         var chest = t.World.Pickups.Add();                           // 중간 보스가 떨군 정예 상자
         chest.Def = defs.Pickups.Get(TestDefs.EliteChestId);
         chest.Pos = chest.PrevPos = new Vector2(100f, 700f);
@@ -103,7 +103,7 @@ public class RewardSpotTests
         var room = t.World.Room!;
         Assert.Equal(RoomPhase.Reward, room.Phase);
         var bonus = Assert.Single(t.World.Pickups.Items.ToArray(), p => !p.Removed && p.Reward is not null);
-        Assert.Equal(TestDefs.RewardPotionId, bonus.Reward!.Id);    // 덤 보상(v0.8 — v0.7 은 정예 방 Reward = null)
+        Assert.Equal(TestDefs.RewardChestId, bonus.Reward!.Id);    // 덤 보상(v0.8 — v0.7 은 정예 방 Reward = null)
         Assert.True(bonus.GatesExit);
         Assert.True(chest.GatesExit);
         Assert.Equal(40f, Vector2.Distance(bonus.Pos, chest.Pos), 3);   // 보상 → 상자 순서로 한 줄
@@ -134,7 +134,7 @@ public class RewardSpotTests
         var defs = TestDefs.Basic();
         var elite = TestDefs.Room(RoomKind.Elite, 60f, 120f, 2);
         var t = new TestWorldBuilder().WithRoom(RoomPhase.Cleanup, 3600, elite, TestDefs.Room(RoomKind.Normal, 120f, 180f, 3),
-                                                reward: defs.Rewards.Get(TestDefs.RewardPotionId)).Build();
+                                                reward: defs.Rewards.Get(TestDefs.RewardChestId)).Build();
         t.World.Nav = narrow;
         var chest = t.World.Pickups.Add();
         chest.Def = defs.Pickups.Get(TestDefs.EliteChestId);

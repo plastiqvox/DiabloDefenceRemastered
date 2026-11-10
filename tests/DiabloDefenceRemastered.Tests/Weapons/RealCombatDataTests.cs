@@ -75,8 +75,11 @@ public class RealCombatDataTests
             foreach (var e in table.Entries) Assert.Contains(e.Pickup.Id, pickups);
 
         var rewards = RealData.Kind<RewardDef>("rewards.json", "rewards");
-        Assert.Equal([RewardKind.WeaponCards, RewardKind.WeaponBundle], rewards.Select(r => r.Kind));   // 단계 1 = 마법서·보물 상자
-        foreach (var r in rewards) Assert.Contains(r.Object.Id, pickups);
+        // 단계 1 가중표 = 마법서·보물 상자. v0.9(WP1g): 회복 문·상인 셋 정의(방 안 물체 없음 — 가중표에 넣는 것은 단계 2)
+        Assert.Equal([RewardKind.WeaponCards, RewardKind.WeaponBundle, RewardKind.HealNextRoom, RewardKind.Merchant, RewardKind.Merchant, RewardKind.Merchant], rewards.Select(r => r.Kind));
+        foreach (var r in rewards)
+            if (r.Object is { } obj) Assert.Contains(obj.Id, pickups);
+            else Assert.True(r.Kind is RewardKind.HealNextRoom or RewardKind.Merchant);
 
         var sorc = Assert.Single(RealData.Kind<HeroClassDef>("heroes/sorcerer.json", "hero_classes"));
         Assert.Equal(["magic_missile"], sorc.StartWeapons.Select(w => w.Id));

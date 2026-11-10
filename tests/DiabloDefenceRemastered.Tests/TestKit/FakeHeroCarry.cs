@@ -1,8 +1,8 @@
 namespace DiabloDefenceRemastered.Tests.TestKit;
 
 /// <summary>
-/// 레벨·체력·칸·열린 칸 수·허리띠만 왕복하는 가짜 <see cref="IHeroCarry"/>(v0.7.1 #23-형 → v0.8 WP1f). 레벨은 <c>World.Progression</c> 이 있으면 그것, 없으면 <see cref="Level"/>(시험이 정함).
-/// 칸은 칸 번호 순서 그대로(빈 칸 = 빈 ID)이고 <c>Restore</c> 는 같은 번호 칸에 놓는다(3.6). <c>Mods</c>·<c>Shrines</c>·<c>Effects</c> 는 시험이 <see cref="Extra"/> 로 붙인 값을 그대로 넘긴다
+/// 레벨·체력·칸·열린 칸 수·물약 칸·지갑·장비(v0.9)만 왕복하는 가짜 <see cref="IHeroCarry"/>(v0.7.1 #23-형 → v0.8 WP1f). 레벨은 <c>World.Progression</c> 이 있으면 그것, 없으면 <see cref="Level"/>(시험이 정함).
+/// 칸은 칸 번호 순서 그대로(빈 칸 = 빈 ID)이고 <c>Restore</c> 는 같은 번호 칸에 놓는다(3.6). <c>Mods</c>·<c>Shrines</c>·<c>Effects</c>·<c>MaxedAtTick</c>(v0.9) 는 시험이 <see cref="Extra"/> 로 붙인 값을 그대로 넘긴다
 /// (판 수명 상태를 이 인스턴스에 두지 않는다 — 11.2: <see cref="Extra"/> 는 <c>Capture</c> 마다 짐에 실려 가고 <c>Restore</c> 가 짐에서 다시 읽는다).
 /// <see cref="Validate"/> 는 <see cref="ValidateReason"/>(기본 null = 맞음).
 /// </summary>
@@ -35,7 +35,10 @@ public sealed class FakeHeroCarry : IHeroCarry
         {
             Level = world.Progression?.Level ?? Level, Xp = 0, RerollsLeft = 0, Hp = hero.Hp,
             Weapons = weapons, Passives = passives, Blessings = blessings,
-            WeaponSlotsOpen = hero.WeaponSlotsOpen, PassiveSlotsOpen = hero.PassiveSlotsOpen, Belt = hero.Belt,
+            WeaponSlotsOpen = hero.WeaponSlotsOpen, PassiveSlotsOpen = hero.PassiveSlotsOpen,
+            Potions = hero.Potions, PotionSlotsLevel = hero.PotionSlotsLevel, PotionSpeedLevel = hero.PotionSpeedLevel, Gold = hero.Gold,
+            Equipment = [.. Enumerable.Range(0, EquipSlots.Count).Where(i => hero.Equipment[i] is not null).Select(i => new CarriedEquip((EquipSlot)i, hero.Equipment[i]!))],
+            MaxedAtTick = Extra?.MaxedAtTick ?? [],
             Mods = Extra?.Mods ?? [], Shrines = Extra?.Shrines ?? [], Effects = Extra?.Effects ?? [],
         };
     }
@@ -51,7 +54,12 @@ public sealed class FakeHeroCarry : IHeroCarry
         hero.MaxHp = MathF.Max(hero.MaxHp, carry.Hp);
         hero.WeaponSlotsOpen = carry.WeaponSlotsOpen;
         hero.PassiveSlotsOpen = carry.PassiveSlotsOpen;
-        hero.Belt = carry.Belt;
+        hero.Potions = carry.Potions;
+        hero.PotionSlotsLevel = carry.PotionSlotsLevel;
+        hero.PotionSpeedLevel = carry.PotionSpeedLevel;
+        hero.Gold = carry.Gold;
+        Array.Clear(hero.Equipment);
+        foreach (var e in carry.Equipment) hero.Equipment[(int)e.Slot] = e.Item;
         for (var i = 0; i < carry.Weapons.Count && i < WeaponSlots.SlotCount; i++)
         {
             var s = carry.Weapons[i];

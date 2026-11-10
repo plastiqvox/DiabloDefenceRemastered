@@ -6,7 +6,8 @@ namespace DiabloDefenceRemastered.Core.Audio;
 /// <para>
 /// 연결 키: 무기 <c>weapons.&lt;id&gt;.fire</c>, 적 <c>enemies.&lt;id&gt;</c> → 없으면 <c>sprite_sets.&lt;그림 묶음&gt;</c>, 적 투사체 <c>projectiles.&lt;id&gt;.fire</c>,
 /// 주인공 <c>hero.&lt;World.HeroClass.Id&gt;</c>, 획득물 <c>pickups.&lt;id&gt;</c>, 문 보상 <c>rewards.&lt;id&gt;.collect</c>, 보스 대사 <c>enemies.&lt;id&gt;.voice</c>,
-/// 정예 무리 <c>ui.elite_pack</c>, 문 열림 <c>ui.door_open</c>, 방 정리 <c>ui.room_clear</c>, 허리띠 저절로 마심 <c>ui.belt_potion</c>(v0.8 <see cref="CueKind.BeltPotion"/>),
+/// 정예 무리 <c>ui.elite_pack</c>, 문 열림 <c>ui.door_open</c>, 방 정리 <c>ui.room_clear</c>, 물약 마심 <c>ui.potion_drink</c>(v0.9.1 <see cref="CueKind.PotionDrink"/> — v0.8 의 <c>belt_potion</c> 을 바꿈),
+/// v0.9 의 다른 새 신호(<c>PotionDenied</c>·<c>HealOnEnter</c>·<c>Shop*</c>·<c>ChestDrop</c>)는 연결 키를 WP8 이 정할 때까지 소리 없음,
 /// 이펙트 <c>effects.&lt;id&gt;</c>, 시체 → 그 적의 <c>death</c>. 연결이 없는 신호는 소리 없음(화살 맞음처럼 — 기획 12.7).
 /// </para>
 /// <para>
@@ -110,8 +111,8 @@ public sealed class SoundRouter(GameDefs defs)
                 sound = Ui(UiKeys.DoorOpen);
                 pos = null;
                 break;
-            case CueKind.BeltPotion:
-                sound = Ui(UiKeys.BeltPotion);
+            case CueKind.PotionDrink:
+                sound = Ui(UiKeys.PotionDrink);
                 pos = null;
                 break;
         }
@@ -226,8 +227,9 @@ public static class UiKeys
     public const string ElitePack = "elite_pack";
     public const string DoorOpen = "door_open";
     public const string RoomClear = "room_clear";
-    public const string BeltPotion = "belt_potion";
+    /// <summary>물약 하나를 마심(v0.9.1 — v0.8 의 <c>belt_potion</c>, 저절로 마심을 바꿈).</summary>
+    public const string PotionDrink = "potion_drink";
 
     /// <summary>알려진 키(검사기가 모르는 키를 경고).</summary>
-    public static IReadOnlyList<string> All { get; } = [MenuMove, MenuSelect, LevelUp, ChestOpen, ElitePack, DoorOpen, RoomClear, BeltPotion];
+    public static IReadOnlyList<string> All { get; } = [MenuMove, MenuSelect, LevelUp, ChestOpen, ElitePack, DoorOpen, RoomClear, PotionDrink];
 }

@@ -141,10 +141,10 @@ public class RoomFlowTests
     [Fact]
     public void RewardObject_MustBeCollected_BeforeDoorsOpen()
     {
-        foreach (var id in new[] { TestDefs.RewardTomeId, TestDefs.RewardPotionId })
+        foreach (var id in new[] { TestDefs.RewardTomeId, TestDefs.RewardChestId })   // v0.9: 회복 문은 방 안 물체가 없다
         {
             var t = Room(RoomPhase.Cleanup, clock: 3600, reward: Reward(id));
-            t.Hero.Hp = t.Hero.MaxHp = 100f;                       // 체력 가득이어도 물약은 문을 막는다(집히는 것은 WP3)
+            t.Hero.Hp = t.Hero.MaxHp = 100f;                       // 체력 가득이어도 보상 물체는 문을 막는다(집히는 것은 WP3)
             t.Step();
             t.Step(120);
             Assert.Equal(RoomPhase.Reward, t.World.Room!.Phase);

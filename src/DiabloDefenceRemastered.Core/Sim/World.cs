@@ -213,6 +213,8 @@ public sealed partial class World
     public ICombatSpawner Spawner { get; set; } = null!;
     /// <summary>WP3 CombatModule 이 넣는다. 없는 시험 월드면 null.</summary>
     public IProgression? Progression { get; set; }
+    /// <summary>상인 창 명령(v0.9, 6.19 — WP3 가 넣는다). 없는 시험 월드면 null. 상인 상태 자체는 <c>Room.Shop</c>(<see cref="ShopState"/>).</summary>
+    public IShop? ShopService { get; set; }
     /// <summary>
     /// 판 누적 기록. 방 월드는 <c>Run.Stats</c> 를 가리키고(v0.7 — 방 사이에 이어짐), 방 없는 월드는 새로 만든다. 지우는 곳이 없다(v0.7.1, 3.6).
     /// </summary>

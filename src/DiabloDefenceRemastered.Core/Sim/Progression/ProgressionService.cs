@@ -119,7 +119,7 @@ public sealed class ProgressionService(World world) : IProgression
             {
                 Build.Evolve(world, evo.Slot, evo.Evo);
                 var r = evo.Evo.Result.Def;
-                items.Add(new ChestItem(ChestItemKind.Evolution, r.Id, r.Name, r.Icon, hero.Weapons[evo.Slot].Level, 0));
+                items.Add(new ChestItem(ChestItemKind.Evolution, r.Id, r.Name, r.Icon, hero.Weapons[evo.Slot].Level));
                 continue;
             }
             var pool = new List<Candidate>();
@@ -130,14 +130,14 @@ public sealed class ProgressionService(World world) : IProgression
             if (pool.Count == 0)
             {
                 var t = Build.Temper(world);
-                items.Add(new ChestItem(ChestItemKind.Temper, t?.Id ?? "", t?.Name ?? "", t?.Icon, 0, 0));
+                items.Add(new ChestItem(ChestItemKind.Temper, t?.Id ?? "", t?.Name ?? "", t?.Icon, 0));
                 continue;
             }
             var pick = Build.Draw(world.Rng.LevelUp, pool, 1)[0];
             var card = Build.Card(world, pick);
             Build.Apply(world, card);
             items.Add(new ChestItem(pick.Kind == CardKind.WeaponUpgrade ? ChestItemKind.WeaponUpgrade : ChestItemKind.PassiveUpgrade,
-                                    card.Id, card.Name, card.Icon, card.ToLevel, 0));
+                                    card.Id, card.Name, card.Icon, card.ToLevel));
         }
         HeroStats.Recompute(world);
         Closed();
@@ -212,15 +212,13 @@ public sealed class ProgressionService(World world) : IProgression
         Closed();
     }
 
-    /// <summary>문 열기 거르기(6.18 "거르기", 문을 여는 순간 한 번).</summary>
+    /// <summary>문 열기 거르기(6.18 "거르기", 문을 여는 순간 한 번). v0.9: 회복 문·상인은 늘 참 — 체력·상인 조건은 <c>RewardDraw</c>(6.19).</summary>
     public bool RewardAvailable(RewardDef reward)
     {
         switch (reward.Kind)
         {
             case RewardKind.WeaponCards:
                 return RewardPool(reward).Count > 0;
-            case RewardKind.BeltPotions:
-                return !HeroBelt.Full(world);
             case RewardKind.Shrine:
             {
                 if (S.Shrines.Contains(reward.Id) || reward.Shrine is not { } shrine) return false;
@@ -245,8 +243,8 @@ public sealed class ProgressionService(World world) : IProgression
     // ── 보상 물체 줍기(6.18 "받는 길") ─────────────────────────────
 
     /// <summary>
-    /// 문 보상 물체를 주운 순간. 마법서 = 보상 대기(줄 카드가 0장이면 <c>단련</c>), 보물 상자 = 무작위 무기 +n(없으면 <c>단련</c>)·허리띠·금화 × <c>gold_scale</c>,
-    /// 물약 = 허리띠(넘치면 마심), 성소 = 무기 레벨·<c>Mods</c>·<c>Shrines</c>(매혹은 창 — 후보 0 이면 <c>단련</c>).
+    /// 문 보상 물체를 주운 순간. 마법서 = 보상 대기(줄 카드가 0장이면 <c>단련</c>), 보물 상자 = 무작위 무기 +n(없으면 <c>단련</c>)·물약 칸(v0.9.1)·금화 × <c>gold_scale</c>,
+    /// 성소 = 무기 레벨·<c>Mods</c>·<c>Shrines</c>(매혹은 창 — 후보 0 이면 <c>단련</c>).
     /// </summary>
     public void CollectReward(RewardDef reward)
     {
@@ -266,7 +264,7 @@ public sealed class ProgressionService(World world) : IProgression
                     if (Build.Upgradable(hero.Weapons[i])) slots[n++] = i;
                 if (n > 0) Build.AddWeaponLevels(world, slots[world.Rng.Drop.Index(n)], bundle.WeaponLevels);
                 else Build.Temper(world);
-                if (bundle.BeltPotions > 0) HeroBelt.Add(world, bundle.BeltPotions);
+                if (bundle.Potions > 0) HeroPotions.Add(world, bundle.Potions);   // v0.9.1: 물약 칸(가득이면 빠짐)
                 if (bundle.Gold is [var lo, var hi])
                 {
                     var scale = world.Run?.Act.Act.Rewards.GoldScale ?? world.Stage?.Rewards.GoldScale ?? 1f;
@@ -274,9 +272,6 @@ public sealed class ProgressionService(World world) : IProgression
                 }
                 break;
             }
-            case RewardKind.BeltPotions:
-                HeroBelt.Add(world, reward.BeltPotions);
-                break;
             case RewardKind.Shrine:
                 CollectShrine(reward);
                 break;

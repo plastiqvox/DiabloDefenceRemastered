@@ -6,7 +6,8 @@
     { "id": "gem_green", "kind": "xp", "draw": { "procedural": "gem", "size": [12, 16], "color": [110, 230, 120] }, "value_range": [5, 19], "magnet": true },
     { "id": "gem_red",   "kind": "xp", "draw": { "procedural": "gem", "size": [14, 20], "color": [255, 80, 80] }, "value_range": [20, 1000000], "magnet": true },
     { "id": "gold", "kind": "gold", "draw": { "sprite": "Gold", "scale": 0.5 }, "magnet": true },
-    { "id": "healing_potion", "kind": "heal", "amount": 30, "draw": { "sprite": "HealingPotion", "scale": 0.5 }, "magnet": false, "skip_when_full": true },
+    // v0.9.1(V9 — 설계서 6.19): 체력 물약은 닿으면 물약 칸에 쌓임(potion_stack — 회복량은 rules.hero.potions), 칸이 가득이면 안 집힘
+    { "id": "healing_potion", "kind": "potion_stack", "draw": { "sprite": "HealingPotion", "scale": 0.5 }, "magnet": false, "skip_when_full": true },
     { "id": "mana_surge", "kind": "surge", "amount": 0.5, "duration": 8, "draw": { "sprite": "ManaPotion", "scale": 0.5 }, "magnet": false },
     { "id": "magnet_rune", "kind": "magnet", "draw": { "sprite": "MagicMissileExplosion", "scale": 0.3, "tint": [255, 210, 90], "frame": 1 }, "magnet": false },
     { "id": "elite_chest", "kind": "chest", "draw": { "sprite": "Gold", "scale": 1.2 }, "magnet": false },

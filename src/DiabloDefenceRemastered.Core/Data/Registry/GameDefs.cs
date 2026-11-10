@@ -53,7 +53,7 @@ public sealed class GameDefs
     [
         "rules", "sprites", "sprite_sets", "effects", "projectiles", "tilesets", "maps", "enemies", "affixes", "buffs",
         "weapons", "passives", "evolutions", "pickups", "drop_tables", "stages", "sounds", "music", "sound_bindings",
-        "hero_classes", "rewards",
+        "hero_classes", "rewards", "items", "item_affixes", "merchants",
     ];
 
     public static GameDefs Empty { get; } = new();
@@ -81,4 +81,15 @@ public sealed class GameDefs
     public DefTable<HeroClassDef> HeroClasses { get; init; } = DefTable<HeroClassDef>.Empty;
     /// <summary>문 보상(v0.7, 6.18). 액트의 <c>rewards.weights</c>·<c>first_room</c>·<c>rules.rooms.fallback_reward</c> 가 가리킨다.</summary>
     public DefTable<RewardDef> Rewards { get; init; } = DefTable<RewardDef>.Empty;
+    /// <summary>
+    /// 장비 기본 아이템(v0.9, 6.19 — 종류 키 <c>items</c>, <c>Data/items/bases.json</c>). 상인 물건(<c>ShopStock</c>)이 그 액트·칸 종류 중 균등으로 고른다.
+    /// </summary>
+    public DefTable<ItemBaseDef> ItemBases { get; init; } = DefTable<ItemBaseDef>.Empty;
+    /// <summary>
+    /// 장비 접사(v0.9, 6.19 — 종류 키 <c>item_affixes</c>, <c>Data/items/affixes.json</c>). 적 접두사 <see cref="Affixes"/>(<c>affixes</c>, 6.7)와 다른 표다.
+    /// 표 순서가 접사 고르기 후보 순서다(<c>ItemRoller</c>).
+    /// </summary>
+    public DefTable<ItemAffixDef> ItemAffixes { get; init; } = DefTable<ItemAffixDef>.Empty;
+    /// <summary>상인(v0.9, 6.19 — 종류 키 <c>merchants</c>, <c>Data/merchants/&lt;id&gt;.json</c>). 문 보상 <c>kind: merchant</c> 가 가리킨다.</summary>
+    public DefTable<MerchantDef> Merchants { get; init; } = DefTable<MerchantDef>.Empty;
 }

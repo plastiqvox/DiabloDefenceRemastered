@@ -9,5 +9,7 @@
     <!-- null 경고는 오류로 본다. 계약 형을 여러 묶음이 같이 쓰므로 null 약속이 흐려지지 않게 -->
     <WarningsAsErrors>$(WarningsAsErrors);nullable</WarningsAsErrors>
     <SatelliteResourceLanguages>ko;en</SatelliteResourceLanguages>
+    <!-- 정보 버전에 커밋 해시를 붙이지 않는다(v0.9 WP1g — WP0 요청: 커밋마다 가져오기 도구 버전이 바뀌어 가져오기 캐시가 깨졌다) -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 </Project>

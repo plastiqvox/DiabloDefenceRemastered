@@ -31,7 +31,7 @@
     },
     "ui": {
       "menu_move": "snd_titlemov", "menu_select": "snd_titlslct", "level_up": "snd_magic", "chest_open": "snd_chest",
-      "elite_pack": "snd_magic1", "door_open": "snd_dooropen", "belt_potion": "snd_invpot"
+      "elite_pack": "snd_magic1", "door_open": "snd_dooropen", "potion_drink": "snd_invpot"
     },
     "rewards": {
       "reward_tome":  { "collect": "snd_invbook", "open": "snd_readbook" },

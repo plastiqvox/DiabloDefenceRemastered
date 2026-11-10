@@ -93,7 +93,6 @@ public sealed class DamageResolveSystem : ISimSystem
                 world.Presentation.Cue(new CueEvent(world.Tick, CueKind.HeroDied, hero.Pos, null));
                 return;
             }
-            HeroBelt.Check(world);
         }
         if (r.KnockbackDist > 0f && dir != Vector2.Zero)
         {

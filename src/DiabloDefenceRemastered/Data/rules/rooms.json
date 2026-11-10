@@ -8,6 +8,10 @@
                "area_scale": { "reference": "cathedral_arena", "min": 0.6, "max": 1.0 },
                "reward_spot": { "distance": 100, "spacing": 40, "clearance": 30 }, "fallback_reward": "reward_chest",
                "stairs": { "weapon_slots": 1, "passive_slots": 1 },
-               "autoplay_door_skip": 20 }
+               "autoplay_door_skip": 20,
+               // 문 보상 뽑기(v0.9 — 설계서 6.19, 기획 11.4·11.7 첫 값): 회복 문 빠짐 75%·보장 40%·저체력 50% 미만이면 가중 30, 상인 = 액트 1 3번 방 문부터·액트마다 2번·보장 액트 1 4번·액트 2 5번 방 문
+               "rewards": { "heal_skip_at_least": 0.75, "heal_guarantee_below": 0.40, "heal_low_hp": 0.50, "heal_low_hp_weight": 30,
+                            "merchant_first_room": 3, "merchant_per_act": 2, "merchant_guarantee_room": [4, 5], "merchant_met_other": 1.5,
+                            "healer_boost": 1.5, "healer_boost_below": 0.50 } }
   }
 }

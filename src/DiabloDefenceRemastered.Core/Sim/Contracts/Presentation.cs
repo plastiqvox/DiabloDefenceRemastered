@@ -55,8 +55,20 @@ public enum CueKind : byte
     DoorsOpened,
     /// <summary>v0.7 WP3 Pickups — 문 보상 물체를 주움. Subject = RewardDef.</summary>
     RewardCollected,
-    /// <summary>v0.8 WP3 — 허리띠 물약을 저절로 마심(체력 &lt; 최대 × <c>rules.hero.belt.threshold</c>). Subject 없음, Pos = 주인공. 소리 <c>ui.belt_potion</c>(WP8)·HUD 허리띠 깜빡임(WP6).</summary>
-    BeltPotion,
+    /// <summary>v0.9.1 WP3 — <c>Drink</c> 로 물약 하나를 마심(서서히 회복 시작). Subject 없음, Pos = 주인공. 소리 원작 <c>invpot</c>(WP8)·HUD 물약 칸(WP6). v0.8 의 <c>BeltPotion</c>(저절로 마심)을 바꿈.</summary>
+    PotionDrink,
+    /// <summary>v0.9.1 WP3 — <c>Drink</c> 를 받았지만 못 마심(창·회복 중·물약 0·체력 가득). Subject 없음. "못 함" 소리.</summary>
+    PotionDenied,
+    /// <summary>v0.9 <c>RoomFlow</c> — 회복 문을 지나 들어온 방의 첫 틱에 체력 전부. Subject = 그 <c>RewardDef</c>, Pos = 주인공.</summary>
+    HealOnEnter,
+    /// <summary>v0.9 WP3 — 상인 창이 열림(상인에 닿음). Subject = <c>MerchantDef</c>. 인사 대사(WP8).</summary>
+    ShopOpen,
+    /// <summary>v0.9 WP3 — 상인 카드를 삼(장비면 끼움). Subject = <c>MerchantDef</c>. 금화·끼우기 소리.</summary>
+    ShopBuy,
+    /// <summary>v0.9 WP3 — 금화가 모자라 못 삼(다시 굴리기 포함). Subject = <c>MerchantDef</c>. "못 함" 소리.</summary>
+    ShopDenied,
+    /// <summary>v0.9.1 V8 WP3 — 보물 상자가 열려 책이 떨어짐(<c>RewardDef.Drop</c>). Subject = 그 <c>RewardDef</c>, Pos = 책 자리.</summary>
+    ChestDrop,
 }
 
 /// <summary>

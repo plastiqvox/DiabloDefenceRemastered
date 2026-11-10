@@ -47,6 +47,7 @@ public sealed class RoomState
         var def = Plan.Def;
         SurviveTicks = def.Kind == RoomKind.Normal && def.To is { } to ? MathX.SecondsToTicks(to.Seconds - def.From.Seconds, World.Dt) : 0;
         _entryOpposite = GateZones.Opposite(Plan.Map, Plan.GateIn);
+        HealOnEnter = Reward?.Kind == RewardKind.HealNextRoom;
     }
 
     public RoomPlan Plan { get; }
@@ -106,6 +107,19 @@ public sealed class RoomState
     /// <c>RoomCleared</c>·<c>DoorsOpened</c> 신호 자리, 보상 물체·정예 상자 줄의 가운데.
     /// </summary>
     public Vector2 RewardSpot { get; internal set; }
+
+    /// <summary>
+    /// 회복 문(v0.9 V1, 6.19 "회복 문")을 지나 들어온 방: 이 방의 보상(<see cref="Reward"/>, 덤 포함)이 <c>heal_next_room</c> 이면 참으로 시작하고,
+    /// 첫 시뮬레이션 틱(넘김 어둠이 걷힌 뒤 — 들어옴 단계 첫 틱)에 <c>RoomFlow</c> 가 체력을 최대로 채우고 거짓으로 바꾼다(<c>CueKind.HealOnEnter</c>).
+    /// 정리 뒤 보상 자리에는 아무것도 놓이지 않는다(물체 없음).
+    /// </summary>
+    public bool HealOnEnter { get; internal set; }
+
+    /// <summary>
+    /// 상인 방 상태(v0.9 V3·V11, 6.19 — 방 수명). 이 방의 보상이 <c>merchant</c> 면 들어오는 틱에 <c>RunSession</c> 이 <c>ShopStock.Create</c> 로 만든다(정리 전), 아니면 null.
+    /// <c>RoomFlow</c>: <see cref="ShopState.Visited"/> 전에는 보상 단계가 끝나지 않고(문이 안 열림), <see cref="ShopState.Open"/> 이면 나가지 못한다.
+    /// </summary>
+    public ShopState? Shop { get; internal set; }
 
     /// <summary>열린 출구 문(<see cref="RoomPhase.Doors"/> 부터 — 그 전엔 빈 목록, 문은 모두 봉인). 순서 = <c>Plan.ExitGates</c>.</summary>
     public IReadOnlyList<RoomExit> Exits { get; internal set; } = [];

@@ -52,6 +52,7 @@ internal static class DataRules
             foreach (var s in defs.Stages.All) Stage(s);
             Bundles();
             Rewards();
+            Equipment();
             UnreachableEnemies();
         }
 
@@ -405,8 +406,9 @@ internal static class DataRules
         {
             foreach (var r in defs.Rewards.All)
             {
-                if (r.Object.IsBound && r.Object.Def.Kind != PickupKind.Reward)
-                    Err("rewards", r.Id, ".object", $"보상 물체 {r.Object.Id} 의 kind 가 reward 가 아니다(13.5-23 ④)");
+                RewardFields(r);
+                if (r.Object is { IsBound: true } obj && obj.Def.Kind != PickupKind.Reward)
+                    Err("rewards", r.Id, ".object", $"보상 물체 {obj.Id} 의 kind 가 reward 가 아니다(13.5-23 ④)");
                 if (r.Shrine is { PickWeapon: > 0, PickMaxLevel: < 1 })
                     Err("rewards", r.Id, ".shrine.pick_max_level", "성소의 pick_max_level 은 1 이상이다(13.5-23 ④)");
                 if (r.Requires.Contains(ContentBundle.Hfvoice)) Err("rewards", r.Id, ".requires", "requires 에 hfvoice 는 쓰지 않는다(13.5-20)");
@@ -433,6 +435,98 @@ internal static class DataRules
             }
             if (defs.Rules.LevelUp is { Temper: { } temper } lu && !lu.Fillers.Any(f => f.Id == temper))
                 RuleErr("level_up", ".temper", $"temper '{temper}' 가 fillers 에 없다{IdSuggest.Hint(temper, lu.Fillers.Select(f => f.Id))}(13.5-23 ④)");
+        }
+
+        /// <summary>
+        /// 13.5-23 ④ 종류마다 칸(v0.9 — 6.18·6.19): 물체는 <c>heal_next_room</c>·<c>merchant</c> 만 없어도 되고 그 밖은 필수,
+        /// <c>merchant</c> 는 <c>merchant</c> 필수·그 밖은 금지, <c>bundle</c> 은 <c>weapon_bundle</c> 만, <c>shrine</c> 은 <c>shrine</c> 만, <c>cards</c> 는 <c>weapon_cards</c> 만.
+        /// </summary>
+        private void RewardFields(RewardDef r)
+        {
+            var objectOptional = r.Kind is RewardKind.HealNextRoom or RewardKind.Merchant;
+            if (r.Object is null && !objectOptional) Err("rewards", r.Id, ".object", $"{Snake(r.Kind)} 보상에 방 안 물체(object)가 없다(13.5-23 ④)");
+            if (r.Kind == RewardKind.Merchant && r.Merchant is null) Err("rewards", r.Id, ".merchant", "merchant 보상에 상인(merchant)이 없다(13.5-23 ④)");
+            if (r.Kind != RewardKind.Merchant && r.Merchant is not null) Err("rewards", r.Id, ".merchant", $"merchant 칸은 merchant 보상에만 쓴다({Snake(r.Kind)}, 13.5-23 ④)");
+            if (r.Kind != RewardKind.WeaponBundle && r.Bundle is not null) Err("rewards", r.Id, ".bundle", $"bundle 칸은 weapon_bundle 보상에만 쓴다({Snake(r.Kind)}, 13.5-23 ④)");
+            if (r.Kind != RewardKind.Shrine && r.Shrine is not null) Err("rewards", r.Id, ".shrine", $"shrine 칸은 shrine 보상에만 쓴다({Snake(r.Kind)}, 13.5-23 ④)");
+            if (r.Kind == RewardKind.Shrine && r.Shrine is null) Err("rewards", r.Id, ".shrine", "shrine 보상에 성소 효과(shrine)가 없다(13.5-23 ④)");
+            if (r.Kind != RewardKind.WeaponCards && r.Cards is not null) Err("rewards", r.Id, ".cards", $"cards 칸은 weapon_cards 보상에만 쓴다({Snake(r.Kind)}, 13.5-23 ④)");
+            if (r.Drop is { IsBound: true } drop && drop.Def.Kind != PickupKind.Reward)
+                Err("rewards", r.Id, ".drop", $"떨어지는 물체 {drop.Id} 의 kind 가 reward 가 아니다(6.19)");
+            if (r.Drop is not null && r.Object is null) Err("rewards", r.Id, ".drop", "drop 은 방 안 물체(object)가 있는 보상에만 쓴다(6.19)");
+            if (r.Merchant is { IsBound: true } m && m.Def.Stock == MerchantStock.Equipment && defs.Rules.Equipment is null)
+                Err("rewards", r.Id, ".merchant", "장비 상인 보상이 있는데 rules.equipment 가 없다(6.19 — rules/equipment.json)");
+        }
+
+        // ── 6.19 장비·상인·물약 칸 (v0.9) ─────────────────────────
+
+        private void Equipment()
+        {
+            foreach (var b in defs.ItemBases.All)
+            {
+                var armor = b.Kind is EquipKind.Head or EquipKind.Body or EquipKind.Shield;
+                if (!armor && b.Weight != ArmorWeight.None) Err("items", b.Id, ".weight", $"무게는 방어구(head·body·shield)에만 쓴다({Snake(b.Kind)}, 6.19)");
+                if (armor && b.Weight == ArmorWeight.None) Err("items", b.Id, ".weight", "방어구에 무게(light·medium·heavy)가 없다(6.19 — v0.9.1 V6)");
+                if (b.Price < 0) Err("items", b.Id, ".price", $"값이 음수다({b.Price})");
+                if (b.Acts.Count == 0 || b.Acts.Any(a => a < 1)) Err("items", b.Id, ".acts", "나오는 액트는 1 이상 하나 이상이다(6.19)");
+                if (b.Requires.Contains(ContentBundle.Hfvoice)) Err("items", b.Id, ".requires", "requires 에 hfvoice 는 쓰지 않는다(13.5-20)");
+            }
+            foreach (var a in defs.ItemAffixes.All)
+            {
+                if (a.Min > a.Max) Err("item_affixes", a.Id, ".min", $"범위가 거꾸로다(min {a.Min} > max {a.Max}, 6.19)");
+                if (a.Step <= 0f) Err("item_affixes", a.Id, ".step", $"굴림 간격은 0 보다 커야 한다({a.Step}, 6.19)");
+                if (a.Stage is < 1 or > 2) Err("item_affixes", a.Id, ".stage", $"단계는 1(두 액트)·2(액트 2 만)이다({a.Stage}, 6.19)");
+                if (a.Kinds.Count == 0) Err("item_affixes", a.Id, ".kinds", "붙는 칸 종류가 없다(6.19)");
+                if (a.Price < 0) Err("item_affixes", a.Id, ".price", $"값이 음수다({a.Price})");
+            }
+            foreach (var m in defs.Merchants.All)
+            {
+                switch (m.Stock)
+                {
+                    case MerchantStock.Equipment:
+                        if (m.Kinds.Count == 0) Err("merchants", m.Id, ".kinds", "장비 상인에 카드 칸 종류(kinds)가 없다(6.19)");
+                        if (m.Upgrades.Count > 0) Err("merchants", m.Id, ".upgrades", "upgrades 는 물약 상인(stock: potions)에만 쓴다(6.19)");
+                        break;
+                    case MerchantStock.Potions:
+                        if (m.Kinds.Count > 0) Err("merchants", m.Id, ".kinds", "kinds 는 장비 상인(stock: equipment)에만 쓴다(6.19)");
+                        if (m.Upgrades.Count == 0) Err("merchants", m.Id, ".upgrades", "물약 상인에 물건(upgrades)이 없다(6.19)");
+                        if (m.Rerollable) Err("merchants", m.Id, ".rerollable", "물약 상인은 고정 물건이라 rerollable: false 다(6.19 — v0.9.1 V11)");
+                        if (defs.Rules.Hero is { } h && h.Potions is null) Err("merchants", m.Id, "", "물약 상인이 있는데 rules.hero.potions 가 없다(6.19)");
+                        for (var i = 0; i < m.Upgrades.Count; i++)
+                        {
+                            var u = m.Upgrades[i];
+                            if (u.Kind == PotionUpgrade.Refill && u.PerSlot <= 0) Err("merchants", m.Id, $".upgrades[{i}].per_slot", "물약 채우기의 per_slot 은 0 보다 크다");
+                            if (u.Kind != PotionUpgrade.Refill && u.Prices.Count == 0) Err("merchants", m.Id, $".upgrades[{i}].prices", "단계 값(prices)이 없다");
+                            if (u.Prices.Any(p => p < 0)) Err("merchants", m.Id, $".upgrades[{i}].prices", "값이 음수다");
+                        }
+                        break;
+                }
+                if (m.Requires.Contains(ContentBundle.Hfvoice)) Err("merchants", m.Id, ".requires", "requires 에 hfvoice 는 쓰지 않는다(13.5-20)");
+            }
+            if ((defs.ItemBases.Count > 0 || defs.Merchants.All.Any(m => m.Stock == MerchantStock.Equipment)) && defs.Rules.Equipment is null)
+                ctx.Add("", "$.rules.equipment", "장비 정의(items)·장비 상인이 있는데 rules.equipment 가 없다(6.19 — rules/equipment.json)");
+            if (defs.Rules.Equipment is { } eq)
+            {
+                if (eq.MagicChance.Count == 0) RuleErr("equipment", ".magic_chance", "액트별 마법 확률이 없다(6.19)");
+                if (eq.PriceRoll.Count != 2) RuleErr("equipment", ".price_roll", $"price_roll 은 [최소 배율, 폭] 둘이다({eq.PriceRoll.Count}개)");
+                if (eq.PriceRound < 1) RuleErr("equipment", ".price_round", $"값 반올림 단위는 1 이상이다({eq.PriceRound})");
+                if (eq.WeightMoveFloor > 0f) RuleErr("equipment", ".weight_move_floor", $"이동 하한은 0 이하다({eq.WeightMoveFloor})");
+            }
+            if (defs.Rules.Hero?.Potions is { } pot)
+            {
+                if (pot.Durations.Count == 0) RuleErr("hero", ".potions.durations", "회복 시간 단계(durations)가 하나 이상이어야 한다(6.19)");
+                if (pot.Durations.Any(d => d <= 0f)) RuleErr("hero", ".potions.durations", "회복 시간은 0 보다 크다(6.19)");
+                if (pot.Slots < 0 || pot.Slots > pot.SlotsMax) RuleErr("hero", ".potions.slots", $"기본 칸 {pot.Slots} 은 0..slots_max({pot.SlotsMax}) 이다(6.19)");
+            }
+            foreach (var h in defs.HeroClasses.All)
+            {
+                foreach (var key in h.Looks.Keys)
+                    if (!LookKey(key)) Err("hero_classes", h.Id, ".looks", $"겉모습 키 '{key}' 는 무게 l·m·h + 든 것 n·u·t 두 글자다(6.19 — v0.9.1 V10)");
+                if (!LookKey(h.Look)) Err("hero_classes", h.Id, ".look", $"대신 쓸 겉모습 키 '{h.Look}' 는 무게 l·m·h + 든 것 n·u·t 두 글자다(6.19)");
+                else if (h.Looks.Count > 0 && !h.Looks.ContainsKey(h.Look)) Err("hero_classes", h.Id, ".look", $"대신 쓸 겉모습 키 '{h.Look}' 가 looks 에 없다(6.19)");
+            }
+
+            static bool LookKey(string key) => key.Length == 2 && "lmh".Contains(key[0]) && "nut".Contains(key[1]);
         }
 
         /// <summary>뿌리 액트(아무도 next_act 로 가리키지 않는 액트)부터 사슬 길이의 최댓값.</summary>

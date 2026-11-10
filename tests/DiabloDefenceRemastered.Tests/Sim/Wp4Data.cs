@@ -96,7 +96,7 @@ public static class Wp4Data
             Projectiles = new DefTable<ProjectileDef>(linker.Stubs<ProjectileDef>()),
             Effects = new DefTable<EffectDef>(linker.Stubs<EffectDef>()),
             Rewards = new DefTable<RewardDef>(linker.Stubs<RewardDef>()),
-            Pickups = new DefTable<PickupDef>([.. linker.Stubs<PickupDef>(), .. linker.Stubs<RewardDef>().Select(r => r.Object.Def)]),
+            Pickups = new DefTable<PickupDef>([.. linker.Stubs<PickupDef>(), .. linker.Stubs<RewardDef>().Where(r => r.Object is not null).Select(r => r.Object!.Def)]),
         };
         return new Loaded(defs, linker.StubNames);
     }
@@ -282,7 +282,7 @@ public static class Wp4Data
             IDef def;
             if (t == typeof(ProjectileDef)) def = new ProjectileDef { Id = id, Sprite = DefRef<SpriteDef>.To(TestDefs.Sprite("stub_" + id)), Radius = 4f, Speed = 260f, Range = 350f };
             else if (t == typeof(EffectDef)) def = new EffectDef { Id = id, Procedural = "stub" };
-            else if (t == typeof(PickupDef)) def = TestDefs.RewardObject(id) with { Kind = PickupKind.Heal };
+            else if (t == typeof(PickupDef)) def = TestDefs.RewardObject(id) with { Kind = PickupKind.PotionStack };
             else if (t == typeof(RewardDef))
             {
                 var kind = id.Contains("tome", StringComparison.Ordinal) ? RewardKind.WeaponCards : RewardKind.WeaponBundle;

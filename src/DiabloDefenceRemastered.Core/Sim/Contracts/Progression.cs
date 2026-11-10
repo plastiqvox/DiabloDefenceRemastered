@@ -14,15 +14,19 @@ public sealed record LevelUpCard(CardKind Kind, string Id, string Name, IconDef?
 /// </summary>
 public enum OfferSource : byte { LevelUp, Tome, Shrine }
 
-/// <summary>지금 보여 줄 선택지. 3장 미만일 수 있다. <paramref name="Source"/>(v0.7, 끝 인자 — 기존 호출은 그대로 레벨업)로 자동 조작 <c>PickCard</c> 가 규칙을 고른다.</summary>
-public sealed record LevelUpOffer(int Level, IReadOnlyList<LevelUpCard> Cards, int RerollsLeft, OfferSource Source = OfferSource.LevelUp);
+/// <summary>
+/// 지금 보여 줄 선택지. 3장 미만일 수 있다. <paramref name="Source"/>(v0.7, 끝 인자 — 기존 호출은 그대로 레벨업)로 자동 조작 <c>PickCard</c> 가 규칙을 고른다.
+/// <paramref name="Reward"/>(v0.9 WP1g — WP6 요청 3): 보상 창(<c>Tome</c>·<c>Shrine</c>)이면 그 보상 정의(건너뛰기 회복 문구·성소 카드 둘째 줄), 레벨업 창은 null.
+/// </summary>
+public sealed record LevelUpOffer(int Level, IReadOnlyList<LevelUpCard> Cards, int RerollsLeft, OfferSource Source = OfferSource.LevelUp, RewardDef? Reward = null);
 
 /// <summary>
 /// 상자 한 칸의 종류. v0.8: <see cref="Temper"/> = 정예 상자의 빈 강화(올릴 것이 없을 때 <c>단련</c> — <c>rules.level_up.temper</c>, 기획 v0.8.1 11.1). v0.7 의 <c>Gold</c> 를 바꿨다.
 /// </summary>
 public enum ChestItemKind : byte { Evolution, WeaponUpgrade, PassiveUpgrade, Temper }
 
-public sealed record ChestItem(ChestItemKind Kind, string Id, string Name, IconDef? Icon, int Level, int Gold);
+/// <summary>상자 한 칸(v0.9 WP1g: v0.7 의 <c>Gold</c> 인자를 없앴다 — v0.8 에 금화 대체가 <c>단련</c> 으로 바뀌어 늘 0 이었다, 13.22 "계약 줄이기는 WP1g").</summary>
+public sealed record ChestItem(ChestItemKind Kind, string Id, string Name, IconDef? Icon, int Level);
 
 /// <summary>상자 하나를 연 결과(중간 보스 상자는 3번).</summary>
 public sealed record ChestReward(IReadOnlyList<ChestItem> Items);
@@ -81,6 +85,25 @@ public interface IProgression
 }
 
 /// <summary>
+/// 상인 창(v0.9, 설계서 6.19 "상인 방 상태와 구매 명령" — 계약 WP1g, 구현 WP3). 상인 창은 <see cref="LevelUpOffer"/> 가 아니라 <see cref="ShopState"/> 를 그린다(화면 모양만 같다 — 기획 12.8).
+/// 창이 열려 있는 동안 판 명령 <c>Choice1~3</c> = <see cref="Buy"/>(또는 <see cref="ShopState.RingPending"/> 이면 <see cref="ReplaceRing"/>), <c>Reroll</c> = <see cref="Reroll"/>, <c>Skip</c> = <see cref="Leave"/> —
+/// 재생·자동 조작·사람이 같은 길이다. 선택 입력 잠금은 레벨업 창과 같은 자리(<c>rules.level_up.input_lock</c>).
+/// </summary>
+public interface IShop
+{
+    /// <summary>이 방의 상인 상태(<c>World.Room.Shop</c>). 상인 방이 아니면 null.</summary>
+    ShopState? Shop { get; }
+    /// <summary>카드 하나를 산다(<c>지갑 ≥ 값</c> 일 때만 — 모자라면 아무 일 없음 + <c>CueKind.ShopDenied</c>). 장비는 그 칸에 끼운다(반지 둘이 찼으면 <see cref="ShopState.RingPending"/>).</summary>
+    void Buy(int card);
+    /// <summary>다시 굴리기(<c>reroll_price + reroll_step × Rerolls</c> — 산 카드는 자리를 지킴, <c>ShopStock.Reroll</c>). 페핀(<c>rerollable: false</c>)은 아무 일 없음.</summary>
+    void Reroll();
+    /// <summary>떠나기 = <c>Open = false; Visited = true</c>(보상 받음 → 문이 열림, 3.6 "집어야 문이 열린다"). 문 단계에 다시 닿으면 다시 연다.</summary>
+    void Leave();
+    /// <summary>반지 둘이 찬 채 반지를 고른 카드(<see cref="ShopState.RingPending"/>)로 <paramref name="ring"/>(0 = 반지 1, 1 = 반지 2)을 바꾼다.</summary>
+    void ReplaceRing(int ring);
+}
+
+/// <summary>
 /// 한 판 기록(결과 화면·저장). DamageResolve·DeathRewards·Pickups 가 채운다. v0.7: 판 수명 — <c>RunState.Stats</c> 하나를 방 월드마다 <c>World.RunStats</c> 가 가리킨다.
 /// <b>지우는 곳이 없다</b>(v0.7.1): <c>RunSession</c> 이 판 시작 때 새로 만들고, 월드 설치·주인공 만들기·WP3 조각은 지우지 않는다(공개 <c>Reset()</c> 을 없앴다 — 방마다 조용히 0 이 되는 길).
 /// partial 이다: WP3 은 자기 폴더 조각(namespace <c>…Core.Sim.Contracts</c>)에 집계 멤버를 더한다. <see cref="DamageByWeapon"/> 은 칸 번호로 센다 — <c>IHeroCarry.Restore</c> 는 같은 칸에 놓는다.
@@ -91,7 +114,12 @@ public sealed partial class RunStats
 {
     public int Kills { get; set; }
     public int EliteKills { get; set; }
+    /// <summary>얻은 금화(결과 화면·누적 — 늘기만 한다. 쓴 금화도 여기 센다, 기획 11.7). 판 안 지갑은 <c>Hero.Gold</c>·짐 <c>HeroCarry.Gold</c>.</summary>
     public int Gold { get; set; }
+    /// <summary>상인에게 쓴 금화(v0.9 — 결과 화면 <c>쓴 금화</c>·로그 <c>ROOM gold_spent</c>).</summary>
+    public int GoldSpent { get; set; }
+    /// <summary>마신 물약 수(v0.9.1 — 로그 <c>ROOM drunk</c> 의 방 차이, WP3 <c>Drink</c> 가 센다).</summary>
+    public int PotionsDrunk { get; set; }
     public int XpCollected { get; set; }
     public float DamageTaken { get; set; }
     /// <summary>무기 칸별 준 피해 합계(결과 화면). 길이 = <see cref="WeaponSlots.SlotCount"/>(6, v0.8.1 — v0.8 은 4 로 남아 5번째 칸이 범위 밖이었다).</summary>

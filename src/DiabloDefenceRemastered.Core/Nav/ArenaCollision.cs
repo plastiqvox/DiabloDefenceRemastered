@@ -83,8 +83,8 @@ public interface INavDebugView
     /// <summary>충돌 도형(<see cref="ArenaCollision.Build"/> 결과).</summary>
     IReadOnlyList<CollisionShape> Collision { get; }
 
-    /// <summary>하위 칸 성질(<c>W</c>/<c>M</c>/<c>X</c> 겹침, <c>--debug-nav tiles</c>).</summary>
-    ArenaGrid Arena { get; }
+    /// <summary>하위 칸 성질(<c>W</c>/<c>M</c>/<c>X</c> 겹침, <c>--debug-nav tiles</c>). 맵 없는 시험 월드(상자 내비)에서는 null(v0.9 WP1g — WP2 요청).</summary>
+    ArenaGrid? Arena { get; }
 
     /// <summary>내비 격자 칸 크기(px, 16).</summary>
     int CellSize { get; }

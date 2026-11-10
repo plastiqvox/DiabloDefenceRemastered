@@ -121,6 +121,6 @@ public class RealAudioDataTests
         Assert.Equal(["d1/sound/sfx/sorceror/mage71.wav"], defs.Sounds.Get(defs.SoundBindings.Hero["sorcerer"].Death!.Id).Files);
         Assert.Equal("d1/sound/sfx/items/dooropen.wav", Assert.Single(defs.Sounds.Get(defs.SoundBindings.Ui["door_open"].Id).Files));
         Assert.False(defs.SoundBindings.Ui.ContainsKey("room_clear"));   // 기획 12.7 v0.8: 방 정리는 소리 없이
-        Assert.Equal("snd_invpot", defs.SoundBindings.Ui["belt_potion"].Id);   // v0.8 허리띠 저절로 마심 = 물약 소리
+        Assert.Equal("snd_invpot", defs.SoundBindings.Ui["potion_drink"].Id);   // v0.9.1 물약 마심 = 물약 소리(v0.8 belt_potion)
     }
 }

@@ -44,6 +44,9 @@ internal static class DefLinker
         WalkTable("music", defs.Music);
         WalkTable("hero_classes", defs.HeroClasses);
         WalkTable("rewards", defs.Rewards);
+        WalkTable("items", defs.ItemBases);
+        WalkTable("item_affixes", defs.ItemAffixes);
+        WalkTable("merchants", defs.Merchants);
 
         WalkObject(defs.Rules, collected.Rules, index, abstracts, registry, errors, parts);
         WalkObject(defs.SoundBindings, collected.SoundBindings, index, abstracts, registry, errors, parts);

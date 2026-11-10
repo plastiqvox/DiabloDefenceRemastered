@@ -1,5 +1,8 @@
 namespace DiabloDefenceRemastered.Core.Sim;
 
+/// <summary>두 단계 보상 물체의 단계(v0.9.1 V8): 닫힘(상자) → 떨어짐(책 — 닿으면 받음).</summary>
+public enum RewardPickupStage : byte { Closed, Dropped }
+
 /// <summary>
 /// 획득물(보석·금화·물약·룬·상자) — 공통 조각 (WP1, 설계서 11.2). 끌어당김 상태는 WP3 조각(<see cref="ResetCombat"/>).
 /// </summary>
@@ -35,6 +38,16 @@ public sealed partial class Pickup : IEntity
     /// 끌려오는 중(v0.7.1 — WP3 조각에 있던 끌어당김 표시를 공통 조각으로 올림). 쓰기 WP3(끌어당김), 읽기 <c>RoomFlow</c>(끌려오는 획득물이 있으면 문이 안 열리고 안 나감).
     /// </summary>
     public bool Magnetized;
+    /// <summary>
+    /// 두 단계 보상 물체의 단계(v0.9.1 V8, 6.19 "보상 물체 둘레 아이콘" — <c>RewardDef.Drop</c> 이 있는 보상, 보물 상자 → 책). 쓰기 WP3(상자에 닿으면 <see cref="RewardPickupStage.Dropped"/>),
+    /// 읽기 WP5(상자·책 그리기)·WP7(해시).
+    /// </summary>
+    public RewardPickupStage RewardStage;
+    /// <summary>
+    /// 상자를 연 틱에 정한 올릴 무기 칸(v0.9.1 V8 — 방 난수 <c>Drop</c> 으로 그 틱에 한 번, 책을 집을 때 다시 뽑지 않음. −1 = 아직·올릴 무기 없음(<c>단련</c>)).
+    /// 쓰기 WP3, 읽기 WP3(받기)·<c>RewardOsd</c>(둘레 아이콘)·WP7.
+    /// </summary>
+    public int RewardChosen = -1;
 
     public void Reset()
     {
@@ -50,6 +63,8 @@ public sealed partial class Pickup : IEntity
         Reward = null;
         GatesExit = false;
         Magnetized = false;
+        RewardStage = RewardPickupStage.Closed;
+        RewardChosen = -1;
         ResetCombat();
     }
 

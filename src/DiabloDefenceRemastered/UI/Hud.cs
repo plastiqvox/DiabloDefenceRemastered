@@ -21,7 +21,10 @@ public sealed record HudModel
     public float MaxHp { get; init; }
     public int Kills { get; init; }
     public int Gold { get; init; }
-    public int Belt { get; init; }
+    /// <summary>물약 칸의 물약 수(v0.9.1 — v0.8 의 허리띠 수. 물약 칸 그리기·<c>2/3</c> 는 WP6).</summary>
+    public int Potions { get; init; }
+    /// <summary>물약 칸 수(<c>rules.hero.potions</c> 의 지금 칸 — 규칙이 없으면 0).</summary>
+    public int PotionSlots { get; init; }
     public int WeaponSlotsOpen { get; init; }
     public int PassiveSlotsOpen { get; init; }
     /// <summary><c>대성당 4 / 9</c>(방 없는 월드는 null).</summary>
@@ -64,7 +67,8 @@ public sealed record HudModel
             MaxHp = hero.MaxHp,
             Kills = world.RunStats.Kills,
             Gold = world.RunStats.Gold,
-            Belt = hero.Belt,
+            Potions = hero.Potions,
+            PotionSlots = world.Defs.Rules.Hero?.Potions?.Capacity(hero.PotionSlotsLevel) ?? 0,
             WeaponSlotsOpen = Math.Clamp(hero.WeaponSlotsOpen, 0, WeaponSlots.SlotCount),
             PassiveSlotsOpen = Math.Clamp(hero.PassiveSlotsOpen, 0, PassiveSlots.SlotCount),
             RoomLine = roomLine,
@@ -144,8 +148,8 @@ public sealed class Hud(AppServices app) : IWorldBound
         _beltFlashTick = int.MinValue / 2;
     }
 
-    /// <summary>허리띠 물약을 저절로 마심(<c>CueKind.BeltPotion</c> — <c>PlayScene</c> 이 표시 이벤트를 소비할 때 알림). 그 신호의 스테이지 틱부터 번쩍임.</summary>
-    public void OnBeltPotion(int stageTick) => _beltFlashTick = stageTick;
+    /// <summary>물약을 마심(v0.9.1 <c>CueKind.PotionDrink</c> — v0.8 의 허리띠 저절로 마심을 바꿈. <c>PlayScene</c> 이 표시 이벤트를 소비할 때 알림). 그 신호의 스테이지 틱부터 번쩍임.</summary>
+    public void OnPotionDrink(int stageTick) => _beltFlashTick = stageTick;
 
     /// <summary>허리띠 칸이 번쩍이는 중인가(스테이지 틱 — 멈추면 같이 멈춤).</summary>
     public bool BeltFlashing => _world is { } w && w.Tick - _beltFlashTick < BeltFlashTicks;
@@ -234,13 +238,13 @@ public sealed class Hud(AppServices app) : IWorldBound
         c.Disc(orb, core, Theme.Red, 0.9f, (core - liquid + 2f * liquid * ratio) / (2f * core));
         c.Disc(orb + new Vector2(-9f, -11f), 6f, Theme.White, 0.16f);     // 유리 반사
         c.Text(string.Create(Inv, $"{MathF.Ceiling(m.Hp):0} / {MathF.Ceiling(m.MaxHp):0}"), new Vector2(84, Theme.Height - 30), Theme.BodyText, Theme.Text);
-        var beltSlots = app.Defs.Rules.Hero?.Belt?.Slots ?? 2;
-        for (var i = 0; i < beltSlots; i++)
+        // v0.9.1: 허리띠 칸 → 물약 칸 수만큼(물약 칸 하나 + 개수 그리기는 WP6 — 기획 12.1)
+        for (var i = 0; i < m.PotionSlots; i++)
         {
             var r = new RectF(84 + i * 28, Theme.Height - 76, 108 + i * 28, Theme.Height - 52);
             c.Fill(r, Theme.Panel, 0.9f);
             Ui.Outline(c, r, Theme.PanelEdge);
-            if (i < m.Belt) c.Fill(Shrink(r, 6), Theme.Red, 0.95f);
+            if (i < m.Potions) c.Fill(Shrink(r, 6), Theme.Red, 0.95f);
             if (BeltFlashing) c.Fill(r, Theme.White, 0.5f);
         }
 

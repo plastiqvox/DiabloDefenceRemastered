@@ -22,6 +22,11 @@ public sealed class RunSession
     private readonly Dictionary<string, float> _areaScale = new(StringComparer.Ordinal);
     private bool _concluded;
     private bool _suspended;
+    // 지금 방에 들어올 때의 값(RoomRecord 새 열 — 방 수명, Enter 가 다시 정함)
+    private float _hpIn = -1f;
+    private int _potionsIn;
+    private int _goldSpentIn;
+    private int _drunkIn;
 
     public RunSession(GameDefs defs, ModuleContext modules, RunStart start)
     {
@@ -48,7 +53,7 @@ public sealed class RunSession
 
         // --room 으로 그 방부터면 앞 방 RewardOrder 의 첫 칸(상태 거르기 없이 — 앞 방이 없으므로, v0.8: 정예·보스 방도 덤으로 같음) [해석]
         var reward = index == 0 ? FirstRoomReward(plan) : FirstOrNull(plan.Rooms[index - 1].RewardOrder);
-        World = Enter(index, reward, startClock, start.Options);
+        World = Enter(index, reward, startClock, start.Options, carry: null);
     }
 
     /// <summary>
@@ -76,10 +81,10 @@ public sealed class RunSession
             Carry = snapshot.Carry,
         };
         Run.AddRooms(snapshot.Rooms);
+        foreach (var id in snapshot.MerchantsMet) Run.MeetMerchant(id);
         ComputeAreaScales(startAct);
 
-        World = Enter(0, FirstRoomReward(plan), 0, _nextOptions);
-        if (snapshot.Carry is { } carry) modules.HeroCarry!.Restore(World, carry);
+        World = Enter(0, FirstRoomReward(plan), 0, _nextOptions, snapshot.Carry);
     }
 
     public RunState Run { get; }
@@ -122,11 +127,12 @@ public sealed class RunSession
             Run.Act = RunPlanner.PlanAct(nextAct, Run.Act.ActNumber + 1, Run.Seed, _rules);
             next = 0;
             reward = FirstRoomReward(Run.Act);
+            Run.MerchantRoomsThisAct = 0;   // v0.9: 상인 횟수·보였음은 액트마다
+            Run.MerchantShownThisAct = false;
         }
 
-        // ⑤ 새 월드 — 개발 옵션은 무적·계측만 다시(레벨·무기·패시브·시작 시각은 첫 방만)
-        World = Enter(next, reward, 0, _nextOptions);
-        if (carry is not null) _modules.HeroCarry!.Restore(World, carry);
+        // ⑤ 새 월드 — 개발 옵션은 무적·계측만 다시(레벨·무기·패시브·시작 시각은 첫 방만) → 짐 풀기 → 상인 물건(v0.9)
+        World = Enter(next, reward, 0, _nextOptions, carry);
     }
 
     /// <summary>
@@ -187,16 +193,23 @@ public sealed class RunSession
         }
 
         var (carry, _) = Settle(room);
+        // 계단 문은 보상이 없으므로 회복 문이 걸려 있을 수 없다(6.19 — 스냅숏에 넣지 않음)
+        if (Run.HealOnEnter) throw new InvalidOperationException("계단 저장인데 회복 문(HealOnEnter)이 걸려 있다 — 계단 문에는 보상이 없다(6.19)");
         var nextAct = RunPlanner.Next(_defs, Run.Act.Act)!;
         _suspended = true;
         return new RunSnapshot(RunSnapshot.CurrentFormat, Run.Seed, Run.StartAct.Id, Run.HeroClass?.Id, nextAct.Id, Run.Act.ActNumber + 1,
-                               RunSnapshot.RoomsHash(nextAct), carry, Run.Stats, Run.Fairness, Run.ElapsedTicks, Run.Depth, [.. Run.Rooms]);
+                               RunSnapshot.RoomsHash(nextAct), carry, Run.Stats, Run.Fairness, Run.ElapsedTicks, Run.Depth, [.. Run.Rooms],
+                               [.. Run.MerchantsMet]);
     }
 
     /// <summary>방 하나의 넓이 배율(판 시작 때 계산한 값, 없는 맵은 1). 거울판은 원판 값(v0.8).</summary>
     public float AreaScaleOf(MapDef map) => _areaScale.TryGetValue(map.MirrorOf ?? map.Id, out var s) ? s : 1f;
 
-    private World Enter(int index, RewardDef? reward, int startClockTicks, RunOptions options)
+    /// <summary>
+    /// 방 하나에 들어간다: 새 <c>World</c> + 시뮬레이션 → 개발 옵션 → 짐 풀기(<paramref name="carry"/> 가 있으면) →
+    /// v0.9: 상인 방이면 상인 물건(<see cref="ShopStock.Create"/> — 상인 전용 흐름, 정리 전) + 판의 상인 횟수·만난 상인, 회복 문 표시 넘기기, <c>RoomRecord</c> 새 열의 들어올 때 값.
+    /// </summary>
+    private World Enter(int index, RewardDef? reward, int startClockTicks, RunOptions options, HeroCarry? carry)
     {
         var act = Run.Act;
         var plan = act.Rooms[index];
@@ -207,6 +220,27 @@ public sealed class RunSession
         var world = new World(_defs, start);
         _modules.CreateSimulation(world);
         _modules.ApplyRunSetups(world, options);
+        if (carry is not null) _modules.HeroCarry!.Restore(world, carry);
+
+        var room = world.Room!;
+        Run.HealOnEnter = false;   // 그 방 RoomState.HealOnEnter 로 넘어감(보상이 heal_next_room 이면 참으로 시작)
+        Run.LastRoomWasMerchant = false;
+        if (reward is { Kind: RewardKind.Merchant, Merchant: { } merchantRef })
+        {
+            var merchant = merchantRef.IsBound ? merchantRef.Def : _defs.Merchants.Get(merchantRef.Id);
+            var hero = world.Hero;
+            room.Shop = ShopStock.Create(merchant, act.ActNumber, plan.Number, Run.Seed, _defs,
+                                         new ShopPotions(hero.Potions, hero.PotionSlotsLevel, hero.PotionSpeedLevel));
+            Run.MerchantRoomsThisAct++;
+            Run.LastRoomWasMerchant = true;
+            Run.MeetMerchant(merchant.Id);
+        }
+
+        var h = world.Hero;
+        _hpIn = room.HealOnEnter && h.MaxHp > 0f ? h.MaxHp : h.Hp;
+        _potionsIn = h.Potions;
+        _goldSpentIn = Run.Stats.GoldSpent;
+        _drunkIn = Run.Stats.PotionsDrunk;
         return world;
     }
 
@@ -216,13 +250,19 @@ public sealed class RunSession
     /// </summary>
     private (HeroCarry? Carry, bool Stairs) Settle(RoomState room)
     {
+        var stairs = Run.RoomIndex + 1 >= Run.Act.Rooms.Count;
+        // v0.9.1: 계단 문을 나가는 틱에 마시던 회복을 바로 채운다 — 짐·계단 저장에 회복 중 상태를 넣지 않는다(6.19 "계단 저장", 기획 11.5)
+        if (stairs) FinishHeal(World.Hero);
+
         var carry = _modules.HeroCarry?.Capture(World);
         if (carry is not null) Run.Carry = carry;
 
         CloseRoom(room.ChosenExit);
         Run.NextReward = room.ChosenExitInfo?.Reward;
+        Run.HealOnEnter = Run.NextReward?.Kind == RewardKind.HealNextRoom;   // v0.9 회복 문으로 나감 → 다음 방 첫 틱에 체력 전부
+        foreach (var e in room.Exits)
+            if (e.Reward?.Kind == RewardKind.Merchant) Run.MerchantShownThisAct = true;   // v0.9 상인 보장 조건(이 액트에 상인 문이 보였음)
 
-        var stairs = Run.RoomIndex + 1 >= Run.Act.Rooms.Count;
         if (stairs && carry is not null)
         {
             var (weapons, passives) = RunSlots.OpenAt(Run.Act.ActNumber + 1, _defs.Rules.LevelUp, _rules);
@@ -241,9 +281,17 @@ public sealed class RunSession
         var level = world.Progression?.Level ?? Run.Carry?.Level ?? 1;
         Run.AddRoom(new RoomRecord(plan.Act, plan.Number, plan.MapId, plan.GateIn, room.Reward?.Id, door,
                                    room.ClearTick, room.CleanupTicks, room.Collapsed, world.Tick, level,
-                                   plan.Mirrored, room.BossClockTicks, world.Progression?.PicksLeft ?? -1));
+                                   plan.Mirrored, room.BossClockTicks, world.Progression?.PicksLeft ?? -1,
+                                   _hpIn, Run.Stats.GoldSpent - _goldSpentIn, room.Shop?.MerchantId, _potionsIn, Run.Stats.PotionsDrunk - _drunkIn));
         Run.ElapsedTicks += world.Tick;
         world.Fairness.AddTo(Run.Fairness);
+    }
+
+    /// <summary>마시던 서서히 회복의 남은 양을 바로 채운다(최대 체력에서 자름, 죽었으면 비우기만).</summary>
+    private static void FinishHeal(Hero hero)
+    {
+        if (hero.Heal.Active && !hero.Dead) hero.Hp = MathF.Min(hero.MaxHp, hero.Hp + hero.Heal.Remaining);
+        hero.Heal = default;
     }
 
     /// <summary>계단 출구의 <c>Exits</c> 자리(없으면 −1).</summary>
@@ -275,7 +323,9 @@ public sealed class RunSession
         var actNumber = ActNumberAfter(defs, startAct, nextAct)
             ?? throw Fail($"다음 액트 '{nextAct.Id}' 가 시작 액트 '{startAct.Id}' 뒤의 next_act 사슬에 없다");
         if (actNumber != s.NextActNumber) throw Fail($"액트 '{nextAct.Id}' 의 번호가 바뀌었다({s.NextActNumber} → {actNumber})");
-        if (s.Stats is null || s.Fairness is null || s.Rooms is null) throw Fail("판 기록(stats·fairness·rooms)이 없다");
+        if (s.Stats is null || s.Fairness is null || s.Rooms is null || s.MerchantsMet is null) throw Fail("판 기록(stats·fairness·rooms·merchants_met)이 없다");
+        foreach (var m in s.MerchantsMet)
+            if (!defs.Merchants.TryGet(m, out _)) throw Fail($"만난 상인 '{m}' 가 없다");
         if (s.Stats.DamageByWeapon is not { Length: WeaponSlots.SlotCount })
             throw Fail($"무기별 피해 칸이 {s.Stats.DamageByWeapon?.Length ?? 0}개다({WeaponSlots.SlotCount}개여야 함)");
 
@@ -292,6 +342,12 @@ public sealed class RunSession
                 if (b.Id.Length > 0 && !defs.Passives.TryGet(b.Id, out _)) throw Fail($"짐의 축복 '{b.Id}' 가 없다");
             foreach (var shrine in carry.Shrines ?? [])
                 if (!defs.Rewards.TryGet(shrine, out _)) throw Fail($"짐의 성소 '{shrine}' 가 없다");
+            foreach (var e in carry.Equipment ?? [])
+            {
+                if (e.Item is null || !defs.ItemBases.TryGet(e.Item.BaseId, out _)) throw Fail($"짐의 장비 '{e.Item?.BaseId}'({e.Slot}) 가 없다");
+                foreach (var a in (ReadOnlySpan<RolledAffix?>)[e.Item.Prefix, e.Item.Suffix])
+                    if (a is { } r && !defs.ItemAffixes.TryGet(r.Id, out _)) throw Fail($"짐의 장비 접사 '{r.Id}' 가 없다");
+            }
             if (carrier!.Validate(carry, defs) is { } reason) throw Fail(reason);
         }
         return (startAct, nextAct, heroClass);

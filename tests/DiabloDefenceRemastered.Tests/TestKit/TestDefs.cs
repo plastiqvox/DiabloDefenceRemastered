@@ -396,8 +396,16 @@ public static class TestDefs
     public const string RewardTomeId = "test_reward_tome";
     /// <summary>합성 문 보상(보물 상자 — 무기 강화 꾸러미 v0.8, <c>rules.rooms.fallback_reward</c>).</summary>
     public const string RewardChestId = "test_reward_chest";
-    /// <summary>합성 문 보상(완전 회복 물약 — 허리띠 물약 v0.8).</summary>
+    /// <summary>합성 문 보상(회복 문 — v0.9 <c>heal_next_room</c>, 방 안 물체 없음. v0.8 은 허리띠 물약).</summary>
     public const string RewardPotionId = "test_reward_potion";
+    /// <summary>합성 상인 보상 셋(v0.9 — <see cref="SmithId"/>·<see cref="WitchId"/>·<see cref="HealerId"/>). 가중표에는 넣지 않는다(기존 순열 시험을 지킴).</summary>
+    public const string RewardSmithId = "test_reward_smith";
+    public const string RewardWitchId = "test_reward_witch";
+    public const string RewardHealerId = "test_reward_healer";
+    /// <summary>합성 상인(v0.9 WP1g #21).</summary>
+    public const string SmithId = "test_smith";
+    public const string WitchId = "test_witch";
+    public const string HealerId = "test_healer";
     /// <summary>합성 문 보상(성소 — v0.8, 음산한 성소 모양). 보상 가중표에는 넣지 않는다(기존 순열 시험을 지킴) — 정의 표·짐 <c>Shrines</c> 대조에만.</summary>
     public const string RewardShrineId = "test_reward_shrine";
     /// <summary>합성 정예 상자 획득물(<c>kind: chest</c> — 정예·보스 방 보상 시험).</summary>
@@ -420,27 +428,122 @@ public static class TestDefs
     };
 
     /// <summary>
-    /// 합성 문 보상 넷(마법서·보물 상자·물약 + 성소 — v0.8 새 모양)과 그 물체. 6.18 예의 모양을 줄인 것.
-    /// 가중표(<c>rewards.weights</c>)에는 앞의 셋만 넣는다(<see cref="Basic"/>·<c>RoomActs</c>) — 성소는 정의 표에만.
+    /// 합성 문 보상(마법서·보물 상자·회복 문 + 성소 + v0.9 상인 셋)과 그 물체. 6.18·6.19 예의 모양을 줄인 것.
+    /// 가중표(<c>rewards.weights</c>)에는 앞의 셋만 넣는다(<see cref="Basic"/>·<c>RoomActs</c>) — 성소·상인은 정의 표에만(상인 뽑기 시험이 가중표를 따로 만든다).
+    /// 상인 보상은 <see cref="Merchants"/> 의 상인을 가리킨다.
     /// </summary>
     public static (IReadOnlyList<RewardDef> Rewards, IReadOnlyList<PickupDef> Objects) Rewards()
     {
         var tome = RewardObject("obj_test_tome");
         var chest = RewardObject("obj_test_chest");
-        var potion = RewardObject("obj_test_potion");
         var shrine = RewardObject("obj_test_shrine");
+        var merchants = Merchants();
         RewardDef[] rewards =
         [
             new() { Id = RewardTomeId, Name = "마법서", Kind = RewardKind.WeaponCards, Object = DefRef<PickupDef>.To(tome),
                     Cards = new RewardCardsDef { OwnedWeapon = 100, NewWeapon = 100 }, Skip = new RewardSkipDef { Heal = 10 } },
             new() { Id = RewardChestId, Name = "보물 상자", Kind = RewardKind.WeaponBundle, Object = DefRef<PickupDef>.To(chest),
-                    Bundle = new RewardBundleDef { WeaponLevels = 1, BeltPotions = 1, Gold = [30, 60] } },
-            new() { Id = RewardPotionId, Name = "완전 회복 물약", Kind = RewardKind.BeltPotions, Object = DefRef<PickupDef>.To(potion), BeltPotions = 2 },
+                    Bundle = new RewardBundleDef { WeaponLevels = 1, Potions = 1, Gold = [30, 60] } },
+            new() { Id = RewardPotionId, Name = "회복", Kind = RewardKind.HealNextRoom },
             new() { Id = RewardShrineId, Name = "음산한 성소", Kind = RewardKind.Shrine, Object = DefRef<PickupDef>.To(shrine),
                     Shrine = new ShrineDef { Stats = new Dictionary<StatKey, float> { [StatKey.Armor] = 2f, [StatKey.DamagePct] = -0.05f } } },
+            new() { Id = RewardSmithId, Name = "그리스월드", Kind = RewardKind.Merchant, Merchant = DefRef<MerchantDef>.To(merchants[0]) },
+            new() { Id = RewardWitchId, Name = "아드리아", Kind = RewardKind.Merchant, Merchant = DefRef<MerchantDef>.To(merchants[1]) },
+            new() { Id = RewardHealerId, Name = "페핀", Kind = RewardKind.Merchant, Merchant = DefRef<MerchantDef>.To(merchants[2]) },
         ];
-        return (rewards, [tome, chest, potion, shrine]);
+        return (rewards, [tome, chest, shrine]);
     }
+
+    // ── 장비·상인·물약 칸(v0.9, WP1g #21 — 6.19) ─────────────────────────
+
+    /// <summary>
+    /// 합성 기본 아이템: 투구 경·중·판금, 갑옷 경·중·판금, 방패 경·판금, 지팡이, 반지(늘 마법). 판금은 액트 2 만(기획 11.6 모양).
+    /// 방어: 판금 투구 4·판금 갑옷 5·판금 방패 4(셋 = 13 — 기획 11.6 의 판금 셋).
+    /// </summary>
+    public static IReadOnlyList<ItemBaseDef> ItemBases() =>
+    [
+        Item("t_cap", EquipKind.Head, ArmorWeight.Light, 40, [1, 2], (StatKey.MaxHp, 10f)),
+        Item("t_helm", EquipKind.Head, ArmorWeight.Medium, 130, [1, 2], (StatKey.MaxHp, 20f), (StatKey.Armor, 2f)),
+        Item("t_full_helm", EquipKind.Head, ArmorWeight.Heavy, 200, [2], (StatKey.MaxHp, 25f), (StatKey.Armor, 4f)),
+        Item("t_quilted", EquipKind.Body, ArmorWeight.Light, 50, [1, 2], (StatKey.MaxHp, 15f)),
+        Item("t_ring_mail", EquipKind.Body, ArmorWeight.Medium, 140, [1, 2], (StatKey.MaxHp, 25f), (StatKey.Armor, 2f)),
+        Item("t_breast_plate", EquipKind.Body, ArmorWeight.Heavy, 240, [2], (StatKey.MaxHp, 30f), (StatKey.Armor, 5f)),
+        Item("t_buckler", EquipKind.Shield, ArmorWeight.Light, 40, [1, 2], (StatKey.Armor, 1f)),
+        Item("t_kite_shield", EquipKind.Shield, ArmorWeight.Heavy, 200, [2], (StatKey.Armor, 4f), (StatKey.KnockbackTakenPct, -0.4f)),
+        Item("t_staff", EquipKind.Staff, ArmorWeight.None, 60, [1, 2], (StatKey.CooldownPct, 0.03f)),
+        Item("t_ring", EquipKind.Ring, ArmorWeight.None, 50, [1, 2]) with { AlwaysMagic = true },
+    ];
+
+    private static ItemBaseDef Item(string id, EquipKind kind, ArmorWeight weight, int price, IReadOnlyList<int> acts, params (StatKey Key, float Value)[] stats) => new()
+    {
+        Id = id, Name = id, Kind = kind, Weight = weight, Price = price, Acts = acts,
+        Stats = stats.ToDictionary(s => s.Key, s => s.Value),
+    };
+
+    /// <summary>
+    /// 합성 접사(v0.9.1 V7): 범위 접두사 <c>t_af_fine</c>(방어 1~2, 방어구), 고정 접미사 <c>t_af_fox</c>(최대 체력 10, 모든 칸), 범위 접미사 <c>t_af_swift</c>(이동 0.03~0.05, 방패·반지),
+    /// 범위 접두사 <c>t_af_jagged</c>(피해 0.03~0.05, 지팡이·반지), 액트 2 접미사 <c>t_af_jaguar</c>(최대 체력 16~24 간격 2, 모든 칸). 값 더함 100(범위 끝 = 75·125).
+    /// </summary>
+    public static IReadOnlyList<ItemAffixDef> ItemAffixes() =>
+    [
+        Affix("t_af_fine", true, [EquipKind.Head, EquipKind.Body, EquipKind.Shield], StatKey.Armor, 1f, 2f, 1f),
+        Affix("t_af_jagged", true, [EquipKind.Staff, EquipKind.Ring], StatKey.DamagePct, 0.03f, 0.05f, 0.01f),
+        Affix("t_af_fox", false, [EquipKind.Head, EquipKind.Body, EquipKind.Shield, EquipKind.Staff, EquipKind.Ring], StatKey.MaxHp, 10f, 10f, 1f),
+        Affix("t_af_swift", false, [EquipKind.Shield, EquipKind.Ring], StatKey.MovePct, 0.03f, 0.05f, 0.01f),
+        Affix("t_af_jaguar", false, [EquipKind.Head, EquipKind.Body, EquipKind.Shield, EquipKind.Staff, EquipKind.Ring], StatKey.MaxHp, 16f, 24f, 2f) with { Stage = 2 },
+    ];
+
+    public static ItemAffixDef Affix(string id, bool prefix, IReadOnlyList<EquipKind> kinds, StatKey stat, float min, float max, float step, int price = 100) => new()
+    {
+        Id = id, Name = id, Prefix = prefix, Kinds = kinds, Stat = stat, Min = min, Max = max, Step = step, Price = price,
+    };
+
+    /// <summary>합성 상인 셋: 그리스월드(투구·갑옷·방패), 아드리아(지팡이·반지·반지), 페핀(물약 주머니 80·150·220, 빠른 물약 100·200, 채우기 25 — 다시 굴리기 없음).</summary>
+    public static IReadOnlyList<MerchantDef> Merchants() =>
+    [
+        new() { Id = SmithId, Name = "그리스월드", Stock = MerchantStock.Equipment, Kinds = [EquipKind.Head, EquipKind.Body, EquipKind.Shield] },
+        new() { Id = WitchId, Name = "아드리아", Stock = MerchantStock.Equipment, Kinds = [EquipKind.Staff, EquipKind.Ring, EquipKind.Ring] },
+        new()
+        {
+            Id = HealerId, Name = "페핀", Stock = MerchantStock.Potions, Rerollable = false,
+            Upgrades =
+            [
+                new PotionUpgradeDef { Kind = PotionUpgrade.Slots, Prices = [80, 150, 220] },
+                new PotionUpgradeDef { Kind = PotionUpgrade.Speed, Prices = [100, 200] },
+                new PotionUpgradeDef { Kind = PotionUpgrade.Refill, PerSlot = 25 },
+            ],
+        },
+    ];
+
+    /// <summary>합성 <c>rules.equipment</c> = 6.19 첫 값(마법 35%·60%, 접사 둘 25%, 값 0.75 + 0.5 × 위치·5 단위, 방어 상한 15, 무게 이동 표, 하한 −15%, 다시 굴리기 30 + 30).</summary>
+    public static EquipmentRulesDef EquipmentRules() => new()
+    {
+        MagicChance = [0.35f, 0.60f],
+        TwoAffixChance = 0.25f,
+        PriceRoll = [0.75f, 0.5f],
+        PriceRound = 5,
+        ArmorCap = 15f,
+        WeightMove = new Dictionary<EquipKind, IReadOnlyDictionary<ArmorWeight, float>>
+        {
+            [EquipKind.Body] = new Dictionary<ArmorWeight, float> { [ArmorWeight.Light] = 0f, [ArmorWeight.Medium] = -0.05f, [ArmorWeight.Heavy] = -0.10f },
+            [EquipKind.Head] = new Dictionary<ArmorWeight, float> { [ArmorWeight.Light] = 0f, [ArmorWeight.Medium] = -0.02f, [ArmorWeight.Heavy] = -0.04f },
+            [EquipKind.Shield] = new Dictionary<ArmorWeight, float> { [ArmorWeight.Light] = 0f, [ArmorWeight.Medium] = -0.02f, [ArmorWeight.Heavy] = -0.04f },
+        },
+        WeightMoveFloor = -0.15f,
+        RerollPrice = 30,
+        RerollStep = 30,
+    };
+
+    /// <summary>합성 <c>rules.hero.potions</c> = 6.19 첫 값(칸 2·상한 5, 한 병 40%, 3·2·1.2초, 자동 조작 35%).</summary>
+    public static PotionRulesDef PotionRules() => new() { Slots = 2, SlotsMax = 5, HealPct = 0.40f, Durations = [3.0f, 2.0f, 1.2f], BotThreshold = 0.35f };
+
+    /// <summary>합성 <c>rules.rooms.rewards</c> = 6.19 첫 값.</summary>
+    public static RewardRulesDef RewardRules() => new()
+    {
+        HealSkipAtLeast = 0.75f, HealGuaranteeBelow = 0.40f, HealLowHp = 0.50f, HealLowHpWeight = 30f,
+        MerchantFirstRoom = 3, MerchantPerAct = 2, MerchantGuaranteeRoom = [4, 5], MerchantMetOther = 1.5f,
+        HealerBoost = 1.5f, HealerBoostBelow = 0.50f,
+    };
 
     /// <summary>
     /// 합성 <c>rules.rooms</c> = 6.10 첫 값(v0.8: 유예 3s, 정리 25s, 정예 생성 2:30, 넘김 0.5s·층 1.0s, 문 sw·se 로 들어와 nw·ne 로 나감, 셋 0.4,
@@ -460,6 +563,7 @@ public static class TestDefs
         FallbackReward = DefRef<RewardDef>.To(fallback),
         Stairs = new StairsRulesDef { WeaponSlots = 1, PassiveSlots = 1 },
         AutoplayDoorSkip = 20f,
+        Rewards = RewardRules(),
     };
 
     /// <summary>방 하나(v0.7). <paramref name="to"/> 는 일반·정예 방의 t 끝(초).</summary>
@@ -518,9 +622,13 @@ public static class TestDefs
             Rules = new RulesDef
             {
                 Sight = sight,
-                Hero = new HeroRulesDef { Class = DefRef<HeroClassDef>.To(hero) },
+                Hero = new HeroRulesDef { Class = DefRef<HeroClassDef>.To(hero), Potions = PotionRules() },
                 Rooms = RoomRules(rewards[1], map),
+                Equipment = EquipmentRules(),
             },
+            ItemBases = new DefTable<ItemBaseDef>(ItemBases()),
+            ItemAffixes = new DefTable<ItemAffixDef>(ItemAffixes()),
+            Merchants = new DefTable<MerchantDef>(MerchantsOf(rewards)),
             Sprites = new DefTable<SpriteDef>([sprite]),
             SpriteSets = new DefTable<SpriteSetDef>([set]),
             Weapons = new DefTable<WeaponDef>([weapon]),
@@ -534,4 +642,8 @@ public static class TestDefs
             Pickups = new DefTable<PickupDef>([.. objects, EliteChest()]),
         };
     }
+
+    /// <summary>보상 표의 상인 보상이 가리키는 상인(같은 인스턴스 — 표와 DefRef 가 같은 정의를 보게).</summary>
+    public static IReadOnlyList<MerchantDef> MerchantsOf(IReadOnlyList<RewardDef> rewards) =>
+        [.. rewards.Where(r => r.Merchant is not null).Select(r => r.Merchant!.Def)];
 }

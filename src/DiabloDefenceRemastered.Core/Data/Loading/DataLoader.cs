@@ -109,6 +109,9 @@ public static class DataLoader
             SoundBindings = bindings ?? new SoundBindingsDef(),
             HeroClasses = Table<HeroClassDef>(tables["hero_classes"]),
             Rewards = Table<RewardDef>(tables["rewards"]),
+            ItemBases = Table<ItemBaseDef>(tables["items"]),
+            ItemAffixes = Table<ItemAffixDef>(tables["item_affixes"]),
+            Merchants = Table<MerchantDef>(tables["merchants"]),
         };
 
         // 5단계: 연결·부품 검사

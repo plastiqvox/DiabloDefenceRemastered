@@ -109,7 +109,7 @@ public class RunSuspendTests
         w.Fairness.KiteSwitches += 3;
         w.Hero.Hp = 41f;
         w.Hero.MaxHp = 50f;
-        w.Hero.Belt = 1;
+        w.Hero.Potions = 1;
         w.Hero.Weapons[4] = new WeaponSlot { Def = w.Defs.Weapons[0], Level = 2, MaxedAtTick = -1 };
     }
 
@@ -387,7 +387,7 @@ public class RunSuspendTests
             Weapons = [new CarriedSlot("w1", 3, false), new CarriedSlot("", 0, false), new CarriedSlot("w2", 8, true)],
             Passives = [new CarriedSlot("p1", 2, false)],
             Blessings = [new CarriedSlot("b1", 1, false)],
-            WeaponSlotsOpen = 5, PassiveSlotsOpen = 5, Belt = 2,
+            WeaponSlotsOpen = 5, PassiveSlotsOpen = 5, Potions = 2,
             Mods = [new CarriedStat(StatKey.MaxHp, 10f), new CarriedStat(StatKey.MaxHpPct, -0.1f)],
             Shrines = ["shrine_fascinating", "shrine_gloomy"],
             Effects = [new CarriedEffect("buff_mana_surge", 90, 0.5f)],
@@ -449,7 +449,7 @@ public class RunSuspendTests
     public void ShapeFingerprint_MatchesCurrentFormat_DamageByWeaponIsSix()
     {
         // 짐·RunStats(조각 포함)·FairnessCounters·RoomRecord·RunDepth·RunSnapshot 의 공개 멤버를 바꾸면 깨진다 → RunSnapshot.CurrentFormat 과 ShapeFingerprint 를 함께 올린다
-        Assert.Equal(1, RunSnapshot.CurrentFormat);
+        Assert.Equal(2, RunSnapshot.CurrentFormat);   // v0.9 WP1g: 짐 장비·지갑·물약 칸·만렙 순번, RunStats GoldSpent·PotionsDrunk, RoomRecord 새 열, MerchantsMet
         Assert.Equal(RunSnapshot.ShapeFingerprint, RunSnapshot.ComputeShapeFingerprint());
         Assert.Equal(6, new RunStats().DamageByWeapon.Length);
         Assert.Null(typeof(RunStats).GetField("WeaponSlotCount"));    // v0.8.1: 상수 없앰

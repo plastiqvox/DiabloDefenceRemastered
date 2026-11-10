@@ -1,0 +1,13 @@
+// 상인 — 페핀(치유사) (설계서 6.19, 기획 v0.9.2 11.7 — v0.9.1 V11, 소유 WP3). 고정 물건 셋, 다시 굴리기 없음.
+// 물약 주머니(칸 +1: 80·150·220), 빠른 물약(3 → 2 → 1.2초: 100·200), 물약 채우기(빈 칸 × 25).
+// 그림(원작 towners\healer\healer — 이름 확인 전)·인사 대사는 가져오기 확인 전이라 비움 — 코드 그림 대체(6.3).
+{
+  "merchants": [
+    { "id": "healer", "name": "페핀", "stock": "potions", "rerollable": false,
+      "upgrades": [
+        { "kind": "slots",  "prices": [80, 150, 220] },
+        { "kind": "speed",  "prices": [100, 200] },
+        { "kind": "refill", "per_slot": 25 }
+      ] }
+  ]
+}

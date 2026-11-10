@@ -27,12 +27,18 @@ public sealed record RulesDef
     /// 스테이지가 있는 데이터에 없으면 로딩 오류(WP7). 없으면(시험 월드) 방 흐름을 쓰는 코드(<c>RunPlanner</c>·<c>RoomFlow</c>·<c>RunSession</c>)가 예외.
     /// </summary>
     public RoomRulesDef? Rooms { get; init; }
+    /// <summary>
+    /// 장비 규칙(v0.9, 6.19 — WP3 <c>rules/equipment.json</c>). 마법 확률·접사 둘·값 굴림·방어 상한·무게 이동 표·하한·다시 굴리기.
+    /// 기본값을 코드에 두지 않는다 — 장비 정의(<c>items</c>)나 장비 상인이 있는데 없으면 로딩 오류(WP7 <c>DataRules</c>). 없으면 장비를 쓰는 코드(<c>ItemRoller</c>·<c>ShopStock</c>)가 예외.
+    /// </summary>
+    public EquipmentRulesDef? Equipment { get; init; }
 }
 
 /// <summary>
 /// <c>rules.rooms</c> (v0.7 → v0.8 WP1f, 설계서 6.10, 기획 2.5·10.8·11.4·15절 첫 값). 쓰는 곳: <see cref="Grace"/>·<see cref="CleanupLimit"/>·<see cref="EliteSpawnCap"/> = <c>RoomFlow</c>·감독,
 /// <see cref="Gates"/>·<see cref="Exits"/> = <c>RunPlanner</c>, <see cref="AreaScale"/>·<see cref="Stairs"/> = <c>RunSession</c>, <see cref="RewardSpot"/>·<see cref="FallbackReward"/> = <c>RoomFlow</c>,
 /// <see cref="Transition"/>·<see cref="TransitionFloor"/> = <c>PlayScene</c>(앱 틱), <see cref="AutoplayDoorSkip"/> = <c>AutoplayPolicy</c>.
+/// v0.9: <see cref="Rewards"/>(문 보상 뽑기 — 회복 문 빠짐·보장·저체력 가중, 상인 조건·보장·배율) = <c>RoomFlow</c> 문 열기(<c>RewardDraw</c>).
 /// <see cref="Transition"/>·<see cref="TransitionFloor"/> 를 뺀 값을 바꾸면 같은 씨앗의 판이 바뀐다(WP4 가 바꾸고 <c>Scenario</c>·13.5-23 을 다시 돌림).
 /// v0.8: <c>remaining_marker</c>(남은 적 점은 정리 시작부터 모두)·<c>reward_anchor</c>·<c>chest_ring</c>(보상 자리 = 주인공 앞, 3.6)은 없앴다 — 남아 있으면 모르는 속성 오류.
 /// </summary>
@@ -59,6 +65,62 @@ public sealed record RoomRulesDef
     public required StairsRulesDef Stairs { get; init; }
     /// <summary>자동 조작이 문 단계를 이 초 안에 못 끝내면 <c>DOOR_SKIP</c>(보상 단계면 <c>REWARD_STALL</c> 기록).</summary>
     public required float AutoplayDoorSkip { get; init; }
+    /// <summary>문 보상 뽑기의 값(v0.9, 6.19 "회복 문"·기획 11.4 "뽑기"·11.7 — <c>RewardDraw</c>).</summary>
+    public required RewardRulesDef Rewards { get; init; }
+}
+
+/// <summary>
+/// <c>rules.rooms.rewards</c>(v0.9 → v0.9.1, 6.19, 기획 11.4·11.5·11.7 첫 값). 체력 비율은 문이 열리는 틱의 <c>Hero.Hp / Hero.MaxHp</c>.
+/// 모두 필수(기본값을 코드에 두지 않음). 바꾸면 같은 씨앗의 문 보상이 바뀐다(WP4 — Scenario 를 다시 돌림).
+/// </summary>
+public sealed record RewardRulesDef
+{
+    /// <summary>체력 비율이 이 값 이상이면 회복 문이 빠진다(0.75).</summary>
+    public required float HealSkipAtLeast { get; init; }
+    /// <summary>체력 비율이 이 값 미만이면 첫 출구 문을 회복 문으로 보장(0.40).</summary>
+    public required float HealGuaranteeBelow { get; init; }
+    /// <summary>체력 비율이 이 값 미만이면 회복 문 가중을 <see cref="HealLowHpWeight"/> 로(0.50).</summary>
+    public required float HealLowHp { get; init; }
+    /// <summary>저체력 회복 문 가중(30 — 보통은 액트 가중표 값 15).</summary>
+    public required float HealLowHpWeight { get; init; }
+    /// <summary>액트 1 에서 상인 문이 처음 나오는 다음 방 번호(3 — 1·2번 방을 깨는 동안은 금화가 모자람, 기획 11.7).</summary>
+    public required int MerchantFirstRoom { get; init; }
+    /// <summary>한 액트에 상인 방 상한(2 — 상인 셋을 합쳐 셈).</summary>
+    public required int MerchantPerAct { get; init; }
+    /// <summary>액트별 상인 보장 방 번호([4, 5] — 액트 1 은 4번 방, 액트 2 는 5번 방으로 가는 문). 액트 수보다 짧으면 그 뒤 액트는 보장 없음.</summary>
+    public required IReadOnlyList<int> MerchantGuaranteeRoom { get; init; }
+    /// <summary>이 판에 한 상인을 만났으면 다른 상인 가중 × 이 값(1.5).</summary>
+    public required float MerchantMetOther { get; init; }
+    /// <summary>물약 칸이 빈 채 체력 비율 &lt; <see cref="HealerBoostBelow"/> 면 물약 상인(페핀) 가중 × 이 값(1.5).</summary>
+    public required float HealerBoost { get; init; }
+    public required float HealerBoostBelow { get; init; }
+}
+
+/// <summary>
+/// <c>rules.equipment</c>(v0.9 → v0.9.1, 6.19, 기획 11.6·11.7 첫 값 — WP3 <c>rules/equipment.json</c>). 모두 필수.
+/// </summary>
+public sealed record EquipmentRulesDef
+{
+    /// <summary>액트별 마법 등급 확률([0.35, 0.60]). 액트 번호가 길이를 넘으면 마지막 값.</summary>
+    public required IReadOnlyList<float> MagicChance { get; init; }
+    /// <summary>마법 등급의 접사 둘(접두사 + 접미사) 확률(0.25 — v0.9.1 V7).</summary>
+    public required float TwoAffixChance { get; init; }
+    /// <summary>접사 값 배율 = [0] + [1] × 굴림 위치([0.75, 0.5] → 0.75~1.25). 길이 2.</summary>
+    public required IReadOnlyList<float> PriceRoll { get; init; }
+    /// <summary>값 반올림 단위(5).</summary>
+    public required int PriceRound { get; init; }
+    /// <summary>방어 상한(15 — v0.9.1, 기획 v0.9.2 열린 질문 52. 모든 출처를 합친 뒤 자름).</summary>
+    public required float ArmorCap { get; init; }
+    /// <summary>끼운 방어구마다 <c>move_pct</c> 에 더하는 값: 칸 종류 → 무게 → 값(갑옷 중 −0.05·판금 −0.10, 투구·방패 중 −0.02·판금 −0.04). 없는 칸·무게는 0.</summary>
+    public required IReadOnlyDictionary<EquipKind, IReadOnlyDictionary<ArmorWeight, float>> WeightMove { get; init; }
+    /// <summary><c>move_pct</c> 하한(−0.15 — 모든 출처를 합친 뒤 자름).</summary>
+    public required float WeightMoveFloor { get; init; }
+    /// <summary>상인 다시 굴리기 값 = <see cref="RerollPrice"/>(30) + <see cref="RerollStep"/>(30) × 이 방에서 누른 수.</summary>
+    public required int RerollPrice { get; init; }
+    public required int RerollStep { get; init; }
+
+    /// <summary>액트 <paramref name="act"/>(1부터)의 마법 확률(길이를 넘으면 마지막 값, 비었으면 0).</summary>
+    public float MagicChanceAt(int act) => MagicChance.Count == 0 ? 0f : MagicChance[Math.Clamp(act - 1, 0, MagicChance.Count - 1)];
 }
 
 /// <summary>
@@ -165,22 +227,35 @@ public sealed record HeroRulesDef
     /// <summary>모든 직업의 기본 능력치(기획 4.1 표). 직업 <c>stats</c> 가 키별로 덮어쓴다.</summary>
     public IReadOnlyDictionary<StatKey, float> Stats { get; init; } = new Dictionary<StatKey, float>();
     public CrowdSlowDef? CrowdSlow { get; init; }
-    /// <summary>허리띠(v0.8, 6.18 — 기획 v0.8.1 11.4). null 이면 허리띠 없음. 구현 WP3, 수는 <c>Hero.Belt</c>·짐 <c>Belt</c>.</summary>
-    public BeltRulesDef? Belt { get; init; }
+    /// <summary>
+    /// 물약 칸(v0.9.1 V9, 6.19 — v0.8 의 <c>belt</c>(저절로 마심)를 바꿈, 옛 키는 모르는 속성 오류). null 이면 물약 칸 없음(체력 물약을 줍지 않음).
+    /// 구현 WP3, 수는 <c>Hero.Potions</c>·짐 <c>Potions</c>.
+    /// </summary>
+    public PotionRulesDef? Potions { get; init; }
 }
 
 /// <summary>
-/// 허리띠(v0.8, 6.10): 체력이 최대 × <see cref="Threshold"/> 아래로 내려가는 순간 하나를 저절로 마신다(전부 회복, <see cref="Cooldown"/> 초에 한 번 — 버튼 없음).
-/// 셋 다 필수(기본값을 코드에 두지 않음).
+/// 물약 칸(v0.9.1 V9, 6.19 — 기획 11.5): <c>Q</c>(<c>CommandButtons.Drink</c>)로 하나를 마시면 최대 체력 × <see cref="HealPct"/> 를 <see cref="Durations"/>[빠른 물약 단계] 초에 걸쳐 고르게.
+/// 칸 = <see cref="Slots"/> + 물약 주머니 단계(상한 <see cref="SlotsMax"/>). 모두 필수. v0.8 의 <c>slots</c>·<c>threshold</c>·<c>cooldown</c>(저절로 마심)은 없앴다.
 /// </summary>
-public sealed record BeltRulesDef
+public sealed record PotionRulesDef
 {
-    /// <summary>허리띠 칸 수(2).</summary>
+    /// <summary>기본 칸 수(2).</summary>
     public required int Slots { get; init; }
-    /// <summary>저절로 마시는 체력 비율(0.3).</summary>
-    public required float Threshold { get; init; }
-    /// <summary>두 번 마시는 사이 최소 초(1.0).</summary>
-    public required float Cooldown { get; init; }
+    /// <summary>칸 상한(5 — 페핀 물약 주머니). <see cref="Slots"/> 이상(로딩 검사).</summary>
+    public required int SlotsMax { get; init; }
+    /// <summary>한 병 회복량 = 최대 체력 × 이 값(0.40).</summary>
+    public required float HealPct { get; init; }
+    /// <summary>빠른 물약 단계별 회복 시간(초, [3.0, 2.0, 1.2]). 길이 ≥ 1(로딩 검사).</summary>
+    public required IReadOnlyList<float> Durations { get; init; }
+    /// <summary>자동 조작이 마시는 체력 비율(0.35 — WP4).</summary>
+    public required float BotThreshold { get; init; }
+
+    /// <summary>물약 주머니 단계 <paramref name="slotsLevel"/> 의 칸 수(<see cref="SlotsMax"/> 에서 자름).</summary>
+    public int Capacity(int slotsLevel) => Math.Min(SlotsMax, Slots + Math.Max(0, slotsLevel));
+
+    /// <summary>빠른 물약 단계 <paramref name="speedLevel"/> 의 회복 시간(초 — 범위 밖이면 끝 값).</summary>
+    public float Duration(int speedLevel) => Durations.Count == 0 ? 0f : Durations[Math.Clamp(speedLevel, 0, Durations.Count - 1)];
 }
 
 public sealed record CrowdSlowDef

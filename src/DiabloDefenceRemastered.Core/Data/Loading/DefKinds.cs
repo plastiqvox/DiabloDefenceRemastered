@@ -24,6 +24,9 @@ internal static class DefKinds
         [typeof(MusicDef)] = "music",
         [typeof(HeroClassDef)] = "hero_classes",
         [typeof(RewardDef)] = "rewards",
+        [typeof(ItemBaseDef)] = "items",
+        [typeof(ItemAffixDef)] = "item_affixes",
+        [typeof(MerchantDef)] = "merchants",
     };
 
     /// <summary>배열 종류 키 → 정의 형(<c>rules</c>·<c>sound_bindings</c> 는 객체라 없다).</summary>
@@ -62,6 +65,9 @@ internal static class DefKinds
             t == typeof(MusicDef) ? defs.Music.All :
             t == typeof(HeroClassDef) ? defs.HeroClasses.All :
             t == typeof(RewardDef) ? defs.Rewards.All :
+            t == typeof(ItemBaseDef) ? defs.ItemBases.All :
+            t == typeof(ItemAffixDef) ? defs.ItemAffixes.All :
+            t == typeof(MerchantDef) ? defs.Merchants.All :
             null;
         if (all is null) return null;
         var d = new Dictionary<string, IDef>(StringComparer.Ordinal);

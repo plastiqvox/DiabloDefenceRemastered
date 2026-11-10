@@ -44,6 +44,24 @@ public enum EnemyStatKey : byte
     [JsonStringEnumMemberName("knockback_resist")] KnockbackResist,
 }
 
+/// <summary>
+/// 주인공 능력치의 출처(v0.9, 6.19 — 4.1 "능력치 키 적용 규칙" 의 합산 차례). 절댓값 키는 출처마다 더하고 <c>_pct</c> 는 같은 키끼리 더해 한 번 곱한다.
+/// <see cref="Equipment"/>(v0.9)는 끼운 장비의 기본 능력치 + 굴린 접사 + 방어구 무게 이동(<c>EquipStats.Sum</c>). 방어 상한·이동 하한은 모든 출처를 합친 <b>뒤</b> 자른다(<c>EquipStats.Clamp</c>).
+/// </summary>
+public enum StatSources : byte
+{
+    /// <summary><c>rules.hero.stats</c> 를 직업 <c>stats</c> 가 덮어쓴 값.</summary>
+    Base,
+    /// <summary>직업 특성(<c>trait</c> 패시브).</summary>
+    Traits,
+    /// <summary>패시브 칸·축복 칸.</summary>
+    Passives,
+    /// <summary>판 끝까지 가는 더하기(짐 <c>Mods</c> — <c>단련</c>·성소 대가).</summary>
+    Mods,
+    /// <summary>장비(v0.9 — 6.19).</summary>
+    Equipment,
+}
+
 public static class StatKeys
 {
     public const int Count = 16;

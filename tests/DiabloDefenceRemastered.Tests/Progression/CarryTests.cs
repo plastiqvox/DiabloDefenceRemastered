@@ -45,7 +45,7 @@ public class CarryTests
         w.Combat.Mods[(int)StatKey.Armor] = 2f;
         w.Combat.Shrines.Add(TestDefs.RewardShrineId);
         w.Combat.StatsDirty = true;
-        w.Hero.Belt = 1;
+        w.Hero.Potions = 1;
         w.Hero.WeaponSlotsOpen = 5;
         w.Hero.PassiveSlotsOpen = 5;
         t.Step();
@@ -83,7 +83,7 @@ public class CarryTests
         Assert.True(b.Hero.Passives[0].IsEmpty);
         Assert.Equal(2, b.Hero.Passives[1].Level);
         Assert.Equal((6, 7, 1), (b.Combat.Level, b.Combat.Xp, b.Combat.RerollsLeft));
-        Assert.Equal((5, 5, 1), (b.Hero.WeaponSlotsOpen, b.Hero.PassiveSlotsOpen, b.Hero.Belt));
+        Assert.Equal((5, 5, 1), (b.Hero.WeaponSlotsOpen, b.Hero.PassiveSlotsOpen, b.Hero.Potions));
         Assert.Equal(61f, b.Hero.Hp);
         Assert.Equal(a.Hero.MaxHp, b.Hero.MaxHp);
         for (var i = 0; i < StatKeys.Count; i++) Assert.Equal(a.Hero.Stats[(StatKey)i], b.Hero.Stats[(StatKey)i]);
@@ -105,7 +105,7 @@ public class CarryTests
         Assert.Throws<InvalidOperationException>(() => new HeroCarrier().Capture(w));
         w.Combat.Chests.Clear();
 
-        CombatKit.Drop(w, w.Defs.Rewards.Get(TestDefs.RewardTomeId).Object.Id, t.Hero.Pos, reward: w.Defs.Rewards.Get(TestDefs.RewardTomeId));
+        CombatKit.Drop(w, w.Defs.Rewards.Get(TestDefs.RewardTomeId).Object!.Id, t.Hero.Pos, reward: w.Defs.Rewards.Get(TestDefs.RewardTomeId));
         t.Step();
         Assert.Equal(1, w.Progression.PendingRewards);
         Assert.Throws<InvalidOperationException>(() => new HeroCarrier().Capture(w));

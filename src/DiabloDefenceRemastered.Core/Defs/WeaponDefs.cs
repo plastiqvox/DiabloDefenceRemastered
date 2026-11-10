@@ -110,8 +110,12 @@ public sealed record EvolutionDef : IDef
     public string Id => Result.Id;
 }
 
-/// <summary>획득물 종류. <see cref="Reward"/>(v0.7, JSON <c>reward</c>) = 문 보상 물체 — 몸에 닿아야 먹히고 끌어당김·수명·상한 정리 밖, 상태와 상관없이 늘 집힌다(6.9·6.18).</summary>
-public enum PickupKind : byte { Xp, Gold, Heal, Surge, Magnet, Chest, Reward }
+/// <summary>
+/// 획득물 종류. <see cref="Reward"/>(v0.7, JSON <c>reward</c>) = 문 보상 물체 — 몸에 닿아야 먹히고 끌어당김·수명·상한 정리 밖, 상태와 상관없이 늘 집힌다(6.9·6.18).
+/// v0.9.1(V9, 6.19 "물약 칸"): <see cref="PotionStack"/>(JSON <c>potion_stack</c>) = 체력 물약 — 닿으면 물약 칸에 하나 쌓인다(바로 마시지 않음). 칸이 가득이면 안 집힌다(그대로 남음).
+/// v0.8 까지의 <c>heal</c>(닿는 순간 <c>amount</c> 회복)을 바꿨다 — 6.19 의 <c>PickupEffect.PotionStack</c> 은 이 열거형 값이다(13장 WP1g 구현 기록).
+/// </summary>
+public enum PickupKind : byte { Xp, Gold, PotionStack, Surge, Magnet, Chest, Reward }
 
 /// <summary>획득물 <c>pickups[]</c> (기획 11.1). 경험치 보석은 드롭 표가 아니라 규칙(죽으면 항상 1개).</summary>
 public sealed record PickupDef : IDef
@@ -123,10 +127,16 @@ public sealed record PickupDef : IDef
     public int[]? ValueRange { get; init; }
     /// <summary>획득 반경·끌어당김 룬에 반응하는지. false 면 몸에 닿아야 먹힌다.</summary>
     public bool Magnet { get; init; }
+    /// <summary>가득이면 안 집힘(v0.9.1: <c>potion_stack</c> = 물약 칸이 가득일 때. v0.8 까지는 체력이 가득일 때).</summary>
     public bool SkipWhenFull { get; init; }
     /// <summary>효과량(회복량, 쿨 감소 비율 …).</summary>
     public float? Amount { get; init; }
     public float? Duration { get; init; }
+    /// <summary>
+    /// 바닥 그림(v0.9.1 V8 — 원작 <c>items\*</c> 떨어짐 애니 전부를 한 번 돌리고 마지막 프레임에서 멈춤, 프레임 0.05s). 가져오기 확인 전에는 null 이고 <see cref="Draw"/> 가 정식 대체.
+    /// 그리기 WP5.
+    /// </summary>
+    public IconDef? Floor { get; init; }
 }
 
 public sealed record PickupDrawDef

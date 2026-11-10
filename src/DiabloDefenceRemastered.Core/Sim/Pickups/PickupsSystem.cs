@@ -150,7 +150,7 @@ public sealed class PickupsSystem : ISimSystem
         }
     }
 
-    /// <summary>획득. 집지 않고 남으면 false(체력이 가득일 때의 체력 물약).</summary>
+    /// <summary>획득. 집지 않고 남으면 false(물약 칸이 가득일 때의 체력 물약 — v0.9.1).</summary>
     private static bool Collect(World world, Pickup p)
     {
         var hero = world.Hero;
@@ -171,9 +171,10 @@ public sealed class PickupsSystem : ISimSystem
             case PickupKind.Gold:
                 world.RunStats.Gold += (int)MathF.Round(p.Value * (1f + hero.Stats[StatKey.GoldPct]), MidpointRounding.AwayFromZero);
                 break;
-            case PickupKind.Heal:
-                if (def.SkipWhenFull && hero.Hp >= hero.MaxHp) return false;
-                hero.Hp = MathF.Min(hero.MaxHp, hero.Hp + (def.Amount ?? 0f));
+            case PickupKind.PotionStack:
+                // v0.9.1 V9: 물약 칸에 하나 쌓임(바로 마시지 않음). 칸이 가득이면 안 집힘(그대로 남음 — 6.19 "물약 칸")
+                if (HeroPotions.Full(world)) return false;
+                HeroPotions.Add(world, 1);
                 break;
             case PickupKind.Surge:
                 world.Combat.SurgeTicks = Math.Max(1, MathX.SecondsToTicks(def.Duration ?? 0f, World.Dt));

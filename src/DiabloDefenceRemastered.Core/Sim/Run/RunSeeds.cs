@@ -9,12 +9,24 @@ public static class RunSeeds
 {
     private const ulong FlowSalt = 0x464C4F575F524F4Ful;   // "FLOW_ROO"
     private const ulong RoomSalt = 0x524F4F4D5F574F52ul;   // "ROOM_WOR"
+    private const ulong ShopSalt = 0x53484F505F535443ul;   // "SHOP_STC"
 
     /// <summary>판 흐름(방 맵·들어오는 문·출구 문 수·보상 후보 — <see cref="RunPlanner"/>). <paramref name="number"/> = <c>RoomDef.Number</c>(보이는 번호, v0.7.1).</summary>
     public static ulong Flow(ulong runSeed, int act, int number) => Mix(runSeed, FlowSalt, act, number);
 
     /// <summary>방 <c>World</c> 의 <c>SimRandom</c> 씨앗.</summary>
     public static ulong Room(ulong runSeed, int act, int number) => Mix(runSeed, RoomSalt, act, number);
+
+    /// <summary>
+    /// 상인 전용 흐름(v0.9, 6.19 "물건을 정하는 때" — 계약): 방 <c>(act, number)</c> 의 다시 굴리기 <paramref name="rerolls"/> 번째, 카드 <paramref name="card"/>(0부터).
+    /// 방 난수(<see cref="Room"/> 의 <c>SimRandom</c>)를 하나도 쓰지 않아 상인 방이든 아니든 그 방의 적·드롭이 같다. 카드마다 흐름이 따로라 정의 표에 접사를 더해도 다른 칸 카드가 밀리지 않는다.
+    /// </summary>
+    public static ulong Shop(ulong runSeed, int act, int number, int rerolls, int card)
+    {
+        var x = Mix(runSeed, ShopSalt, act, number);
+        x = SplitMix64(x ^ (uint)rerolls);
+        return SplitMix64(x ^ ((ulong)(uint)card << 32));
+    }
 
     private static ulong Mix(ulong seed, ulong salt, int act, int number)
     {

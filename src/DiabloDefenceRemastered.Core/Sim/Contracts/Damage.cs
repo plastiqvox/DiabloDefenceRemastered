@@ -23,8 +23,25 @@ public enum DamageFlags : byte
 }
 
 /// <summary>
+/// 피해 요청의 원인(v0.9 WP1g — WP3 요청: 공정성 <c>hidden_hits</c>(10.1)를 "투사체 단계 전 요청" 으로 어림하던 것을 원인으로 가른다).
+/// <see cref="None"/> = 적지 않음(주인공 무기·밀어내기·옛 호출). 적 쪽 요청을 넣는 묶음(WP3·WP4)이 채운다.
+/// </summary>
+public enum DamageCause : byte
+{
+    None,
+    /// <summary>적 본체(근접·자폭·돌진 — 닿아서 맞음).</summary>
+    Body,
+    /// <summary>투사체(적 화살·마법, 폭발 포함).</summary>
+    Projectile,
+    /// <summary>장판 틱.</summary>
+    Hazard,
+    /// <summary>예고된 지연 폭발(<c>telegraphed_blast</c>).</summary>
+    Telegraph,
+}
+
+/// <summary>
 /// 피해 요청 (설계서 5.1, 계약). 근접 타격·투사체·폭발·장판 틱·레벨업 밀어내기가 모두 이것을 큐에 넣고
-/// DamageResolve(12) 한 곳이 적용한다. 다른 길은 없다.
+/// DamageResolve(12) 한 곳이 적용한다. 다른 길은 없다. v0.9: 끝 인자 <c>Cause</c>(기본 <see cref="DamageCause.None"/> — 기존 호출 그대로).
 /// </summary>
 public readonly record struct DamageRequest(
     EntityId Target,          // 적 또는 주인공(EntityId.Hero). E: 아군
@@ -35,7 +52,8 @@ public readonly record struct DamageRequest(
     float CritChance,         // 주인공 쪽: 발사 순간 복사. 적 쪽 0
     sbyte WeaponSlot,         // 주인공 무기 칸(결과 화면 합계·적별 타격 간격). 없으면 −1
     Vector2 KnockbackDir, float KnockbackDist,
-    DamageFlags Flags);       // IgnoreInvuln, FromHazard, NoDamage(밀어내기만) …
+    DamageFlags Flags,        // IgnoreInvuln, FromHazard, NoDamage(밀어내기만) …
+    DamageCause Cause = DamageCause.None);   // v0.9: 원인(공정성 hidden_hits — 적 본체만 셈)
 
 /// <summary>
 /// 피해 요청 큐(<c>World.Damage</c>). DamageResolve 가 모두 처리하고 비운다.
@@ -50,8 +68,9 @@ public sealed class DamageQueue
     public void Add(in DamageRequest request) => Requests.Add(request);
 
     /// <summary>적 → 주인공. amount 는 그 적의 최종 피해.</summary>
-    public void ToHero(EntityId attacker, float amount, Vector2 knockbackDir = default, float knockbackDist = 0f, DamageFlags flags = DamageFlags.None)
-        => Requests.Add(new DamageRequest(EntityId.Hero, attacker, Faction.Enemy, amount, 0f, 0f, -1, knockbackDir, knockbackDist, flags));
+    public void ToHero(EntityId attacker, float amount, Vector2 knockbackDir = default, float knockbackDist = 0f, DamageFlags flags = DamageFlags.None,
+                       DamageCause cause = DamageCause.None)
+        => Requests.Add(new DamageRequest(EntityId.Hero, attacker, Faction.Enemy, amount, 0f, 0f, -1, knockbackDir, knockbackDist, flags, cause));
 
     /// <summary>주인공 무기 → 적. amount 는 레벨 표 원값, damagePct·critChance 는 발사 순간 복사한 값.</summary>
     public void ToEnemy(EntityId target, float amount, float damagePct, float critChance, sbyte weaponSlot,
