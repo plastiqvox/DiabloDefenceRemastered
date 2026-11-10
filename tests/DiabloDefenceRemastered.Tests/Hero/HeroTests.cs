@@ -8,7 +8,7 @@ namespace DiabloDefenceRemastered.Tests.Heroes;
 
 /// <summary>
 /// 주인공(WP3): 실제 <c>heroes/sorcerer.json</c>·<c>passives.json</c>·<c>rules/hero.json</c> 으로 만든 마법사(쿨다운 감소 0.05 — v0.6 완료 기준),
-/// 실제 경험치 곡선, 개발 옵션 <c>--level</c>·<c>--weapons</c>·<c>--passives</c>, 그래픽 없는 시나리오(해골 50 + 매직 미사일 Lv8 60초).
+/// 실제 경험치 곡선, 개발 옵션 <c>--level</c>·<c>--weapons</c>·<c>--passives</c>, <c>HeroControl</c>(이동 의도·무리 끈적임·재생·클립), 그래픽 없는 시나리오(해골 50 + 매직 미사일 Lv8 60초).
 /// WP7 로더 전이라 실제 파일은 형만 읽고 참조는 손으로 잇는다(<see cref="RealData"/>).
 /// </summary>
 public class HeroTests
@@ -126,5 +126,40 @@ public class HeroTests
         Assert.Equal(3, levelUps);                                  // 5 + 15 + 25 = 45 ≤ 50 < 80
         Assert.Equal(4, w.Progression!.Level);
         Assert.True(w.RunStats.DamageByWeapon[0] >= 50 * 20f);
+    }
+
+    [Fact]
+    public void HeroControl_Intent_Facing_CrowdSlow_Regen_Walk()
+    {
+        var t = CombatKit.World();
+        var w = t.World;
+        CombatKit.ClearWeapons(w);
+        w.Command = new PlayerCommand(new Vector2(0f, 2f));
+        t.Step();
+        Assert.Equal(new Vector2(0f, 1f), t.Hero.Facing);
+        Assert.Equal(95f, t.Hero.MoveSpeed);
+        Assert.Equal(ClipKind.Walk, t.Hero.Anim.Clip);
+
+        t.Hero.TouchingCount = 2;
+        t.Step();
+        Assert.Equal(95f, t.Hero.MoveSpeed);
+        t.Hero.TouchingCount = 3;                                   // 닿은 적 3 이상 → ×0.6(기획 4.1)
+        t.Step();
+        Assert.Equal(95f * 0.6f, t.Hero.MoveSpeed, 3);
+
+        w.Command = PlayerCommand.None;
+        t.Hero.TouchingCount = 0;
+        t.Step();
+        Assert.Equal(ClipKind.Idle, t.Hero.Anim.Clip);
+
+        // 재생: 초당 regen 만큼, 최대 체력을 넘지 않음
+        w.Combat.Mods[(int)StatKey.Regen] = 3f;
+        w.Combat.StatsDirty = true;
+        t.Hero.Hp = 50f;
+        t.Step(60);
+        Assert.Equal(53f, t.Hero.Hp, 2);
+        t.Hero.Hp = t.Hero.MaxHp - 0.01f;
+        t.Step(10);
+        Assert.Equal(t.Hero.MaxHp, t.Hero.Hp);
     }
 }
