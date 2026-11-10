@@ -1,0 +1,7 @@
+// 버프 (설계서 6.7, 기획 4.2·8.3). 소유 WP4. 오라·함성 부품은 버프 ID 와 시간만 넘긴다.
+{
+  "buffs": [
+    { "id": "command", "stats": { "speed_pct": 0.25, "damage_pct": 0.25 }, "foot_ring": [255, 210, 90] },
+    { "id": "war_cry", "stats": { "damage_pct": 0.30 }, "foot_ring": [255, 80, 60] }
+  ]
+}
