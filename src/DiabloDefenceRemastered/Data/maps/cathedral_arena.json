@@ -8,6 +8,7 @@
   "maps": [
     {
       "id": "cathedral_arena", "tileset": "l1", "palette": "l1_1", "size": 20,
+      "room_kinds": ["normal", "boss"],                   // 액트 1 보스 방 + 단계 1 의 모든 일반 방(설계서 6.11, 기획 10.8). 정예 방에는 안 씀
       "layout": {
         "border": "arch_hall",
         "gates": [ { "id": "gate_nw", "side": "nw" }, { "id": "gate_ne", "side": "ne" },
