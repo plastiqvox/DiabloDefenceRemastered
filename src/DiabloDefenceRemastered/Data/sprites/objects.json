@@ -1,0 +1,23 @@
+// 문 보상 물체·아이콘 그림 (설계서 6.18·7.11, 기획 11.4 — 소유 WP5). 원작 물체 그림(objects\)의 가져오기가 확인될 때까지(기획 열린 질문 32)
+// 원작 DiabloDefence exe PNG 를 대체 그림으로 쓴다 — 단계 1 은 마법서·보물 상자 둘, 단계 2 에 완전 회복 물약, 단계 3 에 성소 셋.
+// 크기는 그 exe PNG 의 실제 크기(가로 = 방향 1 × 칸, 세로 = 프레임 × 칸). 색 키는 속성을 적지 않아 검정(6.3 grid 기본값).
+// 물체 정의(pickups.json 의 obj_*)·보상 정의(rewards.json)는 WP3 가 이 ID 를 가리킨다. 음산한 성소의 어두운 색조(0.6)는 그 물체·아이콘 쪽 tint 다(그림 정의에는 색조 칸이 없다).
+{
+  "sprites": [
+    // 방 안 물체(발 = 칸 아래쪽 가운데). Gold·HealingPotion 은 원작 exe 의 떨어진 금화·물약 반복 그림(칸 96×160)
+    { "id": "obj_tome",        "source": "grid", "file": "MagicMissileICon.png", "sheet": [48, 48],    "frame": [48, 48],  "origin": [24, 44] },
+    { "id": "obj_chest",       "source": "grid", "file": "Gold.png",             "sheet": [96, 1600],  "frame": [96, 160], "frames": 10, "origin": [48, 150] },
+    { "id": "obj_potion",      "source": "grid", "file": "HealingPotion.png",    "sheet": [96, 2560],  "frame": [96, 160], "frames": 16, "origin": [48, 150] },
+    { "id": "obj_shrine",      "source": "grid", "file": "IncHealth.png",        "sheet": [48, 48],    "frame": [48, 48],  "origin": [24, 44] },
+    { "id": "obj_shrine_red",  "source": "grid", "file": "IncMana.png",          "sheet": [48, 48],    "frame": [48, 48],  "origin": [24, 44] },
+    { "id": "obj_shrine_dark", "source": "grid", "file": "RegenMana.png",        "sheet": [48, 48],    "frame": [48, 48],  "origin": [24, 44] },
+
+    // 문 위 아이콘(48px — 7.11)·HUD 방 줄. 28px 아이콘은 그리는 쪽이 48 칸에 늘린다
+    { "id": "obj_book_icon",        "source": "grid", "file": "MagicMissileICon.png", "sheet": [48, 48], "frame": [48, 48], "origin": [24, 24] },
+    { "id": "obj_chest_icon",       "source": "grid", "file": "GoldIcon.png",         "sheet": [28, 28], "frame": [28, 28], "origin": [14, 14] },
+    { "id": "obj_potion_icon",      "source": "grid", "file": "HealingPotionIcon.png", "sheet": [28, 28], "frame": [28, 28], "origin": [14, 14] },
+    { "id": "obj_shrine_icon",      "source": "grid", "file": "IncHealth.png",        "sheet": [48, 48], "frame": [48, 48], "origin": [24, 24] },
+    { "id": "obj_shrine_red_icon",  "source": "grid", "file": "IncMana.png",          "sheet": [48, 48], "frame": [48, 48], "origin": [24, 24] },
+    { "id": "obj_shrine_dark_icon", "source": "grid", "file": "RegenMana.png",        "sheet": [48, 48], "frame": [48, 48], "origin": [24, 24] }
+  ]
+}
