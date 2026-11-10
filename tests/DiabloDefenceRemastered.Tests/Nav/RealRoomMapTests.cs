@@ -1,3 +1,5 @@
+using DiabloDefenceRemastered.Core.Data.Loading;
+using DiabloDefenceRemastered.Core.Modules;
 using DiabloDefenceRemastered.Core.Nav;
 using DiabloDefenceRemastered.Core.Nav.Validation;
 using DiabloDefenceRemastered.Tests.Data;
@@ -40,6 +42,23 @@ public class RealRoomMapTests
     {
         var map = Get(id);
         return (map, new NavWorld(ArenaLayout.Expand(map), default), ResolvedMap.Resolve(map).HeroStart);
+    }
+
+    [Fact]
+    public void ActOne_PoolHasAtLeastFiveSmallRooms_AllMirrored_BossArenaKept()
+    {
+        Assert.True(RealData.Maps.Errors.Count == 0, string.Join("\n", RealData.Maps.Errors));
+        var rooms = SmallRooms().Where(m => m.Id.StartsWith("cathedral_room_", StringComparison.Ordinal)).ToList();
+        Assert.True(rooms.Count >= 5, $"대성당 작은 방 {rooms.Count}장");
+        foreach (var m in rooms) Assert.True(m.Mirrored is not null, $"{m.Id} 거울판 없음");
+
+        // 액트 1 일반 방 풀 = 작은 방 전부(기획 v0.9 V2), 보스 방 맵은 cathedral_arena 그대로
+        var ctx = GameModules.CreateContext();
+        var data = DataLoader.Load(RealData.Dir, ctx.Parts, ctx.Validators);
+        Assert.False(data.HasErrors, string.Join("\n", data.Errors));
+        var pool = data.Defs.Stages.Get("stage_cathedral").RoomMaps;
+        Assert.Equal(rooms.Select(m => m.Id), pool.Normal.Select(m => m.Id).Order(StringComparer.Ordinal));
+        Assert.Equal("cathedral_arena", pool.Boss?.Id);
     }
 
     [Theory, MemberData(nameof(MapIds))]
