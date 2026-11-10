@@ -12,7 +12,7 @@ namespace DiabloDefenceRemastered;
 /// <summary>
 /// 합성 뿌리 (소유 WP7, 설계서 2.1). GameModules·Scenes/SceneFactory·Rendering/RenderServices·Audio/AudioServices 만 부른다.
 /// 시작 판정(데이터·저장·자원·옵션)은 창을 띄우기 전 <see cref="Boot"/> 가 끝냈고, 여기서는 창·그래픽 장치·씬 스택·프레임 루프·개발 실행 감독을 잇는다.
-/// MonoGame 설정(3.2·7.1): <c>IsFixedTimeStep = false</c>(고정 틱은 누적기가), vsync 는 <c>--vsync</c>, <see cref="GraphicsProfile.HiDef"/>(4096 폭 아틀라스·550×3240 LOGO).
+/// 창·장치 설정은 <see cref="WindowControl"/>(HiDef·고정 틱 끔·vsync·크기·배경 실행).
 /// 다른 묶음 본문이 아직 없으면(<see cref="NotImplementedException"/>) 빈 씬 <see cref="BlankScene"/> 과 <see cref="ShellRenderContext"/> 로 뜬다 — 앱 셸을 홀로 확인하는 길.
 /// </summary>
 public sealed class GameApp : Game
@@ -27,6 +27,7 @@ public sealed class GameApp : Game
     private DevRunner? _runner;
     private RenderContext? _render;
     private bool _quitting;
+    private PerfLog? _perf;
 
     public GameApp(AppServices app, DevOptions options, StartScreen screen)
     {
@@ -35,21 +36,8 @@ public sealed class GameApp : Game
         _screen = screen;
         _exitCodeAtQuit = screen == StartScreen.AssetGuide ? ExitCodes.MissingAssets : null;
 
-        _graphics = new GraphicsDeviceManager(this)
-        {
-            GraphicsProfile = GraphicsProfile.HiDef,
-            SynchronizeWithVerticalRetrace = app.Options.Vsync,
-        };
-        var size = app.Options.Window ?? new Point(DevOptions.DefaultDevWindow.Width, DevOptions.DefaultDevWindow.Height);
-        _graphics.PreferredBackBufferWidth = size.X;
-        _graphics.PreferredBackBufferHeight = size.Y;
-        if (!app.Options.DevRun) _graphics.IsFullScreen = app.Save.Settings.Fullscreen;
-
-        IsFixedTimeStep = false;
-        IsMouseVisible = true;
-        Window.Title = "Diablo Defence Remastered";
-        // --background·--autoplay: 비활성이어도 멈추지 않는다(창을 앞으로 끌어오지 않는 것은 Program 의 SDL 환경 변수)
-        if (app.Options.Background) InactiveSleepTime = TimeSpan.Zero;
+        _graphics = WindowControl.Apply(this, app.Options, app.Save.Settings);
+        if (options.LogTicks is { } csv) _perf = new PerfLog(csv);
     }
 
     /// <summary>끝 종료 코드(Run 이 돌아온 뒤 Program 이 읽는다). 창을 사람이 닫으면 0(안내 화면이면 5).</summary>
@@ -113,7 +101,9 @@ public sealed class GameApp : Game
         var capturing = _runner?.Capturing ?? false;
         _render.AppTick = _loop.Now;
         _render.Capturing = capturing;
+        _perf?.BeginDraw();
         _stack.Draw(_render, capturing ? 1f : _loop.Accumulator.Alpha);
+        _perf?.EndDraw(_loop.Now.Value, _loop.Accumulator.DroppedTicks, (int)GraphicsDevice.Metrics.DrawCount);
         _runner?.AfterDraw(GraphicsDevice);
         base.Draw(gameTime);
         if (_runner?.QuitRequested is { } code) Quit(code);
@@ -126,12 +116,17 @@ public sealed class GameApp : Game
         ExitCode = code;
         _app.Log.Info(string.Create(CultureInfo.InvariantCulture,
             $"FRAMES app_tick={_loop?.Now.Value ?? 0} dropped_ticks={_loop?.Accumulator.DroppedTicks ?? 0}"));
+        if (_perf is not null) _app.Log.Info(_perf.Profiler.Summary());
         Exit();
     }
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing) _runner?.Dispose();
+        if (disposing)
+        {
+            _runner?.Dispose();
+            _perf?.Dispose();
+        }
         base.Dispose(disposing);
     }
 }

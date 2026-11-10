@@ -36,9 +36,7 @@ public static class Program
             var boot = Boot.Prepare(o, args, log);
             if (boot.ExitCode is { } early) return early;
 
-            // 창을 만들기 전에(SDL·OpenAL 은 환경 변수를 장치를 열 때 읽는다 — P/Invoke 없음, 9절·7.9)
-            if (o.EffectiveBackground) Environment.SetEnvironmentVariable("SDL_WINDOW_NO_ACTIVATION_WHEN_SHOWN", "1");
-            if (o.NullAudioDevice) Environment.SetEnvironmentVariable("ALSOFT_DRIVERS", "null");
+            WindowControl.BeforeCreate(o);   // 창을 만들기 전에(SDL·OpenAL 은 장치를 열 때 환경 변수를 읽는다)
             return RunGame(boot, o, log);
         }
         catch (Exception e)
@@ -69,10 +67,9 @@ public static class Program
         {
             app = new GameApp(boot.Services!, o, boot.Screen);
         }
-        catch (Exception e) when (Environment.GetEnvironmentVariable("ALSOFT_DRIVERS") is null)
+        catch (Exception e) when (WindowControl.FallBackToNullAudio())
         {
             log.Warn("SHELL 장치 초기화 실패 — ALSOFT_DRIVERS=null 로 다시 만든다: " + e.Message);
-            Environment.SetEnvironmentVariable("ALSOFT_DRIVERS", "null");
             log.Info("AUDIO device=\"No Output\" fallback=1");
             app = new GameApp(boot.Services!, o, boot.Screen);
         }
