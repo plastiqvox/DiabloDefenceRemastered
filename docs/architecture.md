@@ -2163,7 +2163,7 @@ public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public
 {
   "rules": {
     "hero": { "class": "sorcerer", "invuln_after_hit": 0.25,                        // v0.6: 그림·반경·시작 무기는 직업 정의로(6.16)
-              "stats": { "max_hp": 100, "move_speed": 95, "armor": 0, "regen": 0, "pickup_radius": 60 },   // 모든 직업의 기본값(기획 4.1 = 마법사 값)
+              "stats": { "max_hp": 100, "move_speed": 95, "armor": 0, "regen": 0, "pickup_radius": 80 },   // 모든 직업의 기본값(기획 4.1 = 마법사 값, v0.9 — 60 에서)
               "crowd_slow": { "touching": 3, "mul": 0.6 },
               "belt": { "slots": 2, "threshold": 0.3, "cooldown": 1.0 } },                  // v0.8 허리띠(기획 v0.8.1 11.4): 체력 < 최대 × threshold 인 순간 하나를 저절로(전부 회복), cooldown 초에 한 번
     "xp_curve": [ { "from": 1, "to": 1, "base": 5, "per": 0 },
@@ -5868,7 +5868,10 @@ WP6(화면·UI·입력 — 11.1 WP6) 코드가 문서와 다르게 또는 더 �
 ### WP1g 구현 기록
 
 WP1g(11.1 — 계약 갱신 v0.9·v0.9.1 + 단계 1 이 쌓은 요청, 형과 순수 로직 구현까지) 코드가 문서와 다르게 또는 더 정한 것. 코드가 정본이다(11.4 와 같은 규칙). 커밋은 `git log --grep WP1g`.
-사용자 결정(2026-11-11, 기획 v0.9.2 열린 질문 50~53 답)을 그대로 받았다: 물약 키 `Q`(계약은 `CommandButtons.Drink` — 키 연결은 WP6), 물약 양 첫 값(`rules.hero.potions`·드롭 표는 손대지 않음), 방어 상한 15, 지팡이 + 방패 함께(`t`).
+사용자 결정(2026-11-11, 기획 v0.9.2 열린 질문 50~53 답)을 그대로 받았다: 물약 키 `Q`(계약은 `CommandButtons.Drink` — 키 연결은 WP6), 물약 양 첫 값(`rules.hero.potions` 만 — 드롭 표는 손대지 않았고 아래 "단계 2 묶음에 넘길 것" WP3 에 값을 적었다), 방어 상한 15, 지팡이 + 방패 함께(`t`). 기본 획득 반경 `pickup_radius` 첫 값 80(#3, 기획 4.1)은 `rules/hero.json` 에 넣었다.
+
+> **단계 1 판이 바뀐다(WP1g 를 단계 2 보다 먼저 main 에 합친 판)**: 체력 물약(`healing_potion`)이 닿으면 +30 이 아니라 물약 칸에 쌓이는데, 마시기(`Drink`·`Q`·자동 조작의 마시기)는 WP3·WP6·WP4 몫이라 아직 없다. 그래서 단계 2 가 합쳐지기 전까지 사람·자동 조작 모두 **물약으로 회복하지 못한다.**
+> 회복 문도 액트 가중표에 없어(WP4) 이 판의 회복 수단은 레벨업 선택지·패시브뿐이다. 이 판의 플레이 체감·자동 조작 기록(사망·`hp_in`)을 밸런스 판단에 쓰지 않는다.
 
 **이름·모양**
 
@@ -5915,6 +5918,7 @@ WP1g(11.1 — 계약 갱신 v0.9·v0.9.1 + 단계 1 이 쌓은 요청, 형과 �
 **단계 2 묶음에 넘길 것**
 - WP3: `Drink` 명령(창·회복 중·물약 0·체력 가득이면 `PotionDenied`) → `Hero.Heal = HealOverTime.Start(MaxHp × heal_pct, round(Duration(PotionSpeedLevel) × 60))`·`RunStats.PotionsDrunk++`, `HeroSystem` 차례에서 `Heal.Step()`(최대에서 자름), 방 사이 회복은 `Effects` 로 넘기고 `Validate` 에 그 ID.
   장비 능력치를 `HeroStats.Recompute` 에 `EquipStats.Add` → 모든 출처 합 뒤 `EquipStats.Clamp`, 최대 체력 바뀜은 `EquipStats.RebaseHp`. `IShop` 구현(`World.ShopService`)·상인에 닿으면 `Open`·`CueKind.Shop*`, 지갑 `Hero.Gold`(금화 줍기도 지갑에 — 지금은 `RunStats.Gold` 만 늘어남), 보물 상자 두 단계(`RewardStage`·`RewardChosen`·`ChestDrop`)·`RewardOsd`, `rewards.json` 상자 `potions: 1`, `HeroCarrier` 의 만렙 순번 다듬기, `LevelUpOffer.Reward` 채우기.
+  드롭 표 `Data/drop_tables.json` 을 기획 v0.9.2 값으로(마시기 본문과 함께 — 지금은 v0.8 값): 체력 물약 `dt_elite` 0.25 → **0.10**, `dt_unique` **0.30** 더함, `dt_miniboss` **1.0**(1개 확정) 더함, `dt_common` 0.003 은 그대로(기획 11.1·11.5, 열린 질문 51 답). 금화 `dt_common` 0.03·[1,5] → **0.10·[3,7]**, 액트 보스 금화 **100**(기획 11.7 금화 경제 — 지갑 `Hero.Gold` 와 함께).
 - WP4: `stages/` 가중표에 회복 문·상인 셋(기획 11.4 가중 15·8·8·6), 자동 조작의 물약(`bot_threshold`)·상인 창(기획 12.8)·회복 문 우선순위, `RunPlanner` ① 덱 순서(33-6), `DamageRequest.Cause` 를 적 쪽 요청에 채움(WP3 의 `hidden_hits` 셈이 원인으로), `InvulnUntilTick` 은 이제 공통 조각.
 - WP5: 상인(`Room.Shop` — `RewardSpot` 자리, 코드 그림 대체)·회복 문 아이콘·둘레 아이콘·겉모습 아홉 벌(`HeroLook.Key` → `HeroClassDef.Looks`, 없으면 `Look`)·바닥 그림(`PickupDef.Floor`·`ItemBaseDef.Floor`)·물약 칸·체력 구슬.
 - WP6: `Q` → `CommandButtons.Drink`(한 번만 — 첫 틱), 상인 창(`ShopState` — `Choice1~3`·`Reroll`·`Skip`, `RingPending`), HUD 물약 칸·장비 줄·지갑, `IAppSignals`·`AppServices.Content` 로 옮기기(`GameFlow` 우회 정리), 결과 화면 `쓴 금화`.
