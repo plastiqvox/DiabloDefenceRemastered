@@ -67,33 +67,37 @@ public class RoomDefsTests
         Assert.Throws<JsonException>(() => TestJson.Read<StageDef>(json));
     }
 
-    // v0.8(WP1f) — 6.18 새 보상 넷. v0.7 의 level_up·full_heal·blessing_cards·skip.gold·gold·skip_when_hp_at_least 는 오류
+    // v0.8(WP1f) → v0.9(WP1g) — 6.18·6.19 보상 다섯 종류. v0.7 의 level_up·full_heal·blessing_cards·skip.gold·gold·skip_when_hp_at_least, v0.8 의 belt_potions 는 오류
     private const string RewardsJson = """
         [ { "id": "reward_tome",   "name": "마법서",         "kind": "weapon_cards",  "object": "obj_tome",   "icon": { "sprite": "obj_book_icon" },
             "cards": { "owned_weapon": 100, "new_weapon": 100 }, "skip": { "heal": 10 } },
           { "id": "reward_chest",  "name": "보물 상자",      "kind": "weapon_bundle", "object": "obj_chest",  "icon": { "sprite": "obj_chest_icon" },
-            "bundle": { "weapon_levels": 1, "belt_potions": 1, "gold": [30, 60] } },
-          { "id": "reward_potion", "name": "완전 회복 물약", "kind": "belt_potions",  "object": "obj_potion", "icon": { "sprite": "obj_potion_icon" }, "belt_potions": 2 },
+            "bundle": { "weapon_levels": 1, "potions": 1, "gold": [30, 60] }, "drop": "pk_book" },
+          { "id": "reward_potion", "name": "회복", "kind": "heal_next_room", "icon": { "sprite": "obj_potion_icon" } },
           { "id": "shrine_enchanted",   "name": "마법에 걸린 성소", "kind": "shrine", "object": "obj_shrine",
             "shrine": { "all_weapons": 1, "random_weapon": -1 } },
           { "id": "shrine_fascinating", "name": "매혹의 성소",     "kind": "shrine", "object": "obj_shrine_red",
             "shrine": { "pick_weapon": 2, "pick_max_level": 7, "stats": { "max_hp_pct": -0.10 } } },
           { "id": "shrine_gloomy",      "name": "음산한 성소",     "kind": "shrine", "object": "obj_shrine_dark",
-            "shrine": { "stats": { "armor": 2, "damage_pct": -0.05 } } } ]
+            "shrine": { "stats": { "armor": 2, "damage_pct": -0.05 } } },
+          { "id": "reward_smith", "name": "그리스월드", "kind": "merchant", "merchant": "smith" } ]
         """;
 
     [Fact]
-    public void Rewards_ReadV08Kinds()
+    public void Rewards_ReadV09Kinds()
     {
         var r = TestJson.Read<RewardDef[]>(RewardsJson);
-        Assert.Equal([RewardKind.WeaponCards, RewardKind.WeaponBundle, RewardKind.BeltPotions, RewardKind.Shrine, RewardKind.Shrine, RewardKind.Shrine],
+        Assert.Equal([RewardKind.WeaponCards, RewardKind.WeaponBundle, RewardKind.HealNextRoom, RewardKind.Shrine, RewardKind.Shrine, RewardKind.Shrine, RewardKind.Merchant],
                      r.Select(x => x.Kind));
         Assert.Equal(100f, r[0].Cards!.NewWeapon);
         Assert.Equal(10f, r[0].Skip!.Heal);
         Assert.Equal(1, r[1].Bundle!.WeaponLevels);
-        Assert.Equal(1, r[1].Bundle!.BeltPotions);
+        Assert.Equal(1, r[1].Bundle!.Potions);
+        Assert.Equal("pk_book", r[1].Drop!.Id);
         Assert.Equal([30, 60], r[1].Bundle!.Gold!);
-        Assert.Equal(2, r[2].BeltPotions);
+        Assert.Null(r[2].Object);   // 회복 문 — 방 안 물체 없음(v0.9)
+        Assert.Equal("smith", r[6].Merchant!.Id);
+        Assert.Null(r[6].Object);
         Assert.Equal("obj_potion_icon", r[2].Icon!.Sprite.Id);
         Assert.Equal((1, -1), (r[3].Shrine!.AllWeapons, r[3].Shrine!.RandomWeapon));
         Assert.Equal((2, 7), (r[4].Shrine!.PickWeapon, r[4].Shrine!.PickMaxLevel));
@@ -111,7 +115,10 @@ public class RoomDefsTests
     [InlineData("""{ "id": "x", "kind": "blessing_cards", "object": "o" }""")]
     [InlineData("""{ "id": "x", "kind": "weapon_cards", "object": "o", "skip": { "gold": 25 } }""")]       // 모르는 속성
     [InlineData("""{ "id": "x", "kind": "weapon_bundle", "object": "o", "gold": [30, 60] }""")]
-    [InlineData("""{ "id": "x", "kind": "belt_potions", "object": "o", "skip_when_hp_at_least": 0.7 }""")]
+    [InlineData("""{ "id": "x", "kind": "weapon_cards", "object": "o", "skip_when_hp_at_least": 0.7 }""")]
+    [InlineData("""{ "id": "x", "kind": "belt_potions", "object": "o" }""")]                              // v0.9: 모르는 값
+    [InlineData("""{ "id": "x", "kind": "heal_next_room", "belt_potions": 2 }""")]                         // v0.9: 모르는 속성
+    [InlineData("""{ "id": "x", "kind": "weapon_bundle", "object": "o", "bundle": { "belt_potions": 1 } }""")]
     public void Rewards_OldV07Shape_Throws(string json)
     {
         Assert.Throws<JsonException>(() => TestJson.Read<RewardDef>(json));
@@ -125,7 +132,10 @@ public class RoomDefsTests
           "area_scale": { "reference": "cathedral_arena", "min": 0.6, "max": 1.0 },
           "reward_spot": { "distance": 100, "spacing": 40, "clearance": 30 }, "fallback_reward": "reward_chest",
           "stairs": { "weapon_slots": 1, "passive_slots": 1 },
-          "autoplay_door_skip": 20 }
+          "autoplay_door_skip": 20,
+          "rewards": { "heal_skip_at_least": 0.75, "heal_guarantee_below": 0.40, "heal_low_hp": 0.50, "heal_low_hp_weight": 30,
+                       "merchant_first_room": 3, "merchant_per_act": 2, "merchant_guarantee_room": [4, 5], "merchant_met_other": 1.5,
+                       "healer_boost": 1.5, "healer_boost_below": 0.50 } }
         """;
 
     [Fact]
@@ -146,6 +156,9 @@ public class RoomDefsTests
         Assert.Equal((1, 1), (r.Stairs.WeaponSlots, r.Stairs.PassiveSlots));
         Assert.Equal("reward_chest", r.FallbackReward.Id);
         Assert.Equal(20f, r.AutoplayDoorSkip);
+        Assert.Equal((0.75f, 0.40f, 30f), (r.Rewards.HealSkipAtLeast, r.Rewards.HealGuaranteeBelow, r.Rewards.HealLowHpWeight));   // v0.9
+        Assert.Equal([4, 5], r.Rewards.MerchantGuaranteeRoom);
+        Assert.Equal((3, 2, 1.5f), (r.Rewards.MerchantFirstRoom, r.Rewards.MerchantPerAct, r.Rewards.HealerBoost));
     }
 
     [Theory]
@@ -157,6 +170,8 @@ public class RoomDefsTests
     [InlineData("\"stairs\": { \"weapon_slots\": 1, \"passive_slots\": 1 },")]
     [InlineData(", \"transition_floor\": 1.0")]
     [InlineData("\"clearance\": 30")]
+    [InlineData("\"heal_skip_at_least\": 0.75, ")]   // v0.9 rules.rooms.rewards — 모두 필수
+    [InlineData("\"merchant_guarantee_room\": [4, 5], ")]
     public void RoomRules_MissingKey_Throws(string key)
     {
         var json = RoomRulesJson.Replace(key, "");

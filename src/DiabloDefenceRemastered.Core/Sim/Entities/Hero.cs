@@ -87,6 +87,26 @@ public struct BlessingSlots
 }
 
 /// <summary>
+/// 서서히 회복 하나(v0.9.1 V9, 6.19 "물약 칸"): 남은 틱과 남은 양. 틱마다 <c>남은 양 / 남은 틱</c>(마지막 틱에 나머지 전부 — 합이 정확히 처음 양).
+/// </summary>
+public readonly record struct HealOverTime(int TicksLeft, float Remaining)
+{
+    public bool Active => TicksLeft > 0 && Remaining > 0f;
+
+    /// <summary><paramref name="ticks"/> 틱 동안 <paramref name="total"/> 을 고르게(틱 ≥ 1).</summary>
+    public static HealOverTime Start(float total, int ticks) => new(Math.Max(1, ticks), MathF.Max(0f, total));
+
+    /// <summary>한 틱: 이번 틱에 채울 양과 다음 상태.</summary>
+    public (float Amount, HealOverTime Next) Step()
+    {
+        if (!Active) return (0f, default);
+        if (TicksLeft == 1) return (Remaining, default);
+        var amount = Remaining / TicksLeft;
+        return (amount, new HealOverTime(TicksLeft - 1, Remaining - amount));
+    }
+}
+
+/// <summary>
 /// 주인공 — 공통 조각 (WP1, 설계서 11.2). 저장소에 없고 핸들은 <see cref="EntityId.Hero"/>.
 /// 재생·무기 내부 상태는 <c>Sim/Hero/Hero.Combat.cs</c>(WP3, <see cref="ResetCombat"/>).
 /// </summary>
@@ -128,8 +148,28 @@ public sealed partial class Hero
     public int WeaponSlotsOpen;
     /// <summary>열린 패시브 칸 수(v0.8 — <see cref="WeaponSlotsOpen"/> 과 같은 규칙).</summary>
     public int PassiveSlotsOpen;
-    /// <summary>허리띠 물약 수(v0.8, 0..<c>rules.hero.belt.slots</c> — 쓰기 WP3, 읽기 WP6 HUD·WP4 문 우선순위·WP7 해시). 짐 <c>Belt</c> 로 방·액트 사이에 이어진다.</summary>
-    public int Belt;
+    /// <summary>
+    /// 물약 칸의 체력 물약 수(v0.9.1 V9, 6.19 — v0.8 의 <c>Belt</c> 를 바꿈. 0..<c>rules.hero.potions.Capacity(PotionSlotsLevel)</c>).
+    /// 쓰기 WP3(줍기·마시기·페핀), 읽기 WP6 HUD(<c>2/3</c>)·WP4 자동 조작·문 보상 뽑기(<c>RewardDraw</c> — 페핀 가중)·WP7 해시. 짐 <c>Potions</c> 로 방·액트 사이에 이어진다.
+    /// </summary>
+    public int Potions;
+    /// <summary>물약 주머니 단계(v0.9.1 V11 — 칸 = <c>slots</c> + 이 값, 상한 <c>slots_max</c>). 쓰기 WP3(페핀), 짐 <c>PotionSlotsLevel</c>.</summary>
+    public int PotionSlotsLevel;
+    /// <summary>빠른 물약 단계(v0.9.1 V11 — <c>rules.hero.potions.durations</c> 번호). 쓰기 WP3(페핀), 짐 <c>PotionSpeedLevel</c>.</summary>
+    public int PotionSpeedLevel;
+    /// <summary>
+    /// 마시는 중인 서서히 회복(v0.9.1 V9, 6.19 — 비었으면 <c>default</c>). 쓰기 WP3(<c>Drink</c> 명령·<c>HeroSystem</c> 차례에서 틱마다 <see cref="HealOverTime.Step"/>),
+    /// 읽기 WP6(HUD 구슬 위 옅은 띠 = <see cref="HealOverTime.Remaining"/>)·<c>RunSession.Suspend</c>(계단 저장 때 남은 회복을 바로 채움 — 짐에 넣지 않음)·WP7 해시.
+    /// 판 시간이 멈추면(창·넘김) 틱이 돌지 않으므로 같이 멈춘다. 피해로 끊기지 않는다.
+    /// </summary>
+    public HealOverTime Heal;
+    /// <summary>판 안 지갑(v0.9 V3, 6.19 — 상인에게 쓸 금화). 쓰기 WP3(금화 줍기·상자·상인), 읽기 WP6(HUD 금화·상인 창)·WP7 해시. 짐 <c>Gold</c>. 얻은 금화 누적은 <c>RunStats.Gold</c>.</summary>
+    public int Gold;
+    /// <summary>
+    /// 장비 칸 여섯(v0.9 V4, 6.19 — <see cref="EquipSlot"/> 번호, 빈 칸 null). 쓰기 WP3(상인 <c>Buy</c>·짐 <c>Restore</c>), 읽기 WP3(<c>EquipStats</c>)·WP5(<c>HeroLook.Key</c>)·WP6(HUD 장비 줄·상인 카드 견주기)·WP7 해시.
+    /// 짐 <c>Equipment</c>(빈 칸은 담지 않음)로 방·액트 사이에 이어진다.
+    /// </summary>
+    public EquipItem?[] Equipment { get; } = new EquipItem?[EquipSlots.Count];
 
     // 쓰기 WP2 / 읽기 WP3
     /// <summary>몸이 닿은 적 수(3 이상이면 다음 틱 이동 ×0.6).</summary>
@@ -153,7 +193,10 @@ public sealed partial class Hero
         for (var i = 0; i < PassiveSlots.SlotCount; i++) Passives[i] = default;
         for (var i = 0; i < BlessingSlots.SlotCount; i++) Blessings[i] = default;
         WeaponSlotsOpen = PassiveSlotsOpen = 0;   // 규칙을 받지 않는다 — 주인공 만들기(WP3)가 RunSlots.OpenAt 로, 짐 Restore 가 덮는다
-        Belt = 0;
+        Potions = PotionSlotsLevel = PotionSpeedLevel = 0;
+        Heal = default;
+        Gold = 0;
+        Array.Clear(Equipment);
         TouchingCount = 0;
         ResetCombat();
     }

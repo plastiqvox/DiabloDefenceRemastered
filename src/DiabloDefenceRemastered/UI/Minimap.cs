@@ -164,7 +164,8 @@ public sealed class Minimap(AppServices app) : IWorldBound
     {
         RewardKind.WeaponCards => Theme.WeaponBand,
         RewardKind.WeaponBundle => Theme.Gold,
-        RewardKind.BeltPotions => Theme.Red,
+        RewardKind.HealNextRoom => Theme.Red,
+        RewardKind.Merchant => Theme.Gold,   // v0.9: 상인 색은 WP6 이 고름
         RewardKind.Shrine => Theme.PassiveBand,
         _ => Theme.Grey,
     };

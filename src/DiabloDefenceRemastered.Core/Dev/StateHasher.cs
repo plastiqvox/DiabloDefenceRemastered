@@ -29,7 +29,7 @@ public static class StateHasher
 
         var hero = world.Hero;
         h.V2(hero.Pos); h.V2(hero.Vel); h.F(hero.Hp); h.F(hero.MaxHp); h.Bool(hero.Dead);
-        h.Int(hero.WeaponSlotsOpen); h.Int(hero.PassiveSlotsOpen); h.Int(hero.Belt);
+        h.Int(hero.WeaponSlotsOpen); h.Int(hero.PassiveSlotsOpen); h.Int(hero.Potions);   // v0.9.1: 허리띠 → 물약 칸(장비·지갑·회복 중 열은 WP7)
         for (var i = 0; i < WeaponSlots.SlotCount; i++)
         {
             var w = hero.Weapons[i];

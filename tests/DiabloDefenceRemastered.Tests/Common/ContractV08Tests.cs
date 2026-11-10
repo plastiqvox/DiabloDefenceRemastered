@@ -13,26 +13,26 @@ public class ContractV08Tests
     // ── 6.10 rules.hero / level_up ─────────────────────────────────────
 
     [Fact]
-    public void HeroBelt_Temper_FillerStats_MaxHpPct()
+    public void HeroPotions_Temper_FillerStats_MaxHpPct()
     {
         var r = TestJson.Read<RulesDef>("""
             { "hero": { "class": "sorcerer", "stats": { "max_hp": 100, "max_hp_pct": 0 },
-                        "belt": { "slots": 2, "threshold": 0.3, "cooldown": 1.0 } },
+                        "potions": { "slots": 2, "slots_max": 5, "heal_pct": 0.4, "durations": [3.0, 2.0, 1.2], "bot_threshold": 0.35 } },
               "level_up": { "weapon_slots": 4, "passive_slots": 4,
                             "fillers": [ { "id": "filler_potion", "name": "체력 물약", "heal": 30 },
                                          { "id": "filler_temper", "name": "단련", "heal": 5, "stats": { "max_hp": 5 } } ],
                             "temper": "filler_temper" } }
             """);
-        Assert.Equal((2, 0.3f, 1.0f), (r.Hero!.Belt!.Slots, r.Hero.Belt.Threshold, r.Hero.Belt.Cooldown));
+        Assert.Equal((2, 5, 0.4f, 3), (r.Hero!.Potions!.Slots, r.Hero.Potions.SlotsMax, r.Hero.Potions.HealPct, r.Hero.Potions.Durations.Count));   // v0.9.1: 허리띠 → 물약 칸(WP1g)
         Assert.Equal("filler_temper", r.LevelUp!.Temper);
         Assert.Equal(5f, r.LevelUp.Fillers[1].Stats[StatKey.MaxHp]);
         Assert.Empty(r.LevelUp.Fillers[0].Stats);
         Assert.True(r.Hero.Stats.ContainsKey(StatKey.MaxHpPct));
         Assert.Equal("max_hp_pct", StatKeys.JsonName(StatKey.MaxHpPct));
         Assert.True(StatKeys.TryParse("max_hp_pct", out StatKey k) && k == StatKey.MaxHpPct);
-        Assert.Null(TestJson.Read<HeroRulesDef>("""{ "class": "x" }""").Belt);   // 없으면 허리띠 없음
+        Assert.Null(TestJson.Read<HeroRulesDef>("""{ "class": "x" }""").Potions);   // 없으면 물약 칸 없음
 
-        Assert.Throws<JsonException>(() => TestJson.Read<BeltRulesDef>("""{ "slots": 2, "threshold": 0.3 }"""));   // 셋 다 필수
+        Assert.Throws<JsonException>(() => TestJson.Read<HeroRulesDef>("""{ "class": "x", "belt": { "slots": 2, "threshold": 0.3, "cooldown": 1 } }"""));   // v0.9.1: 옛 belt → 모르는 속성
         Assert.Throws<JsonException>(() => TestJson.Read<FillerCardDef>("""{ "id": "filler_gold", "gold": 25 }"""));  // v0.8: gold 없앰
     }
 
@@ -72,7 +72,7 @@ public class ContractV08Tests
     [Fact]
     public void Upscale_ReadsStrictly_NineTables()
     {
-        Assert.Equal(9, ImportTable.FileNames.Count);
+        Assert.Equal(13, ImportTable.FileNames.Count);   // v0.9 WP1g: + ctrlpan·items·inv·towners
         Assert.Contains("upscale.json", ImportTable.FileNames);
         var r = ImportTable.Read(Tables());
         Assert.Empty(r.Errors);
@@ -207,14 +207,14 @@ public class ContractV08Tests
     [Fact]
     public void NewEnumValues_AndMembers()
     {
-        Assert.True(Enum.IsDefined(CueKind.BeltPotion));
+        Assert.False(Enum.GetNames<CueKind>().Contains("BeltPotion"));   // v0.9.1 WP1g 에 없앰(PotionDrink)
         Assert.Equal(["Evolution", "WeaponUpgrade", "PassiveUpgrade", "Temper"], Enum.GetNames<ChestItemKind>());
-        Assert.Equal(["WeaponCards", "WeaponBundle", "BeltPotions", "Shrine"], Enum.GetNames<RewardKind>());
+        Assert.Equal(["WeaponCards", "WeaponBundle", "HealNextRoom", "Shrine", "Merchant"], Enum.GetNames<RewardKind>());   // v0.9 WP1g
         Assert.NotNull(typeof(IProgression).GetProperty(nameof(IProgression.PicksLeft)));
         Assert.NotNull(typeof(IHeroCarry).GetMethod(nameof(IHeroCarry.Validate)));
-        var hero = new Hero { WeaponSlotsOpen = 5, PassiveSlotsOpen = 5, Belt = 2 };
+        var hero = new Hero { WeaponSlotsOpen = 5, PassiveSlotsOpen = 5, Potions = 2 };
         hero.Reset();
-        Assert.Equal((0, 0, 0), (hero.WeaponSlotsOpen, hero.PassiveSlotsOpen, hero.Belt));   // Reset 은 규칙을 받지 않는다(주인공 만들기 WP3 가 정함)
+        Assert.Equal((0, 0, 0), (hero.WeaponSlotsOpen, hero.PassiveSlotsOpen, hero.Potions));   // Reset 은 규칙을 받지 않는다(주인공 만들기 WP3 가 정함)
         Assert.Equal(-1, new RoomRecord(1, 1, "m", "gate_sw", null, null, -1, 0, false, 0, 1).BossClockTicks);
         Assert.Equal(-1, new RoomRecord(1, 1, "m", "gate_sw", null, null, -1, 0, false, 0, 1).PicksLeft);
         Assert.Equal(0, new RoomExit("gate_ne", null, RoomKind.Normal, null, false, null).NextFloor);

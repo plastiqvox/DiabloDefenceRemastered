@@ -47,7 +47,7 @@ public sealed class AutoplayPolicyTests
         Assert.Equal(0, policy.PickCard(offer));   // 재료 패시브가 없으면 보통 강화
     }
 
-    private static (int Index, IReadOnlyList<DoorSkip> Skips) DoorAfterSkip(Func<GameDefs, RewardDef> nw, Func<GameDefs, RewardDef> ne, float hp = 100f, int belt = 0)
+    private static (int Index, IReadOnlyList<DoorSkip> Skips) DoorAfterSkip(Func<GameDefs, RewardDef> nw, Func<GameDefs, RewardDef> ne, float hp = 100f)
     {
         var defs = Defs([]);
         var t = new TestWorldBuilder().WithDefs(defs).WithRoom(RoomPhase.Doors, exits: ["gate_nw", "gate_ne"]).WithModules(FakeArena.Modules(weapons: false)).Build();
@@ -55,7 +55,6 @@ public sealed class AutoplayPolicyTests
         room.Exits = [new RoomExit("gate_nw", nw(defs), RoomKind.Normal, null, false, null), new RoomExit("gate_ne", ne(defs), RoomKind.Normal, null, false, null)];
         t.Hero.MaxHp = 100f;
         t.Hero.Hp = hp;
-        t.Hero.Belt = belt;
         var policy = new AutoplayPolicy(AutoplayVisit.None);
         var first = policy.Next(t.World);
         Assert.Equal(CommandButtons.None, first.Buttons);   // 넘김 전에는 문 쪽으로 걸어감
@@ -78,10 +77,9 @@ public sealed class AutoplayPolicyTests
     }
 
     [Fact]
-    public void Door_priority_prefers_potion_when_hurt_and_belt_empty()
+    public void Door_priority_prefers_heal_door_when_hurt()
     {
         Assert.Equal(1, DoorAfterSkip(d => R(d, TestDefs.RewardChestId), d => R(d, TestDefs.RewardPotionId), hp: 40f).Index);
-        Assert.Equal(0, DoorAfterSkip(d => R(d, TestDefs.RewardChestId), d => R(d, TestDefs.RewardPotionId), hp: 40f, belt: 1).Index);
         Assert.Equal(0, DoorAfterSkip(d => R(d, TestDefs.RewardChestId), d => R(d, TestDefs.RewardPotionId), hp: 90f).Index);
     }
 

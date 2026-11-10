@@ -153,7 +153,7 @@ public sealed class SaveBookTests
 
     private static RunSnapshot Snapshot() =>
         new(RunSnapshot.CurrentFormat, 7ul, RoomActs.Act1Id, null, RoomActs.Act2Id, 2, RunSnapshot.RoomsHash(Acts.Stages[1]),
-            null, new RunStats(), new FairnessCounters(), 1234, new RunDepth(1, 6), []);
+            null, new RunStats(), new FairnessCounters(), 1234, new RunDepth(1, 6), [], []);
 
     [Fact]
     public void RunFile_RoundTrip_TakeDeletes()

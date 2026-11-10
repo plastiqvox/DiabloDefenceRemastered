@@ -20,9 +20,13 @@ namespace DiabloDefenceRemastered.Core.Assets;
 /// </summary>
 public sealed record ImportTable
 {
-    /// <summary>표 파일 9개(v0.8: + <c>upscale.json</c> — 이름 순은 <see cref="ComputeHash(string)"/> 가 정한다).</summary>
+    /// <summary>
+    /// 표 파일 13개(v0.8: + <c>upscale.json</c>, v0.9 WP1g: + <c>ctrlpan.json</c>·<c>items.json</c>·<c>inv.json</c>·<c>towners.json</c> — 6.19 가져오기 표.
+    /// 이름 순은 <see cref="ComputeHash(string)"/> 가 정한다). 주인공 아홉 벌은 새 파일이 아니라 <c>hero.json</c> 의 줄이다.
+    /// </summary>
     public static readonly IReadOnlyList<string> FileNames =
-        ["monsters.json", "hero.json", "missiles.json", "icons.json", "sounds.json", "music.json", "exe.json", "tilesets.json", "upscale.json"];
+        ["monsters.json", "hero.json", "missiles.json", "icons.json", "sounds.json", "music.json", "exe.json", "tilesets.json", "upscale.json",
+         "ctrlpan.json", "items.json", "inv.json", "towners.json"];
 
     public required MonstersTable Monsters { get; init; }
     public required HeroTable Hero { get; init; }
@@ -34,10 +38,18 @@ public sealed record ImportTable
     public required TilesetsTable Tilesets { get; init; }
     /// <summary>AI 확대 표(v0.8, 사용자 결정 U — 1.4 "AI 확대"). <c>--upscale</c> 을 주지 않으면 읽기만 하고 쓰지 않는다.</summary>
     public required UpscaleTable Upscale { get; init; }
+    /// <summary>조작판 자르기(v0.9.1 — 체력 구슬 <c>panel8.cel</c>·<c>p8bulbs.cel</c>, 물약 칸 한 칸). 6.19 가져오기 표. 실제 줄·출력은 WP0.</summary>
+    public required CtrlpanTable Ctrlpan { get; init; }
+    /// <summary>바닥 아이템(v0.9.1 V8 — <c>items\fbook</c>·<c>fbttle*</c>·<c>goldflip</c>, 떨어짐 프레임). 실제 줄·출력은 WP0.</summary>
+    public required ItemsTable Items { get; init; }
+    /// <summary>인벤토리 그림(v0.9 — <c>data\inv\objcurs.cel</c> 의 아이템 프레임 표, 장비 18 + 물약). 실제 줄·출력은 WP0.</summary>
+    public required InvTable Inv { get; init; }
+    /// <summary>마을 사람(v0.9 V5·V11 — 상인 셋의 서기 그림). 인사 대사는 <c>sounds.json</c> 줄. 실제 줄·출력은 WP0.</summary>
+    public required TownersTable Towners { get; init; }
 
     // ── 읽기 ──────────────────────────────────────────────────────────
 
-    /// <summary>폴더의 표 9개를 읽고 검사한다. 오류의 <c>File</c> 은 표 파일 이름.</summary>
+    /// <summary>폴더의 표 13개를 읽고 검사한다. 오류의 <c>File</c> 은 표 파일 이름.</summary>
     public static ImportTableResult Load(string tableDir)
     {
         var files = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -74,21 +86,26 @@ public sealed record ImportTable
         var exe = Parse<ExeTable>("exe.json");
         var tilesets = Parse<TilesetsTable>("tilesets.json");
         var upscale = Parse<UpscaleTable>("upscale.json");
+        var ctrlpan = Parse<CtrlpanTable>("ctrlpan.json");
+        var items = Parse<ItemsTable>("items.json");
+        var inv = Parse<InvTable>("inv.json");
+        var towners = Parse<TownersTable>("towners.json");
         if (monsters is null || hero is null || missiles is null || icons is null || sounds is null || music is null || exe is null || tilesets is null
-            || upscale is null)
+            || upscale is null || ctrlpan is null || items is null || inv is null || towners is null)
             return new ImportTableResult(null, errors);
 
         var table = new ImportTable
         {
             Monsters = monsters, Hero = hero, Missiles = missiles, Icons = icons,
             Sounds = sounds, Music = music, Exe = exe, Tilesets = tilesets, Upscale = upscale,
+            Ctrlpan = ctrlpan, Items = items, Inv = inv, Towners = towners,
         };
         errors.AddRange(table.Validate());
         return new ImportTableResult(table, errors);
     }
 
     /// <summary>
-    /// 표 해시: <see cref="FileNames"/> 9개(v0.8)를 파일 이름 서수 순으로 이은 바이트의 SHA-256(소문자 16진). 도구는 <c>Table/</c>, 게임은 출력 <c>ImportTable\</c> 에 같은 함수를 쓴다.
+    /// 표 해시: <see cref="FileNames"/> 13개(v0.9 — 새 표 넷을 이음, 그래서 v0.9 표를 처음 받은 PC 는 가져오기를 다시 돌린다)를 파일 이름 서수 순으로 이은 바이트의 SHA-256(소문자 16진). 도구는 <c>Table/</c>, 게임은 출력 <c>ImportTable\</c> 에 같은 함수를 쓴다.
     /// 폴더의 다른 <c>*.json</c> 은 보지 않는다 — 게임 출력은 PreserveNewest 복사라 지우거나 이름을 바꾼 옛 파일이 남는다. 없는 파일은 빈 바이트.
     /// </summary>
     public static string ComputeHash(string tableDir)
@@ -183,6 +200,8 @@ public sealed record ImportTable
             v.Bundle(muf, p, e.Bundle);
             v.Prefer(muf, p, e.Bundle, e.Prefer);
         }
+
+        ValidateV09(v);
 
         const string ef = "exe.json";
         var exeSeen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -405,6 +424,74 @@ public sealed record ImportTable
         return true;
     }
 
+    /// <summary>
+    /// v0.9 새 표 넷의 모양 검사(6.19 가져오기 표): 출력 이름·묶음·칸 폭·프레임·원작 경로(자리표시 없음), 자르기 사각형(너비·높이 &gt; 0), 인벤토리 프레임 번호 ≥ 1·중복 없음.
+    /// 이 표들의 출력은 아직 <see cref="OutputNames"/> 에 들지 않는다 — 도구(WP0)가 만들기 시작할 때 함께 넣는다(이름 대조 13.5-10).
+    /// </summary>
+    private void ValidateV09(Checker v)
+    {
+        const string cf = "ctrlpan.json";
+        if (Ctrlpan.Palette is not null) v.Palette(cf, Ctrlpan.Palette);
+        for (var i = 0; i < Ctrlpan.Crops.Count; i++)
+        {
+            var e = Ctrlpan.Crops[i];
+            var p = $"$.crops[{i}]";
+            v.Out(cf, p, e.Out);
+            v.Bundle(cf, p, e.Bundle);
+            v.Width(cf, $"{p}.width", e.Width);
+            Cel(v, cf, p, e.Cel);
+            if (e.Frame < 1) v.Add(cf, $"{p}.frame", $"프레임 {e.Frame} — 프레임 번호는 1부터");
+            if (e.Rect.X1 <= e.Rect.X0 || e.Rect.Y1 <= e.Rect.Y0) v.Add(cf, $"{p}.rect", "자르기 사각형 [x0,y0,x1,y1] 은 너비·높이가 0 보다 크다");
+        }
+
+        const string itf = "items.json";
+        if (Items.Palette is not null) v.Palette(itf, Items.Palette);
+        for (var i = 0; i < Items.Items.Count; i++)
+        {
+            var e = Items.Items[i];
+            var p = $"$.items[{i}]";
+            v.Out(itf, p, e.Out);
+            v.Bundle(itf, p, e.Bundle);
+            v.Width(itf, $"{p}.width", e.Width);
+            v.Frames(itf, $"{p}.frames", e.Frames);
+            Cel(v, itf, p, e.Cel);
+        }
+
+        const string inf = "inv.json";
+        if (Inv.Palette is not null) v.Palette(inf, Inv.Palette);
+        if (Inv.Frames.Count > 0) Cel(v, inf, "$", Inv.Cel);
+        var frames = new HashSet<int>();
+        for (var i = 0; i < Inv.Frames.Count; i++)
+        {
+            var e = Inv.Frames[i];
+            var p = $"$.frames[{i}]";
+            v.Out(inf, p, e.Out);
+            v.Bundle(inf, p, e.Bundle);
+            v.Width(inf, $"{p}.width", e.Width);
+            if (e.Frame < 1) v.Add(inf, $"{p}.frame", $"프레임 {e.Frame} — 프레임 번호는 1부터");
+            else if (!frames.Add(e.Frame)) v.Add(inf, $"{p}.frame", $"프레임 {e.Frame} 이 두 번 있다");
+        }
+
+        const string tof = "towners.json";
+        if (Towners.Palette is not null) v.Palette(tof, Towners.Palette);
+        for (var i = 0; i < Towners.Towners.Count; i++)
+        {
+            var e = Towners.Towners[i];
+            var p = $"$.towners[{i}]";
+            v.Out(tof, p, e.Out);
+            v.Bundle(tof, p, e.Bundle);
+            v.Width(tof, $"{p}.width", e.Width);
+            v.Frames(tof, $"{p}.frames", e.Frames);
+            Cel(v, tof, p, e.Cel);
+        }
+
+        static void Cel(Checker v, string file, string path, string cel)
+        {
+            if (Placeholders(cel).Count > 0) v.Add(file, $"{path}.cel", $"cel 경로에는 자리표시를 쓰지 않는다('{cel}')");
+            v.SourcePath(file, $"{path}.cel", cel);
+        }
+    }
+
     private sealed class Checker
     {
         public List<DataError> Errors { get; } = [];
@@ -546,6 +633,78 @@ public sealed record SoundsTable
 public sealed record MusicTable
 {
     public IReadOnlyList<ImportMusicEntry> Music { get; init; } = [];
+}
+
+// ── v0.9 새 표(6.19 가져오기 표 — 모양 WP1g, 실제 줄·출력 WP0) ───────────────────────
+
+/// <summary><c>ctrlpan.json</c> — 원작 조작판 CEL 에서 사각형 하나씩 잘라 PNG 로(체력 구슬 자리·액체·물약 칸). 사각형·프레임은 원본으로 확인해 적는다.</summary>
+public sealed record CtrlpanTable
+{
+    /// <summary>선택 키. 없으면 <c>missiles.json</c> 의 palette.</summary>
+    public string? Palette { get; init; }
+    public IReadOnlyList<ImportCropEntry> Crops { get; init; } = [];
+}
+
+/// <summary>자르기 한 줄: <c>cel</c> 의 <c>frame</c>(1부터, 칸 폭 <c>width</c>)에서 <c>rect</c> [x0,y0,x1,y1] 을 잘라 <c>out</c>.</summary>
+public sealed record ImportCropEntry
+{
+    public required string Out { get; init; }
+    public required string Cel { get; init; }
+    public required int Width { get; init; }
+    public int Frame { get; init; } = 1;
+    public required RectI Rect { get; init; }
+    public ContentBundle? Bundle { get; init; }
+}
+
+/// <summary><c>items.json</c> — 바닥 아이템(떨어짐 애니 전부 → 마지막 프레임에서 멈춤). 출력 = 페이지 + 메타(몬스터 CEL 길과 같은지는 WP0 이 확인 — 열린 질문 32).</summary>
+public sealed record ItemsTable
+{
+    public string? Palette { get; init; }
+    public IReadOnlyList<ImportItemEntry> Items { get; init; } = [];
+}
+
+public sealed record ImportItemEntry
+{
+    public required string Out { get; init; }
+    public required string Cel { get; init; }
+    public required int Width { get; init; }
+    /// <summary>[처음, 끝](1부터). 없으면 전부.</summary>
+    public int[]? Frames { get; init; }
+    public ContentBundle? Bundle { get; init; }
+}
+
+/// <summary><c>inv.json</c> — 인벤토리 그림 한 CEL(<c>data\inv\objcurs.cel</c> — 프레임마다 폭이 다름)의 아이템 프레임 표.</summary>
+public sealed record InvTable
+{
+    public string? Palette { get; init; }
+    /// <summary>원작 경로(프레임이 하나라도 있으면 필수).</summary>
+    public string Cel { get; init; } = "";
+    public IReadOnlyList<ImportInvFrame> Frames { get; init; } = [];
+}
+
+/// <summary>인벤토리 프레임 하나 → PNG(<c>out</c>). <c>width</c> = 그 프레임의 칸 폭(28·56 등).</summary>
+public sealed record ImportInvFrame
+{
+    public required string Out { get; init; }
+    public required int Frame { get; init; }
+    public required int Width { get; init; }
+    public ContentBundle? Bundle { get; init; }
+}
+
+/// <summary><c>towners.json</c> — 마을 사람 CEL(상인 서기 반복 — 첫 프레임이 문 위 아이콘). 출력 = 페이지 + 메타.</summary>
+public sealed record TownersTable
+{
+    public string? Palette { get; init; }
+    public IReadOnlyList<ImportTownerEntry> Towners { get; init; } = [];
+}
+
+public sealed record ImportTownerEntry
+{
+    public required string Out { get; init; }
+    public required string Cel { get; init; }
+    public required int Width { get; init; }
+    public int[]? Frames { get; init; }
+    public ContentBundle? Bundle { get; init; }
 }
 
 /// <summary><c>exe.json</c> — 원작 exe PNG 49장·커서의 이름(이름 대조용, 그림 없음).</summary>

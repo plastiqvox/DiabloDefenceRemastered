@@ -98,7 +98,7 @@ public static class CombatKit
             InvulnAfterHit = 0.25f,
             Stats = new Dictionary<StatKey, float> { [StatKey.MaxHp] = 100, [StatKey.MoveSpeed] = 95, [StatKey.PickupRadius] = 60 },
             CrowdSlow = new CrowdSlowDef { Touching = 3, Mul = 0.6f },
-            Belt = new BeltRulesDef { Slots = 2, Threshold = 0.3f, Cooldown = 1f },
+            Potions = TestDefs.PotionRules(),   // v0.9.1: 허리띠 → 물약 칸
         },
         XpCurve =
         [
@@ -174,7 +174,7 @@ public static class CombatKit
             Enemies = new DefTable<EnemyDef>(enemies),
             Rewards = new DefTable<RewardDef>(allRewards),
             Pickups = new DefTable<PickupDef>([.. Gems(), .. objects, shrineObj, TestDefs.EliteChest(),
-                                               new PickupDef { Id = "t_potion", Kind = PickupKind.Heal, Amount = 30, SkipWhenFull = true, Draw = Draw },
+                                               new PickupDef { Id = "t_potion", Kind = PickupKind.PotionStack, SkipWhenFull = true, Draw = Draw },
                                                new PickupDef { Id = "t_surge", Kind = PickupKind.Surge, Amount = 0.5f, Duration = 8, Draw = Draw },
                                                new PickupDef { Id = "t_gold", Kind = PickupKind.Gold, Magnet = true, Draw = Draw }]),
         };

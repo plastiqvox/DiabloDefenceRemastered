@@ -11,8 +11,13 @@ public sealed record ActPlan(StageDef Act, int ActNumber, IReadOnlyList<RoomPlan
 /// <param name="Act">액트 번호(1부터).</param>
 /// <param name="ExitGates">출구 문 순서(판의 마지막 방은 빈 목록). 문 열기(<c>RoomFlow</c>)가 이 순서로 보상을 단다.</param>
 /// <param name="RewardOrder">액트 <c>rewards.weights</c> 의 가중 비복원 순열 — 상태 거르기는 문을 열 때(<c>RoomFlow</c>).</param>
+/// <param name="RewardDraws">
+/// v0.9: ④ 가 쓴 난수(가중표 원소 수만큼 — 순열의 k 번째 뽑기) + 상인 보장의 누구 고르기 하나. 문을 열 때 <c>RewardDraw.Pick</c> 이 바뀐 가중으로 같은 난수를 다시 쓴다
+/// (난수 수 고정 — 문 단계의 상태가 판 흐름 난수를 밀지 않음). null(시험이 손으로 만든 계획)이면 <see cref="RewardOrder"/> 를 그대로 쓴다.
+/// </param>
 public sealed record RoomPlan(int Act, int Index, RoomDef Def, MapDef Map, string GateIn,
-                              IReadOnlyList<string> ExitGates, IReadOnlyList<RewardDef> RewardOrder, ulong RoomSeed)
+                              IReadOnlyList<string> ExitGates, IReadOnlyList<RewardDef> RewardOrder, ulong RoomSeed,
+                              IReadOnlyList<float>? RewardDraws = null)
 {
     public int Number => Def.Number;
     public RoomKind Kind => Def.Kind;
@@ -32,7 +37,8 @@ public sealed record RoomPlan(int Act, int Index, RoomDef Def, MapDef Map, strin
 /// <item><b>출구 문</b> — 판의 마지막 방이면 없음. 이 방이 액트의 마지막 방(계단)이면 <c>gates.single_exit</c> 하나.
 /// 아니면 <c>gates.exits</c> 둘, <c>exits.three_chance</c> 면 남은 앞 문을 더해 셋(순서 = exits 뒤에 남은 앞 문). v0.8: 다음이 정예·보스 방이어도 둘(셋) — 문마다 덤 보상이 다르다.
 /// ②③ 은 <c>rules.rooms.gates</c> 이름으로 뽑고 ① 이 거울판이면 짝 이름(<c>GateZones.MirrorGate</c>)으로 바꿔 담는다.</item>
-/// <item><b>보상 후보 순서</b> — 액트 <c>rewards.weights</c>(가중 &gt; 0) 전체의 가중 비복원 순열.</item>
+/// <item><b>보상 후보 순서</b> — 액트 <c>rewards.weights</c>(가중 &gt; 0) 전체의 가중 비복원 순열. v0.9: 쓴 난수를 <c>RoomPlan.RewardDraws</c> 에 두고, 끝에 하나(상인 보장)를 더 뽑는다 —
+/// 마지막 단계라 앞 단계·다른 방에 영향 없음. 문 열기의 가중 바꿈·보장·거르기는 <c>RewardDraw</c>.</item>
 /// </list>
 /// 단계마다 난수를 <b>늘 정해진 개수만큼</b> 쓴다(①②③ 한 번씩, ④ 보상 수만큼) — 그래서 ②~④ 는 <c>Flow(n)</c> 만의 함수이고, 맵(①)만 앞 방 계획에 이어진다.
 /// </summary>
@@ -116,14 +122,17 @@ public static class RunPlanner
                 for (var k = 0; k < exits.Count; k++) exits[k] = GateZones.MirrorGate(exits[k]);
             }
 
-            // ④ 보상 후보 순서
+            // ④ 보상 후보 순서(쓴 난수를 남김 — 문 열기의 RewardDraw 가 바뀐 가중으로 다시 씀) + 상인 보장 하나(v0.9)
             var order = new List<RewardDef>(weights.Count);
+            var draws = new List<float>(weights.Count + 1);
             var left = new List<WeightEntry<RewardDef>>(weights);
             while (left.Count > 0)
             {
                 var total = 0f;
                 foreach (var w in left) total += w.Weight;
-                var u = rng.NextFloat() * total;
+                var draw = rng.NextFloat();
+                draws.Add(draw);
+                var u = draw * total;
                 var k = 0;
                 for (; k < left.Count - 1; k++)
                 {
@@ -134,7 +143,9 @@ public static class RunPlanner
                 left.RemoveAt(k);
             }
 
-            plans.Add(new RoomPlan(actNumber, i, def, map, gateIn, exits, order, RunSeeds.Room(runSeed, actNumber, def.Number)));
+            draws.Add(rng.NextFloat());
+
+            plans.Add(new RoomPlan(actNumber, i, def, map, gateIn, exits, order, RunSeeds.Room(runSeed, actNumber, def.Number), draws));
 
             void AddPair(MapDef m)
             {

@@ -4,7 +4,7 @@ namespace DiabloDefenceRemastered.Tests.Assets;
 
 public class ImportTableTests
 {
-    /// <summary>설계서 1.4 의 표 9개 예 그대로(주석 포함 — v0.8 upscale.json 은 해시만 시험 값).</summary>
+    /// <summary>설계서 1.4 의 표 예 그대로(주석 포함 — v0.8 upscale.json 은 해시만 시험 값, v0.9 표 넷은 모양 시험 값).</summary>
     internal static Dictionary<string, string> DocTables() => new()
     {
         ["monsters.json"] = """
@@ -75,7 +75,52 @@ public class ImportTableTests
               "apply": { "maps": true, "monsters_min_width": 160 },
               "include": [], "exclude": [] }
             """,
+        // v0.9(WP1g) — 6.19 가져오기 표 넷(모양 시험 값 — 실제 줄·사각형·프레임은 WP0 이 원본으로)
+        ["ctrlpan.json"] = """
+            { "crops": [ { "out": "d1/ui/orb_frame", "cel": "ctrlpan\\panel8.cel", "width": 640, "rect": [0, 16, 88, 104] },
+                         { "out": "d1/ui/orb_fill", "cel": "ctrlpan\\p8bulbs.cel", "width": 88, "frame": 1, "rect": [0, 0, 88, 88] } ] }
+            """,
+        ["items.json"] = """
+            { "items": [ { "out": "d1/items/fbook", "cel": "items\\fbook.cel", "width": 96, "frames": [1, 16] } ] }
+            """,
+        ["inv.json"] = """
+            { "cel": "data\\inv\\objcurs.cel", "frames": [ { "out": "d1/inv/eq_cap", "frame": 71, "width": 56 } ] }
+            """,
+        ["towners.json"] = """
+            { "towners": [ { "out": "d1/towners/smith", "cel": "towners\\smith\\smithn.cel", "width": 96 } ] }
+            """,
     };
+
+    /// <summary>v0.9(WP1g #16): 표 13개, 새 넷의 모양 읽기·검사(사각형·프레임·자리표시·중복 프레임).</summary>
+    [Fact]
+    public void V09Tables_ReadAndValidate()
+    {
+        Assert.Equal(13, ImportTable.FileNames.Count);
+        var t = ReadOk(DocTables());
+        Assert.Equal(new RectI(0, 16, 88, 104), t.Ctrlpan.Crops[0].Rect);
+        Assert.Equal(1, t.Ctrlpan.Crops[0].Frame);
+        Assert.Equal([1, 16], t.Items.Items[0].Frames!);
+        Assert.Equal(71, t.Inv.Frames[0].Frame);
+        Assert.Equal("towners\\smith\\smithn.cel", t.Towners.Towners[0].Cel);
+
+        foreach (var (file, json, expect) in new[]
+        {
+            ("ctrlpan.json", """{ "crops": [ { "out": "d1/ui/x", "cel": "ctrlpan\\panel8.cel", "width": 640, "rect": [10, 0, 10, 5] } ] }""", "너비·높이"),
+            ("inv.json", """{ "cel": "data\\inv\\objcurs.cel", "frames": [ { "out": "d1/inv/a", "frame": 3, "width": 28 }, { "out": "d1/inv/b", "frame": 3, "width": 28 } ] }""", "두 번"),
+            ("items.json", """{ "items": [ { "out": "d1/items/x", "cel": "items\\fbttle{a}.cel", "width": 96 } ] }""", "자리표시"),
+            ("towners.json", """{ "towners": [ { "out": "D1/Towners", "cel": "towners\\smith\\smithn.cel", "width": 96 } ] }""", "출력 이름"),
+            ("inv.json", """{ "frames": [ { "out": "d1/inv/a", "frame": 1, "width": 28 } ] }""", "역슬래시"),
+        })
+        {
+            var files = DocTables();
+            files[file] = json;
+            var r = ImportTable.Read(files);
+            Assert.Contains(r.Errors, e => e.File == file && e.Message.Contains(expect, StringComparison.Ordinal));
+        }
+        var missing = DocTables();
+        missing.Remove("towners.json");
+        Assert.Contains(ImportTable.Read(missing).Errors, e => e.File == "towners.json" && e.Message.Contains("표 파일이 없다", StringComparison.Ordinal));
+    }
 
     private static ImportTable ReadOk(Dictionary<string, string> files)
     {

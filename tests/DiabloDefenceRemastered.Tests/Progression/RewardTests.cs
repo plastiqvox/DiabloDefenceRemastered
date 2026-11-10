@@ -14,7 +14,7 @@ public class RewardTests
     /// <summary>보상 물체를 주인공 발밑에 놓고 한 틱(실제 Pickups 단계가 줍는다).</summary>
     private static void Pick(TestWorld t, RewardDef reward)
     {
-        CombatKit.Drop(t.World, reward.Object.Id, t.Hero.Pos, reward: reward);
+        CombatKit.Drop(t.World, reward.Object!.Id, t.Hero.Pos, reward: reward);
         t.Step();
     }
 
@@ -30,13 +30,13 @@ public class RewardTests
     {
         var t = Fresh();
         var w = t.World;
-        var r = R(w, TestDefs.RewardPotionId);
-        var p = CombatKit.Drop(w, r.Object.Id, t.Hero.Pos + new Vector2(200, 0), reward: r);
+        var r = R(w, TestDefs.RewardChestId);   // v0.9: 회복 문은 방 안 물체가 없다 — 보물 상자로
+        var p = CombatKit.Drop(w, r.Object!.Id, t.Hero.Pos + new Vector2(200, 0), reward: r);
         Assert.True(p.GatesExit);
         Assert.Same(r, p.Reward);
         Assert.Equal(w.Hero.MaxHp, w.Hero.Hp);
         Pick(t, r);
-        Assert.Equal(2, w.Hero.Belt);
+        Assert.Equal(1, w.Hero.Potions);                            // 상자의 물약 1 → 물약 칸(v0.9.1)
         Assert.Equal(1, w.Pickups.LiveCount);                       // 멀리 둔 것은 그대로(끌려오지 않음)
         Assert.False(w.Pickups.Items.ToArray().Single(x => !x.Removed).Magnetized);
     }
@@ -82,7 +82,7 @@ public class RewardTests
     }
 
     [Fact]
-    public void Chest_RandomWeaponPlusOne_Belt_GoldTimesScale_ElseTemper()
+    public void Chest_RandomWeaponPlusOne_Potion_GoldTimesScale_ElseTemper()
     {
         var t = Fresh();
         var w = t.World;
@@ -91,7 +91,7 @@ public class RewardTests
         Pick(t, R(w, TestDefs.RewardChestId));
         Assert.Equal(4, w.Hero.Weapons[0].Level);
         Assert.Equal(8, w.Hero.Weapons[2].Level);
-        Assert.Equal(1, w.Hero.Belt);
+        Assert.Equal(1, w.Hero.Potions);
         Assert.InRange(w.RunStats.Gold, 30, 60);
         Assert.Equal(0, w.Progression!.PendingRewards);
 
@@ -99,21 +99,23 @@ public class RewardTests
         var max = w.Hero.MaxHp;
         Pick(t, R(w, TestDefs.RewardChestId));
         Assert.Equal(max + 5, w.Hero.MaxHp);                        // 올릴 무기 없음 → 단련
-        Assert.Equal(2, w.Hero.Belt);
+        Assert.Equal(2, w.Hero.Potions);
     }
 
+    /// <summary>v0.9.1(6.19 "물약 칸"): 물약 칸이 가득이면 상자의 물약은 빠진다 — 마시지 않는다(v0.8 은 넘치면 그 자리에서 마심). 회복 문·상인은 거르기가 <c>RewardDraw</c> 라 늘 참.</summary>
     [Fact]
-    public void Potion_IntoBelt_OverflowDrinks()
+    public void Chest_PotionDroppedWhenFull_NoDrink_HealAndMerchantAlwaysAvailable()
     {
         var t = Fresh();
         var w = t.World;
-        w.Hero.Belt = 1;
+        CombatKit.SetWeapon(w, 0, CombatKit.Mm, 3);                 // 올릴 무기가 있게(없으면 단련이 체력 +5)
+        w.Hero.Potions = 2;
         w.Hero.Hp = 60f;
+        Pick(t, R(w, TestDefs.RewardChestId));
+        Assert.Equal(2, w.Hero.Potions);
+        Assert.Equal(60f, w.Hero.Hp);
         Assert.True(w.Progression!.RewardAvailable(R(w, TestDefs.RewardPotionId)));
-        Pick(t, R(w, TestDefs.RewardPotionId));
-        Assert.Equal(2, w.Hero.Belt);
-        Assert.Equal(w.Hero.MaxHp, w.Hero.Hp);                      // 넘친 하나를 그 자리에서
-        Assert.False(w.Progression.RewardAvailable(R(w, TestDefs.RewardPotionId)));
+        Assert.True(w.Progression.RewardAvailable(R(w, TestDefs.RewardSmithId)));
     }
 
     [Fact]
@@ -226,31 +228,27 @@ public class RewardTests
         Assert.Equal(ChoiceKind.None, w.AwaitingChoice);
     }
 
-    // ── 허리띠 ───────────────────────────────────────────────────
+    // ── 물약 칸(v0.9.1 — 허리띠 저절로 마심은 없앰, WP1g) ────────────────────
 
     [Fact]
-    public void Belt_AutoDrinkBelowThreshold_OncePerSecond()
+    public void Potions_NoAutoDrink_PickupStacksUntilFull()
     {
         var t = Fresh();
         var w = t.World;
-        w.Hero.Belt = 2;
-        w.Damage.ToHero(EntityId.None, 69f);                        // 31 → 문턱(30) 위
-        t.Step();
-        Assert.Equal(31f, w.Hero.Hp);
-        Assert.Equal(2, w.Hero.Belt);
-        t.Step(20);
-        w.Damage.ToHero(EntityId.None, 2f);                         // 29 → 마심
-        t.Step();
-        Assert.Equal(100f, w.Hero.Hp);
-        Assert.Equal(1, w.Hero.Belt);
-        t.Step(20);
-        w.Damage.ToHero(EntityId.None, 80f);                        // 20 → 1초 안이라 아직
-        t.Step();
+        w.Hero.Potions = 1;
+        w.Damage.ToHero(EntityId.None, 80f);                        // 20 — v0.8 은 여기서 저절로 마셨다
+        t.Step(70);
         Assert.Equal(20f, w.Hero.Hp);
-        Assert.Equal(1, w.Hero.Belt);
-        t.Step(40);                                                  // 간격이 지나면 HeroControl 이 마심
-        Assert.Equal(100f, w.Hero.Hp);
-        Assert.Equal(0, w.Hero.Belt);
+        Assert.Equal(1, w.Hero.Potions);
+        CombatKit.Drop(w, "t_potion", t.Hero.Pos);
+        t.Step();
+        Assert.Equal(0, w.Pickups.LiveCount);
+        Assert.Equal(2, w.Hero.Potions);                            // 칸 2 가득
+        CombatKit.Drop(w, "t_potion", t.Hero.Pos);
+        t.Step(5);
+        Assert.Equal(1, w.Pickups.LiveCount);                        // 가득이면 안 집힘(그대로 남음)
+        Assert.Equal(2, w.Hero.Potions);
+        Assert.Equal(20f, w.Hero.Hp);                                // 닿아도 바로 마시지 않는다
     }
 
     // ── 시간 효과·칸 5 ───────────────────────────────────────────

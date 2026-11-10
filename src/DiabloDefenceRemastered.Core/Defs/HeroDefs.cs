@@ -22,6 +22,16 @@ public sealed record HeroClassDef : IDef
     public required IReadOnlyList<DefRef<WeaponDef>> StartWeapons { get; init; }
     /// <summary>특성 = 레벨 없고 슬롯을 안 쓰는 패시브(<c>trait: true</c>, v0.6.1 — 직업 형을 고치지 않고 특성 둘·<c>on_acquire</c>·직업 전용 패시브를 쓴다).</summary>
     public IReadOnlyList<DefRef<PassiveDef>> Traits { get; init; } = [];
+    /// <summary>
+    /// 겉모습 아홉 벌(v0.9.1 V10, 6.19 "주인공 겉모습"): 키 = 무게 글자(<c>l</c>·<c>m</c>·<c>h</c>) + 든 것 글자(<c>n</c>·<c>u</c>·<c>t</c>) → 그림 묶음.
+    /// 고르기는 <c>HeroLook.Key</c>(순수 함수 — 시뮬레이션은 키만 안다), 그리기(WP5)가 프레임마다 키로 묶음을 고른다. 비면 <see cref="Sprites"/> 하나.
+    /// 키는 아홉 글자 조합만(다른 키는 로딩 오류).
+    /// </summary>
+    public IReadOnlyDictionary<string, DefRef<SpriteSetDef>> Looks { get; init; } = new Dictionary<string, DefRef<SpriteSetDef>>();
+    /// <summary>
+    /// 고른 키의 묶음이 <see cref="Looks"/> 에 없거나 꺼졌을 때(<c>ContentAvailability</c>·가져오기에서 빠짐) 대신 쓰는 키(v0.9.1 — 기본 <c>lt</c>, 기획 34절 "못 가져온 벌은 <c>slt</c>").
+    /// </summary>
+    public string Look { get; init; } = "lt";
     /// <summary>이 직업이 쓰는 자원 묶음(6.17). 묶음이 없는 PC 에서는 직업이 꺼진다. 기본 직업(<c>rules.hero.class</c>)은 비어 있어야 한다(13.5-20).</summary>
     public IReadOnlyList<ContentBundle> Requires { get; init; } = [];
 }

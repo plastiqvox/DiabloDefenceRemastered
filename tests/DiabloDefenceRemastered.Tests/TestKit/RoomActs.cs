@@ -11,7 +11,7 @@ namespace DiabloDefenceRemastered.Tests.TestKit;
 /// (원판과 전치가 다르게 가로 벽 한 줄 — <see cref="MirrorWall"/>). (맵, 방향) 후보가 늘어 <c>RunPlanner</c> ① 의 결과가 바뀐다.</item>
 /// <item>(v0.8) <paramref name="floors"/>: 층 — 액트 1 방 1~3 = 1층, 4~6 = 2층, 액트 2 = 3층(<c>RoomExit.NextFloor</c> 시험).</item>
 /// </list>
-/// 보상 = <see cref="TestDefs.Rewards"/>(마법서·보물 상자·물약 가중 30·30·15 + 정의 표에만 성소), <c>first_room</c> 마법서, <c>rules.rooms</c> = <see cref="TestDefs.RoomRules"/>(기준 맵 = 보스 맵).
+/// 보상 = <see cref="TestDefs.Rewards"/>(마법서·보물 상자·회복 문 가중 30·30·15 + 정의 표에만 성소·상인 셋 — v0.9), <c>first_room</c> 마법서, <c>rules.rooms</c> = <see cref="TestDefs.RoomRules"/>(기준 맵 = 보스 맵).
 /// </summary>
 public static class RoomActs
 {
@@ -104,6 +104,9 @@ public static class RoomActs
             Stages = new DefTable<StageDef>([act1, act2]),
             Enemies = new DefTable<EnemyDef>([.. basic.Enemies.All, miniboss, bossEnemy]),
             Rewards = new DefTable<RewardDef>(rewards),
+            ItemBases = basic.ItemBases,
+            ItemAffixes = basic.ItemAffixes,
+            Merchants = new DefTable<MerchantDef>(TestDefs.MerchantsOf(rewards)),
             Pickups = new DefTable<PickupDef>([.. objects, TestDefs.EliteChest()]),
         };
     }

@@ -285,7 +285,7 @@ public sealed class AutoplayPolicy(AutoplayVisit visit)
         var hero = world.Hero;
         return reward.Kind switch
         {
-            RewardKind.BeltPotions when hero.MaxHp > 0f && hero.Hp < hero.MaxHp * 0.5f && hero.Belt == 0 => 0,
+            RewardKind.HealNextRoom when hero.MaxHp > 0f && hero.Hp < hero.MaxHp * 0.5f => 0,   // v0.9: 회복 문(우선순위 정리는 WP4 — 6.19)
             RewardKind.WeaponCards when TomeUseful(hero) => 1,
             RewardKind.WeaponBundle => 2,
             RewardKind.Shrine => 3 + ShrineOrder(reward.Id),

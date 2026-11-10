@@ -43,7 +43,13 @@ public sealed class HeroCarrier : IHeroCarry
             Blessings = blessings,
             WeaponSlotsOpen = hero.WeaponSlotsOpen,
             PassiveSlotsOpen = hero.PassiveSlotsOpen,
-            Belt = hero.Belt,
+            // v0.9 WP1g: 만렙 순번·장비·지갑·물약 칸(장비·물약 효과 본문은 WP3)
+            MaxedAtTick = MaxedOrder(hero),
+            Equipment = Equipped(hero),
+            Gold = hero.Gold,
+            Potions = hero.Potions,
+            PotionSlotsLevel = hero.PotionSlotsLevel,
+            PotionSpeedLevel = hero.PotionSpeedLevel,
             Mods = mods,
             Shrines = shrines,
             Effects = effects,
@@ -66,15 +72,21 @@ public sealed class HeroCarrier : IHeroCarry
         s.LevelOffer = s.RewardOffer = null;
         hero.WeaponSlotsOpen = carry.WeaponSlotsOpen;
         hero.PassiveSlotsOpen = carry.PassiveSlotsOpen;
-        hero.Belt = carry.Belt;
+        hero.Potions = carry.Potions;
+        hero.PotionSlotsLevel = carry.PotionSlotsLevel;
+        hero.PotionSpeedLevel = carry.PotionSpeedLevel;
+        hero.Gold = carry.Gold;
+        Array.Clear(hero.Equipment);
+        foreach (var e in carry.Equipment) hero.Equipment[(int)e.Slot] = e.Item;
         for (var i = 0; i < WeaponSlots.SlotCount; i++)
         {
             var c = i < carry.Weapons.Count ? carry.Weapons[i] : default;
             if (string.IsNullOrEmpty(c.Id)) { hero.Weapons[i] = new WeaponSlot { MaxedAtTick = -1 }; continue; }
             var def = defs.Weapons.Get(c.Id);
             var max = c.Evolved || def.BaseWeapon is not null || c.Level >= def.MaxLevel;
-            // MaxedAtTick 은 짐에 없다 — 만렙 무기는 0(같으면 칸 번호가 먼저, 13장 WP3 기록·WP1g 요청)
-            hero.Weapons[i] = new WeaponSlot { Def = def, Level = c.Level, Evolved = c.Evolved, AcquiredTick = 0, MaxedAtTick = max ? 0 : -1 };
+            // v0.9 WP1g: 짐의 만렙 순번(없으면 v0.8 처럼 만렙 무기 0) — 방을 넘어도 "먼저 만렙이 된 무기" 순서가 남는다(같으면 칸 번호)
+            var rank = i < carry.MaxedAtTick.Count ? carry.MaxedAtTick[i] : -1;
+            hero.Weapons[i] = new WeaponSlot { Def = def, Level = c.Level, Evolved = c.Evolved, AcquiredTick = 0, MaxedAtTick = max ? Math.Max(0, rank) : -1 };
         }
         for (var i = 0; i < PassiveSlots.SlotCount; i++)
         {
@@ -139,5 +151,29 @@ public sealed class HeroCarrier : IHeroCarry
             if (e.TicksLeft < 0) return $"시간 효과 '{e.Id}' 남은 틱 {e.TicksLeft}";
         }
         return null;
+    }
+
+    /// <summary>무기 칸별 만렙 순번(v0.9 — 만렙이 된 틱 순, 같으면 칸 번호. 아직이면 −1).</summary>
+    private static List<int> MaxedOrder(Hero hero)
+    {
+        var order = new List<int>(WeaponSlots.SlotCount);
+        var maxed = new List<(int Tick, int Slot)>();
+        for (var i = 0; i < WeaponSlots.SlotCount; i++)
+        {
+            order.Add(-1);
+            if (!hero.Weapons[i].IsEmpty && hero.Weapons[i].MaxedAtTick >= 0) maxed.Add((hero.Weapons[i].MaxedAtTick, i));
+        }
+        maxed.Sort();
+        for (var r = 0; r < maxed.Count; r++) order[maxed[r].Slot] = r;
+        return order;
+    }
+
+    /// <summary>끼운 장비(칸 순, 빈 칸 빼고).</summary>
+    private static List<CarriedEquip> Equipped(Hero hero)
+    {
+        var list = new List<CarriedEquip>();
+        for (var i = 0; i < EquipSlots.Count; i++)
+            if (hero.Equipment[i] is { } item) list.Add(new CarriedEquip((EquipSlot)i, item));
+        return list;
     }
 }

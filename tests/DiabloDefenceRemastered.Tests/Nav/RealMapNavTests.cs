@@ -67,7 +67,7 @@ public class RealMapNavTests
     {
         // 창살 w 칸: 걷기 도형만(투사체 통과)
         var nav = Nav.Value;
-        var grid = nav.Arena;
+        var grid = nav.Arena!;
         var walkOnly = nav.Collision.Where(s => s.BlocksWalk && !s.BlocksProjectiles).ToList();
         Assert.NotEmpty(walkOnly);
         foreach (var s in walkOnly)

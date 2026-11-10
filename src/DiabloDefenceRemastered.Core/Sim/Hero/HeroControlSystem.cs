@@ -29,7 +29,6 @@ public sealed class HeroControlSystem : ISimSystem
 
         var regen = hero.Stats[StatKey.Regen];
         if (regen > 0f && hero.Hp < hero.MaxHp) hero.Hp = MathF.Min(hero.MaxHp, hero.Hp + regen * World.Dt);
-        HeroBelt.Check(world);
 
         var move = world.Outcome == RunOutcome.Running ? world.Command.Move : Vector2.Zero;
         var len = move.Length();

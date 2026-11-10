@@ -169,7 +169,7 @@ public sealed class PlayScene : IScene
         foreach (var cue in buffer.Cues.AsSpan())
         {
             if (cue.Kind == CueKind.BossArrived) boss = true;
-            else if (cue.Kind == CueKind.BeltPotion) _hud.OnBeltPotion(cue.Tick);
+            else if (cue.Kind == CueKind.PotionDrink) _hud.OnPotionDrink(cue.Tick);
         }
         if (boss) _flow.Signal("boss");
         _renderer?.Fx.Consume(buffer, world.Tick);

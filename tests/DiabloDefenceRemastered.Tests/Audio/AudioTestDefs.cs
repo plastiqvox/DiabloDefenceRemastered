@@ -139,7 +139,7 @@ public static class AudioTestDefs
                 Hero = new Dictionary<string, HeroSoundsDef> { [TestDefs.HeroClassId] = new() { Hurt = S("snd_hurt"), Death = S("snd_death") } },
                 Ui = new Dictionary<string, DefRef<SoundDef>>
                 {
-                    ["level_up"] = S("snd_magic"), ["elite_pack"] = S("snd_magic1"), ["door_open"] = S("snd_door"), ["belt_potion"] = S("snd_invpot"),
+                    ["level_up"] = S("snd_magic"), ["elite_pack"] = S("snd_magic1"), ["door_open"] = S("snd_door"), ["potion_drink"] = S("snd_invpot"),
                 },
                 Rewards = new Dictionary<string, RewardSoundsDef> { [TestDefs.RewardTomeId] = new() { Collect = S("snd_invbook"), Open = S("snd_readbook") } },
                 Music = new Dictionary<string, DefRef<MusicDef>>

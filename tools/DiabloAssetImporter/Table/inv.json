@@ -1,0 +1,6 @@
+// 인벤토리 그림 (설계서 1.4·6.19 가져오기 표 — v0.9 WP1g 가 모양만, 줄은 WP0). data\inv\objcurs.cel 의 아이템 프레임(장비 18 + 물약).
+// 줄: "cel": "data\\inv\\objcurs.cel", "frames": [ { "out": "d1/inv/eq_cap", "frame": n, "width": 56 } ] — 프레임 번호·폭은 원본으로 확인.
+{
+  "cel": "",
+  "frames": []
+}

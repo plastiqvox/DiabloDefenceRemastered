@@ -1,0 +1,24 @@
+// 장비 기본 아이템 (설계서 6.19, 기획 v0.9.2 11.6 "기본 아이템" 표 그대로 — 18개, 소유 WP3). 이름은 원작 기본 아이템 이름(영어 그대로).
+// 무게: 방어구만(이동은 rules.equipment.weight_move). 퍼센트 키는 비율(0.03 = 3%). 그림(icon·floor)은 가져오기 확인 전이라 비움 — 코드 그림 대체(6.3).
+{
+  "items": [
+    { "id": "eq_cap",             "name": "Cap",             "kind": "head",   "weight": "light",  "stats": { "max_hp": 10 },                 "price": 40,  "acts": [1, 2] },
+    { "id": "eq_skull_cap",       "name": "Skull Cap",       "kind": "head",   "weight": "light",  "stats": { "max_hp": 15, "armor": 1 },     "price": 80,  "acts": [1, 2] },
+    { "id": "eq_helm",            "name": "Helm",            "kind": "head",   "weight": "medium", "stats": { "max_hp": 20, "armor": 2 },     "price": 130, "acts": [1, 2] },
+    { "id": "eq_full_helm",       "name": "Full Helm",       "kind": "head",   "weight": "heavy",  "stats": { "max_hp": 25, "armor": 4 },     "price": 200, "acts": [2] },
+    { "id": "eq_quilted_armor",   "name": "Quilted Armor",   "kind": "body",   "weight": "light",  "stats": { "max_hp": 15 },                 "price": 50,  "acts": [1, 2] },
+    { "id": "eq_leather_armor",   "name": "Leather Armor",   "kind": "body",   "weight": "light",  "stats": { "max_hp": 20, "armor": 1 },     "price": 90,  "acts": [1, 2] },
+    { "id": "eq_ring_mail",       "name": "Ring Mail",       "kind": "body",   "weight": "medium", "stats": { "max_hp": 25, "armor": 2 },     "price": 140, "acts": [1, 2] },
+    { "id": "eq_chain_mail",      "name": "Chain Mail",      "kind": "body",   "weight": "medium", "stats": { "max_hp": 30, "armor": 3 },     "price": 190, "acts": [2] },
+    { "id": "eq_breast_plate",    "name": "Breast Plate",    "kind": "body",   "weight": "heavy",  "stats": { "max_hp": 30, "armor": 5 },     "price": 240, "acts": [2] },
+    { "id": "eq_buckler",         "name": "Buckler",         "kind": "shield", "weight": "light",  "stats": { "armor": 1 },                  "price": 40,  "acts": [1, 2] },
+    { "id": "eq_small_shield",    "name": "Small Shield",    "kind": "shield", "weight": "light",  "stats": { "armor": 1, "knockback_taken_pct": -0.15 }, "price": 70,  "acts": [1, 2] },
+    { "id": "eq_large_shield",    "name": "Large Shield",    "kind": "shield", "weight": "medium", "stats": { "armor": 2, "knockback_taken_pct": -0.25 }, "price": 130, "acts": [1, 2] },
+    { "id": "eq_kite_shield",     "name": "Kite Shield",     "kind": "shield", "weight": "heavy",  "stats": { "armor": 4, "knockback_taken_pct": -0.40 }, "price": 200, "acts": [2] },
+    { "id": "eq_short_staff",     "name": "Short Staff",     "kind": "staff",  "stats": { "cooldown_pct": 0.03 },                     "price": 60,  "acts": [1, 2] },
+    { "id": "eq_long_staff",      "name": "Long Staff",      "kind": "staff",  "stats": { "damage_pct": 0.05 },                       "price": 90,  "acts": [1, 2] },
+    { "id": "eq_composite_staff", "name": "Composite Staff", "kind": "staff",  "stats": { "cooldown_pct": 0.04, "damage_pct": 0.04 }, "price": 150, "acts": [2] },
+    { "id": "eq_war_staff",       "name": "War Staff",       "kind": "staff",  "stats": { "damage_pct": 0.08 },                       "price": 190, "acts": [2] },
+    { "id": "eq_ring",            "name": "Ring",            "kind": "ring",   "always_magic": true,                                   "price": 50,  "acts": [1, 2] }
+  ]
+}

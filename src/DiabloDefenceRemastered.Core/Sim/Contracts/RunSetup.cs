@@ -48,6 +48,12 @@ public enum CommandButtons : ushort
     /// 기본값(<c>default</c>·<see cref="PlayerCommand.None"/>)이 조용히 0번 출구로 나가는 일이 없다.
     /// </summary>
     Exit = 1 << 9,
+    /// <summary>
+    /// 물약 하나를 마신다(v0.9.1 V9, 6.19 "물약 칸" — 사람 <c>Q</c>, 자동 조작은 체력 &lt; <c>bot_threshold</c>). 판 명령이라 재생·자동 조작·사람이 같은 길이다.
+    /// 못 마시면(창·회복 중·물약 0·체력 가득) <c>CueKind.PotionDenied</c>. 한 번만 일어나야 하는 버튼이라 프레임의 첫 틱에만 넣는다(3.2).
+    /// 상인 창(6.19)은 새 버튼 없이 <see cref="Choice1"/>~<see cref="Choice3"/>·<see cref="Reroll"/>·<see cref="Skip"/> 을 쓴다.
+    /// </summary>
+    Drink = 1 << 10,
 }
 
 /// <summary>

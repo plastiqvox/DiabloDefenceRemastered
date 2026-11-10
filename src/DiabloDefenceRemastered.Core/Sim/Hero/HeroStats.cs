@@ -50,41 +50,21 @@ public static class HeroStats
 }
 
 /// <summary>
-/// 허리띠(v0.8, 6.18 — 기획 v0.8.1 11.4): 체력이 최대 × <c>threshold</c> 아래면 하나를 저절로 마신다(전부 회복, <c>cooldown</c> 초에 한 번 — 버튼 없음).
-/// 피해를 받은 순간(<c>DamageResolve</c>)과 매 틱(<c>HeroControl</c> — 간격 때문에 못 마신 경우)에 본다. 넣을 때 차 있으면 그 자리에서 마신다(<see cref="Add"/>).
+/// 물약 칸(v0.9.1 V9, 6.19 — v0.8 의 허리띠를 바꿈. WP1g 는 옛 이름 자리를 고치는 데까지: 넣기·가득 판정만, 마시기·서서히 회복 본문은 WP3).
+/// 저절로 마시기는 없앴다(사용자 결정 V9 — <c>Q</c> 로 원할 때). 칸 = <c>rules.hero.potions.Capacity(Hero.PotionSlotsLevel)</c>, 규칙이 없으면 0.
 /// </summary>
-public static class HeroBelt
+public static class HeroPotions
 {
-    public static void Check(World world)
-    {
-        var hero = world.Hero;
-        if (world.Defs.Rules.Hero?.Belt is not { } belt || hero.Belt <= 0 || hero.Dead) return;
-        if (hero.Hp >= hero.MaxHp * belt.Threshold || world.Tick < hero.BeltReadyTick) return;
-        hero.Belt--;
-        Drink(world);
-        hero.BeltReadyTick = world.Tick + Math.Max(1, MathX.SecondsToTicks(belt.Cooldown, World.Dt));
-    }
+    /// <summary>지금 칸 수(규칙이 없으면 0).</summary>
+    public static int Capacity(World world) => world.Defs.Rules.Hero?.Potions?.Capacity(world.Hero.PotionSlotsLevel) ?? 0;
 
-    /// <summary>허리띠에 <paramref name="count"/> 개 넣는다. 칸을 넘는 만큼은 그 자리에서 마신다.</summary>
+    /// <summary>물약 칸에 <paramref name="count"/> 개 넣는다. 칸을 넘는 만큼은 빠진다(마시지 않는다 — 기획 v0.9.1 11.4 "집는 순간").</summary>
     public static void Add(World world, int count)
     {
         var hero = world.Hero;
-        var slots = world.Defs.Rules.Hero?.Belt?.Slots ?? 0;
-        for (var i = 0; i < count; i++)
-        {
-            if (hero.Belt < slots) hero.Belt++;
-            else Drink(world);
-        }
-        Check(world);
+        hero.Potions = Math.Min(Capacity(world), hero.Potions + Math.Max(0, count));
     }
 
-    /// <summary>허리띠가 찼나(물약 보상 거르기).</summary>
-    public static bool Full(World world) => world.Hero.Belt >= (world.Defs.Rules.Hero?.Belt?.Slots ?? 0);
-
-    private static void Drink(World world)
-    {
-        var hero = world.Hero;
-        hero.Hp = hero.MaxHp;
-        world.Presentation.Cue(new CueEvent(world.Tick, CueKind.BeltPotion, hero.Pos, null));
-    }
+    /// <summary>물약 칸이 찼나(체력 물약 줍기 — 가득이면 안 집힘).</summary>
+    public static bool Full(World world) => world.Hero.Potions >= Capacity(world);
 }

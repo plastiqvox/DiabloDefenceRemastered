@@ -11,7 +11,7 @@ namespace DiabloDefenceRemastered.Scenes;
 /// <para>앱(WP7)이 쓰는 것: <see cref="Autoplay"/>(앱 틱마다 <c>Step</c>), <see cref="Moment"/>(<c>--capture-on</c>·<c>--exit-on-result</c>),
 /// <see cref="QuitRequested"/>(타이틀 <c>종료</c>), <see cref="SettingsChanged"/>(전체 화면 적용), <see cref="RequestPause"/>(창이 비활성 — 3.3).</para>
 /// </summary>
-public sealed class GameFlow
+public sealed class GameFlow : IAppSignals
 {
     private static readonly ConditionalWeakTable<AppServices, GameFlow> Flows = new();
     private UiCanvas? _canvas;
@@ -20,6 +20,7 @@ public sealed class GameFlow
     {
         App = app;
         Autoplay = app.Options.Autoplay ? new AutoplayDriver(app.Options.AutoplayVisit) : null;
+        app.Signals ??= this;   // v0.9 WP1g: 계약 자리(IAppSignals) — 앱 쪽이 GameFlow 를 몰라도 받게(WP6 요청 2)
     }
 
     /// <summary>이 앱의 흐름 맥락(처음 부르면 만든다).</summary>

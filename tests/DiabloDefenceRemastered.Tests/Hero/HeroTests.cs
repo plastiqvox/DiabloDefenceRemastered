@@ -52,7 +52,7 @@ public class HeroTests
         Assert.Equal(100f, h.MaxHp);
         Assert.Equal(100f, h.Hp);
         Assert.Equal(95f, h.Stats[StatKey.MoveSpeed]);
-        Assert.Equal(60f, h.Stats[StatKey.PickupRadius]);
+        Assert.Equal(80f, h.Stats[StatKey.PickupRadius]);   // v0.9 기획 4.1(60 → 80)
         Assert.Equal("magic_missile", h.Weapons[0].Def!.Id);
         Assert.Equal(1, h.Weapons[0].Level);
         for (var i = 0; i < PassiveSlots.SlotCount; i++) Assert.True(h.Passives[i].IsEmpty);   // 특성은 칸 밖

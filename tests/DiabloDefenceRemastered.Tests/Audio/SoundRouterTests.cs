@@ -106,9 +106,9 @@ public class SoundRouterTests
     }
 
     [Fact]
-    public void UiCues_BeltPotionDoorsElite_NoPosition()
+    public void UiCues_PotionDrinkDoorsElite_NoPosition()
     {
-        var belt = Cue(CueKind.BeltPotion);
+        var belt = Cue(CueKind.PotionDrink);
         Assert.Equal(("snd_invpot", (Vector2?)null), (belt.Def.Id, belt.Pos));
         Assert.Equal("snd_door", Cue(CueKind.DoorsOpened).Def.Id);
         Assert.Equal("snd_magic1", Cue(CueKind.ElitePack).Def.Id);
@@ -230,7 +230,7 @@ public class SoundRouterTests
                     buf.Effect(new FxEvent((int)frame, D.Effects.Get(ImpactId), hero, 1f, Rgb.White));
                 }
                 if (frame % 7 == 0) buf.Corpse(Corpse(basic, (int)frame));
-                if (frame % 50 == 0) buf.Cue(new CueEvent((int)frame, CueKind.BeltPotion, hero, null));
+                if (frame % 50 == 0) buf.Cue(new CueEvent((int)frame, CueKind.PotionDrink, hero, null));
                 if (frame % 3 == 0) buf.Cue(new CueEvent((int)frame, CueKind.WeaponFired, hero, D.Weapons[0]));
                 if (frame == 100) AddHazard(w, PoolId);
                 pipeline.Consume(buf, w, frame);

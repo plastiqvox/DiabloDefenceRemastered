@@ -43,6 +43,11 @@ public sealed partial class Enemy : IEntity
     public KillCause KillCause;
     /// <summary>마지막으로 때린 적(EnemyKilled.Attacker). 주인공 무기면 None.</summary>
     public EntityId KilledBy;
+    /// <summary>
+    /// 페이즈 전환 무적이 끝나는 틱(이 틱 전에는 피해를 받지 않음 — v0.9 WP1g 에 WP4 조각에서 공통 조각으로 옮김, WP4 요청 1·통합 기록).
+    /// 쓰기 WP4(페이즈 전환), 읽기 WP3 <c>DamageResolve</c>(무적 틱 전 요청을 버림).
+    /// </summary>
+    public int InvulnUntilTick;
 
     // 쓰기 WP4(생성·버프) / 읽기 WP3
     public float Armor;
@@ -105,6 +110,7 @@ public sealed partial class Enemy : IEntity
         Dead = false;
         KillCause = KillCause.Damage;
         KilledBy = EntityId.None;
+        InvulnUntilTick = 0;
         Armor = KnockbackResist = 0f;
         Immunities = Immunity.None;
         DamageMul = 1f;

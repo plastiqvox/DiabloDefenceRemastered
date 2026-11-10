@@ -78,7 +78,7 @@ public sealed class ChestOverlay(GameFlow flow, World world) : IScene
             var line = item.Kind switch
             {
                 ChestItemKind.Evolution => $"{item.Name} — 진화",
-                ChestItemKind.Temper => item.Gold > 0 ? $"{item.Name} (+{RunText.Number(item.Gold)} 금화)" : item.Name,
+                ChestItemKind.Temper => item.Name,
                 _ => item.Level > 0 ? $"{item.Name} Lv {item.Level}" : item.Name,
             };
             c.Text(line, new Vector2(r.X0 + 64, r.Y0 + 18), Theme.BodyText, item.Kind == ChestItemKind.Evolution ? Theme.Gold : Theme.Text, appear);

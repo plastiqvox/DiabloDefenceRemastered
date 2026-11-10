@@ -20,7 +20,7 @@ public sealed class NavWorld : INavWorld, INavDebugView
     /// <param name="arena">맵 격자. null 이면 장애물 없는 상자(<paramref name="boxSize"/>) — 맵 없는 시험 월드.</param>
     public NavWorld(ArenaGrid? arena, Vector2 boxSize)
     {
-        Arena = arena!;
+        Arena = arena;
         _iso = arena?.Iso;
         _box = arena?.Iso.BoxSize ?? boxSize;
         Collision = arena is null ? [] : ArenaCollision.Build(arena);
@@ -240,7 +240,7 @@ public sealed class NavWorld : INavWorld, INavDebugView
     // ── INavDebugView ───────────────────────────────────────────────
 
     public IReadOnlyList<CollisionShape> Collision { get; }
-    public ArenaGrid Arena { get; }
+    public ArenaGrid? Arena { get; }
     public int CellSize => Grid.CellSize;
     public Int2 GridSize => new(Grid.Width, Grid.Height);
     public float CellClearance(int cx, int cy) => Grid.At(cx, cy);
