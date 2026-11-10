@@ -75,6 +75,6 @@ public sealed class SightWallTests(ITestOutputHelper output)
         t.Step(300);
         output.WriteLine($"kite_switches={t.World.Fairness.KiteSwitches} shots={Spawner(t).Projectiles.Count} cell={t.World.Arena!.Iso.CellOf(e.Pos)}");
         Assert.True(t.World.Fairness.KiteSwitches <= 2, $"kite 전환 {t.World.Fairness.KiteSwitches} > 2 — 벽 뒤에서 떨었다");
-        Assert.Equal(0, Spawner(t).Projectiles.Count);
+        Assert.Empty(Spawner(t).Projectiles);
     }
 }
