@@ -143,6 +143,14 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         // ── 7층 발광(알파 → 가산) ────────────────────────────────
         DrawLayer7(batch, f, prim, toTarget);
 
+        // ── --debug-nav 겹침(월드 px) ─────────────────────────────
+        if (_app.Options.DebugNav.Count > 0)
+        {
+            batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, toTarget);
+            DebugNavOverlay.Draw(batch, prim, world, _app.Options.DebugNav, f.View, heroDraw, tick);
+            batch.End();
+        }
+
         // ── 8층 화면 효과 ───────────────────────────────────────
         DrawScreenEffects(batch, world, prim, tick);
 
