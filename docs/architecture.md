@@ -5308,7 +5308,10 @@ WP0 이 다른 묶음과 동시에 일해서, 1.4 본문에 적기로 한 실측
 - 오류 모드 물려받기(`vulkan-1.dll` 없는 실행에서 창이 안 뜨는지) — 이 PC 에서 꾸밀 수 없음. `SetErrorMode` 는 띄우기 전에 부른다.
 - `import-all.ps1` 실제 실행 — 원작 exe 단계가 옛 폴더를 읽어서 돌리지 않았다(구문 검사만). 도구 단계는 같은 옵션의 `import` 직접 실행으로 확인.
 
-**남은 것**: v0.8 ③ L1 짝 조각 — `probe tiles` 로 본 원본은 35 = 하위 SOL 25·0·25·0(`w.w.`, 36 `ww..` 의 전치), 25 = 31·0·31·0(`X.X.`, 26 `XX..` 의 전치). 35 기둥 칸의 보정 여부(`sol_known_diffs` / `design_diffs`)를 정하고 `pieces`·`props`·짝 표를 더하는 일은 다음 단계.
+**남은 것**: v0.8 ③ L1 짝 조각 — `probe tiles` 로 본 원본은 35 = 하위 62·63(1부터) SOL 25·0·25·0(`w.w.`, 36 `ww..` 의 전치 — MIN 조각 배치도 26↔25 와 같은 꼴이라 기둥 칸 = 위-왼), 25 = SOL 31·0·31·0(`X.X.`, 26 `XX..` 의 전치).
+  `pieces` 에 `grate_v` 35·`door_closed_v` 25, `props` 35 `X.w.`·25 `X.X.`, `marks` 에 35·25, 6.11 예와 같은 `mirror` 짝 표, 35 기둥 칸은 `design_diffs`(원작 수정판 보정 여부는 확인 못 함 — 보정이라 하지 않음)로 넣어 보면
+  실제 원본 성질 대조 통과·13.5-12 짝 검사 통과(`mirror: true` 인 `cathedral_arena` 가 오류 없이 거울판을 만듦)였다. 다만 지금 `MapMirrorTests.RealCathedral_MirrorTrue_ReportsMissingPairs_GrateAndClosedDoor`(짝 표가 없음을 기대)·
+  `RealMapTests.Tileset_PropsKeysAreNamedTiles_AndOriginValues`(`design_diffs` 가 빔을 기대)가 깨져서 — 둘 다 WP0 소유가 아님 — 넣지 않았다. 통합 때 두 시험을 같이 고치며 넣는다.
 
 ---
 
