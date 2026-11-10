@@ -144,4 +144,27 @@ public class BundleTests
         Assert.True(r.Manifest!.TryGetFile("d1/monsters/fel.png", out var fel));
         Assert.Equal(["diabdat.mpq"], fel.Sources);
     }
+
+    /// <summary>v0.6.1 "타일셋 묶음과 맵": 타일셋 항목의 묶음을 건너뛰면 그 타일셋을 쓰는 맵 굽기도 건너뛴다. 묶음 MPQ 가 있으면 맵 그림 줄의 <c>bundle</c> 은 타일셋 항목의 묶음.</summary>
+    [Fact]
+    public void TilesetBundleSkipped_MapBakeSkipped_PresentGivesMapBundle()
+    {
+        using var t = new TempDir();
+        var table = Repo.CopyTable(t.Sub("table"));
+        var ts = Path.Combine(table, "tilesets.json");
+        File.WriteAllText(ts, File.ReadAllText(ts).Replace("\"id\": \"l1\",", "\"id\": \"l1\", \"bundle\": \"hellfire\","));
+        using var f = new ImportFixture(files => files, table);
+        var off = f.Run();
+        Assert.True(off.ExitCode == 0, string.Join("\n", off.Report));
+        Assert.Contains(off.Manifest!.SkippedBundles, s => s.Bundle == ContentBundle.Hellfire && s.Reason == "없음");
+        Assert.DoesNotContain(off.Manifest.Files, x => x.Path.StartsWith("d1/maps/", StringComparison.Ordinal));
+        Assert.True(off.Manifest.TryGetFile("d1/monsters/zombie.png", out _));
+
+        SynthMpq.Write(Path.Combine(f.SourceDir, "hellfire.mpq"), new Dictionary<string, byte[]> { ["other.bin"] = [1] });
+        var on = f.Run();
+        Assert.True(on.ExitCode == 0, string.Join("\n", on.Report));
+        Assert.True(on.Manifest!.TryGetFile("d1/maps/cathedral_arena/arena.json", out var arena));
+        Assert.Equal(ContentBundle.Hellfire, arena.Bundle);
+        Assert.Equal(["diabdat.mpq"], arena.Sources);   // 원본 찾는 순서: 묶음 항목도 diabdat 먼저
+    }
 }
