@@ -1,3 +1,4 @@
+using DiabloAssetImporter.Bake;
 using DiabloAssetImporter.Cli;
 using DiabloAssetImporter.Pipeline;
 using DiabloAssetImporter.Tests.TestKit;
@@ -18,7 +19,7 @@ public class PipelineTests
         // 만든 이름 = 13.5-10 이름 목록(표 이름 + 맵 그림 이름 — mirror 맵은 거울판 그림도, 둘째 페이지 제외)
         var table = ImportTable.Load(f.TableDir).Table!;
         var arenas = MapDataReader.Read(Repo.DataDir).Maps.SelectMany(m => m.Mirrored is { } mm ? [m, mm] : new[] { m }).Select(m => ArenaLayout.Expand(m)).ToList();
-        var made = r1.Manifest!.Files.Select(x => x.Path).Where(p => !p.Contains("_p", StringComparison.Ordinal)).ToHashSet();
+        var made = r1.Manifest!.Files.Select(x => x.Path).Where(p => !SheetPacker.IsExtraPage(p)).ToHashSet();
         var expected = table.OutputNames().Concat(arenas.SelectMany(a => ArenaArt.OutputNames(a))).ToHashSet();
         Assert.Equal(expected.Order(StringComparer.Ordinal), made.Order(StringComparer.Ordinal));
         Assert.Equal(AssetFormat.Version, r1.Manifest.Format);

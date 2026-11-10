@@ -6,7 +6,8 @@ namespace DiabloAssetImporter.Commands;
 
 /// <summary>
 /// <c>contact</c>: 사람이 눈으로 볼 견본 PNG(1.4, WP0 완료 기준) — 저장소 밖 <c>--out</c> 에 가져오기를 한 번 돌리고(<c>&lt;out&gt;/assets</c>)
-/// 그 출력으로 견본을 만든다: 좀비 원색·<c>bluered</c> 걷기, 파이어볼 16방향, L1 아레나 바닥 + 벽(전체), 마법사 시전. 확대 옵션을 그대로 넘길 수 있다.
+/// 그 출력으로 견본을 만든다: 좀비 원색·<c>bluered</c> 걷기, 파이어볼 16방향, L1 아레나 바닥 + 벽(전체), 마법사 시전,
+/// (v0.9) 주인공 아홉 벌, 바닥 아이템·물체·상인·조작판·인벤토리 그림(폴더마다 한 장). 확대 옵션을 그대로 넘길 수 있다.
 /// </summary>
 internal static class ContactCommand
 {
@@ -36,7 +37,32 @@ internal static class ContactCommand
             File.Copy(icon, Path.Combine(outDir, "icon_" + Path.GetFileName(icon)), true);
         foreach (var dir in Directory.Exists(Path.Combine(assets, "d1", "maps")) ? Directory.GetDirectories(Path.Combine(assets, "d1", "maps")) : [])
             Save($"arena_{Path.GetFileName(dir)}.png", Arena(dir));
+
+        // (v0.9) 주인공 아홉 벌 서기 8방향(벌마다 한 줄)·시전 한 방향, CEL 그림 묶음 폴더마다 모든 프레임(묶음마다 한 줄)
+        var heroes = new[] { "sln", "slu", "slt", "smn", "smu", "smt", "shn", "shu", "sht" };
+        if (Stack([.. heroes.Select(h => Strip(assets, $"d1/hero/{h}", "idle", null, "", 1))]) is { } hi) Save("hero_looks_idle_8dirs.png", hi);
+        if (Stack([.. heroes.Select(h => Strip(assets, $"d1/hero/{h}", "cast_magic", 0, "", null))]) is { } hc) Save("hero_looks_cast_magic.png", hc);
+        foreach (var folder in new[] { "items", "objects", "towners", "ui", "inv" })
+        {
+            var dir = Path.Combine(assets, "d1", folder);
+            if (!Directory.Exists(dir)) continue;
+            var strips = Directory.GetFiles(dir, "*.json").Order(StringComparer.Ordinal)
+                .Select(m => Strip(assets, $"d1/{folder}/{Path.GetFileNameWithoutExtension(m)}", null, 0, "", null)).ToList();
+            if (Stack(strips) is { } s) Save($"v09_{folder}.png", s);
+        }
         return r.ExitCode;
+    }
+
+    /// <summary>줄들을 세로로 쌓는다(사이 4px 어두운 띠). 없는 줄은 건너뜀.</summary>
+    internal static RgbaImage? Stack(IReadOnlyList<RgbaImage?> rows)
+    {
+        var list = rows.OfType<RgbaImage>().ToList();
+        if (list.Count == 0) return null;
+        var img = new RgbaImage(list.Max(i => i.Width), list.Sum(i => i.Height + 4));
+        for (var i = 0; i < img.Width * img.Height; i++) { img.Pixels[i * 4] = img.Pixels[i * 4 + 1] = img.Pixels[i * 4 + 2] = 12; img.Pixels[i * 4 + 3] = 255; }
+        var y = 0;
+        foreach (var r in list) { img.DrawOver(r, 0, y); y += r.Height + 4; }
+        return img;
     }
 
     /// <summary>한 동작의 프레임 줄: <paramref name="dir"/> 가 있으면 그 방향의 모든 프레임, 없으면 모든 방향의 <paramref name="frame"/> 번째.</summary>

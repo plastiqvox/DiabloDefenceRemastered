@@ -33,16 +33,16 @@ internal static class VerifyCommand
 
 /// <summary>
 /// <c>probe</c>: 원본 사실 보기(성질 표·가져오기 표를 손으로 쓸 때). 출력은 숫자·경로뿐이고 파일을 만들지 않는다.
-/// <c>probe tiles --tileset l1 --tiles 1,2,15</c>, <c>probe files &lt;경로…&gt;</c>, <c>probe cl2 &lt;경로&gt; [--groups 8|1]</c>.
+/// <c>probe tiles --tileset l1 --tiles 1,2,15</c>, <c>probe files &lt;경로…&gt;</c>, <c>probe cl2 &lt;경로&gt; [--groups 8|1]</c>, <c>probe cel &lt;경로&gt; [--width &lt;폭&gt;]</c>.
 /// </summary>
 internal static class ProbeCommand
 {
     public static int Run(Options o, string cwd, TextWriter output)
     {
-        o.Allow("--diabdat", "--tileset", "--tiles", "--groups", "--hellfire");
+        o.Allow("--diabdat", "--tileset", "--tiles", "--groups", "--hellfire", "--width", "--sheet");
         var diabdat = o.Get("--diabdat") ?? ImportCommand.CommonDiabdatPaths().FirstOrDefault(File.Exists)
             ?? throw new UsageException("--diabdat 를 준다");
-        var what = o.Positional.FirstOrDefault() ?? throw new UsageException("probe tiles | files | cl2");
+        var what = o.Positional.FirstOrDefault() ?? throw new UsageException("probe tiles | files | cl2 | cel");
         using var mpq = MpqSource.Open(diabdat);
         var extra = new List<MpqSource>();
         if (o.Get("--hellfire") is { } hf)
@@ -76,6 +76,38 @@ internal static class ProbeCommand
                     }
                     return 0;
                 }
+                case "cel":
+                {
+                    // CEL 프레임마다 머리 유무·추정 폭·픽셀 수·쓰는 색인 범위(1..127 은 층 팔레트마다 다른 자리 — 부록 A.2)
+                    var p = o.Positional.ElementAtOrDefault(1) ?? throw new UsageException("probe cel <경로> [--width <폭>]");
+                    var bytes = new[] { mpq }.Concat(extra).Select(m => m.Read(p)).FirstOrDefault(b => b is not null) ?? throw new UsageException($"{p} 없음");
+                    var frames = Cel.Frames(bytes);
+                    int? width = o.Has("--width") ? o.GetInt("--width", 0) : null;
+                    output.WriteLine($"{p}: 프레임 {frames.Count}, 머리 있음 {frames.Count(f => Cel.HasHeader(f.Span))}");
+                    for (var i = 0; i < frames.Count; i++)
+                    {
+                        var f = frames[i].Span;
+                        var px = Cel.CountPixels(Cel.Data(f));
+                        var w = Cel.EstimateWidth(f) ?? width;
+                        var low = 0;
+                        int min = 255, max = 0;
+                        if (w is { } ww)
+                        {
+                            var img = Cel.Decode(f, ww);
+                            for (var k = 0; k < img.Index.Length; k++)
+                                if (img.Opaque[k])
+                                {
+                                    var c = img.Index[k];
+                                    if (c is > 0 and < 128) low++;
+                                    min = Math.Min(min, c); max = Math.Max(max, c);
+                                }
+                        }
+                        output.WriteLine($"  {i + 1}: {f.Length}B 머리 {(Cel.HasHeader(f) ? "O" : "X")} 폭 {(Cel.EstimateWidth(f)?.ToString(CultureInfo.InvariantCulture) ?? "-")} 픽셀 {px}" +
+                                         (w is { } w2 ? $" ({w2}×{(px + w2 - 1) / w2}{(px % w2 == 0 ? "" : " 나머지")}) 색인 {min}..{max} 1~127 {low}" : ""));
+                    }
+                    if (o.Get("--sheet") is { } sheet) SaveCelSheet(sheet, frames, width, Palette.Read(mpq.Read(@"levels\l1data\l1.pal")!), output);
+                    return 0;
+                }
                 case "tiles":
                 {
                     var id = o.Get("--tileset") ?? throw new UsageException("--tileset 을 준다");
@@ -98,13 +130,42 @@ internal static class ProbeCommand
                     return 0;
                 }
                 default:
-                    throw new UsageException("probe tiles | files | cl2");
+                    throw new UsageException("probe tiles | files | cl2 | cel");
             }
         }
         finally
         {
             foreach (var m in extra) m.Dispose();
         }
+    }
+
+    /// <summary>
+    /// <c>probe cel --sheet &lt;png&gt;</c>: 프레임 전부를 한 줄 10칸 격자로(칸 = 가장 큰 프레임, 어두운 바탕, l1.pal) — 표의 프레임 번호를 눈으로 고를 때.
+    /// 줄 r·칸 c 가 프레임 10r + c + 1 이다. 원작 그림이 든 파일이라 저장소 밖에만 쓴다(1.4 출력 경로 검사).
+    /// </summary>
+    private static void SaveCelSheet(string path, IReadOnlyList<ReadOnlyMemory<byte>> frames, int? width, Palette pal, TextWriter output)
+    {
+        var full = Path.GetFullPath(path);
+        if (RepoPaths.CheckOutput(Path.GetDirectoryName(full)!) is { } bad) throw new UsageException(bad);
+        var images = frames.Select(f =>
+        {
+            var px = Cel.CountPixels(Cel.Data(f.Span));
+            var w = Cel.EstimateWidth(f.Span) ?? (width is { } tw && px % tw == 0 ? tw : Math.Max(1, (int)Math.Round(Math.Sqrt(px))));
+            return RgbaImage.FromIndexed(Cel.Decode(f.Span, w), pal, null, null);
+        }).ToList();
+        int cw = images.Max(i => i.Width) + 4, ch = images.Max(i => i.Height) + 4, cols = Math.Min(10, images.Count);
+        var sheet = new RgbaImage(cw * cols, ch * ((images.Count + cols - 1) / cols));
+        for (var y = 0; y < sheet.Height; y++)
+            for (var x = 0; x < sheet.Width; x++)
+            {
+                var edge = x % cw < 2 || y % ch < 2;
+                var v = (byte)(edge ? 90 : 30);
+                sheet.Set(x, y, v, v, (byte)(edge ? 40 : 30), 255);
+            }
+        for (var i = 0; i < images.Count; i++)
+            sheet.DrawOver(images[i], i % cols * cw + 2, i / cols * ch + 2 + (ch - 4 - images[i].Height));
+        File.WriteAllBytes(full, Png.Encode(sheet));
+        output.WriteLine($"격자 {full} ({cols}칸 × {(images.Count + cols - 1) / cols}줄)");
     }
 }
 

@@ -187,4 +187,60 @@ public class FormatsTests
         var ex = Assert.Throws<ImportCheckException>(() => UnitBaker.DecodeUnitAction("hero/slt", a, cl2));
         Assert.Contains("hero/slt cast_fire: 파일 폭 96, 표 128", ex.Message);
     }
+
+    [Fact]
+    public void Cel_HeaderOrNot_SameImage_WidthFromSkipTableOnlyWithHeader()
+    {
+        // 원작 아이템·물체·마을 사람 CEL 은 프레임 머리가 있고, 조작판 그림(spelicon·panel8)은 없다(v0.9 원본 확인)
+        var img = Encoders.Figure(96, 70, 150, 2);
+        var withHead = Encoders.CelFrame(img);
+        var bare = Encoders.CelFrame(img, header: false);
+        Assert.True(Cel.HasHeader(withHead));
+        Assert.False(Cel.HasHeader(bare));
+        Assert.Equal(96, Cel.EstimateWidth(withHead));
+        Assert.Null(Cel.EstimateWidth(bare));
+        AssertSame(img, Cel.Decode(withHead, 96));
+        AssertSame(img, Cel.Decode(bare, 96));
+
+        // 32줄보다 낮은 머리 있는 프레임(인벤토리 1칸 28×28)은 위치가 모두 0 — 폭은 표에서
+        var small = Encoders.Figure(28, 28, 140, 0);
+        var smallFrame = Encoders.CelFrame(small);
+        Assert.True(Cel.HasHeader(smallFrame));
+        Assert.Null(Cel.EstimateWidth(smallFrame));
+        AssertSame(small, Cel.Decode(smallFrame, 28));
+    }
+
+    [Fact]
+    public void Cel_HeaderlessFrameStartingLikeHeader_IsNotHeader()
+    {
+        // 머리 없는 프레임의 아래 줄이 "그대로 10칸, 색인 0 아홉 + …" 이면 첫 u16 이 0x000A, 위치 넷이 0 으로 읽힌다 — 머리로 보면 안 된다
+        var img = new IndexedImage(10, 2);
+        for (var i = 0; i < 20; i++) { img.Opaque[i] = true; img.Index[i] = (byte)(i < 10 ? 200 : 0); }
+        var bare = Encoders.CelFrame(img, header: false);
+        Assert.Equal(0x0A, bare[0]);
+        Assert.Equal(0, bare[1]);
+        Assert.False(Cel.HasHeader(bare));
+        AssertSame(img, Cel.Decode(bare, 10));
+    }
+
+    [Fact]
+    public void CelSprite_InMissileEntry_WidthCheck_FrameRange_TableWidthForLowFrames()
+    {
+        // missiles.json 항목의 원본이 .cel 이면 CEL 로 푼다(v0.9 — 바닥 아이템·물체·마을 사람·인벤토리 그림)
+        var frames = new[] { Encoders.Figure(56, 56, 150, 0), Encoders.Figure(28, 28, 160, 1), Encoders.Figure(56, 84, 170, 2) };
+        var file = Encoders.Flat([.. frames.Select(f => Encoders.CelFrame(f))]);
+        var e = new ImportMissileEntry { Out = "d1/inv/x", Cl2 = @"data\inv\objcurs.cel", Width = 56, Frames = [3, 3] };
+        var d = UnitBaker.DecodeMissile("inv/x", e, [file], null);
+        Assert.Equal((56, 84, 1, 1), (d.Cell.X, d.Cell.Y, d.Directions, d.Frames));
+        AssertSame(frames[2], d.Images[0]);
+
+        var ring = UnitBaker.DecodeMissile("inv/ring", e with { Width = 28, Frames = [2, 2] }, [file], null);
+        AssertSame(frames[1], ring.Images[0]);
+
+        // 파일 폭(머리)과 표 폭이 다르면 대조 실패, 머리로 폭을 못 정하는 프레임에서 표 폭이 틀리면 픽셀 수로 잡는다
+        var wide = Assert.Throws<ImportCheckException>(() => UnitBaker.DecodeMissile("inv/x", e with { Width = 28 }, [file], null));
+        Assert.Contains("파일 폭 56, 표 28", wide.Message);
+        var low = Assert.Throws<ImportCheckException>(() => UnitBaker.DecodeMissile("inv/ring", e with { Width = 27, Frames = [2, 2] }, [file], null));
+        Assert.Contains("배수", low.Message);
+    }
 }

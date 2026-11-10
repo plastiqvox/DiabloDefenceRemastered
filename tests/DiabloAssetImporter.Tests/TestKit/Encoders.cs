@@ -57,6 +57,40 @@ internal static class Encoders
         return [.. head, .. data];
     }
 
+    /// <summary>
+    /// 색인 그림(줄 0 = 위) → 스프라이트 CEL 프레임(부록 A.2 CEL RLE: 0x01..0x7F 그대로, 0x80.. 투명). 아래 줄부터, 칸은 줄 끝에서 끊는다.
+    /// <paramref name="header"/> 면 10바이트 머리(<c>0x000A</c> + 32줄마다 데이터 위치, 없는 자리 0 — 원작 아이템·물체 CEL 모양).
+    /// </summary>
+    public static byte[] CelFrame(IndexedImage img, bool header = true)
+    {
+        var data = new List<byte>();
+        var skips = new List<int>();
+        for (var row = 0; row < img.Height; row++)
+        {
+            if (header && row > 0 && row % 32 == 0 && skips.Count < 4) skips.Add(data.Count + 10);
+            var y = img.Height - 1 - row;
+            for (var x = 0; x < img.Width;)
+            {
+                var opaque = img.Opaque[y * img.Width + x];
+                var n = 0;
+                while (x + n < img.Width && img.Opaque[y * img.Width + x + n] == opaque && n < 127) n++;
+                if (opaque)
+                {
+                    data.Add((byte)n);
+                    for (var k = 0; k < n; k++) data.Add(img.Index[y * img.Width + x + k]);
+                }
+                else data.Add((byte)(sbyte)(-n));
+                x += n;
+            }
+        }
+        if (!header) return [.. data];
+        while (skips.Count < 4) skips.Add(0);
+        var head = new byte[10];
+        BinaryPrimitives.WriteUInt16LittleEndian(head, 0x0A);
+        for (var k = 0; k < 4; k++) BinaryPrimitives.WriteUInt16LittleEndian(head.AsSpan(2 + k * 2), (ushort)skips[k]);
+        return [.. head, .. data];
+    }
+
     /// <summary>평면 묶음: <c>u32 n, u32 오프셋[n + 1]</c> + 프레임들.</summary>
     public static byte[] Flat(IReadOnlyList<byte[]> frames)
     {
