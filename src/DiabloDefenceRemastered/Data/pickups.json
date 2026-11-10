@@ -1,0 +1,17 @@
+// 획득물 (기획 11.1·11.4, 설계서 6.9·6.18, 소유 WP3). 그림은 원작 exe PNG(Gold·HealingPotion·ManaPotion·MagicMissileExplosion — WP5 sprites/)와 코드 그림(gem).
+// 문 보상 물체(kind: reward)는 원작 물체 그림 검증 전까지 exe PNG 가 정식 대체(기획 v0.8.1 11.4·열린 질문 32). 단계 1 = 마법서·보물 상자.
+{
+  "pickups": [
+    { "id": "gem_blue",  "kind": "xp", "draw": { "procedural": "gem", "size": [10, 14], "color": [90, 150, 255] }, "value_range": [1, 4], "magnet": true },
+    { "id": "gem_green", "kind": "xp", "draw": { "procedural": "gem", "size": [12, 16], "color": [110, 230, 120] }, "value_range": [5, 19], "magnet": true },
+    { "id": "gem_red",   "kind": "xp", "draw": { "procedural": "gem", "size": [14, 20], "color": [255, 80, 80] }, "value_range": [20, 1000000], "magnet": true },
+    { "id": "gold", "kind": "gold", "draw": { "sprite": "Gold", "scale": 0.5 }, "magnet": true },
+    { "id": "healing_potion", "kind": "heal", "amount": 30, "draw": { "sprite": "HealingPotion", "scale": 0.5 }, "magnet": false, "skip_when_full": true },
+    { "id": "mana_surge", "kind": "surge", "amount": 0.5, "duration": 8, "draw": { "sprite": "ManaPotion", "scale": 0.5 }, "magnet": false },
+    { "id": "magnet_rune", "kind": "magnet", "draw": { "sprite": "MagicMissileExplosion", "scale": 0.3, "tint": [255, 210, 90], "frame": 1 }, "magnet": false },
+    { "id": "elite_chest", "kind": "chest", "draw": { "sprite": "Gold", "scale": 1.2 }, "magnet": false },
+    // 문 보상 물체(v0.8 — 대체 그림): 마법서 = 매직 미사일 아이콘, 보물 상자 = 금화 아이콘
+    { "id": "obj_tome",  "kind": "reward", "draw": { "sprite": "MagicMissileICon" }, "magnet": false },
+    { "id": "obj_chest", "kind": "reward", "draw": { "sprite": "GoldIcon" }, "magnet": false }
+  ]
+}

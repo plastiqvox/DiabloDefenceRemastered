@@ -1,0 +1,10 @@
+// 직업 정의 — 마법사 (설계서 6.16, 기획 4.0·4.1·4.5, 소유 WP3). MVP 직업 하나.
+{
+  "hero_classes": [
+    { "id": "sorcerer", "name": "마법사", "description": "마법 무기의 쿨다운이 조금 짧다",
+      "sprites": "set_sorcerer", "radius": 14,
+      "stats": {},                                            // rules.hero.stats 덮어쓰기 — 기본값이 마법사 값이라 비어 있음
+      "start_weapons": ["magic_missile"],
+      "traits": ["trait_arcane_affinity"] }                   // 특성 = trait 패시브(passives.json)
+  ]
+}

@@ -1,0 +1,40 @@
+// 주인공·레벨업 규칙 (설계서 6.10, 소유 WP3). 값은 기획 4.1·4.3·4.4·11.4·12.6 그대로.
+// rules 하위 키 hero·xp_curve·level_up·level_up_push 는 이 파일에만 있다(6.1).
+{
+  "rules": {
+    "hero": {
+      "class": "sorcerer",                                    // 고른 직업이 없을 때(MVP·--hero 없음·저장 없음, 6.16)
+      "invuln_after_hit": 0.25,                               // 기획 4.1 피격 무적
+      "stats": { "max_hp": 100, "move_speed": 95, "armor": 0, "regen": 0, "pickup_radius": 60 },   // 모든 직업의 기본값 = 마법사 값(기획 4.1)
+      "crowd_slow": { "touching": 3, "mul": 0.6 },            // 닿은 적 3 이상이면 이동 ×0.6(기획 4.1)
+      "belt": { "slots": 2, "threshold": 0.3, "cooldown": 1.0 }   // 허리띠(기획 v0.8.1 11.4): 체력 < 최대 × 0.3 이면 하나를 저절로, 1초에 한 번
+    },
+    "xp_curve": [                                             // 기획 4.3(v0.8.1): 1→5, 2→15, 19→185, 20→215, 39→785, 40→825
+      { "from": 1, "to": 1, "base": 5, "per": 0 },
+      { "from": 2, "to": 19, "base": 5, "per": 10, "origin": 1 },
+      { "from": 20, "to": 39, "base": 185, "per": 30, "origin": 19 },
+      { "from": 40, "to": null, "base": 785, "per": 40, "origin": 39 }
+    ],
+    "level_up": {
+      "cards": 3,
+      "weights": { "owned_weapon": 100, "owned_passive": 100, "new_weapon": 70, "new_passive": 70 },
+      "weapon_slots": 4, "passive_slots": 4,                  // 판 시작(액트 1) 칸 수 — 계단마다 rules.rooms.stairs 만큼 +, 상한 6
+      "rerolls": 3, "skip_heal": 10, "input_lock": 0.4,
+      "guarantee_new_weapon_at": [2, 3],
+      "fillers": [
+        { "id": "filler_potion", "name": "체력 물약", "heal": 30, "icon": { "sprite": "HealingPotion" } },
+        { "id": "filler_temper", "name": "단련", "heal": 5, "stats": { "max_hp": 5 }, "icon": { "sprite": "IncHealth", "tint": [200, 200, 200] } }
+      ],
+      "temper": "filler_temper",                              // 0장 보상·보물 상자에 올릴 무기 없음·정예 상자 빈 강화(기획 4.4·11.1·11.4)
+      "stat_labels": {
+        "damage": { "label": "피해" }, "tick_damage": { "label": "틱 피해" }, "cooldown": { "label": "쿨", "unit": "s" },
+        "count": { "label": "발 수" }, "pierce": { "label": "관통" }, "speed": { "label": "속도" },
+        "radius": { "label": "반경" }, "orbit_radius": { "label": "회전 반경" }, "duration": { "label": "지속", "unit": "s" },
+        "max_hp": { "label": "최대 체력" }, "damage_pct": { "label": "피해", "format": "pct" }, "cooldown_pct": { "label": "쿨 감소", "format": "pct" },
+        "move_pct": { "label": "이동", "format": "pct" }, "pickup_pct": { "label": "획득 반경", "format": "pct" },
+        "crit_chance": { "label": "치명", "format": "pct" }, "armor": { "label": "방어" }, "knockback_taken_pct": { "label": "받는 넉백", "format": "pct" }
+      }
+    },
+    "level_up_push": { "radius": 150, "distance": 80 }       // 선택 창이 닫힌 다음 틱(기획 12.6)
+  }
+}
