@@ -134,7 +134,7 @@ public sealed class ProjectilesSystem : ISimSystem
                 if (Vector2.Distance(e.Pos, p.Pos) > p.Radius + e.Radius) continue;
                 ref var next = ref e.NextHitBySlot[p.WeaponSlot];
                 if (now < next - 1e-5f) continue;
-                next = now + p.HitInterval;
+                next = now + p.HitInterval - World.Dt * 0.5f;
                 HitOne(world, p, e, FirePatternsDir(e.Pos - world.Hero.Pos, p.Vel), p.Damage);
             }
             return false;

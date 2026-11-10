@@ -24,13 +24,14 @@ public sealed class HazardsSystem : ISimSystem
             var h = store[i];
             if (h.Removed || h.SpawnTick >= world.Tick) continue;
             h.Age += World.Dt;
-            h.NextTickIn -= World.Dt;
+            // 첫 틱은 생긴 다음 틱, 그 뒤 정확히 간격마다(확인 뒤에 줄인다 — 첫 틱이 한 틱을 더 먹지 않게)
             if (h.NextTickIn <= 1e-5f)
             {
                 h.NextTickIn += h.TickInterval;
                 if (h.Faction == Faction.Hero) HitEnemies(world, h);
                 else HitHero(world, h);
             }
+            h.NextTickIn -= World.Dt;
             h.TimeLeft -= World.Dt;
             if (h.TimeLeft <= 1e-5f) store.RemoveAt(i);
         }
@@ -50,7 +51,7 @@ public sealed class HazardsSystem : ISimSystem
             {
                 ref var next = ref e.NextHitBySlot[h.WeaponSlot];
                 if (now < next - 1e-5f) continue;
-                next = now + h.TickInterval;
+                next = now + h.TickInterval - World.Dt * 0.5f;   // 반 틱 여유 — 장판 틱과 적별 간격이 같을 때 틱 오차로 한 번 건너뛰지 않게
             }
             if (h.TickDamage > 0f)
                 world.Damage.ToEnemy(e.Id, h.TickDamage, h.DamagePct, h.CritChance, h.WeaponSlot, default, 0f, DamageFlags.FromHazard);
