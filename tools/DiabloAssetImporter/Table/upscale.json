@@ -1,0 +1,14 @@
+// AI 확대 표 (설계서 1.4 "AI 확대", 사용자 결정 U, 소유 WP0). --upscale 을 주지 않으면 읽기만 하고 쓰지 않는다.
+// 허용 해시 = Real-ESRGAN ncnn-vulkan v0.2.5.0 Windows 판(사용자 시험 zip, SHA-256 abc02804…802d 와 같은 배포판)의 네 파일 SHA-256. 새 판으로 바꿀 때는 이 표만 고친다.
+{
+  "models": {
+    "realesrgan-x4plus": { "scale": 4,
+      "files": { "realesrgan-ncnn-vulkan.exe": "07e49f7cbb4ede01ae4dd4c399d3a7e5846e3d2085c3128eff881e55cb7b1a0c",
+                 "vcomp140.dll": "8f72ef2e483465444b2059fc6744d6cb22cd8d8a27f6fa56befd2a42dcd0f78b",
+                 "models/realesrgan-x4plus.param": "35330ececcea33b6c397a72548e788d5d53becee4734c50b7fada36e89f10a86",
+                 "models/realesrgan-x4plus.bin": "713ee713b0353afaa27976f0563a64a5043bd70b9bd8936c2e26e25ebcdbcddf" } } },
+  "output_scale": 2,
+  "apply": { "maps": true, "monsters_min_width": 160 },
+  "include": [],
+  "exclude": []
+}

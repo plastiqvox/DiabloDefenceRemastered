@@ -1,0 +1,17 @@
+// 몬스터 가져오기 표 (설계서 1.4, 소유 WP0). 단계 1 = 해골(skelaxe white)·불타는 해골(skelaxe 원색)·해골 궁수(skelbow white)·좀비(원색)·구울(zombie bluered).
+// 경로·칸 폭·TRN 은 이 PC 의 diabdat 를 probe 로 읽어 확인한 사실 값이다(원작 바이트는 없다, R24). 프레임 수·높이는 도구가 파일에서 읽는다.
+{
+  "palette": "levels\\l1data\\l1.pal",
+  "shadow_alpha": 0.5,
+  "monsters": [
+    { "out": "d1/monsters/skelaxe", "cl2": "monsters\\skelaxe\\sklax{a}.cl2", "width": 128,
+      "actions": { "idle": "n", "walk": "w", "attack": "a", "die": "d" },
+      "variants": { "": null, "white": "monsters\\skelaxe\\white.trn" } },
+    { "out": "d1/monsters/skelbow", "cl2": "monsters\\skelbow\\sklbw{a}.cl2", "width": 128,
+      "actions": { "idle": "n", "walk": "w", "attack": "a", "die": "d" },
+      "variants": { "": null, "white": "monsters\\skelbow\\white.trn" } },
+    { "out": "d1/monsters/zombie", "cl2": "monsters\\zombie\\zombie{a}.cl2", "width": 128,
+      "actions": { "idle": "n", "walk": "w", "attack": "a", "die": "d" },
+      "variants": { "": null, "bluered": "monsters\\zombie\\bluered.trn" } }
+  ]
+}

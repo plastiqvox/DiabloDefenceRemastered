@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- 디아블로 1 자원 가져오기 도구 (설계서 1.4, 소유 WP0). MonoGame 없음. MPQ 읽기 패키지(War3Net.IO.Mpq)는 WP0 이 넣는다.
+  <!-- 디아블로 1 자원 가져오기 도구 (설계서 1.4, 소유 WP0). MonoGame 없음. MPQ 읽기는 War3Net.IO.Mpq(MIT, 원본 항목 읽기는 주 스레드에서 차례로 — 1.4 "MPQ 읽기와 스레드").
        가져오기 표(Table/*.json)·맵 정의 읽기·배치 풀기는 Core(Assets/ImportTable, Map/MapDataReader·ArenaLayout)를 그대로 쓴다 -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -10,6 +10,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\DiabloDefenceRemastered.Core\DiabloDefenceRemastered.Core.csproj" />
+    <PackageReference Include="War3Net.IO.Mpq" Version="6.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DiabloAssetImporter.Tests" />
   </ItemGroup>
 
   <ItemGroup>

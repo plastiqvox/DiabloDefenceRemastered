@@ -1,0 +1,14 @@
+// 주인공 가져오기 표 (설계서 1.4, 소유 WP0). MVP = 마법사 slt 한 벌(기획 4.0) — 서기·걷기 96, 시전 셋 128, 죽기는 맨손 벌 sln\slndt 128.
+// 칸 폭은 이 PC 의 diabdat 를 probe 로 읽어 확인한 값(표 값은 대조용 — 도구는 파일에서 추정한 폭을 쓰고 다르면 종료 코드 4).
+{
+  "palette": "levels\\l1data\\l1.pal",
+  "shadow_alpha": 0.5,
+  "hero": [
+    { "out": "d1/hero/slt", "cl2": "plrgfx\\sorceror\\slt\\slt{a}.cl2", "width": 96,
+      "actions": { "idle": "as", "walk": "aw",
+                   "cast_fire": { "file": "fm", "width": 128 }, "cast_lightning": { "file": "lm", "width": 128 },
+                   "cast_magic": { "file": "qm", "width": 128 },
+                   "die": { "cl2": "plrgfx\\sorceror\\sln\\slndt.cl2", "width": 128 } },
+      "variants": { "": null } }
+  ]
+}
