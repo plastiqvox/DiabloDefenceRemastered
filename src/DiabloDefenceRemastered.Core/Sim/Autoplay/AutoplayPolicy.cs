@@ -128,6 +128,7 @@ public sealed class AutoplayPolicy(AutoplayVisit visit)
     /// <summary>
     /// 고를 카드 번호(0부터): 진화 재료 무기 강화 > 가진 무기 강화 > 새 무기 > 가진 패시브 > 새 패시브 > 채움. 같은 순위면 왼쪽부터(기획 15절).
     /// 마법서·성소 창도 같은 무기 순위(v0.8).
+    /// 진화 재료 = 주인공이 그 진화의 재료 패시브를 가진 진화 전 무기(마지막으로 <see cref="Next"/> 를 받은 월드로 판단 — 아직 없으면 보통 무기 강화와 같음).
     /// </summary>
     public int PickCard(LevelUpOffer offer)
     {
@@ -137,7 +138,7 @@ public sealed class AutoplayPolicy(AutoplayVisit visit)
         {
             var rank = offer.Cards[i].Kind switch
             {
-                CardKind.WeaponUpgrade => 1,
+                CardKind.WeaponUpgrade => IsEvolutionMaterial(offer.Cards[i].Id) ? 0 : 1,
                 CardKind.NewWeapon => 2,
                 CardKind.PassiveUpgrade => 3,
                 CardKind.NewPassive => 4,
@@ -146,6 +147,18 @@ public sealed class AutoplayPolicy(AutoplayVisit visit)
             if (rank < bestRank) { bestRank = rank; best = i; }
         }
         return best;
+    }
+
+    private bool IsEvolutionMaterial(string weaponId)
+    {
+        if (_world is not { } world) return false;
+        foreach (var evo in world.Defs.Evolutions.All)
+        {
+            if (!string.Equals(evo.Weapon.Id, weaponId, StringComparison.Ordinal)) continue;
+            for (var i = 0; i < PassiveSlots.SlotCount; i++)
+                if (world.Hero.Passives[i].Def is { } p && string.Equals(p.Id, evo.Passive.Id, StringComparison.Ordinal)) return true;
+        }
+        return false;
     }
 
     private void BeginWorld(World world)

@@ -76,7 +76,8 @@ public static class Wp4Defs
     /// <summary>합성 정의 묶음. <paramref name="stage"/> 를 주면 그 스테이지 하나(맵은 기본 맵).</summary>
     public static GameDefs Defs(IEnumerable<EnemyDef> enemies, Func<MapDef, StageDef>? stage = null, int megaTiles = TestDefs.DefaultMegaTiles,
                                 SightRulesDef? sight = null, float heroLight = 0f, IReadOnlyList<PiecePlacementDef>? place = null,
-                                IEnumerable<AffixDef>? affixes = null, CapsDef? caps = null)
+                                IEnumerable<AffixDef>? affixes = null, CapsDef? caps = null,
+                                IEnumerable<EvolutionDef>? evolutions = null)
     {
         var basic = TestDefs.Basic(megaTiles, extraEnemies: enemies, sight: sight, heroLight: heroLight, place: place);
         var st = stage is null ? basic.Stages : new DefTable<StageDef>([stage(basic.Maps[0]) with { Lighting = basic.Stages[0].Lighting }]);
@@ -96,6 +97,7 @@ public static class Wp4Defs
             Pickups = basic.Pickups,
             Buffs = new DefTable<BuffDef>([Command, WarCryBuff]),
             Affixes = new DefTable<AffixDef>(affixes ?? [Berserk]),
+            Evolutions = evolutions is null ? DefTable<EvolutionDef>.Empty : new DefTable<EvolutionDef>(evolutions),
         };
     }
 
