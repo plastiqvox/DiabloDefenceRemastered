@@ -293,4 +293,63 @@ public class FakeExeTests
         Assert.StartsWith("진행 없음", RunFake("sleep", out _, out _, noProgress: TimeSpan.FromSeconds(2)).Failure);
         Assert.True(sw.Elapsed < TimeSpan.FromSeconds(60));
     }
+
+    /// <summary>
+    /// 가짜 실행 파일을 확대 프로그램 폴더 모양(실행 파일 이름·DLL·모델 두 파일)으로 깐다. 실행 파일 옆에 가짜의 dll·runtimeconfig 를 같이 둔다(앱 호스트가 찾음).
+    /// 표는 이 폴더의 해시로 만든 것을 주입한다(실제 Table/upscale.json 은 그대로).
+    /// </summary>
+    private static UpscaleTable FakeBinWithExe(string bin)
+    {
+        var src = Path.GetDirectoryName(FakeExe())!;
+        Directory.CreateDirectory(Path.Combine(bin, "models"));
+        foreach (var f in Directory.GetFiles(src)) File.Copy(f, Path.Combine(bin, Path.GetFileName(f)), true);
+        File.Copy(FakeExe(), Path.Combine(bin, UpscaleSetup.ExeFile), true);
+        File.WriteAllText(Path.Combine(bin, "vcomp140.dll"), "가짜");
+        File.WriteAllText(Path.Combine(bin, "models", "realesrgan-x4plus.param"), "가짜");
+        File.WriteAllText(Path.Combine(bin, "models", "realesrgan-x4plus.bin"), "가짜");
+        var files = new[] { UpscaleSetup.ExeFile, "vcomp140.dll", "models/realesrgan-x4plus.param", "models/realesrgan-x4plus.bin" }
+            .ToDictionary(r => r, r => AssetManifest.Sha256OfFile(Path.Combine(bin, r.Replace('/', Path.DirectorySeparatorChar))), StringComparer.Ordinal);
+        return UpscaleTests.FakeBin(Path.Combine(bin, "unused")).Table with
+        {
+            Models = new Dictionary<string, UpscaleModelDef> { ["realesrgan-x4plus"] = new() { Scale = 4, Files = files } },
+        };
+    }
+
+    private static (int Code, string Text) Check(string bin, string outDir, UpscaleTable table, bool vulkan = true, string mode = "")
+    {
+        Environment.SetEnvironmentVariable("DDR_FAKE_MODE", mode);
+        try
+        {
+            var w = new StringWriter();
+            var code = Commands.UpscalerCheckCommand.Run(Cli.Options.Parse(["upscaler-check", "--upscale-bin", bin, "--out", outDir, "--upscale-gpu", "0"]), Repo.Root, w, () => vulkan, table);
+            return (code, w.ToString());
+        }
+        finally { Environment.SetEnvironmentVariable("DDR_FAKE_MODE", null); }
+    }
+
+    /// <summary><c>upscaler-check</c>(1.4 v0.8.1): 해시·Vulkan 확인 → 16×16 무늬 한 장 변환 → 장치 줄·결과 크기. Assets 를 만들지 않고 임시 폴더를 지운다.</summary>
+    [Fact]
+    public void UpscalerCheck_DeviceLine_Size_NoAssets_FailuresAre6()
+    {
+        using var t = new TempDir();
+        var bin = t.Sub("bin");
+        var table = FakeBinWithExe(bin);
+        var outDir = Path.Combine(t.Path, "assets");
+
+        var (code, text) = Check(bin, outDir, table);
+        Assert.True(code == 0, text);
+        Assert.Contains("장치: [0 Fake Vulkan GPU]", text);
+        Assert.Contains("결과 크기 64×64", text);
+        Assert.False(File.Exists(Path.Combine(outDir, AssetFormat.ManifestPath)));
+        Assert.False(Directory.Exists(Path.Combine(outDir, "d1", ".cache", "tmp")));
+
+        Assert.Equal(6, Check(bin, outDir, table, vulkan: false).Code);   // 런타임 없음 → 띄우지 않음
+        var (c2, t2) = Check(bin, outDir, table, mode: "fail");
+        Assert.Equal(6, c2);
+        Assert.Contains("변환 실패: 오류 종료", t2);
+        File.AppendAllText(Path.Combine(bin, "vcomp140.dll"), "바뀜");
+        var (c3, t3) = Check(bin, outDir, table);
+        Assert.Equal(6, c3);
+        Assert.Contains("확인 실패", t3);
+    }
 }
