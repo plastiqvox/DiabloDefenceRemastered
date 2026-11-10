@@ -288,6 +288,7 @@ public static class Wp4Data
                 var kind = id.Contains("tome", StringComparison.Ordinal) ? RewardKind.WeaponCards : RewardKind.WeaponBundle;
                 def = new RewardDef { Id = id, Name = id, Kind = kind, Object = DefRef<PickupDef>.To(TestDefs.RewardObject("obj_" + id)) };
             }
+            else if (t == typeof(DropTableDef)) def = new DropTableDef { Id = id };   // 드롭 표(WP3)는 빈 표 — 드롭 없이 돈다
             else throw new InvalidOperationException($"{t.Name} '{id}' 가 없다(대역을 만들지 않는 종류)");
             s[id] = def;
             StubNames.Add($"{t.Name}:{id}");

@@ -1,10 +1,10 @@
 // 적 공통 규칙 (설계서 6.10 rules/enemies.json, 기획 2.3·2.4·8.1·9.1~9.2·12.6). 소유 WP4. 원본 유래 값이 아니다(기획 첫 값).
-// 정예·우두머리 drop_table(dt_elite·dt_unique)은 WP3 드롭 표가 생기면 단다.
+// 정예·우두머리 drop_table 은 WP3 드롭 표(dt_elite·dt_unique — 기획 11.1 금화 정예 100%(10~30)). 등급 표가 적 정의의 표보다 앞선다.
 {
   "rules": {
-    "ranks": { "elite":  { "hp": 3.5, "damage": 1.4, "speed": 1.1, "xp": 4,  "scale": 1.15, "knockback_resist_add": 0.3, "affixes": 1,
+    "ranks": { "elite":  { "hp": 3.5, "damage": 1.4, "speed": 1.1, "xp": 4,  "scale": 1.15, "knockback_resist_add": 0.3, "affixes": 1, "drop_table": "dt_elite",
                            "glow": [90, 140, 255], "pulse": { "period": 1.2, "alpha": [0.25, 0.45] } },
-               "unique": { "hp": 8,   "damage": 1.6, "speed": 1.1, "xp": 10, "scale": 1.3,  "knockback_resist": 0.8,   "affixes": 2,
+               "unique": { "hp": 8,   "damage": 1.6, "speed": 1.1, "xp": 10, "scale": 1.3,  "knockback_resist": 0.8,   "affixes": 2, "drop_table": "dt_unique",
                            "glow": [255, 200, 80] },
                "pack":   { "pack_size": [3, 5], "unique_chance": 0.3, "banner": "정예 무리가 나타났다", "banner_time": 1.5 },
                "max_scale": 1.6 },
