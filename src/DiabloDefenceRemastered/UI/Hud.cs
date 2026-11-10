@@ -138,23 +138,18 @@ public sealed class Hud(AppServices app) : IWorldBound
         _warnedBossBars = false;
     }
 
-    /// <summary>이번 앱 틱의 값(그리지 않고 경고만 — 그래픽 없는 실행에서도 로그 경고가 같게).</summary>
-    public HudModel Update(RunState? run)
+    /// <summary>앱 틱마다(<c>PlayScene</c>): 보스 막대가 4줄을 넘으면 로그 경고 한 번(8.2) — 그리지 않는 실행에서도 같게 틱에서 본다.</summary>
+    public void Tick()
     {
-        if (_world is not { } world) throw new InvalidOperationException("Hud.Attach 전");
-        var model = HudModel.From(world, run);
-        if (model.BossBarsOverflow && !_warnedBossBars)
-        {
-            _warnedBossBars = true;
-            app.Log.Warn($"HUD 보스 막대 {world.BossBars.Count}줄 — 최대 {HudModel.MaxBossBars}줄만 그림(8.2)");
-        }
-        return model;
+        if (_world is not { } world || _warnedBossBars || world.BossBars.Count <= HudModel.MaxBossBars) return;
+        _warnedBossBars = true;
+        app.Log.Warn($"HUD 보스 막대 {world.BossBars.Count}줄 — 최대 {HudModel.MaxBossBars}줄만 그림(8.2)");
     }
 
-    public void Draw(UiCanvas c, RunState? run)
+    public void Draw(UiCanvas c, RenderContext rc, RunState? run)
     {
         if (_world is null) return;
-        var m = Update(run);
+        var m = HudModel.From(_world, run);
 
         // 맨 위 경험치 막대 + Lv
         Ui.Bar(c, new RectF(0, 0, Theme.Width, 8), m.XpRatio, Theme.Blue, Theme.Panel, 0.9f);
@@ -213,7 +208,7 @@ public sealed class Hud(AppServices app) : IWorldBound
         // 오른쪽 위 처치·금화, 그 아래 미니맵
         Ui.Right(c, $"처치 {RunText.Number(m.Kills)}", Theme.Width - 8, 30, Theme.BodyText, Theme.Text);
         Ui.Right(c, $"금화 {RunText.Number(m.Gold)}", Theme.Width - 8, 50, Theme.BodyText, Theme.Gold);
-        Minimap.Draw(c, new Vector2(Theme.Width - 8, 72));
+        Minimap.Draw(c, rc, new Vector2(Theme.Width - 8, 72));
 
         // 왼쪽 아래 체력 구슬(코드 그림 — 원·돌 테 텍스처는 WP5 UiCanvas 에 원 채우기가 생기면 바꿈) + 허리띠 둘
         var orb = new RectF(12, Theme.Height - 76, 76, Theme.Height - 12);

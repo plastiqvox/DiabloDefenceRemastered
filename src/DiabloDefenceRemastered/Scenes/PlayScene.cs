@@ -78,6 +78,7 @@ public sealed class PlayScene : IScene
         }
         if (app.Art is not null) _renderer = new WorldRenderer(app);
         _hud.Minimap.Visible = app.Save.Settings.ShowMinimap;
+        _flow.SettingsChanged += OnSettings;
         AttachAll(World);
         StartActAudio();
         _lastPhase = World.Room?.Phase ?? RoomPhase.Enter;
@@ -87,7 +88,10 @@ public sealed class PlayScene : IScene
             app.Log.Warn("--autoplay-visit rooms: 이 방 맵에 방 기준점(room_*)이 없다 — 보통 자동 조작");
     }
 
-    public void Exit() { }
+    public void Exit() => _flow.SettingsChanged -= OnSettings;
+
+    /// <summary>판 중 설정에서 미니맵을 켜고 끔(Tab 과 같은 값).</summary>
+    private void OnSettings(GameSettings s) => _hud.Minimap.Visible = s.ShowMinimap;
 
     public void FixedTick(in AppTick t, InputFrame input)
     {
@@ -120,6 +124,7 @@ public sealed class PlayScene : IScene
         var step = StageStepper.AppTick(world, command);
         if (step == StageStep.Stepped) Consume(world);
         LogPolicy();
+        _hud.Tick();
 
         switch (step)
         {
@@ -305,7 +310,7 @@ public sealed class PlayScene : IScene
         _renderer?.Draw(world, rc, a);
         if (_flow.Canvas is not { } c) return;
         c.Begin(rc);
-        _hud.Draw(c, _session.Run);
+        _hud.Draw(c, rc, _session.Run);
         if (_transitionAge >= 0 && _transitionTicks > 0)
         {
             // 어두워짐: 가운데(Advance)에서 가장 어둡다

@@ -23,6 +23,8 @@ public static class SceneFactory
         var flow = GameFlow.Of(app);
         if (content is not null) flow.Content = content;
         flow.NextSeed = app.Options.Seed;
+        var (master, sfx, music) = flow.Volumes(app.Save.Settings);
+        app.Audio?.SetVolumes(master, sfx, music);   // 시작 때 음량(8.3 — 저장에 없으면 rules.audio.defaults)
         if (app.HasDataErrors) return CreateDataError(app);
         if (app.Options.Preview is { } target) return new PreviewScene(app, target);
         if (app.Options.StageId is not null || app.Options.StartRoom is not null)
