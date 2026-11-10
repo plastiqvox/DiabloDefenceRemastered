@@ -72,7 +72,9 @@ public sealed class DevRunner : IDisposable
     private void CheckQuit()
     {
         if (QuitRequested is not null || _pending is not null) return;
-        if (!_schedule.ShouldQuit(_loop.Accumulator.AppTick)) return;
+        // 자원 안내 화면 캡처 실행(1.4 끝)은 --quit-after 가 없어도 캡처를 다 찍으면 끝낸다 — 벽시계 감시(4)까지 기다리지 않게
+        var guideDone = ExitCodeAtQuit is not null && _schedule.QuitTick is null && _schedule.Captures.Count > 0 && _schedule.Missing().Count == 0;
+        if (!guideDone && !_schedule.ShouldQuit(_loop.Accumulator.AppTick)) return;
         foreach (var m in _schedule.Missing()) _log.Error($"CAPTURE 안 생김 path=\"{m}\"");
         QuitRequested = ExitCodeAtQuit ?? _schedule.ExitCode();
     }

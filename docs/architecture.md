@@ -5281,6 +5281,38 @@ WP1f(형과 순수 로직을 한 번에 — 11.1 WP1f 표 #1~#20) 코드가 문�
 | 낮음 | `Suspend` ⓐ 의 한 틱 뒤 예외면 월드가 이미 한 틱 진행됨 | 코드는 그대로. 11.1 WP6 v0.8.2 에 메뉴가 예외를 받아 `저장 못 함` 한 줄로 판을 이어 가게 적음 |
 | 낮음 | 커밋 준비(`git log --grep WP1f` 참조·설계 v0.8/v0.8.1 본문·리뷰 문서 2개·기획서·brief 변경) | 문서 변경 없음 — 커밋 제목·본문에 `WP1f` 를 넣고, 함께 넣을 파일은 메인 세션·사용자가 정함 |
 
+### WP7 구현 기록
+
+WP7(앱 셸·데이터 로더·개발 도구·자원 검사, 단계 1) 코드가 문서와 다르게 또는 더 정한 것. 코드가 정본이다(11.4 와 같은 규칙).
+게임 창을 띄우는 완료 기준(빈 씬 캡처·`HiDef` 큰 텍스처·저장 시각·포그라운드 창·빈 자원 exe·표 바꾼 exe·최소화 창 캡처 R8)은 이 묶음에서 확인하지 않았다 — 합친 뒤 검증 담당이 본다.
+창 없이 도는 길(`--validate-data` 0, 모르는 옵션 64, 자원 없는 빌드의 `--autoplay` 5 와 `ASSETS`·`AUDIO device="No Output"` 줄)은 빌드한 exe 로 확인했다.
+
+| 자리 | 문서 | 코드 | 이유 |
+|---|---|---|---|
+| 9절 시작 판정 | `GameApp` 이 판정 | 창을 만들기 전 `App/Boot.Prepare`: 데이터 → 첫 줄 → 저장(`SAVE` 줄은 첫 줄 뒤로 미룸) → `AUDIO device=` → 자원 검사 → `DevOptions.CheckData`. 개발 옵션 실행의 데이터 오류 2·자원 5·옵션 64/5 는 창 없이 끝남 | 자동 실행이 창을 띄웠다 닫지 않게, 첫 줄이 늘 맨 앞에 |
+| 9절 "자동 실행에서 데이터 오류" | 자동 실행 | 개발 옵션 실행이면 모두(캡처만 준 실행 포함) 2 로 끝남 | 캡처로 DataError 화면을 보는 길은 문서에 없음 — 입력을 기다리며 멈추지 않는 쪽으로 |
+| 1.4 끝 안내 화면 | DataError 화면 재사용 | 자원 문제 줄과 가져오기 명령 한 줄을 `DataError("Assets", "$", …)` 로 `AppServices.DataErrors` 에 넣어 `SceneFactory.CreateDataError` 를 부름. 캡처만 준 실행은 `--quit-after` 가 없어도 캡처를 다 찍으면 5 로 끝남 | 화면 쪽 계약을 늘리지 않음. 감시(4)까지 기다리지 않게 |
+| 3.4 첫 줄 | `seed config commit data args` (+ `hero`, `start`, `room`) | 순서 `seed= config= commit= data= hero= start= room= args="…"`. `data` = `Data/**/*.json` 을 경로 서수 순으로 경로·길이·바이트 SHA-256 앞 8바이트(16진). `commit` 은 `AssemblyInformationalVersion` 의 `+` 뒤 앞 12자(없으면 칸 없음). `--seed` 가 없으면 시각에서 splitmix64 | `Core/Dev/RunHeader` 로 시험 |
+| 9절 캡처 | 그 틱에 멈춰 그린 화면 | `Core/Dev/DevSchedule`: 앱 초 → 틱 반올림, `--quit-after` 보다 늦은 캡처가 있으면 끝 틱을 그 캡처까지, 안 생긴 캡처(시각마다·`--capture-on` 하나)면 3. 게임은 백 버퍼(`GetBackBufferData`)를 알파 255 로 PNG. 로그 `CAPTURE path= app_tick= at=` | 그래픽 없는 판정은 Core 에서 시험 |
+| 9절 감시 | 마지막 앱 틱·씬·스택 | `TIMEOUT wall_s= limit_s= app_tick= dropped_ticks= scene= stack=[…]` → `EXIT code=4` 후 감시 스레드에서 `Environment.Exit(4)` | — |
+| 9절 고정 로그 | — | 더함: `GRAPHICS profile= backbuffer= vsync=`(HiDef 확인용), `DEV captures= on_event= quit_tick=`, 끝 `FRAMES app_tick= dropped_ticks=`, `--log-ticks` 면 `PERF …`, 예외는 `CRASH <스택>`, 자원 없는 다른 묶음 본문은 `WARN SHELL <함수> 본문 없음` | 판정·디버깅용, 고정 문장과 겹치지 않음 |
+| 7.9 `AUDIO device=` | 개발 옵션 실행 로그에 `No Output` | `Boot` 가 판정값(`ALSOFT_DRIVERS=null` 을 둘지)으로 쓴다: `AUDIO device="No Output"` 또는 `AUDIO device="default" muted=0\|1`. 장치를 다시 만들면 `fallback=1` 줄 하나 더 | MonoGame 이 연 장치 이름을 묻는 공개 API 가 없음 |
+| 7.9 다시 만들기 | 장치 초기화 예외 | `new GameApp()` 예외만 잡아 한 번 다시 만든다. `Run()` 안에서 처음 소리를 열 때의 예외는 `CRASH` → 1 | MonoGame 이 장치를 여는 시점이 플랫폼마다 다름 — R21 첫 실행에서 확인할 것 |
+| 단계 1 빈 씬 | 빈 시험 씬으로 창 | `SceneFactory`·`RenderServices` 가 `NotImplementedException` 이면 `BlankScene`(어두운 갈색 한 색)·`ShellRenderContext`(화면 좌표 그대로) 로 뜸. 합친 뒤에는 진짜 씬이 뜨므로 빈 씬을 고르는 옵션은 두지 않음 | 옵션을 늘리지 않음 |
+| 10.3 `TickProfiler` | 열 목록 | 단계 열 이름 = `SimPhase` 이름 snake_case + `_ms`(17개). `--check` 열은 아직 없음. 요약은 앞 5초를 뺀 frame·tick·draw_calls 의 nearest-rank p50/p95/p99/max | — |
+| 11.1 WP7 시험 `Fixtures/data/` | 고장 난 JSON 파일 | 파일 대신 시험 안의 `DataFile` 목록(`LoaderFixture`)으로 고장 하나씩 | 시험 한 곳에서 입력과 기대를 같이 봄 |
+| 6.14 `rules.rooms` 없음 오류 | 늘 | 스테이지가 있을 때만(`rules.sight`·`rules.hero` 도 같음) | 스테이지가 없는 지금 실제 데이터가 막힘 |
+| 8.3 `run.json` | `RunSnapshot` | 감싸개 `{ version: 1, run: … }`, 위치 record 인자가 빠지면 `.bad`(STJ 가 기본값으로 채우므로 키를 직접 봄) | `RunSnapshot` 이 모르는 속성을 오류로 봄 |
+
+**남은 것**(계약에 길이 없어 잇지 못한 것 — 아래 WP1g 요청)
+1. 사람 입력(`KeyboardMouseSource`, WP6)과 자동 조작 메뉴 넘김(`AutoplayDriver`, WP6)을 `FrameLoop` 에 넘기는 길 — 지금 `GameApp` 은 입력 없이(`readInput: null`, 봇 없음) 돈다.
+2. `--capture-on`·`--exit-on-result`·`RESULT`: 씬이 "그 일이 일어나 화면이 다 열림"·"결과 화면 열림" 을 앱에 알리는 길. 지금은 `--capture-on` 캡처가 늘 "안 생김"(3).
+3. `--log-ticks` 의 월드 쪽 열(`stage_s`·적·투사체·장판 수·단계 시간)과 `--log-hash`: 판을 가진 씬이 `Simulation.Profiler`·월드를 앱에 보이는 길. 지금은 0.
+4. 꺼진 묶음(`ContentAvailability`)과 `ASSETS disabled=` 결과를 씬(타이틀 한 줄·직업 카드)에 넘기는 길 — `AppServices` 에 칸이 없다.
+
+**WP1g 요청**: `AppServices` 에 `ContentAvailability Availability`·`DisabledContent Disabled`(자원 검사 결과), 앱 개발 실행 훅 `IDevHooks`(`CaptureEvent(string kind)` — 화면이 다 열린 프레임, `ResultShown(RunResult)` — `--exit-on-result`, `AttachProfiler(Simulation)`·`HashRow(World, RunState)` — `--log-ticks`·`--log-hash`),
+`SceneFactory.CreateInput(AppServices) → IInputSource?`(자동 조작이면 null)·`SceneFactory.CreateAutoplayDriver(AppServices) → IAutoplayDriver?` 또는 같은 뜻의 연결 파일 함수. `RunSnapshot` 위치 인자의 `required`(STJ `JsonRequired`) — 지금은 `SaveBook` 이 키를 직접 본다.
+
 ---
 
 ## 부록 A. 원작 형식 규칙 (조사 문서·시제품에서 옮김)
