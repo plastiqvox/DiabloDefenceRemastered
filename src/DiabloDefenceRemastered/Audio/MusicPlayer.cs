@@ -127,7 +127,7 @@ public sealed class MusicPlayer : IDisposable
             instance.Play();
             return new Track(effect, instance);
         }
-        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or NotSupportedException or InstancePlayLimitException)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or NotSupportedException or InstancePlayLimitException or NoAudioHardwareException)
         {
             _log.Warn($"AUDIO 곡을 틀지 못했다: {music.File} ({ex.Message})");
             return null;

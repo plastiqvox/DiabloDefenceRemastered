@@ -61,7 +61,7 @@ public sealed class SoundBank : ISoundSink, IDisposable
             instance.Play();   // 일시정지 중에 고른 소리(메뉴 이동 등 UI)는 멈추지 않는다
             _voices[slot] = new Voice(instance, play.Volume);
         }
-        catch (InstancePlayLimitException)
+        catch (Exception ex) when (ex is InstancePlayLimitException or NoAudioHardwareException)
         {
             _deviceBusy++;
         }
@@ -80,7 +80,7 @@ public sealed class SoundBank : ISoundSink, IDisposable
             if (_paused) instance.Pause();
             _loops[sound.Id] = new Loop(instance, volume);
         }
-        catch (InstancePlayLimitException)
+        catch (Exception ex) when (ex is InstancePlayLimitException or NoAudioHardwareException)
         {
             _deviceBusy++;
         }
@@ -163,7 +163,7 @@ public sealed class SoundBank : ISoundSink, IDisposable
         {
             e = SoundEffect.FromFile(Path.Combine(_root, file));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or NotSupportedException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or NotSupportedException or NoAudioHardwareException)
         {
             _log.Warn($"AUDIO 소리 파일을 읽지 못했다: {file} ({ex.Message})");
             e = null;
