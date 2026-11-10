@@ -15,6 +15,12 @@ public static class Program
     {
         var (o, errors) = DevOptions.Parse(args);
         using var log = new Log(o.Log ?? Log.DefaultPath(o.DevRun, o.SaveDir ?? SaveStore.UserDir));
+        // 다른 스레드의 처리 안 된 예외도 로그에 스택과 끝 줄을 남긴다(종료 코드 1)
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            log.Error("CRASH " + e.ExceptionObject);
+            log.Exit(ExitCodes.Crash);
+        };
         var code = Run(o, errors, args, log);
         log.Exit(code);
         return code;

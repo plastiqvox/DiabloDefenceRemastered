@@ -27,6 +27,8 @@ public sealed class DevRunner : IDisposable
         _log = log;
         ExitCodeAtQuit = exitCodeAtQuit;
         foreach (var c in _schedule.Captures) loop.Accumulator.AddStop(c.AppTick);
+        // 끝 틱에도 멈춘다 — 한 프레임에 틱이 여럿 돌아도 끝나는 앱 틱이 프레임 묶음과 상관없이 같게
+        if (_schedule.QuitTick is { } quit) loop.Accumulator.AddStop(quit);
         if (options.EffectiveTimeout is { } seconds)
             _watchdog = new Timer(_ => OnTimeout(seconds), null, TimeSpan.FromSeconds(seconds), Timeout.InfiniteTimeSpan);
         log.Info("DEV " + _schedule);
