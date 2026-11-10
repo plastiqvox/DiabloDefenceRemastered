@@ -1,3 +1,4 @@
+using DiabloAssetImporter.Bake;
 using DiabloAssetImporter.Formats;
 using War3Net.IO.Mpq;
 
@@ -58,8 +59,18 @@ internal static class SynthSources
             foreach (var v in e.Variants.Values)
                 if (v is not null) files[v] = Encoders.Trn(trnShift++);
         }
-        foreach (var e in table.Missiles.Missiles)
+        foreach (var e in table.Missiles.Missiles.Where(e => !UnitBaker.IsCel(e.Cl2)))
             foreach (var p in e.SourcePaths()) files[p] = FlatCl2(e.Width, e.FramesAreDirs ?? framesOf?.Invoke(p) ?? 14);
+        // (v0.9) CEL 그림 묶음: 한 파일을 여러 항목이 프레임 범위·폭을 달리해 쓴다(인벤토리 그림) — 프레임마다 그 범위 항목의 폭으로, 머리 있는 CEL
+        foreach (var g in table.Missiles.Missiles.Where(e => UnitBaker.IsCel(e.Cl2)).GroupBy(e => e.Cl2, StringComparer.OrdinalIgnoreCase))
+        {
+            var count = Math.Max(framesOf?.Invoke(g.Key) ?? 6, g.Max(e => e.Frames?[1] ?? 0));
+            var widths = Enumerable.Repeat(g.First().Width, count).ToArray();
+            foreach (var e in g)
+                if (e.Frames is { } r)
+                    for (var f = r[0]; f <= r[1]; f++) widths[f - 1] = e.Width;
+            files[g.Key] = Encoders.Flat([.. widths.Select((w, f) => Encoders.CelFrame(Encoders.Figure(w, w < 32 ? w : 40, (byte)(140 + f % 50), f)))]);
+        }
         foreach (var e in table.Icons.Icons)
             foreach (var p in e.SourcePaths())
                 if (!files.ContainsKey(p)) files[p] = e.Cel is not null ? FlatCel(e.Width, 52) : FlatCl2(e.Width, e.FramesAreDirs ?? 8);

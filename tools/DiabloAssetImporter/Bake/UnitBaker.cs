@@ -32,9 +32,14 @@ internal static class UnitBaker
         return Place(owner, a.Name, frames, a.Width, a.ShadowAlpha);
     }
 
-    /// <summary>마법: 방향 파일들(평면) 또는 프레임 = 방향 또는 방향 없음.</summary>
+    /// <summary>
+    /// 마법: 방향 파일들(평면) 또는 프레임 = 방향 또는 방향 없음.
+    /// (v0.9) 원본 경로가 <c>.cel</c> 이면 CEL 스프라이트로 푼다(바닥 아이템·물체·마을 사람·조작판·인벤토리 그림 — 머리 유무는 프레임마다 <see cref="Cel.HasHeader"/>).
+    /// 지금 표 모양(<c>missiles.json</c> 항목)에 평면 CEL 그림 묶음을 싣는 길이다 — 표 키 이름은 <c>cl2</c> 그대로.
+    /// </summary>
     public static DecodedAction DecodeMissile(string owner, ImportMissileEntry e, IReadOnlyList<byte[]> files, float? headShadow)
     {
+        var cel = IsCel(e.Cl2);
         List<IReadOnlyList<ReadOnlyMemory<byte>>> frames;
         if (e.FramesAreDirs is { } nd)
         {
@@ -45,8 +50,11 @@ internal static class UnitBaker
         else frames = [.. files.Select(f => Select(owner, "", Cl2.ReadFlat(f), e.Frames))];
         var n = frames[0].Count;
         if (frames.Any(f => f.Count != n)) throw new ImportCheckException($"{owner}: 방향 파일마다 프레임 수가 다르다");
-        return Place(owner, "default", frames, e.Width, e.ShadowAlpha ?? headShadow);
+        return Place(owner, "default", frames, e.Width, e.ShadowAlpha ?? headShadow, cel);
     }
+
+    /// <summary>원본 경로가 CEL 스프라이트인지(확장자로 — 표에 형식 키가 없다).</summary>
+    public static bool IsCel(string path) => path.EndsWith(".cel", StringComparison.OrdinalIgnoreCase);
 
     private static IReadOnlyList<ReadOnlyMemory<byte>> Select(string owner, string action, IReadOnlyList<ReadOnlyMemory<byte>> all, int[]? range)
     {
@@ -55,16 +63,24 @@ internal static class UnitBaker
         return [.. all.Skip(range[0] - 1).Take(range[1] - range[0] + 1)];
     }
 
-    private static DecodedAction Place(string owner, string action, List<IReadOnlyList<ReadOnlyMemory<byte>>> frames, int tableWidth, float? shadow)
+    private static DecodedAction Place(string owner, string action, List<IReadOnlyList<ReadOnlyMemory<byte>>> frames, int tableWidth, float? shadow, bool cel = false)
     {
         int? width = null;
         foreach (var dir in frames)
             foreach (var f in dir)
-                if (Cl2.EstimateWidth(f.Span) is { } w) { width = w; break; }
+                if ((cel ? Cel.EstimateWidth(f.Span) : Cl2.EstimateWidth(f.Span)) is { } w) { width = w; break; }
         if (width is { } fw && fw != tableWidth)
             throw new ImportCheckException($"{owner} {action}: 파일 폭 {fw}, 표 {tableWidth}".Replace("  ", " "));
         var cellW = width ?? tableWidth;
-        var decoded = frames.SelectMany(d => d.Select(f => Cl2.Decode(f.Span, cellW))).ToList();
+        List<IndexedImage> decoded;
+        try { decoded = [.. frames.SelectMany(d => d.Select(f => cel ? Cel.Decode(f.Span, cellW) : Cl2.Decode(f.Span, cellW)))]; }
+        catch (InvalidDataException ex) { throw new ImportCheckException($"{owner} {action}: {ex.Message}".Replace("  ", " ")); }
+        // CEL 은 줄 끝에서 칸을 끊으므로 픽셀 수가 폭의 배수가 아니면 폭이 틀린 것(머리 없는·32줄 안 되는 프레임은 표 폭을 쓰므로 여기서 잡는다)
+        if (cel && decoded.Count > 0)
+            foreach (var dir in frames)
+                foreach (var f in dir)
+                    if (Cel.CountPixels(Cel.Data(f.Span)) % cellW != 0)
+                        throw new ImportCheckException($"{owner} {action}: CEL 프레임 픽셀 수가 폭 {cellW} 의 배수가 아니다(표 폭 확인)".Replace("  ", " "));
         var cellH = Math.Max(1, decoded.Max(d => d.Height));
         var placed = new List<IndexedImage>(decoded.Count);
         foreach (var d in decoded)
