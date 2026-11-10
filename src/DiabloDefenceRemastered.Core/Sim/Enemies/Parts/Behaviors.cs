@@ -142,9 +142,12 @@ public sealed class Kite(KiteParams p) : IPositioningPart
         // 주인공이 적보다 빨리 멀어질 때 띠 경계에서 매 틱 다가감·멈춤을 오가지 않게(띠 폭 ≥ 40 이라 가운데에 닿는다)
         var seekTo = slot.Counter == Seek ? maxP - Hysteresis : maxP;
         var awayTo = slot.Counter == Away ? minP + Hysteresis : minP;
+        // 띠 최소 안쪽인데 또렷이 보이지 않으면(벽 모서리 뒤) 멈춘다: ①(안 보이면 다가감)을 먼저 따르면 1px 다가가 보이게 됨 → ② 물러남 → 1px 물러나 안 보임 → 다가감을
+        // 매 틱 되풀이했다(씨앗 7 의 작은 방 — kite_switches 3921 > kite 적 초 2577). 너무 가까우니 다가가지 않고, 안 보이니 쏘지도 않는다.
+        var seen = ctx.SeenClearly;
         int state;
-        if (!ctx.SeenClearly || d > seekTo) state = Seek;
-        else if (d < awayTo && slot.Timer <= 0f) state = Away;
+        if (d < awayTo && slot.Timer <= 0f) state = seen ? Away : Hold;
+        else if (!seen || d > seekTo) state = Seek;
         else state = Hold;
 
         if (slot.Counter != 0 && slot.Counter != state) w.Fairness.KiteSwitches++;

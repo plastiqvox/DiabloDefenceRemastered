@@ -1955,6 +1955,7 @@ public readonly struct EnemyCtx(World world, Enemy self) { /* 거리·길 트임
     `clear_sight` 패턴이 만드는 투사체는 `EnemyProjectileSpawn.SightGated = true`(WP1d) — 공정성 계측이 이 발사를 보스 제외에서 빼고 센다(10.1).
   - `kite.TryPosition`(v0.5.1 — 기획 v0.6.1 8.3 "띠 당기기", 떨림 막기 R29): L = `World.Visibility.ClearReach(normalize(self.Pos − HeroPos), self.BodyTop)`(그 방향으로 또렷이 보이는 가장 먼 거리, 벽 제외).
     쓰는 띠 = 최대' = min(최대, L − 10), 최소' = min(최소, 최대' − 40). ① `SeenClearly` 가 거짓이거나 거리 > 최대' → `SeekHero`(다가감). ② 거리 < 최소' → 물러남. ③ 그 밖 → 멈추고 쏨.
+    v0.9 플레이 관찰: 거리 < 최소' 인데 `SeenClearly` 가 거짓이면(벽 모서리 뒤) ① 보다 먼저 **멈춤** — ① 을 먼저 따르면 1px 다가가 보임 → ② 물러남 → 안 보임을 매 틱 되풀이했다(액트 1 씨앗 7, `kite_switches` 3921 > kite 적 초 2577). 안 보이니 쏘지도 않는다.
     띠 폭이 늘 40 이상이라 주인공이 조금 움직여도 쏘기·이동을 오가지 않는다. 양옆은 L = R − 40 ≥ 최대 + 20 이라 띠가 그대로이고, 화면 위아래 쪽에서만 당겨진다(위쪽 한계 약 164~194 가 띠 최소보다 작아도 쏠 자리가 있다).
     L 은 틱마다 그 적 방향으로 한 번(사각형 네 변과 원 하나의 교점 — 할당 없음). 물러날 수 없을 때(0.5s 못 움직임) 제자리 사격은 그대로이고 `shoot_projectile` 쪽 조건을 탄다.
     `kite` 상태가 바뀔 때마다 `World.Fairness.KiteSwitches` 를 1 늘린다(계측, 10.1).

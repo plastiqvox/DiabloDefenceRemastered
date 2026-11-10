@@ -14,9 +14,9 @@ public sealed class Stage1ScenarioTests(ITestOutputHelper output)
     public void Slice_act_runs_to_victory_with_autoplay_and_god()
     {
         var defs = Wp4Data.Defs;
-        // 씨앗 7 은 작은 방 맵 풀 + 방 첫 무리 바로 내기를 합친 뒤 kite_switches 3921 > kite 적 초 2577(방 6·8 무너짐)로 깨져 8 로 바꿈.
-        // 씨앗 3·8·9 는 통과 — 씨앗 7 의 kite 상태 뒤집힘은 따로 볼 일(통합 기록)
-        var r = ActRunner.Run(defs, "stage_cathedral", 8);
+        // 씨앗 7 은 작은 방 맵 풀을 합친 뒤 kite_switches 3921 > kite 적 초 2577 로 깨졌었다 — 벽 모서리 뒤 띠 최소 안쪽 궁수가 다가감·물러남을 매 틱 오감(Kite).
+        // 방 6·8 의 정리 무너짐(cleanup 25s)은 씨앗과 상관없이 이 가짜 이웃(단일 대상 무기 70/s·벽 미끄러짐 없음)에서 늘 나고, 실제 모듈 판(RealActScenarioTests)에서는 나지 않는다
+        var r = ActRunner.Run(defs, "stage_cathedral", 7);
         output.WriteLine($"ticks={r.Ticks} ({r.Ticks * World.Dt / 60f:0.0}분) rooms={r.Run.Rooms.Count} peak={r.PeakAlive} spawned={r.Spawned} band={r.BandSpawns} fallback={r.Fallbacks}");
         foreach (var room in r.Run.Rooms)
             output.WriteLine($"ROOM act={room.Act} room={room.Number} map={room.MapId} gate_in={room.GateIn} reward={room.RewardId ?? "-"} door={room.Door ?? "-"} clear_tick={room.ClearTick} cleanup_s={room.CleanupTicks * World.Dt:0.0} collapsed={(room.Collapsed ? 1 : 0)}");
