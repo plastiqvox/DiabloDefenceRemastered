@@ -5370,6 +5370,42 @@ WP3(주인공·전투·무기·성장) 구현이 문서와 다르게 정했거�
 
 남은 것(확인 못 함 — 합친 뒤): WP2 실제 공간 해시로 시나리오 다시 돌리기, WP4 감독·`DeathHooks` 와 합친 실제 판의 끊고 잇기 같음, 게임 창에서 무기 `cast_clip`·피해 숫자·보상 창 보기.
 
+### WP4 구현 기록
+
+WP4(적·감독·자동 조작) 단계 1 코드가 문서와 다르게 또는 더 정한 것. 코드가 정본이다(11.4 와 같은 규칙). 계약 파일(WP1~WP1f 형)은 고치지 않았다 — 바꿀 것은 "WP1g 요청" 에 적는다.
+이웃 묶음 본문(WP2 이동·충돌·`PlacementResolver`, WP3 `DamageMath`·피해·투사체·장판·드롭)이 아직 없어 시험은 `tests/…/Sim/FakeArena.cs` 가짜(직선 이동·가장 가까운 적 때리기·피해 적용·줍기·생성 세기)로 돈다.
+
+| 자리 | 문서 | 코드 | 이유 |
+|---|---|---|---|
+| 6.6 `kite` 띠 당기기 | ① 다가감 ② 물러남 ③ 멈춤, 경계는 `최대'`·`최소'` | 되돌이 여유 20px(`Kite.Hysteresis`): 다가가는 중이면 `최대' − 20` 까지, 물러나는 중이면 `최소' + 20` 까지 계속. 물러나다 0.5s 못 움직이면 "물러날 수 없음" 표시(슬롯 `Timer`)를 두고 띠 최소 밖으로 나갈 때까지 제자리 | 주인공이 궁수보다 빨리 멀어질 때 띠 경계에서 매 틱 다가감·멈춤을 오가 `kite_switches` 가 기준을 넘었다(띠 폭 ≥ 40 이라 가운데에 닿는다) |
+| 6.6 `self_destruct` | 폭발 뒤 자기는 사라짐 | 터진 적은 `KillCause.Culled` — 보상·시체·죽음 훅 없음 | 자기 폭발로 경험치·드롭을 주지 않게. 점화 중 `Damage` 죽음은 폭발 없이 `fizzle_effect` 만(시험) |
+| 5.2 적 피해 식 | `Combat/DamageMath`(WP3) | 같은 식을 `Sim/Enemies/EnemyMath` 에 둠 | WP3 본문이 `NotImplemented`. 부르는 곳이 이 클래스 하나라 합칠 때 본문만 `DamageMath` 호출로 바꾼다 |
+| 4.10 놓을 자리 | `Nav/PlacementResolver`(WP2) | 같은 규칙을 `Sim/Enemies/EnemyPlacement`(`TryPlace`·`Throw`)에 둠 | WP2 본문이 `NotImplemented`. 소환·호위·분열·정예 무리·포위 고리가 이것 하나를 부른다 — 합칠 때 호출로 바꾼다 |
+| 6.6 페이즈 무적 | — | `Enemy.InvulnUntilTick` 을 WP4 조각(`Enemy.Behavior.cs`)에 둠, 가짜 피해가 지킴 | 공통 조각에 무적 필드가 없다(WP1g 요청 1). WP3 `DamageResolve` 가 읽어야 한다 |
+| 9절 `--stress` | 적 수 + 투사체 수 유지 | 적만 채움(출처 `Stress`, 상한 검사 없음) | 투사체 수 유지는 WP3 무기 쪽 일이라 본문이 생기면 거기서 |
+| 9절·기획 15절 `PickCard` | 진화 재료 무기 강화 > 가진 무기 강화 > … | 진화 재료 = 주인공이 그 진화의 재료 패시브를 가진 진화 전 무기. 계약 시그니처 `PickCard(offer)` 를 지키려고 정책이 마지막으로 `Next` 를 받은 월드로 판단(아직 없으면 보통 무기 강화와 같은 순위) | 카드에 진화 정보가 없다. 메뉴 오버레이는 늘 판 도중에 열리므로 월드가 이미 있다 |
+| 6.12 단계 1 판 이벤트 | 기획 10.3 표 | 단계 1 에 있는 적으로만: 6번 방 행진의 폴른 원 20 → 해골 20, 해골 대장·중간 보스·보스·방 보급은 단계 2. 구간표는 없는 종(폴른 원·썩은 시체·핀드·불타는 해골 궁수) 가중을 빼고 2:00–2:30·2:30–3:00 을 한 줄로 합침, 이 판에 안 쓰이는 5:00–6:00·7:30–8:30 줄도 13.5-3(빈틈 없음) 때문에 남김 | 단계 1 세로 조각(6.12)은 적 5종뿐. 단계 2 에 전체 판으로 바꾸고 이 판은 지운다 |
+| 6.7 접두사 | 광폭한·강철 피부의·불타는 | `affixes.json` 은 광폭한·강철 피부의 둘. 불타는 은 죽음 폭발 이펙트와 함께 단계 2 | 이펙트 정의(WP5)가 없다 |
+| 10.1 `Enemies` 변형 픽스처 | 로더가 `extends`·`behaviors_add`·`behaviors_patch` 를 풂 | `Fixtures/variants/ash_skeleton.json` 을 시험 안 최소 풀기(`Wp4Data.ResolveVariant` — 부모 한 단계, add 는 뒤에, patch 는 같은 `id` 자리)로 실제 적 표에 넣음 | WP7 로더 전. 로더가 생기면 그것으로 읽고 이 함수는 지운다 |
+| 10.1 실제 데이터 시험 | WP7 로더로 `Data/` 읽기 | `tests/…/Sim/Wp4Data.cs` 가 WP4 파일 + 실제 맵·그림 묶음·`rules.sight` 를 읽고, 다른 묶음 정의(투사체·이펙트·문 보상·획득물)는 시험 안 대역으로 연결 | 저장소 데이터에 임시 정의를 넣지 않으려고(11.3) |
+| 10.1 공정성 열 | 세 열 0 | WP4 가 세는 `unseen_charges`·`kite_switches` 만 본다. `unseen_shots`·`hidden_hits`(WP3 이 셈)와 불변식 계측기(WP2)는 합친 뒤 | 가짜 이웃에는 그 계측이 없다 |
+| 10.1 `Director` 포위 고리 길 거리 | 벽 너머 방 안 자리 = 길 거리 > 직선 × 1.5 → 버림 | 시험은 실제 `cathedral_arena` 진입점 넷에서 최소 거리 ≥ 300·생략 비율 로그만 — 길 거리는 `StraightNav` 가짜(벽 무시) | WP2 `Navigator.PathLength` 본문 뒤에 같은 시험을 실제 내비로 |
+
+**단계 1 완료 기준**(11.1 WP4) — 됨: 부품·생성기·전수 연기 시험(`Enemies/PartsSmokeTests` — 등록 목록 = 시험 목록), 변형 픽스처, 결정성 30초·표시 이벤트 켬/끔(`Sim/Wp4SimTests`), 오라·함성 `include_bosses`·함성 대상(`Enemies/EnemyRulesTests`),
+우두머리 썩은 시체 1.6·22(합성 — 정의는 단계 2), 실제 적의 13.5-13·실제 스테이지의 13.5-15·13.5-18 고장 픽스처(`Enemies/EnemyDataValidatorTests`), 목표 문 행진 풀림·돌진 시작 조건(`Enemies/EnemyBehaviorTests`), 궁수 시야 조건 세 경우(`L` 줄 뒤·R − 40 밖·머리가 화면 위 밖 — 대조군 포함, `SightWallTests`·`EnemyRulesTests`),
+정위 궁수 떨림 ①②③(③ 은 궁수가 주인공보다 느려 "아래로 300px 넘게 따라옴" 으로 봄), 단계 1 판 `RunSession` 실행·방 들르기(`Sim/Stage1ScenarioTests`), 상한 무한 월드 생성 수·마름모 모서리 입구 대체 로그(`Director/DirectorTests`), 공정성 합성 맵 3분, 자동 조작 카드·문 우선순위(`Sim/AutoplayPolicyTests`).
+못 함: 창살 너머 궁수 시나리오(주인공 투사체가 WP3), 실제 내비로 고리 길 거리. 확인 못 함 — 합친 뒤: 불변식 기준·`unseen_shots`·`hidden_hits`, 실제 이동·충돌로 도는 단계 1 판.
+
+**WP1g 요청**
+1. `Enemy` 공통 조각에 `InvulnUntilTick`(페이즈 전환 무적 끝 틱) — 지금은 WP4 조각. WP3 `DamageResolve` 가 읽는다.
+
+**다른 묶음에 넘길 것**
+- WP2: `PlacementResolver.TryPlace`·`Throw` 본문이 생기면 `EnemyPlacement` 본문을 그 호출로. 실제 `Navigator` 로 `DirectorTests.Ring_keeps_min_radius_300_from_every_real_entry` 에 길 거리 버림을 더함. `PassThroughObstacles`(phase_through) 충돌.
+- WP3: `DamageMath` 본문이 생기면 `EnemyMath` 를 그 호출로. `DamageResolve` 가 `InvulnUntilTick` 을 지킴. `ground_hazard` 상한 묶음(오래된 것부터)·`telegraphed_blast` 터짐·`--stress` 투사체 수 유지. `unseen_shots`·`hidden_hits` 셈.
+- WP5·WP0a: 단계 2 적(폴른 원·썩은 시체·핀드·불타는 해골 궁수·해골 대장·중간 보스·해골왕)의 그림 묶음과 정예·보스 방 맵·작은 방 풀 — 그 뒤 WP4 가 액트 1 아홉 방 판으로 바꾼다.
+- WP6: `AutoplayPolicy.DoorSkips`·`RewardStalls`·`Events` 를 로그 줄로. 메뉴 오버레이가 `PickCard` 를 부르기 전에 그 판의 `Next` 가 한 번 이상 불렸어야 진화 재료 순위가 선다.
+- WP7: 로더가 생기면 `Wp4Data`·`ResolveVariant` 를 로더 호출로 바꾸고, `EnemyDataValidator`(이미 `EnemyModule` 이 `AddValidator`)가 실제 읽기에서 돈다.
+
 ---
 
 ## 부록 A. 원작 형식 규칙 (조사 문서·시제품에서 옮김)

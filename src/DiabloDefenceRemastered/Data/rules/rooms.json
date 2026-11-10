@@ -1,0 +1,13 @@
+// 방 흐름·문·넓이 배율 규칙 (설계서 6.10 rules/rooms.json, 기획 2.5·10.8·11.4·15절 첫 값). 소유 WP4.
+// transition·transition_floor 는 그림 값(WP6 이 요청해 바꿈), 나머지는 판 결과를 바꾼다(바꾸면 Scenario·13.5-23 을 다시 돌림).
+{
+  "rules": {
+    "rooms": { "grace": 3, "cleanup_limit": 25, "elite_spawn_cap": "02:30", "transition": 0.5, "transition_floor": 1.0,
+               "gates": { "entry": ["gate_sw", "gate_se"], "boss_entry": "gate_sw", "exits": ["gate_nw", "gate_ne"], "single_exit": "gate_ne" },
+               "exits": { "three_chance": 0.4 },
+               "area_scale": { "reference": "cathedral_arena", "min": 0.6, "max": 1.0 },
+               "reward_spot": { "distance": 100, "spacing": 40, "clearance": 30 }, "fallback_reward": "reward_chest",
+               "stairs": { "weapon_slots": 1, "passive_slots": 1 },
+               "autoplay_door_skip": 20 }
+  }
+}

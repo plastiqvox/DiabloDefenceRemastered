@@ -1,0 +1,47 @@
+// 스테이지 1 = 액트 1 대성당 — 단계 1 판 (설계서 6.12 "단계 1 세로 조각", 기획 10.3·14.1). 소유 WP4.
+// slice: 일반 방 여섯(순번 표 번호 1·2·3·4·6·8 그대로, 정예·보스 방 없음), 방 맵은 cathedral_arena 하나, 보상은 마법서·보물 상자 둘.
+// 구간표는 기획 10.3 표에서 단계 1 에 없는 종(폴른 원·썩은 시체·핀드·불타는 해골 궁수)의 가중을 뺀 것 — 2:00–2:30·2:30–3:00 은 한 줄로 합침,
+// 5:00–6:00·7:30–8:30(정예 방 t)은 이 판에서 쓰이지 않지만 13.5-3(빈틈 없음)을 지키려고 남긴다.
+// 이벤트는 기획 10.3 표에서 단계 1 에 있는 적만: 3번 방 포위(불타는 해골 12), 2번 방 행진(해골 궁수 5), 4번 방 정예 무리(해골 4, 접두사 없음),
+// 6번 방 우두머리 구울 정예 0:20·행진(폴른 원 20 대신 해골 20 — 폴른 원은 단계 2), 8번 방 포위(좀비 24)·경고. 해골 대장·중간 보스·보스·방 보급은 단계 2.
+// 단계 2 에서 전체 판(방 아홉·정예 둘·보스)으로 바꾸고 이 판은 지운다(두 판을 같이 두지 않는다).
+{
+  "stages": [
+    { "id": "stage_cathedral", "name": "대성당", "slice": true,
+      "room_maps": { "normal": ["cathedral_arena"] },
+      "rooms": [
+        { "kind": "normal", "from": "00:00", "to": "01:00", "number": 1, "floor": 1 },
+        { "kind": "normal", "from": "01:00", "to": "02:15", "number": 2, "floor": 1 },
+        { "kind": "normal", "from": "02:15", "to": "03:30", "number": 3, "floor": 2 },
+        { "kind": "normal", "from": "03:30", "to": "05:00", "number": 4, "floor": 2 },
+        { "kind": "normal", "from": "06:00", "to": "07:30", "number": 6, "floor": 3 },
+        { "kind": "normal", "from": "08:30", "to": "10:00", "number": 8, "floor": 4 } ],
+      "rewards": { "weights": { "reward_tome": 30, "reward_chest": 30 }, "first_room": "reward_tome", "gold_scale": 1.0 },
+      "lighting": { "ambient": [200, 200, 215], "darkness": 0.5,
+                    "hero_light": { "color": [255, 240, 220], "radius": 420 },
+                    "unit_min_light": 0.6, "lights": [] },
+      "scaling": { "hp": [1.0, 0.08], "damage": [1.0, 0.03] },
+      "elite_chance": { "from": "02:00", "at": "00:30", "chance": 0.25 },
+      "spawn_intervals": [
+        { "from": "00:00", "to": "01:00", "max_alive": 25,  "per_second": 0.8, "weights": { "skeleton": 100 } },
+        { "from": "01:00", "to": "02:00", "max_alive": 45,  "per_second": 1.3, "weights": { "skeleton": 70, "zombie": 30 } },
+        { "from": "02:00", "to": "03:00", "max_alive": 60,  "per_second": 1.8, "weights": { "skeleton": 50, "zombie": 30, "skeleton_archer": 20 } },
+        { "from": "03:00", "to": "04:00", "max_alive": 80,  "per_second": 2.3, "weights": { "skeleton": 35, "zombie": 20, "skeleton_archer": 15, "burning_dead": 15 } },
+        { "from": "04:00", "to": "05:00", "max_alive": 100, "per_second": 2.8, "weights": { "skeleton": 30, "zombie": 20, "skeleton_archer": 10, "burning_dead": 15, "ghoul": 10 } },
+        { "from": "05:00", "to": "06:00", "max_alive": 90,  "per_second": 2.5, "weights": { "skeleton": 30, "zombie": 20, "skeleton_archer": 10, "burning_dead": 15, "ghoul": 10 } },
+        { "from": "06:00", "to": "07:00", "max_alive": 130, "per_second": 3.5, "weights": { "skeleton": 25, "zombie": 15, "skeleton_archer": 10, "burning_dead": 10, "ghoul": 15 } },
+        { "from": "07:00", "to": "07:30", "max_alive": 150, "per_second": 4.0, "weights": { "skeleton": 20, "zombie": 15, "skeleton_archer": 10, "burning_dead": 15, "ghoul": 10 } },
+        { "from": "07:30", "to": "08:30", "max_alive": 135, "per_second": 3.6, "weights": { "skeleton": 20, "zombie": 15, "skeleton_archer": 10, "burning_dead": 15, "ghoul": 10 } },
+        { "from": "08:30", "to": "09:00", "max_alive": 170, "per_second": 4.5, "weights": { "skeleton": 20, "zombie": 10, "skeleton_archer": 5, "burning_dead": 15, "ghoul": 10 } },
+        { "from": "09:00", "to": "10:00", "max_alive": 200, "per_second": 5.5, "weights": { "skeleton": 20, "zombie": 10, "burning_dead": 15, "ghoul": 15 } } ],
+      "events": [
+        { "at": "00:00", "type": "banner", "text": "대성당", "duration": 2 },
+        { "at": "02:00", "type": "march", "enemy": "skeleton_archer", "count": 5, "at_entry": "gate_ne", "toward": "center", "straight": 15 },
+        { "at": "03:00", "type": "ring", "enemy": "burning_dead", "count": 12, "radius": 400 },
+        { "at": "04:30", "type": "elite_pack", "enemy": "skeleton", "count": 4, "affixes": 0, "unique_chance": 0 },
+        { "at": "06:20", "type": "elite_pack", "enemy": "ghoul", "count": 4, "affixes": 0, "unique_chance": 1.0 },
+        { "at": "07:00", "type": "march", "enemy": "skeleton", "count": 20, "at_entry": "gate_se", "toward_entry": "gate_nw", "straight": 15 },
+        { "at": "09:25", "type": "ring", "enemy": "zombie", "count": 24, "radius": 420 },
+        { "at": "09:30", "type": "banner", "text": "땅이 울린다…", "duration": 3, "shake": { "px": 1, "duration": 30 } } ] }
+  ]
+}

@@ -1,0 +1,7 @@
+// 접두사 (설계서 6.7, 기획 9.3). 소유 WP4. 불타는(fire_enchanted)은 이펙트(WP5 fx_warning_circle·fx_fire_explosion)와 함께 단계 2 에 넣는다.
+{
+  "affixes": [
+    { "id": "berserk", "name": "광폭한", "stats": { "speed_pct": 0.35, "attack_cooldown_pct": -0.30 }, "glow": [255, 60, 60] },
+    { "id": "ironskin", "name": "강철 피부의", "stats": { "armor": 3, "hp_pct": 0.5 }, "immunities": ["knockback"], "glow": [170, 170, 180] }
+  ]
+}

@@ -1,0 +1,12 @@
+// 코드 없는 변형 증거 (설계서 6.13 "새 적 = JSON 1개"): 해골을 extends 로 이어 색조만 바꾸고, 죽으면 장판을 남기고, 근접 쿨을 고친다.
+// 이 파일을 바꾸면서 C# 을 고쳐야 했다면 구조가 깨진 것이다. 이펙트 fx_ash_pool 은 시험 대역(저장소 데이터에 없음).
+{
+  "enemies": [
+    { "id": "ash_skeleton", "extends": "skeleton", "name": "잿빛 해골",
+      "tint": [150, 150, 150],
+      "behaviors_add": [
+        { "type": "ground_hazard", "trigger": "on_death", "radius": 40, "duration": 3, "damage": 4,
+          "cap_group": "ash_pool", "cap": 20, "effect": "fx_ash_pool" } ],
+      "behaviors_patch": [ { "id": "melee", "cooldown": 0.8 } ] }
+  ]
+}
