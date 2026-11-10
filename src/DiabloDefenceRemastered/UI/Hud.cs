@@ -222,13 +222,17 @@ public sealed class Hud(AppServices app) : IWorldBound
         Ui.Right(c, $"금화 {RunText.Number(m.Gold)}", Theme.Width - 8, 50, Theme.BodyText, Theme.Gold);
         Minimap.Draw(c, rc, new Vector2(Theme.Width - 8, 72));
 
-        // 왼쪽 아래 체력 구슬(코드 그림 — 원·돌 테 텍스처는 WP5 UiCanvas 에 원 채우기가 생기면 바꿈) + 허리띠 둘
-        var orb = new RectF(12, Theme.Height - 76, 76, Theme.Height - 12);
-        c.Fill(orb, Theme.Grey, 0.8f);
-        var inner = Shrink(orb, 3);
+        // 왼쪽 아래 체력 구슬(기획 12.1 — 지름 64 원, 붉은 액체가 비율만큼 아래에서 차오름, 가장자리 돌 테. 코드 그림) + 허리띠 둘
+        var orb = new Vector2(44, Theme.Height - 44);
         var ratio = m.MaxHp > 0 ? Math.Clamp(m.Hp / m.MaxHp, 0f, 1f) : 0f;
-        c.Fill(inner, Theme.Black, 0.9f);
-        c.Fill(new RectF(inner.X0, inner.Y1 - inner.Height * ratio, inner.X1, inner.Y1), Theme.Red, 0.95f);
+        c.Disc(orb, OrbRadius, OrbStone);                                  // 돌 테(바깥)
+        c.Disc(orb, OrbRadius - 2f, OrbStoneDark);                         // 돌 테 안쪽 그림자
+        c.Disc(orb, OrbRadius - 4f, OrbGlass, 0.95f);                      // 빈 유리
+        c.Disc(orb, OrbRadius - 4f, Theme.DarkRed, 1f, ratio);             // 액체(어두운 바닥)
+        var liquid = OrbRadius - 4f;
+        var core = liquid - 3f;                                            // 같은 수위의 밝은 속(테 쪽이 어둡게)
+        c.Disc(orb, core, Theme.Red, 0.9f, (core - liquid + 2f * liquid * ratio) / (2f * core));
+        c.Disc(orb + new Vector2(-9f, -11f), 6f, Theme.White, 0.16f);     // 유리 반사
         c.Text(string.Create(Inv, $"{MathF.Ceiling(m.Hp):0} / {MathF.Ceiling(m.MaxHp):0}"), new Vector2(84, Theme.Height - 30), Theme.BodyText, Theme.Text);
         var beltSlots = app.Defs.Rules.Hero?.Belt?.Slots ?? 2;
         for (var i = 0; i < beltSlots; i++)
@@ -264,6 +268,12 @@ public sealed class Hud(AppServices app) : IWorldBound
         var max = maxLevel > 0 && level >= maxLevel;
         Ui.Right(c, max ? "MAX" : level.ToString(Inv), box.X1 - 1, box.Y1 - 13, Theme.SmallText, max ? Theme.Gold : Theme.Text);
     }
+
+    /// <summary>체력 구슬 반지름(가상 px — 기획 12.1 지름 64)과 돌 테·유리 색.</summary>
+    public const float OrbRadius = 32f;
+    private static readonly Rgb OrbStone = new(104, 94, 80);
+    private static readonly Rgb OrbStoneDark = new(46, 40, 34);
+    private static readonly Rgb OrbGlass = new(14, 8, 8);
 
     private static RectF Shrink(RectF r, float d) => new(r.X0 + d, r.Y0 + d, r.X1 - d, r.Y1 - d);
 }
