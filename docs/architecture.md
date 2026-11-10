@@ -5457,11 +5457,19 @@ WP5(렌더·그림·미리보기) 단계 1 구현이 이 문서와 다르게 정
 | `--debug-nav`(9절) | `grid`·`tiles`·`entries`·`sight` 만 그린다. `flow`·`astar`·`shapes` 는 합친 뒤 WP2 가 `DebugNavOverlay` 에 더하거나 자기 겹침을 둔다 | WP2 의 길찾기·충돌 상태를 읽어야 한다 |
 | `--preview fog` 의 `_light.png`(9절) | 씬은 `SaveLightPng` 만 내고, 파일 이름을 아는 캡처 쪽(WP7)이 부른다. 장면은 60틱씩, 시야만 `BeginTick` 으로 계산(적 생각·이동 없음) | 씬은 캡처 파일 이름을 모른다 |
 | 음산한 성소 색조 0.6(13.20 ③) | 그림 정의(`sprites/objects.json`)에 색조 칸이 없어 물체·아이콘 쪽 `tint`(WP3 `rewards`·`pickups`)로 | 그림 정의는 원작 exe PNG 대체 그림(기획 열린 질문 32 — 원작 물체 그림 확인 전). 시트 크기는 이 PC 의 실제 크기 |
-| 대성당 작은 방 A "기둥 홀"(11.1 맵 데이터 — 단계 2 데이터를 먼저) | `Data/maps/` 가 아니라 시험 고정 파일 `tests/…/Art/Maps/cathedral_room_a.json`(시험 `Art/RoomMapTests`) | `Map/RealMapTests` 가 실제 맵 목록을 `cathedral_arena` 하나로 굳혀 두어 Data 에 넣으면 그 시험이 깨지고, 그 파일은 WP5 몫이 아니다. 목록 줄이 풀리면(WP1g 요청) 파일만 옮긴다. 기획의 배치 표(10.8)가 나오면 그것에 맞춘다 |
+| 대성당 작은 방 A "기둥 홀"(11.1 맵 데이터 — 단계 2 데이터를 먼저) | `Data/maps/` 가 아니라 시험 고정 파일 `tests/…/Art/Maps/cathedral_room_a.json`(시험 `Art/RoomMapTests`) | `Map/RealMapTests` 가 실제 맵 목록을 `cathedral_arena` 하나로 굳혀 두어 Data 에 넣으면 그 시험이 깨지고, 그 파일은 WP5 몫이 아니다. 목록 줄이 풀리면(WP1g 요청) 파일만 옮긴다. 기획의 배치 표(10.8)가 나오면 그것에 맞춘다 | — **v0.9 맵 묶음에서 `Data/maps/` 로 옮김**(아래 "작은 방 다섯")
 
 **작은 방 A 배치**: 메가 16(하위 32, 외곽 상자 2048×1152), `arch_hall` 둘레·문 넷(하위 14..17), 기둥 넷은 `open_center` [5,5,11,11] 바깥 귀퉁이(안에 두면 기둥 상한 2), 앞쪽 구석 Γ(모서리 + 가로·세로 벽 하나씩)는 둘레와 메가 하나 뗌.
 진입점 뒤 문 4·앞 문 26, `room_kinds` normal·elite, `room_*` 기준점 없음, 원작 방을 본뜨지 않음(`// 본뜬 원작 방: 없음` — 13.5-22 대조 줄 없음). 거울판은 L1 짝 표(WP0) 뒤.
 `MapDataReader` 로 오류·경고 0(13.5-4 배치 쪽·13.5-19·13.5-23 ③ 작은 방 진입점 150px). WP2 의 13.5-4(80px)·5·6 은 합친 뒤.
+
+**작은 방 다섯**(v0.9 맵 묶음, 브랜치 `maps/act1`): `Data/maps/cathedral_room_a~e`, 모두 메가 16·`arch_hall` 둘레·문 넷·진입점 뒤 4/앞 26·`room_kinds` normal·elite·`mirror: true`·원작 방을 본뜨지 않음.
+A "기둥 홀"(기둥 셋 + 앞쪽 Γ), B "긴 회랑"(가로 벽 둘이 nw ↔ se 회랑을 가름 — 거울판은 ne ↔ sw), C "안쪽 방 둘"(뒤·앞 모서리에 출입구 둘짜리 방, `room_north`·`room_south`),
+D "창살 방"(좌우 모서리에 창살 낀 방, `room_east`·`room_west` — 배치가 대각선 대칭이라 거울판이 원판과 거의 같다), E "십자"(귀퉁이 ㄱ 넷).
+A 의 처음 판은 통합 검증에서 13.5-4 를 어겼다(Γ [12,12] 가 앞 둘레와 하위 2칸 57px·기둥 [11,11] 과 대각 1칸 32px) — Γ 를 [11,11] 로 옮기고 그 기둥을 뺐다.
+시험은 `Nav/RealRoomMapTests`(작은 방 전부 원판·거울판 — `ValidateRooms`·`NavPathValidator` 13.5-4~6·13.5-23·10.1 `Nav` 전수 (a)~(c)·문 넷 진입점·맵 풀).
+`stage_cathedral` 의 `room_maps.normal` 이 이 다섯이고 `boss` 는 `cathedral_arena` 그대로(이 판엔 보스 방이 없어 방 없는 월드가 씀).
+**맵 그림**: 시작 검사가 `Data/maps` 의 모든 맵(거울판 포함)의 `d1/maps/<id>/arena.json` 을 요구하므로, 이 묶음을 받은 PC 는 `toolsimport-all.ps1`(또는 도구 `import`)을 다시 돌려야 게임이 뜬다(안 돌리면 데이터 오류 화면, 개발 실행은 종료 코드 2).
 
 **남은 것**(단계 1 완료 기준 중 창이 필요한 것 — 합친 뒤 검증 담당): `--preview sprites/enemies/effects/tiles/blend/fog` 캡처 판정, `--stress 300 --freeze-ai` 렌더 p99·`draw_calls` ≤ 600(`--reveal`·안개 켬 두 번, s = 2 한 번), `vram_mb`(R7·R38),
 10.2 "뒷벽·앞 턱·아치"·"예고·빛"·"안개 고정 장면"·"안개 흐름"·"안개 재현"·"방 흐름"(봉인·아이콘) 행. 기획 열린 질문 7·10·11·18 의 값 맞추기도 미리보기를 본 뒤.
