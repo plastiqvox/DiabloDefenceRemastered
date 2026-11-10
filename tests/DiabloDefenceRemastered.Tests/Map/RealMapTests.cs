@@ -53,6 +53,8 @@ public class RealMapTests
         Assert.Equal("XXX.", ts.Props[ts.Pieces["blood_wall_corner"]]);
         Assert.Equal("XX..", ts.Props[ts.Pieces["door_closed"]]);   // 닫힌 문 26 = 가로 벽(SOL 로 벽 — 문으로 안 씀)
         Assert.Equal("X...", ts.Props[ts.Pieces["wall_post"]]);     // 작은 모서리 기둥 3(┘ 자리)
+        Assert.Equal("X.w.", ts.Props[ts.Pieces["grate_v"]]);     // 세로 창살 35 = 36 의 전치(기둥 칸은 아래 design_diffs)
+        Assert.Equal("X.X.", ts.Props[ts.Pieces["door_closed_v"]]); // 닫힌 문 세로 25 = 26 의 전치
         foreach (var t in ts.Floor) Assert.Equal("....", ts.Props[t]);
         var b = ts.Borders["arch_hall"];
         foreach (var t in new[] { b.CornerE, b.EdgeSe, b.CornerS, b.EdgeSw, b.CornerW }) Assert.Equal("XXXX", ts.Props[t]);
@@ -60,9 +62,12 @@ public class RealMapTests
         // SOL 오류 보정은 창살 기둥 칸 하나(쓰는 글자가 성질 표와 같음 — ValidateTileset)
         var diff = Assert.Single(ts.SolKnownDiffs);
         Assert.Equal((36, 0, "w", "X"), (diff.Tile, diff.Sub, diff.Sol, diff.Use));
-        Assert.Empty(ts.DesignDiffs);
+        // 기획 이유로 다르게 둔 칸은 세로 창살 기둥 칸 하나(36 의 기둥 칸과 같게 — 거울판 짝, WP0)
+        var design = Assert.Single(ts.DesignDiffs);
+        Assert.Equal((35, 0, "w", "X"), (design.Tile, design.Sub, design.Sol, design.Use));
         Assert.Equal([15], ts.Marks[TileMark.Pillar]);
-        Assert.Equal([26], ts.Marks[TileMark.ClosedDoor]);   // 98 은 피 튄 아치 벽(문 아님, 설계서 13.16)
+        Assert.Equal([36, 35], ts.Marks[TileMark.Grate]);
+        Assert.Equal([26, 25], ts.Marks[TileMark.ClosedDoor]);   // 98 은 피 튄 아치 벽(문 아님, 설계서 13.16)
     }
 
     [Fact]

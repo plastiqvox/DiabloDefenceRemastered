@@ -245,9 +245,9 @@ public class MapMirrorTests
     }
 
     [Fact]
-    public void RealCathedral_MirrorTrue_ReportsMissingPairs_GrateAndClosedDoor()
+    public void RealCathedral_MirrorTrue_MakesMirroredMap_NoPairErrors()
     {
-        // 실제 l1.json 에는 아직 짝 표가 없다 — 다른 조각 오류도 함께 나오고 순서는 보지 않는다(포함)
+        // 실제 l1.json 짝 표(WP0 — 창살 35·닫힌 문 25 포함)로 cathedral_arena 에 mirror 를 켜면 오류 없이 거울판이 생긴다
         var tilesets = RealData.Read("tilesets/l1.json");
         var maps = RealData.Read("maps/cathedral_arena.json");
         var map = (JsonObject)((JsonArray)maps["maps"]!)[0]!.DeepClone();
@@ -257,9 +257,8 @@ public class MapMirrorTests
             new MapDataElement("tilesets/l1.json", "$.tilesets[0]", MapDataReader.TilesetsKind, ((JsonArray)tilesets["tilesets"]!)[0]!.DeepClone()),
             new MapDataElement("maps/cathedral_arena.json", "$.maps[0]", MapDataReader.MapsKind, map),
         ]);
-        Assert.Contains(r.Errors, e => e.File == "maps/cathedral_arena.json" && e.Message.Contains("조각 grate_h 의 짝"));
-        Assert.Contains(r.Errors, e => e.File == "maps/cathedral_arena.json" && e.Message.Contains("조각 door_closed 의 짝"));
-        Assert.Null(r.Maps.Single().Mirrored);
+        Assert.True(r.Errors.Count == 0, string.Join("\n", r.Errors.Select(e => e.Message)));
+        Assert.NotNull(r.Maps.Single().Mirrored);
         Assert.False(RealData.Cathedral.Mirror);                         // 실제 데이터는 바꾸지 않았다
     }
 

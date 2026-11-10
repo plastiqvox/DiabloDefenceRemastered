@@ -5440,6 +5440,7 @@ WP0 이 다른 묶음과 동시에 일해서, 1.4 본문에 적기로 한 실측
   `pieces` 에 `grate_v` 35·`door_closed_v` 25, `props` 35 `X.w.`·25 `X.X.`, `marks` 에 35·25, 6.11 예와 같은 `mirror` 짝 표, 35 기둥 칸은 `design_diffs`(원작 수정판 보정 여부는 확인 못 함 — 보정이라 하지 않음)로 넣어 보면
   실제 원본 성질 대조 통과·13.5-12 짝 검사 통과(`mirror: true` 인 `cathedral_arena` 가 오류 없이 거울판을 만듦)였다. 다만 지금 `MapMirrorTests.RealCathedral_MirrorTrue_ReportsMissingPairs_GrateAndClosedDoor`(짝 표가 없음을 기대)·
   `RealMapTests.Tileset_PropsKeysAreNamedTiles_AndOriginValues`(`design_diffs` 가 빔을 기대)가 깨져서 — 둘 다 WP0 소유가 아님 — 넣지 않았다. 통합 때 두 시험을 같이 고치며 넣는다.
+  — **통합 때 넣음**: 위 값 그대로 `l1.json` 에 넣고 두 시험을 고쳤다(`RealCathedral_MirrorTrue_MakesMirroredMap_NoPairErrors` — 오류 0·거울판 있음, 성질 표 시험에 35·25·`design_diffs` 하나·`marks`). 실제 `cathedral_arena` 의 `mirror` 는 켜지 않았다(맵 소유 WP5 가 정함).
 
 ### WP5 구현 기록
 
