@@ -6,16 +6,16 @@ namespace DiabloDefenceRemastered.Tests.Art;
 
 /// <summary>
 /// 대성당 작은 방 A "기둥 홀"(기획 10.8 첫 안, 설계서 11.1 WP5 맵 데이터). 자원 없이 돈다.
-/// 맵은 아직 <c>Data/maps/</c> 가 아니라 이 폴더의 <c>Maps/cathedral_room_a.json</c> 에 둔다 — <c>Map/RealMapTests</c> 가 실제 맵 목록을 <c>cathedral_arena</c> 하나로 굳혀
-/// 두어서(WP5 밖 파일), 그 줄이 풀리면 파일만 <c>Data/maps/</c> 로 옮긴다(설계서 13장 "WP5 구현 기록").
-/// 실제 <c>l1</c> 타일셋과 함께 <see cref="MapDataReader"/> 로 읽어 13.5-4 배치 쪽·13.5-19·13.5-23 ③(작은 방 진입점 150px) 를 본다. WP2 의 13.5-4(80px)·5·6 은 합친 뒤.
+/// 맵은 <c>Data/maps/cathedral_room_a.json</c>(처음엔 시험 고정 파일이었다 — <c>Map/RealMapTests</c> 의 맵 목록 줄이 풀려 옮김).
+/// 실제 <c>l1</c> 타일셋과 함께 <see cref="MapDataReader"/> 로 읽어 13.5-4 배치 쪽·13.5-19·13.5-23 ③(작은 방 진입점 150px) 를 본다.
+/// 길 검사 13.5-4(80px)·5·6 과 10.1 <c>Nav</c> 전수는 모든 작은 방을 함께 보는 <c>Nav/RealRoomMapTests</c>.
 /// </summary>
 public class RoomMapTests
 {
     private const string File = "maps/cathedral_room_a.json";
 
     private static string FixturePath() =>
-        Path.Combine(RealData.RepoRoot(), "tests", "DiabloDefenceRemastered.Tests", "Art", "Maps", "cathedral_room_a.json");
+        Path.Combine(RealData.Dir, "maps", "cathedral_room_a.json");
 
     private static MapDataResult Read()
     {
@@ -39,7 +39,7 @@ public class RoomMapTests
         Assert.Equal("cathedral_room_a", map.Id);
         Assert.Equal(16, map.Size);
         Assert.Equal([RoomKind.Normal, RoomKind.Elite], map.RoomKinds);
-        Assert.False(map.Mirror);                                            // 짝 표(WP0) 뒤에 단다
+        Assert.True(map.Mirror);                                             // L1 짝 표(WP0)로 거울판을 켠다
         Assert.Equal("d1/maps/cathedral_room_a", map.Art);
     }
 
