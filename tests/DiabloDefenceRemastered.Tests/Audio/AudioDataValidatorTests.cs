@@ -188,4 +188,16 @@ public class AudioDataValidatorTests
                                                 .Select(b => $"{Path.GetRelativePath(sim, f)}: {b}")).ToList();
         Assert.Empty(hits);
     }
+
+    /// <summary>7.9 "안개와 무관": 고르기·연결은 시야를 읽지 않는다 — 화면 안이면 안개 속 적의 소리도 내고 <c>--reveal</c> 이 <c>AUDIO</c> 수를 바꾸지 않는다.</summary>
+    [Fact]
+    public void AudioSources_DoNotReadVisibility()
+    {
+        var audio = Path.Combine(RealData.RepoRoot(), "src", "DiabloDefenceRemastered.Core", "Audio");
+        var game = Path.Combine(RealData.RepoRoot(), "src", "DiabloDefenceRemastered", "Audio");
+        var files = Directory.GetFiles(audio, "*.cs").Concat(Directory.GetFiles(game, "*.cs")).ToList();
+        Assert.True(files.Count >= 10, string.Join(", ", files));
+        Assert.DoesNotContain(files, f => File.ReadAllText(f).Contains(".Visibility", StringComparison.Ordinal)
+                                         || File.ReadAllText(f).Contains("FogMath", StringComparison.Ordinal));
+    }
 }
