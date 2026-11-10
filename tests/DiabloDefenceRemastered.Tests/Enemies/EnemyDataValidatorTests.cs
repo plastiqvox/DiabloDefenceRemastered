@@ -50,6 +50,38 @@ public sealed class EnemyDataValidatorTests(ITestOutputHelper output)
         { "light_under_range", "13.5-15", DataSeverity.Error },
     };
 
+    private static SpawnIntervalDef Iv(float from, float to, int maxAlive, float perSecond, EnemyDef e) => new()
+    {
+        From = new ClockTime(from), To = new ClockTime(to), MaxAlive = maxAlive, PerSecond = perSecond,
+        Weights = [new WeightEntry<EnemyDef>(DefRef<EnemyDef>.To(e), 1f)],
+    };
+
+    [Fact]
+    public void Room_rhythm_warnings_13_5_18()
+    {
+        // 정예 방(2·3)이 붙어 있고(사이 일반 방 0, t 시작 간격 1:00) 3번 정예 방 구간(120–180)이 바로 앞 구간(60–120)보다 크다 → 13.5-18 경고 셋
+        var grunt = Enemy("val_grunt");
+        var mini = Enemy("val_mini") with { Rank = DefRank.Miniboss };
+        var defs = Defs([grunt, mini], map => TestDefs.Stage(map) with
+        {
+            Rooms =
+            [
+                TestDefs.Room(RoomKind.Normal, 0f, 60f, 1),
+                TestDefs.Room(RoomKind.Elite, 60f, 120f, 2, miniboss: mini),
+                TestDefs.Room(RoomKind.Elite, 120f, 180f, 3, miniboss: mini),
+                TestDefs.Room(RoomKind.Normal, 180f, 240f, 4),
+            ],
+            SpawnIntervals = [Iv(0f, 60f, 40, 2f, grunt), Iv(60f, 120f, 40, 2f, grunt), Iv(120f, 180f, 60, 3f, grunt), Iv(180f, 240f, 60, 3f, grunt)],
+        });
+        var errors = Validate(defs);
+        foreach (var e in errors) output.WriteLine(e.ToString());
+        var rhythm = errors.Where(e => e.Message.Contains("13.5-18", StringComparison.Ordinal)).ToList();
+        Assert.All(rhythm, e => Assert.Equal(DataSeverity.Warning, e.Severity));
+        Assert.Contains(rhythm, e => e.Message.Contains("일반 방이 없다", StringComparison.Ordinal));
+        Assert.Contains(rhythm, e => e.Message.Contains("간격", StringComparison.Ordinal));
+        Assert.Contains(rhythm, e => e.Message.Contains("바로 앞 구간보다 크다", StringComparison.Ordinal));
+    }
+
     [Theory]
     [MemberData(nameof(Broken))]
     public void Broken_definition_reports_its_rule(string kind, string rule, DataSeverity severity)
