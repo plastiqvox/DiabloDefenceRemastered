@@ -5281,6 +5281,48 @@ WP1f(형과 순수 로직을 한 번에 — 11.1 WP1f 표 #1~#20) 코드가 문�
 | 낮음 | `Suspend` ⓐ 의 한 틱 뒤 예외면 월드가 이미 한 틱 진행됨 | 코드는 그대로. 11.1 WP6 v0.8.2 에 메뉴가 예외를 받아 `저장 못 함` 한 줄로 판을 이어 가게 적음 |
 | 낮음 | 커밋 준비(`git log --grep WP1f` 참조·설계 v0.8/v0.8.1 본문·리뷰 문서 2개·기획서·brief 변경) | 문서 변경 없음 — 커밋 제목·본문에 `WP1f` 를 넣고, 함께 넣을 파일은 메인 세션·사용자가 정함 |
 
+### WP2 구현 기록
+
+WP2(길찾기·충돌·공간·시야 소유) 코드가 문서와 다르게 또는 더 정한 것. 코드가 정본이다(11.4 와 같은 규칙). 계약 파일·실제 `Data/` 는 고치지 않았다. 커밋은 `git log --grep WP2`.
+파일: Core `Geometry/Geo.cs`, `Nav/`(`ArenaCollision` 본문·`NavConst`·`NavGrid`·`ObstacleIndex`·`FlowField`·`GridAStar`·`IndexedMinHeap`·`NavWorld`·`PlacementResolver` 본문·`NavModule`·`Validation/PathChecks`·`Validation/FlowRadiusValidator`),
+`Spatial/SpatialHash.cs`, `Sim/Movement/`(`Navigator`·`MovementSystems`·`Enemy.Nav.cs`·`World.Movement.cs`·`Invariants/InvariantChecker`), 시험 `Geometry/ Nav/ Spatial/ Movement/ Invariants/`.
+
+| 자리 | 문서 | 코드 | 이유 |
+|---|---|---|---|
+| 4.2 도형 만들기 1 | 막힘 종류마다(걷기 칸 묶음·투사체 칸 묶음) 탐욕 직사각형 | **칸 종류**(걷기·투사체·둘레 세 비트가 같은 칸)마다 탐욕 직사각형. `X` 칸은 두 플래그를 다 가진 도형 하나, `w`·`W` 는 걷기만, `m`·`M` 은 투사체만 | 같은 칸에 도형 둘이 겹치지 않고, 둘레 칸과 안쪽 칸이 한 도형에 섞이지 않아 `IsBoundary` 가 칸 그대로다. 합집합 = 막힌 칸 합집합(점 표본 시험) |
+| 4.2 clearance | 칸 중심 부호 거리 | `min(바깥 마름모 부호 거리, 걷기 막힘 도형 부호 거리 최솟값)`. 도형 안의 깊이는 그 도형 하나 기준(합집합 깊이보다 작을 수 있음). 모든 도형을 외접 상자 거리로 거름 — 색인 칸 반경 제한 없음 | 정확한 값이 싸다(설치 N 40 2.7ms). 맵 밖은 경계 거리 그대로 |
+| 4.3 방향 읽기 | 4칸 이중선형 기울기, 못 가는 칸이 섞이면 자기 칸 `dir` | 더함: 보간 기울기가 자기 칸 `dir` 과 **60° 넘게 엇갈리면** 자기 칸 `dir`(`FlowField.SaddleCos`) | 벽 모서리의 거리 안장에서 보간 기울기가 제자리를 맴돌게 했다(실제 맵 점 유닛 16칸이 멈춤 — 시험 (b)) |
+| 4.3 끼임 | "공격 사거리 밖이면" 비켜 감 | 사거리 = 두 몸 반경 + `Navigator.ReachMargin`(40) 근사. 비켜 가기 방향은 `Rng.Ai` | 부품 사거리는 WP4 가 안다 — 내비는 의도만 받는다(4.4 끝). `[해석]` |
+| 4.3·4.4 `phase_through` | 장애물 통과 유닛의 길 | `SeekHero` 면 필드·A* 없이 주인공 쪽 직선(안쪽 장애물은 충돌이 건너뛰고 둘레·경계는 막음) | 필드는 안쪽 장애물을 막힘으로 본다 |
+| 4.4 목표 칸 | 목표에 못 들어가면 h 최소 칸까지 | 목표 칸이 막혔으면 먼저 3칸 안 가장 가까운 통과 칸을 목표로(없으면 그 칸 그대로 → h 최소). 시작 칸도 같은 3칸 규칙. 펼침 상한 `NavConst.PathExpandLimit` 2만 | 시작 쪽 규칙(4.4)과 같은 범위. 주인공이 큰 몸이 못 서는 벽 곁에 있어도 경로가 그 앞까지 간다 |
+| 4.5 길 트임 | 4px 간격 이중선형 clearance ≥ r | 그대로(양 끝 포함). 상자 밖 점은 경계 거리 | — |
+| 4.6 주인공 | (적만 적힘) | `Locomotion` 이 주인공도 적분: `Hero.Intent` 가 `Heading`·`Straight` 면 `Dir` 정규화 × `MoveSpeed` × `SpeedMul`, `SeekPoint`·`Away` 는 점 쪽·반대, 그 밖 0. 가속 제한·미끄러짐 없음(벽은 충돌이 밀어 미끄러짐이 생김). 넉백 중이면 넉백 속도 | `Hero.Pos·Vel` 쓰기가 WP2(11.2). 주인공은 즉답이 맞다 |
+| 4.6 분리·가속 | 모든 이동 | `Straight`(입장·돌진) 의도는 분리·가속 제한을 건너뜀, 입장 중은 가속 제한 없음. 분리는 해시에 든(조준 가능) 적만 | "미끄러짐 없는 직선" 을 지킴 |
+| 4.6-4 넉백 | `KnockbackVel` 을 0.12s 동안 | `Locomotion` 이 그동안 희망 속도 **대신** 넉백 속도로 움직이고 `KnockbackTime` 을 줄인다(0 이면 `KnockbackVel` 도 0). WP3 은 쓰기만 | 적분하는 곳이 시간도 줄여야 두 번 줄지 않는다 |
+| 4.7 막힘 시간 | "희망 방향으로 실제 이동이 막힘" | 충돌 뒤 `(Pos − PrevPos)·희망 방향` 이 기대(희망 속도 × Dt)의 25% 미만이면 `MoveBlockedTime += Dt`, 아니면 0. 희망 속도 0·넉백 중이면 0 | 문턱 한 곳(`CollisionSystem.BlockedProgress`) |
+| 4.7-1 적-적 | 해시에서 쌍 | `Locomotion` 이 지은 해시를 다시 쓴다(질의 칸 범위를 `SpatialHash.Slack` 8px 넓힘, 거리는 지금 위치로) | 한 틱 이동(2~6px)은 여유 안. 해시 짓기는 6·8 단계 두 번 그대로(3.5) |
+| 4.7-2 단단한 적 | 중간 보스·보스·반경 20 이상 | `Def.Rank != Normal` 또는 반경 ≥ 20(`CollisionSystem.HardRadius`) | 정의 등급 = 중간 보스·보스 |
+| 4.7-3 입장·등장 | 입장 중은 장애물·경계를 건너뜀 | 등장 중(`Emerging`)은 장애물·경계에 밀린다(해시·분리에서만 빠짐) | 등장은 맵 안 자리에서 솟는다 |
+| 4.8 해시 | 외곽 상자 칸 | 상자 밖 자리는 가장자리 칸에 넣는다(질의 범위도 자름). `MaxRadius`(넣은 적 중 최대 반경)를 같이 냄 | 입장 중이 아니어도 밀려 상자 밖에 잠깐 있는 적을 잃지 않게 |
+| 4.10 `Throw` | `HasClearLine` 으로 닿는 곳까지 | 4px 걸음으로 clearance ≥ 몸 반경인 마지막 자리(처음부터 막히면 제자리) | 같은 뜻을 걸음으로 |
+| 4.10 `PathLengthToHero` | 필드 등급·통과 칸이면 필드 거리 | + 그 필드가 지금 주인공 칸으로 계산된 것일 때만(아니면 자른 A*). 시작점 칸은 직선 거리 | 주인공이 옮긴 뒤 갱신 전(최대 6틱) 낡은 필드 거리를 쓰지 않게 |
+| 6.14 13.5-4 | 도형 묶음끼리·경계와 80px 이상 또는 붙음 | 걷기 막힘 도형을 "붙음"(거리 ≤ 0.5px)으로 묶음. **둘레 묶음**(둘레 도형을 품거나 바깥 마름모에 붙은 묶음)끼리는 안 봄. 둘레가 아닌 묶음 ↔ 바깥 마름모도 봄 | 둘레끼리는 같은 경계다. 실제 맵·6.11 예 합성 맵 통과, T 자 접합(세로 조각만) 오류·모서리 조각 통과 |
+| 6.14 13.5-5 기준점 | 입구 진입점 → `center`·`room_*` 길(16·26·34) | **기준점 칸에서 3칸(체비쇼프) 안에 닿는 칸**이 있으면 닿음 | 실제 `room_south`(31,31)는 기둥(30,32)에서 약 32px 라 34 몸이 그 칸에 정확히 못 선다 — A* 가 "갈 수 있는 가장 가까운 곳" 까지 가는 것과 같은 뜻. `[해석]` |
+| 6.14 13.5-5 나머지 | "도달 칸", S 필드 시작점 | "주인공 시작 → 모든 입구 진입점" 만(도달 칸은 갇힌 바닥 칸 검사가 덮음). S 필드 시작점은 BFS 대체 없이 "(14 + 16)px 안 통과 칸 ≥ 1" 을 직접 봄 | BFS 대체가 있으면 늘 참이라 검사가 아니다 |
+| 6.14 13.5-6·작은 방 | 60px·150px | 같은 함수 `PathChecks.InnerDistance`(둘레 아닌 걷기 도형까지 실제 거리), 작은 방(방 맵·N ≤ 36)이면 150px 문턱 | 11.1 WP2 v0.7 "같은 함수에 거리만" |
+| 6.14 오류 위치 | 파일·경로 | 길 검사 = `maps/<원판 ID>.json` `$`, 거울판은 문구 앞 `(거울판 <id>@m)`. flow 몸 경고 = 파일 `enemies` 경로 `$.enemies[<id>].radius`(경고) | 정의에 원본 파일 이름이 없다 — WP7 로더가 고쳐 붙일 수 있다 |
+| 13.13 넘긴 것 2 | "14px 안" 이 실제 L1 벽 모서리에서 거짓 오류를 내는지 | 실제 `cathedral_arena`·6.11 예 합성 맵에서 갇힌 바닥 칸 0 — 기준을 넓히지 않았다 | — |
+| 10.1 `Nav` (b) | 10초 안에 120px | 한계 = max(10초, 필드 길 길이 × 1.5 / 70px/s + 2초) | 2560px 맵의 먼 칸은 길이 1,300px 를 넘어 해골 걸음으로 10초에 못 온다. 시험의 뜻은 "맴돌지 않음" |
+| 10.1 `InvariantChecker` | `SpatialRebuild` 안 60틱마다 | `World.Options.Check` 또는 `InvariantChecker.Enabled` 일 때 `Tick % 60 == 0`. 결과 = `World.Invariants`(`InvariantReport` — World 조각 `Sim/Movement/World.Movement.cs`, 방 수명). 판 합은 부르는 쪽이 방마다 `InvariantReport.AddTo`. `stuck` 은 3표본(3초) 간격으로 기준 자리와 비교, 제외 거리 = 두 반경 + 40 + 32, `Away`·`Hold`·`Straight` 의도는 뺌. `occluded` 는 일반 정의 등급·입장·등장 중 아님·`Visibility.Enabled`. 공정성 네 열은 `World.Fairness` 를 줄(`Format`)에만 붙임 | `RunState` 에 칸이 없다(계약 — WP1g 요청). 판 수명 상태를 모듈 인스턴스에 두지 않는다(11.2) |
+| 4.9 측정 | 적 500 플로우 3,600틱 | `Perf` 시험 `MovementPerfTests`: 실제 `cathedral_arena`, 주인공이 가운데 둘레를 천천히 돎(필드 갱신 틱 포함). Release 이 PC: Navigation 0.036 + Locomotion 0.167 + Collision 0.169 = **0.371ms**(SpatialRebuild 0.006), 할당 0B, 불변식(`stuck_max` 4/500). 500 은 절대 상한 360 을 일부러 넘으므로 `over_cap` 은 안 봄. 설치(`NavWorld.Build`) N 40 2.7ms·N 32 1.6ms | 주인공 정지면 500 이 한 점에 굳어 `stuck` 이 기준을 넘는다(뒤 줄이 못 움직임 — 내비 고장이 아님) |
+| `INavDebugView.Arena` | 맵 격자 | 맵 없는 시험 월드(상자 내비)에서는 null | 형은 계약(null 불가 표시) — WP1g 요청 |
+
+**남은 것**
+1. 스테이지 2 실제 맵(협로 포함)의 (a)~(d) — 단계 3(맵이 생기면 `RealMapNavTests` 를 그 맵으로 한 번 더 — (a)~(c) 본문은 `Nav/NavExhaustive` 한 곳). 지금은 합성 맵·합성 액트 풀로 대신: 작은 방 N 32 세 맵(액트 풀 `test_room_a`·그 거울판·안쪽 방 하나와 기둥을 둔 맵)의 (a)~(d) 는 `SmallRoomNavTests`, 맵 ⑤ 모서리 구멍 → 13.5-4 는 `SyntheticMapNavTests`.
+2. R23 입구 대체 비율(작은 방 32) — 감독 생성 규칙(WP4 `Director`)이 있어야 잰다. 못 함.
+3. 단계 1 시나리오의 불변식·공정성 열 0(액트 1 실행) — WP4 `Scenario` 가 `RunOptions.Check` 로 켜고 방마다 `World.Invariants` 를 합친다.
+4. `--debug-nav`·창으로 보는 확인 — 확인 못 함(합친 뒤, WP5).
+
 ---
 
 ## 부록 A. 원작 형식 규칙 (조사 문서·시제품에서 옮김)

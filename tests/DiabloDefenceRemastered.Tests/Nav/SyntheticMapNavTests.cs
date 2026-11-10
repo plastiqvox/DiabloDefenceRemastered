@@ -67,6 +67,16 @@ public class SyntheticMapNavTests
     }
 
     [Fact]
+    public void NoCornersRoom_CornerHoleCaughtBy80px()
+    {
+        // 합성 방 맵 ⑤(v0.6.1): 꺾이는 자리에 가로·세로 조각만 둔 방의 모서리 하위 1칸 구멍이 13.5-4 80px 로도 잡힌다.
+        // 배치 풀기 검사(13.5-19 하위 1칸 틈)가 먼저 오류를 내는 맵이라 풀기 오류를 보지 않고 길 검사만 돌린다. 모서리 조각 ③ 은 통과
+        var errors = NavPathValidator.Check(TestDefs.RoomMapNoCorners());
+        Assert.Contains(errors, e => e.StartsWith("13.5-4", StringComparison.Ordinal));
+        Assert.DoesNotContain(Check(TestDefs.RoomMapOneDoor()), e => e.StartsWith("13.5-4", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void EntryNearInnerWall_60pxError()
     {
         // 북서 입구 진입점 (4, 19.5) 바로 옆 기둥(하위 (4,20))
