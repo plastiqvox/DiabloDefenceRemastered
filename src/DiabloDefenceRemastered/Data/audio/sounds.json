@@ -1,0 +1,54 @@
+// 효과음·음악 정의 (설계서 6.15, 기획 12.7). 소유 WP8. 단계 1 내용(매직 미사일·파이어볼·비전 구체, 해골·해골 궁수·좀비 묶음, 마법사,
+// 경험치 보석·금화·체력 물약, 문 보상 마법서·보물 상자)과 UI·문 소리만 — 단계 2·3 의 무기·몬스터·보스 대사·장판 반복은 그 내용과 함께 더한다.
+// files 는 가져오기 출력 이름(1.4: 원작 경로를 소문자로 d1/sound/ 아래 그대로)이다. 가져오기 소리 표 줄은 WP0 가 쓴다(13.5-10 이 대조).
+// 원작 파일 이름은 기획 12.7 표 그대로. 몬스터 소리 이름 규칙(<묶음 폴더>\<접두>{a,h,d,s}{1,2}.wav)은 DevilutionX 참고 — 원본 목록과 대조는 가져오기(WP0) 때.
+// 소리 길이는 적지 않는다 — 가져오기 출력 d1/sound/index.json 에서 읽는다(7.9).
+{
+  "sounds": [
+    // 무기 발사(발동 한 번에 하나, 기획 12.7)
+    { "id": "snd_cbolt",    "files": ["d1/sound/sfx/misc/cbolt.wav"],    "category": "weapon_fire" },
+    { "id": "snd_fbolt",    "files": ["d1/sound/sfx/misc/fbolt1.wav"],   "category": "weapon_fire" },
+    { "id": "snd_holybolt", "files": ["d1/sound/sfx/misc/holybolt.wav"], "category": "weapon_fire" },
+    // 무기 맞음: 불 계열 / 번개·비전 계열. 같은 소리 반복이 덜 거슬리게 ±5%
+    { "id": "snd_firimp",   "files": ["d1/sound/sfx/misc/firimp2.wav"],  "category": "weapon_hit", "pitch_jitter": 0.05 },
+    { "id": "snd_elecimp",  "files": ["d1/sound/sfx/misc/elecimp1.wav"], "category": "weapon_hit", "pitch_jitter": 0.05 },
+    // 적 투사체: 화살(같은 이름이 sfx\items 에도 있지만 원작 활 소리는 misc — 기획 12.7 v0.5)
+    { "id": "snd_bfire",    "files": ["d1/sound/sfx/misc/bfire.wav"],    "category": "monster" },
+
+    // 몬스터 a·h·d(공격 시작·맞음·죽음) — 출처: DevilutionX 참고(monstdat 소리 이름 규칙 SklAx·SklBw·Zombie)
+    { "id": "snd_skelaxe_attack", "files": ["d1/sound/monsters/skelaxe/sklaxa1.wav", "d1/sound/monsters/skelaxe/sklaxa2.wav"], "category": "monster" },
+    { "id": "snd_skelaxe_hit",    "files": ["d1/sound/monsters/skelaxe/sklaxh1.wav", "d1/sound/monsters/skelaxe/sklaxh2.wav"], "category": "monster_hit", "pitch_jitter": 0.05 },
+    { "id": "snd_skelaxe_death",  "files": ["d1/sound/monsters/skelaxe/sklaxd1.wav", "d1/sound/monsters/skelaxe/sklaxd2.wav"], "category": "monster" },
+    { "id": "snd_skelbow_attack", "files": ["d1/sound/monsters/skelbow/sklbwa1.wav", "d1/sound/monsters/skelbow/sklbwa2.wav"], "category": "monster" },
+    { "id": "snd_skelbow_hit",    "files": ["d1/sound/monsters/skelbow/sklbwh1.wav", "d1/sound/monsters/skelbow/sklbwh2.wav"], "category": "monster_hit", "pitch_jitter": 0.05 },
+    { "id": "snd_skelbow_death",  "files": ["d1/sound/monsters/skelbow/sklbwd1.wav", "d1/sound/monsters/skelbow/sklbwd2.wav"], "category": "monster" },
+    { "id": "snd_zombie_attack",  "files": ["d1/sound/monsters/zombie/zombiea1.wav", "d1/sound/monsters/zombie/zombiea2.wav"], "category": "monster" },
+    { "id": "snd_zombie_hit",     "files": ["d1/sound/monsters/zombie/zombieh1.wav", "d1/sound/monsters/zombie/zombieh2.wav"], "category": "monster_hit", "pitch_jitter": 0.05 },
+    { "id": "snd_zombie_death",   "files": ["d1/sound/monsters/zombie/zombied1.wav", "d1/sound/monsters/zombie/zombied2.wav"], "category": "monster" },
+
+    // 주인공(마법사, 기획 4.0·12.7): 맞음 = 신음 둘 중 무작위, 죽음 = mage71(dead.wav 는 전사 소리라 안 씀). 원작 폴더 철자 sorceror
+    { "id": "snd_sorcerer_hurt",  "files": ["d1/sound/sfx/sorceror/mage69.wav", "d1/sound/sfx/sorceror/mage69b.wav"], "category": "hero" },
+    { "id": "snd_sorcerer_death", "files": ["d1/sound/sfx/sorceror/mage71.wav"], "category": "hero" },
+
+    // 줍기(기획 12.7·11.1): 보석 0.06s 에 한 번·음량 40%
+    { "id": "snd_gem",     "files": ["d1/sound/sfx/items/invgrab.wav"], "category": "pickup", "volume": 0.4, "min_interval": 0.06 },
+    { "id": "snd_gold",    "files": ["d1/sound/sfx/items/gold.wav"],    "category": "pickup" },
+    { "id": "snd_invpot",  "files": ["d1/sound/sfx/items/invpot.wav"],  "category": "pickup" },
+    { "id": "snd_flippot", "files": ["d1/sound/sfx/items/flippot.wav"], "category": "pickup" },
+    { "id": "snd_invbook", "files": ["d1/sound/sfx/items/invbook.wav"], "category": "pickup" },
+
+    // UI·레벨업·상자·정예·문(기획 12.7): 레벨업은 원작 신전 소리 magic.wav, 정예 무리는 magic1.wav 작게
+    { "id": "snd_titlemov",  "files": ["d1/sound/sfx/items/titlemov.wav"], "category": "ui" },
+    { "id": "snd_titlslct",  "files": ["d1/sound/sfx/items/titlslct.wav"], "category": "ui" },
+    { "id": "snd_magic",     "files": ["d1/sound/sfx/items/magic.wav"],    "category": "ui" },
+    { "id": "snd_magic1",    "files": ["d1/sound/sfx/items/magic1.wav"],   "category": "ui", "volume": 0.5 },
+    { "id": "snd_chest",     "files": ["d1/sound/sfx/items/chest.wav"],    "category": "ui" },
+    { "id": "snd_dooropen",  "files": ["d1/sound/sfx/items/dooropen.wav"], "category": "ui" },
+    { "id": "snd_readbook",  "files": ["d1/sound/sfx/items/readbook.wav"], "category": "ui" }
+  ],
+  "music": [
+    // 기획 12.7 곡 목록. 같은 액트 안 방 이동에서는 다시 시작하지 않는다(7.9). 액트 2(dlvlb)는 그 액트 정의와 함께 더한다
+    { "id": "mus_title",     "file": "d1/sound/music/dintro.wav" },
+    { "id": "mus_cathedral", "file": "d1/sound/music/dlvla.wav" }
+  ]
+}

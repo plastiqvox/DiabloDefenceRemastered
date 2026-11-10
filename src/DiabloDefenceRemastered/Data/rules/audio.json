@@ -1,0 +1,26 @@
+// 소리 규칙 (설계서 6.15·7.9, 기획 12.7 "동시 재생 제한"·"음량 원칙"). 소유 WP8. 원본 유래 값이 아니다 — 기획 값 그대로.
+// categories 순서 = 우선순위(앞이 높음, 기획 12.7: 보스 대사 > 주인공 > 레벨업·UI > 보스 소리 > 무기 발사 > 무기 맞음 > 몬스터 > 줍기).
+// offscreen: false 인 분류는 카메라 시야를 offscreen_margin(px) 만큼 넓힌 사각형 밖에서 난 소리를 버린다(안개와 무관).
+{
+  "rules": {
+    "audio": {
+      "voices": 24, "same_sound": 3, "min_interval": 0.05, "monster_hit_interval": 0.08,
+      "monster_death": { "voices": 4, "same_kind_interval": 0.1 },
+      "offscreen_margin": 100, "pan": 0.5,
+      "defaults": { "master": 0.8, "sfx": 0.8, "music": 0.6 },
+      "music_fade": 0.5, "voice_duck": { "to": 0.5, "time": 2.0 }, "pause_music": 0.5,
+      "categories": [
+        { "id": "boss_voice",  "volume": 1.0, "offscreen": true },
+        { "id": "hero",        "volume": 1.0, "offscreen": true },
+        { "id": "ui",          "volume": 0.7, "offscreen": true },
+        { "id": "boss",        "volume": 0.8, "offscreen": true },
+        { "id": "weapon_fire", "volume": 0.6, "offscreen": true },
+        { "id": "weapon_hit",  "volume": 0.5, "offscreen": false },
+        { "id": "monster",     "volume": 0.5, "offscreen": false },
+        { "id": "monster_hit", "volume": 0.5, "offscreen": false },
+        { "id": "pickup",      "volume": 0.4, "offscreen": true },
+        { "id": "ambient",     "volume": 0.6, "offscreen": true }
+      ]
+    }
+  }
+}
