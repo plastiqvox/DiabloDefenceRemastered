@@ -153,6 +153,37 @@ public class SoundRouterTests
     }
 
     [Fact]
+    public void MusicChoice_SameSongContinues_FallbackLogged()
+    {
+        var router = new SoundRouter(D);
+        var noHf = new MusicChoice(router, b => b != ContentBundle.Hfmusic);
+        Assert.True(noHf.TryChange("title", out var m, out var log, out _));
+        Assert.Equal(("mus_title", "AUDIO music=mus_title"), (m!.Id, log));
+        Assert.True(noHf.TryChange(TestDefs.StageId, out m, out log, out _));
+        Assert.Equal("AUDIO music=mus_stage", log);
+        // 같은 액트의 방 이동: 같은 키 → 바꾸지 않음, 로그 없음(액트마다 AUDIO music= 한 줄)
+        Assert.False(noHf.TryChange(TestDefs.StageId, out m, out log, out var warn));
+        Assert.Equal(((MusicDef?)null, (string?)null, (string?)null), (m, log, warn));
+        Assert.False(noHf.TryChange("stage_none", out _, out _, out warn));
+        Assert.StartsWith("AUDIO music 키 'stage_none'", warn);
+
+        // 묶음이 없는 곡은 대체 곡 — 이미 그 곡이면 이어 틂
+        var bindings = D.SoundBindings with
+        {
+            Music = new Dictionary<string, DefRef<MusicDef>>(D.SoundBindings.Music) { ["act_crypt"] = DefRef<MusicDef>.To(D.Music.Get("mus_bundled")) },
+        };
+        var defs = new GameDefs { Sounds = D.Sounds, Music = D.Music, SoundBindings = bindings };
+        var crypt = new MusicChoice(new SoundRouter(defs), b => b != ContentBundle.Hfmusic);
+        Assert.True(crypt.TryChange("act_crypt", out m, out log, out _));
+        Assert.Equal(("mus_stage", "AUDIO music=mus_stage fallback=mus_bundled"), (m!.Id, log));
+        Assert.False(crypt.TryChange(TestDefs.StageId, out _, out _, out _));
+        var withHf = new MusicChoice(new SoundRouter(defs), _ => true);
+        Assert.True(withHf.TryChange("act_crypt", out m, out log, out _));
+        Assert.Equal(("mus_bundled", "AUDIO music=mus_bundled"), (m!.Id, log));
+        Assert.Equal("mus_stage", crypt.Peek("act_crypt")!.Id);
+    }
+
+    [Fact]
     public void HazardLoops_OneLoopPerSound_StopsWhenGone()
     {
         var tw = NewWorld();
