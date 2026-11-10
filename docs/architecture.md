@@ -1,6 +1,6 @@
 # Diablo Defence Remastered — 설계서 (Architecture)
 
-- 상태: v0.8.2 (설계 담당 — v0.7.2 줄은 WP1e 구현 담당, v0.8.2 줄은 WP1f 구현 담당).
+- 상태: v0.9 (설계 담당 — v0.7.2 줄은 WP1e 구현 담당, v0.8.2 줄은 WP1f 구현 담당).
   - v0.1: 첫 판.
   - v0.2: 세 리뷰(`docs/reviews/architecture-planner.md`, `architecture-implementer.md`, `architecture-verifier.md`)를 반영했다 — 지적별 처리는 13.1~13.3.
   - v0.3: 기획서 v0.4 의 **디아블로 1 원본 자원 사용**(사용자 요구 10)을 받았다 — 자원 가져오기 도구(1.4), 등각 아레나 좌표·타일 충돌(4.1·4.2),
@@ -55,7 +55,10 @@
     `RunSnapshot` 의 JSON 옵션·`RoomsHash`·모양 지문 상수, `MapMirror.TryOf`/`WithMirror`, `UpscaleTable` 검사 세부·`AssetScale`, 시험 도우미(합성 성소·짝 표 타일셋·거울판·층). 처리 목록은 13.22.
     같은 판의 검증 반영: 이어 하기의 액트 번호를 시작 액트에서 셈(헬파이어 곁가지 액트끼리 이어진 판), 좁은 통로의 보상 줄이 `Find` 의 문턱으로 당김, 모양 지문에 열거형 값 이름(지문만 다시 — `CurrentFormat` 1 그대로),
     `rules.level_up` 키 경로 본문 일곱 곳, WP6 의 `Suspend` 예외 처리, WP0 시작 전 조건(기획서가 13.21 넘긴 것 2~6 을 받음). 13.22 끝 "검증 반영".
-  기준 기획서: `docs/gdd.md` v0.8.4(설계에 넘긴 목록은 기획서 28절·29절 끝 — v0.8 에서 모두 받음, 13.20. 기획서 31절 끝 넘긴 것은 v0.8.1 이 받음, 13.21).
+  - v0.9: 기획서 v0.9(33절 — 사용자 결정 V1~V5: 회복 문·방 맵 풀·상인 방·장비)와 v0.9.1(34절 — V6~V12: 방어구 무게·무작위 옵션·보상 물체 그림과 둘레 아이콘·물약 칸과 서서히 회복·주인공 겉모습·페핀·원작 체력 구슬)을 받았다.
+    새 계약 모양은 **6.19**(장비 정의·인스턴스·굴림 결정론·능력치 합산 뒤 자르기, 상인 정의·상인 방 상태·구매 명령, 물약 칸·`Drink` 명령·서서히 회복, 회복 문 적용 시점, 둘레 아이콘, 겉모습 고르기, 가져오기 표),
+    계약 변경과 단계 1 구현·통합이 쌓은 WP1g 요청을 11.1 **WP1g** 한 묶음(22줄)에 모았고 순서·소유는 11.3, 처리 표는 13.23. 레벨업 아이콘이 검던 관찰은 원작 `ctrlpan\spelicon.cel` 로(가져오기 표).
+  기준 기획서: `docs/gdd.md` v0.9.1(v0.9 — 33절·34절 "설계에 넘기는 것" 1~15 를 13.23 이 받음. 그 앞: v0.8.4 — 설계에 넘긴 목록은 기획서 28절·29절 끝 — v0.8 에서 모두 받음, 13.20. 기획서 31절 끝 넘긴 것은 v0.8.1 이 받음, 13.21).
   13.21 끝 "기획서에 넘기는 것" 2~6 과 13.22 의 기획 몫은 기획서 v0.8.4 가 받았다(기획서 32절 — 19.6·2.5·11.4·15절, 설계서 문장 그대로. 11.1 WP0 "시작 전").
   두 문서에 걸친 지적은 설계서 쪽만 고치고 기획서 문장은 13.21 끝 "기획서에 넘기는 것" 으로 넘겼다(13.20 끝 목록도 그대로 유효). 출발점: `docs/brief.md`.
 - 이 문서는 **코드 구조·형식·알고리즘·작업 나누기**를 정한다. 수치·규칙은 기획서가 정하고, 여기서는 그것을 어디에 어떻게 담는지만 정한다.
@@ -897,7 +900,7 @@ public sealed record HeroCarry
     public required int Level { get; init; }   public required int Xp { get; init; }   public required int RerollsLeft { get; init; }   public required float Hp { get; init; }
     public IReadOnlyList<CarriedSlot> Weapons { get; init; } = [];   public IReadOnlyList<CarriedSlot> Passives { get; init; } = [];   public IReadOnlyList<CarriedSlot> Blessings { get; init; } = [];
     public required int WeaponSlotsOpen { get; init; }   public required int PassiveSlotsOpen { get; init; }   // v0.8: 열린 칸 수(rules.level_up.*_slots 로 시작, 계단마다 rules.rooms.stairs 만큼 +)
-    public int Belt { get; init; }                                        // v0.8: 허리띠 물약 수(0..rules.hero.belt.slots)
+    public int Belt { get; init; }                                        // v0.8: 허리띠 물약 수(0..rules.hero.belt.slots) — v0.9 WP1g 에 없앰 → Potions·PotionSlotsLevel·PotionSpeedLevel, 더함 Equipment·Gold·MaxedAtTick(6.19·11.1 WP1g #6)
     public IReadOnlyList<CarriedStat> Mods { get; init; } = [];           // v0.8: 판 끝까지 가는 능력치 더하기(단련 max_hp +5 쌓임·성소 대가 — 같은 키는 하나로 합침, StatKey 순)
     public IReadOnlyList<string> Shrines { get; init; } = [];             // v0.8: 이 판에 받은 성소 보상 ID(서수 순 — 한 판에 한 번)
     public IReadOnlyList<CarriedEffect> Effects { get; init; } = [];      // v0.8: 시간 효과의 남은 틱(Id 서수 순 — 이름은 WP3 가 정함, 예 buff ID)
@@ -2920,6 +2923,7 @@ public sealed record DisabledContent(IReadOnlyList<StageDef> Stages, IReadOnlyLi
 ```csharp
 // Core Defs/RewardDefs.cs (계약 WP1e → v0.8 WP1f)
 public enum RewardKind : byte { WeaponCards, WeaponBundle, BeltPotions, Shrine }   // JSON weapon_cards / weapon_bundle / belt_potions / shrine (v0.7 의 blessing_cards·level_up·full_heal 없앰)
+// v0.9(WP1g — 6.19·11.1 #1): BeltPotions 없앰, HealNextRoom(heal_next_room — 회복 문)·Merchant(merchant) 더함, Object null 허용(그 둘만)·Merchant·Drop 칸, BeltPotions 칸 → Bundle.Potions
 public sealed record RewardDef : IDef
 {
     public required string Id { get; init; }   public string Name { get; init; } = "";
@@ -2973,7 +2977,172 @@ int PicksLeft { get; }                 // v0.8: 빌드에 남은 칸 레벨(열�
 
 - 대기 순서를 레벨업 → 상자 → 보상으로 둔 이유: 끌어당긴 보석이 만든 레벨업과 정예 상자 진화를 먼저 끝내야 마법서 카드가 지금 칸 상태로 만들어진다. 출구 문은 셋이 다 비어야 열린다(3.6 `Reward` 줄).
 - **허리띠**(v0.8, 기획 v0.8.1 11.4 — 계약 `Hero.Belt`(int, 공통 조각 — HUD 가 읽음)·`rules.hero.belt`, 구현 WP3): 체력이 최대 × `threshold` 아래로 내려가는 순간 하나를 저절로 마신다(전부 회복, `cooldown` 초에 한 번 — 버튼 없음). 짐 `Belt` 로 방·액트 사이에 이어진다.
+  (v0.9) 허리띠는 기획 v0.9.1(사용자 결정 V9)에서 **물약 칸**으로 바뀌었다 — 저절로 마심·`Hero.Belt`·`rules.hero.belt` 를 없애고 `Drink` 명령·서서히 회복으로(6.19 "물약 칸", WP1g). 이 줄은 v0.8 기록이다.
 - 소리는 정의에 두지 않고 `sound_bindings.rewards.<id>`(6.15). 문 위 표시·방 안 물체 그리기는 7.11.
+
+### 6.19 장비·상인·물약 칸 `items`·`affixes`·`merchants`·`rules.equipment`·`rules.hero.potions` (v0.9, 기획 v0.9.1 11.4~11.7·12.1·12.8·33·34)
+
+기획서 v0.9(33절, 사용자 결정 V1~V5)와 v0.9.1(34절, V6~V12)이 판 안의 **장비·금화·상인·물약 칸**을 더했다. 모두 판 수명 상태라 짐(`HeroCarry`)·계단 저장(`RunSnapshot`)에 들어가고(3.6 "판 수명 상태는 짐·`RunState` 에만"),
+고르기·굴림은 판 씨앗에서 나온 난수 흐름으로 정해 같은 씨앗·같은 명령이면 같은 물건·같은 값이다. 계약은 WP1g(11.1)가 형과 순수 로직까지 한 번에 낸다.
+
+**정의 — 기본 아이템·접사**(`Data/items/bases.json`, `Data/items/affixes.json` — 기획 11.6 표 그대로)
+
+```csharp
+// Core Defs/ItemDefs.cs (v0.9 — 계약 WP1g)
+public enum EquipKind : byte { Head, Body, Shield, Staff, Ring }                 // JSON head / body / shield / staff / ring
+public enum EquipSlot : byte { Head, Body, Shield, Staff, Ring1, Ring2 }          // 칸 여섯(기획 11.6 — 목걸이 없음). HUD 장비 줄 순서와 같다
+public enum ArmorWeight : byte { None, Light, Medium, Heavy }                     // JSON - / light / medium / heavy (v0.9.1 V6 — 지팡이·반지는 None)
+public sealed record ItemBaseDef : IDef
+{
+    public required string Id { get; init; }   public string Name { get; init; } = "";   // 원작 영어 이름 그대로(기획 11.6 "이름")
+    public required EquipKind Kind { get; init; }
+    public ArmorWeight Weight { get; init; }                                      // 방어구만. 이동 감소는 rules.equipment.weight_move 에서(정의에 이동을 따로 적지 않음)
+    public IReadOnlyDictionary<StatKey, float> Stats { get; init; } = new Dictionary<StatKey, float>();   // 기본 능력치 — 굴리지 않음
+    public required int Price { get; init; }
+    public IReadOnlyList<int> Acts { get; init; } = [1, 2];                        // 나오는 액트 번호
+    public bool AlwaysMagic { get; init; }                                        // 반지(기획: 늘 마법)
+    public SpriteRef? Icon { get; init; }                                         // 인벤토리 그림 objcurs 프레임(가져오기 전 코드 그림 — 6.3 대체 규칙)
+    public SpriteRef? Floor { get; init; }                                        // 바닥 그림 items\*(장비 드롭은 E — 지금은 읽기만)
+    public IReadOnlyList<ContentBundle> Requires { get; init; } = [];
+}
+public sealed record AffixDef : IDef
+{
+    public required string Id { get; init; }   public required string Name { get; init; }
+    public required bool Prefix { get; init; }                                    // 거짓 = 접미사
+    public required IReadOnlyList<EquipKind> Kinds { get; init; }                 // 붙는 칸 종류
+    public required StatKey Stat { get; init; }
+    public required float Min { get; init; }   public required float Max { get; init; }   public float Step { get; init; } = 1;   // v0.9.1 V7: 범위 굴림 — Min == Max 면 고정
+    public required int Price { get; init; }                                      // 범위 가운데의 값
+    public int Stage { get; init; } = 1;                                          // 1 = 두 액트, 2 = 액트 2 만
+}
+// GameDefs.ItemBases·Affixes(DefTable), Kinds 에 "items"·"affixes"
+```
+
+**장비 인스턴스**(굴린 결과 — 정의 ID + 굴린 값. 짐·저장·상인 카드가 같은 형을 쓴다)
+
+```csharp
+// Core Sim/Items/EquipItem.cs (v0.9 — 계약 WP1g)
+public readonly record struct RolledAffix(string Id, float Value);
+public sealed record EquipItem(string BaseId, RolledAffix? Prefix, RolledAffix? Suffix, int Price)   // Price = 굴림 반영 값(사는 순간 그대로)
+{
+    public bool Magic => Prefix is not null || Suffix is not null;
+}
+public static class ItemRoller   // 순수 함수 — WP1g 가 본문과 시험까지
+{
+    // 마법 확률(액트별) → 접사 수(하나 1-two_affix / 둘) → 접사(그 칸·그 액트 단계 중 균등, 하나면 접두사·접미사 반반) → 값(단계 균등) → 값 = Price + Σ affix.Price × (0.75 + 0.5 × 위치), 5 단위 반올림
+    public static EquipItem Roll(ItemBaseDef b, int act, EquipmentRulesDef rules, GameDefs defs, ref DetRng rng);
+    public static EquipItem RollMagic(ItemBaseDef b, int act, EquipmentRulesDef rules, GameDefs defs, ref DetRng rng, IReadOnlySet<string> avoidAffixes);  // 반지 둘 = 서로 다른 접사
+}
+```
+
+- **난수 수 고정**: `Roll` 은 마법 여부·접사 수·접사 고르기·값 굴림마다 **늘 같은 수**의 난수를 뽑는다(쓰지 않는 갈래도 뽑아 버림 — 3.6 "뽑기 단계마다 난수 개수 고정" 과 같은 규칙). 정의 표에 접사를 더해도 다른 카드의 굴림이 밀리지 않게, 카드마다 흐름을 따로 낸다(아래 "상인 물건").
+- **능력치 합산**: 장비 능력치는 4.1 능력치 키 합산의 한 출처(`StatSources.Equipment`)다 — 절댓값 키 더하기, `_pct` 같은 키끼리 더해 한 번 곱하기. **방어 상한 10**·**무게 이동 하한 −15%**·쿨다운 상한 60% 는 모든 출처를 합친 **뒤** 자른다(`rules.equipment.armor_cap`·`weight_move_floor`).
+  무게 이동은 끼운 방어구마다 `rules.equipment.weight_move[칸 종류][무게]` 를 `move_pct` 에 더한다. 최대 체력이 바뀌는 순간 지금 체력 = `max(1, 지금 + 오른 만큼)` 을 새 최대에서 자른다(기획 11.6).
+
+**규칙 데이터**(`Data/rules/equipment.json` → `rules.equipment`, `rules.hero.potions`, `rules.rooms.rewards`)
+
+```jsonc
+// rules.equipment (v0.9 — 기획 11.6·11.7 첫 값)
+{ "magic_chance": [0.35, 0.60],                // 액트 1·2
+  "two_affix_chance": 0.25,                    // v0.9.1 V7
+  "price_roll": [0.75, 0.5], "price_round": 5,
+  "armor_cap": 10,
+  "weight_move": { "body": { "light": 0, "medium": -0.05, "heavy": -0.10 }, "head": { "light": 0, "medium": -0.02, "heavy": -0.04 }, "shield": { "light": 0, "medium": -0.02, "heavy": -0.04 } },
+  "weight_move_floor": -0.15,
+  "reroll_price": 30, "reroll_step": 30 }
+// rules.hero.potions (v0.9.1 V9 — v0.8 의 rules.hero.belt 를 바꿈: slots·threshold·cooldown 없앰)
+{ "slots": 2, "slots_max": 5, "heal_pct": 0.40, "durations": [3.0, 2.0, 1.2], "bot_threshold": 0.35 }
+// rules.rooms.rewards (v0.9 — 문 보상 뽑기의 값. 6.18)
+{ "heal_skip_at_least": 0.75, "heal_guarantee_below": 0.40, "heal_low_hp": 0.50, "heal_low_hp_weight": 30,
+  "merchant_first_room": 3, "merchant_per_act": 2, "merchant_guarantee_room": [4, 5], "merchant_met_other": 1.5,
+  "healer_boost": 1.5, "healer_boost_below": 0.50 }
+```
+
+**상인 정의**(`Data/merchants/<id>.json` — 그리스월드·아드리아·페핀)
+
+```csharp
+// Core Defs/MerchantDefs.cs (v0.9 — 계약 WP1g)
+public enum MerchantStock : byte { Equipment, Potions }                      // 그리스월드·아드리아 = Equipment, 페핀 = Potions(v0.9.1 V11)
+public sealed record MerchantDef : IDef
+{
+    public required string Id { get; init; }   public required string Name { get; init; }   // 그리스월드·아드리아·페핀
+    public required MerchantStock Stock { get; init; }
+    public IReadOnlyList<EquipKind> Kinds { get; init; } = [];                  // Equipment: 카드 칸 종류 목록(그리스월드 head·body·shield, 아드리아 staff·ring·ring)
+    public IReadOnlyList<PotionUpgradeDef> Upgrades { get; init; } = [];        // Potions: 물약 주머니·빠른 물약·물약 채우기
+    public bool Rerollable { get; init; } = true;                               // 페핀 거짓
+    public required DefRef<SpriteSetDef> Sprite { get; init; }                  // 원작 towners 그림(서기 반복) — 문 위 아이콘·창 머리·방 안 상인
+    public string? GreetSound { get; init; }                                    // 소리 연결 키(6.15)
+}
+public enum PotionUpgrade : byte { Slots, Speed, Refill }
+public sealed record PotionUpgradeDef { public required PotionUpgrade Kind { get; init; } public IReadOnlyList<int> Prices { get; init; } = []; public int PerSlot { get; init; } }  // Refill = 빈 칸 × PerSlot
+```
+
+**상인 방 상태와 구매 명령**
+
+```csharp
+// Core Sim/Contracts/ShopState.cs (v0.9 — 계약 WP1g, 방 수명 → RoomState.Shop)
+public enum ShopCardKind : byte { Equip, Potion }
+public sealed record ShopCard(ShopCardKind Kind, EquipItem? Item, PotionUpgrade Upgrade, int Price, bool Bought);
+public sealed class ShopState
+{
+    public required string MerchantId { get; init; }
+    public List<ShopCard> Cards { get; } = [];
+    public int Rerolls { get; set; }                       // 이 방에서 누른 다시 굴리기 수(값 = reroll_price + reroll_step × Rerolls)
+    public bool Open { get; set; }                         // 창이 열려 있음(시간 멈춤 — 레벨업 창과 같은 멈춤)
+    public bool Visited { get; set; }                      // 한 번이라도 닫았음 = 보상 받음(문이 열림)
+    public int RingPending { get; set; } = -1;             // 반지 둘이 찬 채 반지를 고른 카드 번호 — 창이 "바꿀 반지" 둘로 바뀜
+}
+// IProgression 옆에 IShop(WP3): ShopState? Shop { get; }  void Buy(int card); void Reroll(); void Leave(); void ReplaceRing(int ring);
+// OfferSource 에 Merchant 를 더하지 않는다 — 상인 창은 LevelUpOffer 가 아니라 ShopState 를 그린다(화면 모양만 같다, 기획 12.8)
+```
+
+- **물건을 정하는 때**: 상인 방(다음 방 보상이 `merchant`)에 **들어오는 틱**(`RunSession.Advance` ⑤ 새 `World` 직후, 정리 전)에 `ShopState` 를 만든다. 난수는 **상인 전용 흐름** `DetRng.For(seed, act, room, "shop", rerolls, card)` — 방 난수(`Drop`·`Spawn`)를 하나도 소비하지 않아 상인 방이든 아니든 적·드롭이 같다.
+  다시 굴리기는 같은 식에 `rerolls` 만 바꿔 **사지 않은 카드만** 새로 굴린다(산 카드는 자리를 지킴). 같은 씨앗·같은 누른 수면 같은 결과.
+- **명령**: `CommandButtons` 에 **`Drink = 1 << 10`**(아래 물약) 하나만 더한다. 상인 카드는 셋(기획 v0.9.1 — v0.9 의 아드리아 넷째 칸 허리띠 물약이 페핀으로 감)이라 `Choice1~3` 으로 된다.
+  창이 열려 있는 동안 `Choice1~3` = `Buy`(또는 `RingPending` 이면 `ReplaceRing`), `Reroll` = 다시 굴리기, `Skip` = 떠나기. 선택 입력 잠금 0.4s 는 레벨업 창과 같은 자리(`rules.level_up.input_lock`)에서. 모두 판 명령이라 재생·자동 조작·사람이 같은 길이다.
+- **열고 닫기**: 상인(정리 뒤 보상 자리에 놓인 물체 — `RewardKind.Merchant`)에 닿으면 `Open = true`. `Leave` = `Open = false; Visited = true`(→ 보상 받음 신호 = 문이 열림, 3.6 "집어야 문이 열린다"). 문 단계에 다시 닿으면 다시 연다.
+- **금화**: 지갑은 짐 `HeroCarry.Gold`(판 안 쓸 금화)이고, `RunStats.Gold`(얻은 금화 — 결과 화면·누적)는 그대로 늘기만 한다. 쓴 금화 `RunStats.GoldSpent`(새 멤버). `Buy` 는 `Gold ≥ Price` 일 때만, 모자라면 아무 일 없음 + `CueKind.ShopDenied`.
+
+**물약 칸과 서서히 회복**(v0.9.1 V9 — v0.8 의 허리띠 저절로 마심을 바꿈)
+
+- 상태: 짐 `HeroCarry.Potions`(가진 수)·`PotionSlotsLevel`(0 → 칸 = `slots` + 단계, 상한 `slots_max`)·`PotionSpeedLevel`(`durations` 의 번호). 마시는 중 회복은 `Hero.Heal`(`HealOverTime` — 남은 틱·틱당 양) 하나.
+- **마시기**: `CommandButtons.Drink` 가 들어온 틱에 (창 없음 ∧ 회복 중 아님 ∧ `Potions > 0` ∧ 체력 < 최대)이면 `Potions -= 1`, `Heal = (ticks = round(durations[lv] × 60), total = max_hp × heal_pct)`. 아니면 `CueKind.PotionDenied`.
+  회복은 `HeroSystem` 차례에서 틱마다 `total / ticks`(마지막 틱에 나머지 — 합이 정확히 `total`), 최대 체력에서 자른다. 피해로 끊기지 않는다. 판 시간이 멈추면(창·넘김) 같이 멈춘다(틱이 돌지 않으므로 따로 할 일 없음).
+- **줍기**: `healing_potion`(`PickupDef.Effect = potion_stack`)은 `Potions < 칸` 일 때만 집힌다(가득이면 그대로 남음 — 6.9 집기 조건). 마력 폭주는 지금처럼 닿는 순간.
+- **계단 저장**: 계단 문을 나가는 틱(`Suspend` 의 ①)에 남은 회복을 바로 채우고 `Heal` 을 비운다 — 짐에 회복 중 상태를 넣지 않는다(기획 11.5).
+- **없앰**: `rules.hero.belt`·`HeroCarry.Belt`·`RewardDef.BeltPotions`·`RewardBundleDef.BeltPotions`·`CueKind.BeltPotion`, WP3 의 30% 저절로 마심 경로. 새 `CueKind.PotionDrink`·`PotionDenied`·`ShopOpen`·`ShopBuy`·`ShopDenied`.
+- **자동 조작**(WP4): 체력 < `bot_threshold` ∧ 회복 중 아님 ∧ `Potions > 0` → 그 틱 명령에 `Drink`. 상인 창 규칙은 기획 12.8(살 수 있는 카드 중 최대 체력·방어 차이 최대 하나, 페핀은 채우기 → 주머니 → 빠른 물약).
+
+**회복 문**(v0.9 V1 — `RewardKind.HealNextRoom`)
+
+- 방 안 물체가 없다(`RewardDef.Object` = null 허용, 이 종류만). 그 문으로 나가는 틱에 `RunState.HealOnEnter = true`, `RunSession.Advance` 가 새 방을 만든 뒤 **들어옴 단계 첫 틱**(넘김 어둠이 걷힌 틱 — `RoomFlow` 가 `Phase == Enter` 로 바꾼 첫 틱)에 체력 = 최대, `HealOnEnter = false`, `CueKind.HealOnEnter`.
+- 정예·보스 방 앞 문의 덤이면 그 방에 들어올 때 회복이고, 그 방 정리 뒤 보상 자리에는 정예 상자만 놓인다. 계단 문은 보상이 없으므로 `Suspend` 때 `HealOnEnter` 는 늘 거짓이다(스냅숏에 넣지 않고, `Suspend` 가 거짓임을 단언).
+- 거르기·보장(기획 11.4 "뽑기")은 **문이 열리는 틱의 상태**의 함수다(체력 비율·이 액트 상인 방 수·바로 앞 방이 상인 방·만난 상인) — 그 틱은 결정적이라 같은 씨앗·같은 명령이면 같은 문이다.
+  보장 순서: 회복 문 보장(체력 < 40% → 첫 문 `gate_nw`, 거울판이면 짝) → 상인 보장(그 액트에 상인 문이 안 보였고 액트 1 4번·액트 2 5번 방으로 가는 문이면 둘째 문) → 나머지 가중 뽑기. 보장으로 정한 문도 뽑기 난수 수는 그대로 소비한다(난수 수 고정).
+
+**보상 물체 둘레 아이콘**(v0.9.1 V8)
+
+- `RewardDef.Drop`(`DefRef<PickupDef>?`): 물체에 닿으면 열리고 이 물체가 떨어지는 보상(보물 상자 → `pk_book` = `items\fbook`). 두 단계 상태 `RewardPickup.Stage`(`Closed` → `Dropped`) — 상자에 닿으면 `Dropped`, 책에 닿으면 받음. 책 자리 = 상자 앞 30px(`RewardSpot.Row` 의 당김 규칙).
+- 둘레 아이콘 목록은 **표시 전용 순수 함수** `RewardOsd.Icons(RewardDef, World) → IReadOnlyList<OsdIcon>`(WP3 본문, 그리기 WP5). 보물 상자의 올릴 무기는 **상자를 여는 틱**에 방 난수 `Drop` 으로 정해 `RewardPickup.Chosen` 에 둔다 — 책을 집는 틱에 다시 뽑지 않는다(보이는 것과 받는 것이 같게). 마법서 카드는 집는 순간(지금과 같음).
+
+**주인공 겉모습**(v0.9.1 V10)
+
+- `HeroClassDef.Looks`(`IReadOnlyDictionary<string, DefRef<SpriteSetDef>>` — 키 `lt`·`mn` 처럼 무게 글자 + 든 것 글자, 아홉)와 `HeroClassDef.Look`(기본 키 `lt` — 못 가져온 벌의 대신).
+- 고르기는 순수 함수 `HeroLook.Key(equip) = 무게(갑옷 칸: 없음·경 → l, 중 → m, 판금 → h) + 든 것(지팡이 → t, 방패만 → u, 없음 → n)`. 그리기(WP5)가 프레임마다 키로 묶음을 고른다 — 시뮬레이션은 키만 안다(그림 크기·프레임은 그리기 몫, 동작 시간은 묶음마다 같음을 13.5 검사가 확인).
+  묶음이 `ContentAvailability` 에 없거나 가져오기에서 빠졌으면 `Look` 으로.
+
+**가져오기 표**(1.4 — WP0. 이름은 모두 기획서가 기억으로 적은 것이라 원본 목록으로 확인)
+
+| 쓰임 | 원본 | 출력 | 비고 |
+|---|---|---|---|
+| 무기 아이콘 (5.9 v0.9.1) | `ctrlpan\spelicon.cel` | `d1/icons/spell_<번호>.png` 56×56 | 프레임 머리 없는 CEL(부록 A.2) — 칸 크기를 표에 적어 읽음. `Table/icons.json` 의 무기 항목을 프레임 번호로 바꿈, 옛 "투사체 한 프레임" 항목은 대체로 남기되 가산으로 굽기 |
+| 체력 구슬 (12.1 V12) | `ctrlpan\panel8.cel`(구슬 자리·허리띠 칸 자르기), `ctrlpan\p8bulbs.cel`(붉은 액체) | `d1/ui/orb_frame.png`·`orb_fill.png`·`belt_slot.png` | 자를 사각형은 표에 적음 |
+| 바닥 아이템 (V8) | `items\fbook`·`fbttle*`·`goldflip` | `d1/items/<이름>.png` + 메타(떨어짐 프레임) | 몬스터 CEL 길과 같은지 확인(열린 질문 32) |
+| 인벤토리 그림 (11.6) | `data\inv\objcurs.cel` | 아이템 프레임 표 | 장비 18 + 물약 |
+| 상인 (11.7 V5·V11) | `towners\smith\smithn`·`towners\townwmn1\witch`·`towners\healer\healer` | `d1/towners/<id>` | 서기 첫 프레임 = 문 아이콘. 인사 대사 `sfx\towners\bsmith*`·`witch*`·`healer*` |
+| 주인공 아홉 벌 (4.0 V10) | `plrgfx\sorceror\s{l,m,h}{n,u,t}\*` 의 `as`·`aw`·`fm`·`lm`·`qm` | 지금 `slt` 와 같은 모양 | 죽기는 `sln` 하나 |
+
+- 확인 전·실패 때는 코드 그림 대체(6.3 대체 규칙 — 단계가 그림 때문에 막히지 않는다). 아이콘이 어둡던 문제(통합 뒤 플레이)는 원작 아이콘으로 풀고, 대체 아이콘은 가져오기가 가산으로 구워 같은 문제가 남지 않게 한다.
 
 ---
 
@@ -3930,6 +4099,66 @@ WP2~WP8 이 아직 시작 전이라 지금이 가장 싸다(WP1e 와 같은 까�
 - **옛 모양 점검**: `rg -n "RemainingMarker|remaining_marker|RewardAnchor|reward_anchor|ChestRing|chest_ring|BlessingCards|blessing_cards|RewardKind\.LevelUp|level_up\"|FullHeal|full_heal|SkipWhenHpAtLeast|skip_when_hp|filler_gold|ChestItemKind\.Gold|SlotCount = 4|WeaponSlotCount|HeroCarry\(" src tests tools` 결과를 줄마다 새 모양으로 확인해 완료 보고에 적는다
   (`level_up` 은 `rules.level_up` 키라 남는다 — 보상 종류 쓰임만 없어야 함).
 
+#### WP1g — 계약 갱신: 기획 v0.9·v0.9.1(사용자 결정 V1~V12) + 단계 1 구현·통합이 쌓은 요청 (v0.9) — 버그 수정·방 맵 마무리를 main 에 합친 뒤, 단계 2 묶음 앞, 혼자, **형과 순수 로직 구현까지 한 번에**
+
+기획서 33절 "설계에 넘기는 것" 1~8 과 34절 9~15, 그리고 단계 1 구현 기록(13장 끝 WP7·WP2·WP3·WP4·WP0·WP8·WP6 소절과 "통합 기록")의 **WP1g 요청**을 한 묶음에 모은다. 새 계약 모양은 6.19(장비·상인·물약)·6.18(문 보상) 이 정본이다.
+WP1f 와 같은 까닭으로 형과 구현을 한 작업에서 낸다 — 바뀌는 순수 로직(`Sim/Run/**`·새 `Sim/Items/**`)은 WP1e·WP1f 가 쓴 파일이고, 단계 2 묶음은 아직 그 위에 코드를 쓰지 않았다.
+단계 1 코드가 이미 있으므로 **"형만" 줄도 그 형을 쓰는 단계 1 코드의 컴파일을 고치는 데까지**는 WP1g 몫이다(옛 이름을 지우면 쓰던 자리를 새 이름으로 — 동작 본문은 그 묶음).
+
+| # | 파일·형 | 바꾸는 것 | 구현 | 기획 # | 영향 |
+|---|---|---|---|---|---|
+| 1 | `Defs/RewardDefs.cs` | `RewardKind` = `WeaponCards`·`WeaponBundle`·**`HealNextRoom`**·`Shrine`·**`Merchant`**(JSON `heal_next_room`·`merchant` — `BeltPotions` 없앰), `RewardDef.Object` null 허용(`HealNextRoom`·`Merchant` 만), `RewardDef.Merchant`(`DefRef<MerchantDef>?`)·`Drop`(`DefRef<PickupDef>?` — V8 상자 → 책), `RewardDef.BeltPotions` 없앰, `RewardBundleDef.BeltPotions` → `Potions`, 로딩 검사(종류마다 칸 — 13.5-23 ④) | 형 + 읽기 시험 | 33-2·34-12·34-13 | WP3·WP4·WP6·WP7·WP8 |
+| 2 | 새 `Defs/ItemDefs.cs`·`Defs/MerchantDefs.cs` | `EquipKind`·`EquipSlot`·`ArmorWeight`·`ItemBaseDef`·`AffixDef`(범위·단계 — V7)·`MerchantDef`·`MerchantStock`·`PotionUpgradeDef`(6.19), `GameDefs.ItemBases`·`Affixes`·`Merchants`, `Kinds` 에 `items`·`affixes`·`merchants` | 형 + 읽기 시험 | 33-1·34-10·34-13 | WP3·WP6·WP7 |
+| 3 | `Defs/RulesDefs.cs` | `rules.equipment`(`EquipmentRulesDef` — 마법 확률·접사 둘·값 굴림·방어 상한·무게 이동 표·하한·다시 굴리기), `rules.hero.potions`(`PotionRulesDef`), `rules.rooms.rewards`(`RewardRulesDef` — 회복 문 빠짐·보장·저체력 가중, 상인 첫 방·액트 상한·보장 방·만난 뒤 배율·페핀 배율), `rules.hero.belt` 없앰, `pickup_radius` 첫 값 80 은 데이터 | 형 + 읽기 시험 | 33-1·33-2·34-9 | WP3·WP4·WP7 |
+| 4 | 새 `Sim/Items/EquipItem.cs`·`ItemRoller.cs`·`HeroLook.cs` | `EquipItem`·`RolledAffix`, `ItemRoller.Roll`/`RollMagic`(난수 수 고정·5 단위 값), `HeroLook.Key`(V10 — 무게 글자 + 든 것 글자) | **구현과 시험까지** | 34-10·34-11 | WP3·WP5·WP6 |
+| 5 | `Defs/StatKeys.cs`, 새 `Sim/Items/EquipStats.cs` | 장비 능력치 출처 `StatSources.Equipment`, 합산 뒤 자르기(방어 상한·무게 이동 하한·쿨 상한) 순수 함수 `EquipStats.Sum(equip, defs, rules) → StatBlock`, 최대 체력 바뀜 규칙 `EquipStats.RebaseHp` | **구현과 시험까지** | 33-1·34-10 | WP3 |
+| 6 | `Sim/Run/RunState.cs` | `HeroCarry` 에 `Equipment`(`IReadOnlyList<CarriedEquip>` — `EquipSlot` + `EquipItem`, 칸 순)·`Gold`(지갑)·`Potions`·`PotionSlotsLevel`·`PotionSpeedLevel`·**`MaxedAtTick`**(무기 칸별 — WP3 요청: 방을 넘으면 만렙 순서가 칸 순서로 바뀌던 것), `Belt` 없앰. `RunState.HealOnEnter`·`MerchantsMet`(상인 ID 서수 순)·`MerchantRoomsThisAct`·`MerchantShownThisAct`·`LastRoomWasMerchant`, `RoomRecord` 끝에 `HpIn`·`GoldSpent`·`Shop`(상인 ID 또는 null)·`Potions`·`Drunk`(기본값 있음 — 기획 15절 `ROOM` 새 열) | 형 + 왕복 시험 | 33-1·33-5·34-9 | WP3·WP6·WP7 |
+| 7 | `Sim/Run/RunSnapshot.cs` | `MerchantsMet` 더함, `CurrentFormat` 1 → **2**(짐·`RunStats` 모양이 바뀜 — 옛 `run.json` 은 불일치로 지움, 8.3), 모양 지문 기대 값 갱신, `Suspend` 가 `HealOnEnter == false` 단언·회복 중 물약을 바로 채움 | 형 + **구현과 시험까지**(단언·채움) | 33-3·34-9 | WP6·WP7 |
+| 8 | `Sim/Contracts/Progression.cs` | `RunStats.GoldSpent`(int), `IShop`(6.19 — `Shop`·`Buy`·`Reroll`·`Leave`·`ReplaceRing`), `ChestItem` 의 `Gold` 인자 없앰(13.22 "계약 줄이기는 WP1g"), `LevelUpOffer.Reward`(`RewardDef?` — WP6 요청 3: 건너뛰기·성소 카드 문구) | 형 | 33-4·33-5 | WP3·WP6 |
+| 9 | 새 `Sim/Contracts/ShopState.cs`, `Sim/Contracts/RoomState.cs` | `ShopState`·`ShopCard`·`ShopCardKind`, `RoomState.Shop`(방 수명), `RewardPickup.Stage`(`Closed`·`Dropped`)·`Chosen`(V8 상자를 연 틱에 정한 무기) | 형 | 33-4·34-12 | WP3·WP5·WP6 |
+| 10 | 새 `Sim/Run/ShopStock.cs` | 상인 물건 정하기 `ShopStock.Create(merchant, act, rules, defs, seed, act, room, rerolls)`(상인 전용 흐름 — 방 난수를 쓰지 않음)·`Reroll`(산 카드 자리 지킴)·페핀 카드(단계 값·다 올림·채우기 값) | **구현과 시험까지** | 33-4·34-13 | WP3·WP6 |
+| 11 | `Sim/Run/RunPlanner.cs`(보상 뽑기)·`RoomFlow.cs` | 문 보상 거르기(회복 문 75%·상인 다섯 조건·성소 한 번), **보장**(회복 문 40% → 첫 문, 상인 액트 보장 → 둘째 문, 겹치면 회복이 첫 문), 가중 바꿈(회복 문 저체력 30, 만난 뒤 다른 상인 ×1.5, 페핀 ×1.5) — 문이 열리는 틱 상태의 함수, 난수 수 고정. 회복 문 적용 = 들어옴 첫 틱 | **구현과 시험까지** | 33-2·33-3·34-13 | WP4·WP6 |
+| 12 | `Sim/Contracts/RunSetup.cs` | `CommandButtons.Drink = 1 << 10` | 형 | 34-9 | WP3·WP4·WP6 |
+| 13 | `Sim/Contracts/Presentation.cs` | `CueKind.BeltPotion` 없앰, `PotionDrink`·`PotionDenied`·`HealOnEnter`·`ShopOpen`·`ShopBuy`·`ShopDenied`·`ChestDrop`(상자 → 책) 더함 | 형 | 34-9·34-12 | WP3·WP6·WP8 |
+| 14 | `Defs/HeroClassDefs.cs` | `HeroClassDef.Looks`(키 아홉 → 그림 묶음)·`Look`(대신 쓸 키, 기본 `lt`) | 형 + 읽기 시험 | 34-11 | WP3·WP5·WP7 |
+| 15 | `Defs/PickupDefs.cs` | `PickupEffect.PotionStack`(JSON `potion_stack` — `healing_potion` 의 `heal` 을 바꿈), 집기 조건 "물약 칸이 가득이면 안 집힘", 바닥 그림 `Floor`(V8 — 떨어짐 프레임) | 형 + 읽기 시험 | 34-9 | WP3·WP5·WP7 |
+| 16 | `Assets/ImportTable.cs` | 표 새 묶음: `ctrlpan`(spelicon 칸 크기·자르기 사각형), `items`(바닥), `inv`(objcurs 프레임 표), `towners`, 주인공 아홉 벌 — 6.19 가져오기 표. 표 해시가 새 표를 이음 | 형 + 읽기 시험 | 33-7·34-14 | WP0·WP5·WP7 |
+| 17 | `Sim/Entities/Enemy.cs`(공통 조각) | **`InvulnUntilTick`** — WP4 조각에서 옮김(WP4 요청 1·통합 기록 중간), WP3 `DamageResolve` 가 읽는 자리를 공통으로 | 형(옮기기 — 본문 그대로) | — | WP3·WP4 |
+| 18 | `Sim/Contracts/Damage.cs` | `DamageRequest.Cause`(`DamageCause` — 투사체·적 몸·장판 — WP3 요청: 공정성 `hidden_hits` 를 "투사체 단계 전 요청" 으로 어림하던 것) | 형 | — | WP3·WP4 |
+| 19 | 게임 `App/Contracts/AppServices.cs`·`IAudioServices` | `AppServices.Content`(`ContentAvailability`)·`AssetProblems`·`AssetRoot`(WP7·WP8·WP6 요청), `IDevHooks`(`CaptureEvent`·`ResultShown`·`AttachProfiler`·`HashRow` — WP7 요청), 화면 신호·종료 요청·창 비활성 멈춤 자리(WP6 요청 2 — `GameFlow` 우회를 계약으로), `IAudioServices : IDisposable`(WP8 요청 1), `PlayReward(RewardDef, bool open)`(WP8 요청 2, 선택) | 형(본문 WP6·WP7·WP8) | — | WP6·WP7·WP8 |
+| 20 | `Sim/Navigation/INavDebugView.cs`, `Directory.Build.props` | `INavDebugView.Arena` 를 `ArenaGrid?`(WP2 요청 — 상자 내비 시험 월드), `IncludeSourceRevisionInInformationalVersion` 거짓(WP0 요청 — 커밋마다 가져오기 캐시가 깨짐) | 형 | — | WP0·WP2 |
+| 21 | `TestKit/` | `FakeHeroCarry` 새 짐 필드, `TestDefs` 합성 기본 아이템·접사(범위 하나·고정 하나)·상인 셋·`rules.equipment`·`rules.hero.potions`·`rules.rooms.rewards`, 회복 문·상인 보상 | 구현 | — | 모두 |
+| 22 | 문서·데이터 | 6.15 예의 `ui.room_clear: snd_magic` 지움(WP8 요청 4), 실제 `Data/` 의 `reward_potion` → `heal_next_room`·`healing_potion` → `potion_stack`(WP1g 가 계약과 함께 — 읽기가 깨지지 않게), 장비·상인·규칙 첫 파일(기획 11.6 표 그대로) | 구현 | 33 전체 | WP7 |
+
+- **하지 않는 것**(본문은 그 묶음): 상인 창·물약 칸·장비 줄·체력 구슬 화면과 `Q` 키 연결(WP6), 상인·장비·물약 효과 본문과 능력치 반영·서서히 회복·저절로 마심 삭제·둘레 아이콘 목록(WP3), 자동 조작의 물약·상인 창·회복 문 우선순위(WP4),
+  그림 묶음 아홉 벌 고르기·둘레 아이콘·구슬 액체 그리기·원작 아이콘(WP5), 가져오기 표 실제 줄과 원본 이름 확인(WP0), 상인 대사·물약 소리(WP8), `run.json` Format 2 와 로그 `ROOM` 새 열(WP7). 게임 쪽 시험 프로젝트(WP6 요청 4)는 메인 세션이 정한다 — WP1g 에 넣지 않는다.
+- **완료 기준 — 형**: `dotnet build -p:SkipAssetCheck=true`·`dotnet test` 통과(단계 1 시험 모두 — 옛 이름을 지운 자리를 고친 뒤). 읽기 시험: 6.18 다섯 종류(옛 `belt_potions` → 모르는 값 오류, `heal_next_room` 에 `object` 가 있어도 되고 없어도 됨, `merchant` 에 `merchant` 칸 없음 → 오류),
+  6.19 기본 아이템 18·접사 11(범위 `min > max`·`step ≤ 0`·`stage` 1·2 밖 → 오류), 상인 셋(`Potions` 상인에 `kinds` → 오류), `rules.equipment`·`rules.hero.potions`(`durations` 길이 ≥ 1, `slots ≤ slots_max`)·`rules.rooms.rewards`, 옛 `rules.hero.belt` → 모르는 속성 오류,
+  `HeroCarry`(장비·지갑·물약·`MaxedAtTick` 포함)·`RunSnapshot`(Format 2) **다시 직렬화한 바이트가 같음**, 모양 지문 새 기대 값, `RunStats` 반사 왕복(새 `GoldSpent`).
+- **완료 기준 — 구현과 시험까지**(10.1 `Items`·`Run`):
+  `ItemRoller` — 씨앗 1,000개에서 마법 비율 액트 1 35%±3·액트 2 60%±3, 접사 둘 25%±3, 같은 쪽 둘 0, 반지 늘 마법, 값이 5 의 배수·범위 끝 굴림의 값 = 0.75×·1.25×, 같은 씨앗 두 번 같은 결과, **정의 표에 접사 하나를 더해도 다른 칸 카드 결과가 그대로**(카드마다 흐름).
+  `EquipStats` — 방어 합이 상한 10 에서 잘림(판금 셋 + Fine), 무게 이동 −10 −4 −4 → −15% 하한, `of Swiftness` + 판금은 하한 뒤에 더하지 않음(합친 뒤 자름 — 순서 시험), 최대 체력 +30 → 지금 체력 +30, 바꿔서 −20 → 새 최대에서 자름.
+  `HeroLook.Key` — 아홉 조합 + 지팡이·방패 둘 다 → `t`, 갑옷 없음 → `l`.
+  `ShopStock` — 같은 (씨앗, 액트, 방) 같은 물건, 다시 굴리기가 산 카드를 지킴, `rerolls` 같으면 같음, **상인 방이든 아니든 그 방의 적 생성·드롭이 같음**(방 난수를 쓰지 않음), 페핀 카드 단계 값·다 올림·채우기 = 빈 칸 × 25.
+  보상 뽑기 — 체력 39% → 첫 문 회복 문(거울판이면 짝), 76% → 회복 문 빠짐, 액트 1 2번 방 문엔 상인 0, 이 액트 상인 둘 뒤 상인 0, 한 문 단계 상인 둘 0, 액트 1 4번 방 문 상인 보장(겹치면 회복 첫·상인 둘째), 보장이 있어도 다음 방들의 뽑기 결과가 보장 없는 판과 같은 난수 위치(난수 수 고정).
+  회복 문 — 넘김 어둠 동안 체력 그대로, 들어옴 첫 틱에 최대, 정예 방 덤이면 그 방 들어올 때. `Suspend` — 회복 중 물약이 있으면 채운 체력이 스냅숏에 들어감, 이어 하기 뒤 같은 판과 `RoomRecord`·`RunStats` 같음(WP1f 끊고 잇기 시험에 장비·지갑·물약·만난 상인을 더해).
+- **옛 모양 점검**: `rg -n "BeltPotions|belt_potions|rules\.hero\.belt|HeroCarry\.Belt|CueKind\.BeltPotion|\"heal\".*healing_potion|ChestItem\(.*Gold" src tests Data docs/architecture.md` 결과 0(이 문서에서는 "없앰" 을 적은 문장·13장 기록만 남음).
+- **WP1g 뒤**: 단계 2 묶음(WP3·WP4·WP5·WP6·WP0·WP8 의 v0.9 줄)이 이 계약에 기대어 동시에 간다. 단계 2 데이터(액트 1 아홉 방·작은 방 풀 5장)는 WP0a 방식으로 버그 수정·방 맵 브랜치가 넣은 것 위에 더한다.
+
+**앞서 쌓인 WP1g 요청 모음**(13장 끝 구현 기록·통합 기록 — 위 표의 어느 줄이 받는지)
+
+| 낸 곳 | 요청 | 받는 줄 |
+|---|---|---|
+| WP7 구현 기록 | `AppServices` 에 `ContentAvailability`·`DisabledContent`, 개발 실행 훅 `IDevHooks` | #19 |
+| WP2 구현 기록 | `INavDebugView.Arena` null 표시 | #20 |
+| WP3 구현 기록 | `HeroCarry.MaxedAtTick`(방을 넘으면 만렙 순서가 칸 순서로), 피해 요청 원인 칸(`hidden_hits`) | #6·#18 |
+| WP4 구현 기록 1·통합 기록(중간) | `Enemy.InvulnUntilTick` 을 공통 조각으로 | #17 |
+| WP0 구현 기록 | `Directory.Build.props` 소스 리비전 끔(가져오기 캐시) | #20 |
+| WP8 구현 기록 1~4 | `IAudioServices` 끝내기, `PlayReward`(선택), `AppServices` 자원 폴더, 6.15 예 고침 | #19·#22 |
+| WP6 구현 기록 1~3 | 시작 검사 결과 자리, 화면 신호·종료·비활성 멈춤 계약, `LevelUpOffer.Reward` | #19·#8 |
+| WP6 구현 기록 4 | 게임 쪽 시험 프로젝트 | 메인 세션이 정함(WP1g 밖) |
+| 13.21·13.22 | `ChestItem.Gold` 계약 줄이기, 칸 그릇 6 넘김(액트 셋 이상)·`output_scale` 4 | #8 / 그대로 열린 질문(액트 셋·4배를 넣을 때) |
+
 #### WP0 — 가져오기 도구 (WP0a 뒤, 다른 묶음과 동시)
 
 - **시작 전**(v0.8.2, WP1f 검증 반영): 기획 담당이 13.21 끝 "기획서에 넘기는 것" 2~6(`upscaler-check` 는 작은 무늬 그림 한 장 변환, 되돌아감 이유 `Vulkan 런타임 없음`·"진행 없음 2분", 맵 그림 알파 = 원본 2배 점 확대·이음매 대처 = 벽 줄째 확대·기둥 빼기, 액트 2 시작 칸 5·`--weapons` 초과 옵션 오류, 끊는 틱 두 길)을 기획서 19.6·2.5·15절에 넣은 뒤 시작한다.
@@ -4284,6 +4513,14 @@ WP2~WP8 이 아직 시작 전이라 지금이 가장 싸다(WP1e 와 같은 까�
   데이터 파일 소유: `rules/rooms.json`·`stages/` = WP4, `rewards.json` = WP3, 작은 방 `maps/` = WP5, `rules.rooms` 의 `transition`·`transition_floor`(그림 값 — v0.8: `remaining_marker` 는 없앰)는 WP6 이 WP4 에 요청해 바꾼다.
   (v0.7.1) `TestKit` 의 경계: **#23-형**(`TestDefs.Stage`·`WithRoom`·`FakeHeroCarry`·`FakeSpawner`·합성 `rules.rooms`·합성 보상)은 형과 같이 나오는 공용 도우미라 형 뒤에는 계약처럼 다룬다 — 다른 묶음이 비슷한 도우미를 따로 만들지 않고, 바꿀 것은 메인 세션에 요청한다.
   **#23-구현**(`TestKit/RoomActs.cs` — 합성 액트·작은 합성 맵)은 WP1e-구현이 끝날 때까지 그 담당만 고치고, 끝나면 WP4 로 넘긴다.
+- (v0.9) **WP1g 순서와 소유**(기획 v0.9·v0.9.1 — 11.1 WP1g):
+  순서: 지금 돌던 버그 수정(`fix/playtest`)·방 맵(`maps/act1`)을 main 에 합친다 → **WP1g**(혼자 — 계약 파일과 단계 1 코드의 옛 이름 자리를 고침) → 단계 2 묶음 동시. 버그 수정·방 맵 브랜치가 WP1g 보다 늦게 끝나면 WP1g 가 그 위로 다시 맞춘다(그쪽은 계약 파일을 고치지 않으므로 겹침은 옛 이름 쓰는 자리뿐).
+  **WP1g 가 끝날 때까지** 다른 묶음은 `RewardKind.BeltPotions`·`HeroCarry.Belt`·`rules.hero.belt`·`CueKind.BeltPotion`·`healing_potion` 의 `heal` 효과에 기대는 새 코드를 쓰지 않는다(WP1g 가 지움). 레벨업 아이콘을 원작 `spelicon` 으로 바꾸는 가져오기 일(WP0)은 계약과 무관해 WP1g 와 나란히 해도 된다 — 다만 `Table/icons.json` 은 WP0 소유 한 곳에서만.
+  WP1g 가 구현한 순수 로직의 소유: `Sim/Items/**`(`ItemRoller`·`EquipStats`·`HeroLook`) → **WP3**(주인공·성장이 주 사용처. 단 `ItemRoller` 의 난수 순서·`HeroLook.Key` 글자는 계약 — 바꾸면 저장·그림이 같이 바뀜),
+  `Sim/Run/ShopStock.cs`·보상 뽑기의 보장·거르기 → **WP4**(v0.7 의 `Sim/Run/**` 와 같음 — 단 상인 전용 난수 흐름 이름은 계약), `ShopState`·`RoomState.Shop` → 계약.
+  데이터 파일 소유: `items/`·`merchants/`·`rules/equipment.json` = WP3, `rules.rooms.rewards` = WP4, `rewards.json` 의 새 종류 = WP3, 가져오기 표 새 묶음 = WP0, 주인공 아홉 벌 그림 묶음(`sprites/hero.json`) = WP5.
+  짐(`HeroCarry`)·`RunSnapshot` 필드가 또 필요하면 다음 갱신 묶음(**WP1h**)으로 모은다 — WP1g 뒤에도 sealed 계약 record 규칙(11.2)은 그대로다.
+
 - 개발 옵션은 WP7 이 파싱만 하고, 적용은 `IRunSetup` 을 등록한 묶음이 한다(WP3: 주인공 쪽, WP4: 시각·부하·AI 멈춤). 소리 옵션(`--mute`·`--sound`)은 `AppOptions.Muted` 로 WP8 이 읽는다.
 
 ### 11.4 WP1 코드가 정한 시그니처 (v0.2 문서에 없거나 다르던 것)
@@ -5280,6 +5517,42 @@ WP1f(형과 순수 로직을 한 번에 — 11.1 WP1f 표 #1~#20) 코드가 문�
 | 낮음 | 모양 지문이 열거형 값 이름을 안 봐 `StatKey` 값을 없애거나 바꿔도 지문 그대로 | 닿는 열거형의 값 JSON 이름을 지문에 넣음. 지문 `3d03c6b8` → `7c149bd4`, `CurrentFormat` 1 그대로(저장된 판이 아직 없음) |
 | 낮음 | `Suspend` ⓐ 의 한 틱 뒤 예외면 월드가 이미 한 틱 진행됨 | 코드는 그대로. 11.1 WP6 v0.8.2 에 메뉴가 예외를 받아 `저장 못 함` 한 줄로 판을 이어 가게 적음 |
 | 낮음 | 커밋 준비(`git log --grep WP1f` 참조·설계 v0.8/v0.8.1 본문·리뷰 문서 2개·기획서·brief 변경) | 문서 변경 없음 — 커밋 제목·본문에 `WP1f` 를 넣고, 함께 넣을 파일은 메인 세션·사용자가 정함 |
+
+### 13.23 v0.9 — 기획서 v0.9(33절, 사용자 결정 V1~V5)·v0.9.1(34절, V6~V12) 받기와 WP1g
+
+단계 1 통합 뒤 첫 플레이(2026-11-11)에서 사용자가 정한 열두 가지와 레벨업 아이콘 관찰을 받았다. 새 계약 모양은 6.19(장비·상인·물약 칸·회복 문·둘레 아이콘·겉모습·가져오기 표)이고, 계약 변경과 단계 1 이 쌓은 요청은 11.1 **WP1g** 한 묶음에 모았다(순서·소유 11.3).
+
+**기획서 33절·34절 "설계에 넘기는 것" 처리**
+
+| 기획 # | 내용 | 처리 | 자리 |
+|---|---|---|---|
+| 33-1 | 장비 계약 — 정의·칸 여섯·짐·계단 저장·합산 순서(방어 상한은 합산 뒤)·최대 체력 바뀜 | 반영 | 6.19 정의·인스턴스·합산, WP1g #2·#4·#5·#6·#7 |
+| 33-2 | 문 보상 — 회복 문(방 안 물체 없음)·상인, 거르기·보장의 결정성 | 반영 — `RewardKind.HealNextRoom`·`Merchant`, 문이 열리는 틱 상태의 함수 + 난수 수 고정 | 6.19 "회복 문", WP1g #1·#3·#11 |
+| 33-3 | 회복 문 적용 시점 — 들어옴 첫 틱, 계단 다음은 회복 문 아님 | 반영 — `RunState.HealOnEnter`, `Suspend` 가 거짓 단언 | 6.19, WP1g #7·#11 |
+| 33-4 | 상인 창 상태·구매 명령의 결정론 | 반영 — 들어오는 틱에 상인 전용 난수 흐름(방 난수 안 씀), 사기·다시 굴리기·떠나기·반지 바꾸기 = `Choice1~3`·`Reroll`·`Skip` 판 명령 | 6.19 "상인 방 상태와 구매 명령", WP1g #8·#9·#10 |
+| 33-5 | 금화 경제 상태 — 지갑·쓴 금화·상인 방 횟수·만난 상인 | 반영 — 지갑 `HeroCarry.Gold`, `RunStats.GoldSpent`, 액트 횟수는 `RunState`(액트마다 0), 만난 상인은 스냅숏까지 | WP1g #6·#7·#8 |
+| 33-6 | 맵 풀 데이터 — 액트마다 작은 방 5장 이상·덱 순서 | 데이터는 방 맵 브랜치(`maps/act1`)·단계 2 데이터, 덱 순서는 3.6 결정 2(이미 있는 뽑기 — 바로 앞 쌍 빼기)를 "액트 시작 때 섞은 순서" 로 바꾸는 일 | **남김** — 방 맵 브랜치가 합쳐진 뒤 WP4 가 `RunPlanner` ① 을 고침(계약 아님 — 뽑기 순서는 판 결과라 시험 기대 값만 바뀜) |
+| 33-7 | 가져오기 표 — 상인 그림·대사·인벤토리 그림·장비 소리 | 반영 | 6.19 가져오기 표, WP1g #16(표 모양), 실제 줄 WP0 |
+| 33-8 | `ROOM` 로그 `hp_in`·`kills`·`gold`·`gold_spent`·`shop`, 자동 조작 상인 창·문 우선순위 | 로그 열은 WP7(계약 아님 — `RoomRecord` 에 `HpIn`·`GoldSpent`·`Shop` 을 더하는 것은 WP1g #6 과 같은 커밋), 자동 조작은 WP4 | WP1g #6·하지 않는 것 |
+| 34-9 | 물약 칸 상태·마시기 명령·서서히 회복·저절로 마심 삭제 | 반영 — `CommandButtons.Drink`, `Hero.Heal` 틱마다 같은 양(끝 틱 나머지), 판 시간 멈추면 멈춤, 계단 저장 때 바로 채움 | 6.19 "물약 칸", WP1g #3·#6·#12·#13·#15 |
+| 34-10 | 장비 정의 보탬 — 무게·접사 범위·접사 둘·인스턴스·무게 이동 표 | 반영 | 6.19, WP1g #2·#3·#4·#5 |
+| 34-11 | 겉모습 고르기 — 순수 함수, 못 가져온 벌은 `slt` | 반영 — `HeroLook.Key`, `HeroClassDef.Looks`·`Look` | 6.19, WP1g #4·#14 |
+| 34-12 | 둘레 아이콘 — 상자를 여는 순간 정한 무기의 결정성, 상자 → 책 두 단계 | 반영 — 여는 틱에 방 난수 `Drop` 으로 정해 `RewardPickup.Chosen`, 책을 집는 틱에 다시 뽑지 않음 | 6.19 "둘레 아이콘", WP1g #1·#9·#13 |
+| 34-13 | 페핀 — `reward_healer`, 고정 물건 셋, 다시 굴리기 없음 | 반영 — `MerchantStock.Potions`·`PotionUpgradeDef`·`Rerollable` 거짓 | 6.19, WP1g #2·#10·#11 |
+| 34-14 | 가져오기 표 — spelicon·panel8·p8bulbs·items·towners·아홉 벌 | 반영 | 6.19 가져오기 표, WP1g #16 |
+| 34-15 | `ROOM` `potions`·`drunk`, 자동 조작 물약 35%·페핀 창 | 로그 WP7, 자동 조작 WP4(`rules.hero.potions.bot_threshold`) | WP1g 하지 않는 것 |
+| 관찰 | 레벨업 아이콘이 거의 검게 보임(`Table/icons.json` 이 투사체 CL2 한 프레임을 48px 로 줄여 만듦) | 원작 `ctrlpan\spelicon.cel`(56×56, 프레임 머리 없는 CEL)로 — WP0 이 표를 바꾸고, 대체 아이콘은 가산으로 구움. 계약 변경 없음(그림 경로·크기만) | 6.19 가져오기 표, 11.3 |
+| 관찰 | "키 입력이 이상하다"(무엇인지 미확인) | 버그 수정 담당이 재현. 창 닫힌 뒤 입력 새기가 원인이면 WP6 `InputMap` 의 잠금(기획 3절 첫 안 0.2초) — 계약 아님 | 기획 열린 질문 50 |
+
+**다르게 해석·보탠 것**(설계가 정함 — 기획서에 넘기는 것)
+
+1. 상인 카드 최대 셋 → `CommandButtons` 에 `Choice4` 를 더하지 않았다(기획 v0.9 의 아드리아 넷째 칸이 v0.9.1 에 페핀으로 갔다). 카드가 넷 이상인 상인을 더하면 그때 계약.
+2. 상인 물건은 **상인 전용 난수 흐름**으로 정한다(기획 11.7 "방 난수" 를 좁힘) — 상인 방이든 아니든 그 방의 적·드롭이 같아야 시험·재현이 쉽다. 같은 씨앗 = 같은 물건이라는 기획 문장은 그대로 선다.
+3. 보장으로 정한 문도 뽑기 난수를 그대로 소비한다(난수 수 고정 — 3.6). 기획에는 없던 규칙이지만 보이는 결과는 같다.
+4. 계단 저장 `Format` 1 → 2: 옛 `run.json` 은 불일치로 지워진다(8.3 — 판 하나를 잃음). 단계 1 은 계단 저장을 쓰지 않으므로 사용자 판은 잃지 않는다.
+5. 지갑(`HeroCarry.Gold`)과 얻은 금화(`RunStats.Gold`)를 나눴다 — 기획 11.7 "쓴 금화도 얻은 금화에 센다" 와 결과 화면 `얻은 금화 · 쓴 금화` 를 그대로 받는 모양.
+
+**기획서에 넘기는 것**: 위 1~3 을 기획 11.7·12.8 에 한 줄씩(다음 판). 33-6 의 "덱 순서" 를 3.6 결정 2(바로 앞 쌍 빼기)와 어떻게 합칠지(덱을 다 쓰면 다시 섞을 때 바로 앞 방과 같은 맵이 오지 않게 — 첫 안).
 
 ### WP7 구현 기록
 
