@@ -1,15 +1,15 @@
 // 마법 그림·무기 아이콘 (설계서 6.3·6.4, 기획 5.2·5.9·13.7 — 소유 WP5). 합칠 때(검증 담당) 무기 데이터(WP3)가 가리키는 ID 가 없어 넣은 첫 판.
 // 마법: 가져오기 표 Table/missiles.json 의 출력(방향·프레임 수·칸 = 가져온 메타 d1/missiles/*.json 값). origin 은 칸 가운데 — WP5 가 --preview 로 맞춘다.
-// 아이콘: 가져오기 표 Table/icons.json 의 출력(48×48, PNG 알파라 color_key null).
+// 아이콘: 가져오기 표 Table/icons.json 의 출력(원작 마법 아이콘 56×56, 불투명 PNG 라 color_key null).
 {
   "sprites": [
     { "id": "fireba",   "source": "atlas", "file": "d1/missiles/fireba.png",   "frame": [96, 96], "directions": 16, "frames": 14, "origin": [48, 48] },
     { "id": "holy",     "source": "atlas", "file": "d1/missiles/holy.png",     "frame": [96, 96], "directions": 16, "frames": 14, "origin": [48, 48] },
     { "id": "miniltng", "source": "atlas", "file": "d1/missiles/miniltng.png", "frame": [64, 64], "directions": 1,  "frames": 8,  "origin": [32, 32] },
 
-    { "id": "icon_magic_missile", "source": "grid", "file": "d1/icons/magic_missile.png", "sheet": [48, 48], "frame": [48, 48], "color_key": null, "origin": [24, 24] },
-    { "id": "icon_fireball",      "source": "grid", "file": "d1/icons/fireball.png",      "sheet": [48, 48], "frame": [48, 48], "color_key": null, "origin": [24, 24] },
-    { "id": "icon_arcane_orbit",  "source": "grid", "file": "d1/icons/arcane_orbit.png",  "sheet": [48, 48], "frame": [48, 48], "color_key": null, "origin": [24, 24] },
+    { "id": "icon_magic_missile", "source": "grid", "file": "d1/icons/magic_missile.png", "sheet": [56, 56], "frame": [56, 56], "color_key": null, "origin": [28, 28] },
+    { "id": "icon_fireball",      "source": "grid", "file": "d1/icons/fireball.png",      "sheet": [56, 56], "frame": [56, 56], "color_key": null, "origin": [28, 28] },
+    { "id": "icon_arcane_orbit",  "source": "grid", "file": "d1/icons/arcane_orbit.png",  "sheet": [56, 56], "frame": [56, 56], "color_key": null, "origin": [28, 28] },
 
     // 대체 그림(원작 DiabloDefence exe PNG — objects.json 과 같은 방식). 아래 이펙트·투사체의 원작 그림(lghning·bigexp·firarwex·arrows, 기획 13.7)은
     // 아직 가져오기 표에 없다 — WP0 이 표에 넣고 WP5 가 effects/common.json 을 그 그림으로 바꾼다.

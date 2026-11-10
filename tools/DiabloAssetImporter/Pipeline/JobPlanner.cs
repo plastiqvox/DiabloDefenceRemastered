@@ -78,11 +78,22 @@ internal static class JobPlanner
         sources.AddRange(files);
         return new ImportJob(e.Out, "icon", e.Bundle, [], Distinct(sources), Spec("icon", palette, head.Size, head.Background, e), false, (bag, _) =>
         {
-            var asMissile = new ImportMissileEntry { Out = e.Out, Cl2 = e.Cl2, Width = e.Width, Dirs = e.Dirs, FramesAreDirs = e.FramesAreDirs, ShadowAlpha = e.ShadowAlpha };
-            var decoded = UnitBaker.DecodeMissile(e.Out[3..], asMissile, [.. files.Select(bag.Get)], null);
+            var decoded = e.Cel is { } cel ? DecodeCelIcon(e, bag.Get(cel)) : UnitBaker.DecodeMissile(e.Out[3..],
+                new ImportMissileEntry { Out = e.Out, Cl2 = e.Cl2!, Width = e.Width, Dirs = e.Dirs, FramesAreDirs = e.FramesAreDirs, ShadowAlpha = e.ShadowAlpha },
+                [.. files.Select(bag.Get)], null);
             var img = IconBaker.Bake(e, decoded, Palette.Read(bag.Get(palette)), head.Size, head.Background);
             return JobOutput.Of([new OutFile(e.Out + ".png", Png.Encode(img))]);
         });
+    }
+
+    /// <summary>CEL 아이콘: 프레임 전부를 폭 그대로 풀어 방향 1개짜리 묶음으로(칸 = 폭 × 가장 큰 높이). 원작 마법 아이콘은 투명 없는 56×56 이다.</summary>
+    internal static UnitBaker.DecodedAction DecodeCelIcon(ImportIconEntry e, byte[] cel)
+    {
+        List<IndexedImage> images;
+        try { images = [.. Cel.Frames(cel).Select(f => Cel.Decode(f.Span, e.Width))]; }
+        catch (InvalidDataException ex) { throw new ImportCheckException($"{e.Cel}: {ex.Message}"); }
+        if (images.Count == 0) throw new ImportCheckException($"{e.Cel}: 프레임이 없다");
+        return new UnitBaker.DecodedAction("default", new Int2(e.Width, images.Max(i => i.Height)), 1, images.Count, images, e.ShadowAlpha);
     }
 
     private static ImportJob Sound(string src, ContentBundle? bundle, IReadOnlyList<ContentBundle> prefer)

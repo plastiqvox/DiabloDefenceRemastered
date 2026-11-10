@@ -62,7 +62,7 @@ internal static class SynthSources
             foreach (var p in e.SourcePaths()) files[p] = FlatCl2(e.Width, e.FramesAreDirs ?? framesOf?.Invoke(p) ?? 14);
         foreach (var e in table.Icons.Icons)
             foreach (var p in e.SourcePaths())
-                if (!files.ContainsKey(p)) files[p] = FlatCl2(e.Width, e.FramesAreDirs ?? 8);
+                if (!files.ContainsKey(p)) files[p] = e.Cel is not null ? FlatCel(e.Width, 52) : FlatCl2(e.Width, e.FramesAreDirs ?? 8);
         foreach (var e in table.Sounds.Sounds)
             foreach (var p in e.SourcePaths()) files[p] = Encoders.Wav8([128, 255, 0, 64, 200]);
         foreach (var e in table.Music.Music) files[e.Path] = Encoders.Wav8([128, 129, 130]);
@@ -81,6 +81,21 @@ internal static class SynthSources
 
     public static byte[] FlatCl2(int width, int frames, int height = 40) =>
         Encoders.Flat([.. Enumerable.Range(0, frames).Select(f => Encoders.Cl2Frame(Encoders.Figure(width, height, (byte)(140 + f), f)))]);
+
+    /// <summary>합성 스프라이트 CEL(원작 마법 아이콘 모양): 프레임마다 width×width 불투명, 줄마다 그대로 칸(0x00..0x7F) 하나 이상.</summary>
+    public static byte[] FlatCel(int width, int frames) =>
+        Encoders.Flat([.. Enumerable.Range(0, frames).Select(f =>
+        {
+            var bytes = new List<byte>();
+            for (var y = 0; y < width; y++)
+                for (var x = 0; x < width; x += 127)
+                {
+                    var n = Math.Min(127, width - x);
+                    bytes.Add((byte)n);
+                    for (var k = 0; k < n; k++) bytes.Add((byte)(140 + (f + x + k + y) % 100));
+                }
+            return bytes.ToArray();
+        })]);
 
     /// <summary>
     /// 합성 타일셋: 메가타일 m(1..max) → 하위 타일 4(m−1)..+3, SOL = 성질 표 글자의 번호(없으면 0 = 바닥). MIN 조각: 바닥 단 = 왼쪽·오른쪽 삼각형(바닥 칸)

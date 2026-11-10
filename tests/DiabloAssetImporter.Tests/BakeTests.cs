@@ -1,6 +1,7 @@
 using DiabloAssetImporter.Bake;
 using DiabloAssetImporter.Formats;
 using DiabloAssetImporter.Imaging;
+using DiabloAssetImporter.Pipeline;
 using DiabloAssetImporter.Tests.TestKit;
 
 namespace DiabloAssetImporter.Tests;
@@ -89,6 +90,30 @@ public class BakeTests
         var bigIcon = IconBaker.Bake(new ImportIconEntry { Out = "d1/icons/y", Cl2 = "y.cl2", Width = 160, Layers = [new ImportIconLayer { Frame = 1 }] },
                                      bigD, Palette.Read(Encoders.Pal()), 48, new Rgb(0, 0, 0));
         Assert.Equal(48, bigIcon.Width);
+    }
+
+    [Fact]
+    public void Icon_Cel_DecodesSignedRuns_AndKeepsOpaqueColors()
+    {
+        // 폭 4, 두 줄(아래 줄부터): 아래 = 색인 200 넷, 위 = 투명 둘 + 색인 7 둘. CEL 은 0x00..0x7F 가 그대로, 0x80.. 가 투명(CL2 와 반대)
+        byte[] frame = [0x04, 200, 200, 200, 200, 0xFE, 0x02, 7, 7];
+        var file = new byte[12 + frame.Length];
+        BitConverter.GetBytes(1).CopyTo(file, 0);
+        BitConverter.GetBytes(12).CopyTo(file, 4);
+        BitConverter.GetBytes(12 + frame.Length).CopyTo(file, 8);
+        frame.CopyTo(file, 12);
+        var e = new ImportIconEntry { Out = "d1/icons/z", Cel = @"ctrlpan\spelicon.cel", Width = 4, Layers = [new ImportIconLayer { Frame = 1 }] };
+        var d = JobPlanner.DecodeCelIcon(e, file);
+        Assert.Equal((4, 2, 1, 1), (d.Cell.X, d.Cell.Y, d.Directions, d.Frames));
+        var img = d.Images[0];
+        Assert.Equal(new[] { false, false, true, true, true, true, true, true }, img.Opaque);
+        Assert.Equal((byte)7, img.Index[3]);
+        Assert.Equal((byte)200, img.Index[4]);
+        // 1:1 로 옮기면(4×2 그림은 4×4 칸의 가운데 1~2 줄) 불투명 칸은 팔레트 색 그대로다(바탕과 섞여 어두워지지 않는다)
+        var pal = Palette.Read(Encoders.Pal());
+        var icon = IconBaker.Bake(e, d, pal, 4, new Rgb(16, 12, 10));
+        var (r, g, b) = pal[200];
+        Assert.Equal(new byte[] { r, g, b, 255 }, icon.Pixels[((2 * 4 + 0) * 4)..((2 * 4 + 0) * 4 + 4)]);
     }
 
     private static (ArenaGrid Grid, TilesetSource Ts) RealMapSynthTiles()
