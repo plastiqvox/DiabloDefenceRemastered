@@ -5552,6 +5552,24 @@ WP6(화면·UI·입력 — 11.1 WP6) 코드가 문서와 다르게 또는 더 �
 - WP8: `Consume` 은 스텝마다(프레임마다가 아님), `PlayUi` 키 `menu_move`·`menu_select`·`level_up`·`chest_open`, `PlayMusic("title")`·액트 ID(액트가 바뀔 때만), 일시정지 `SetPaused`, 시작 때 `SetVolumes`.
 - WP3: 선택 뒤 대기가 남지 않으면 `AwaitingChoice = None`(남으면 `PlayScene` 이 다음 앱 틱에 새 창), `Reroll` 뒤 `Offer()` 가 새 카드.
 
+
+### 통합 기록 (WP0·WP2~WP8 합침 — 단계 1, 커밋은 `git log --grep 통합`·`git log --grep 합침`)
+
+합친 순서 wp7 → wp2 → wp3 → wp4 → wp0 → wp5 → wp8 → wp6(모두 `--no-ff`). 겹친 파일은 이 문서 하나였고, 13장 끝 구현 기록 소절을 모두 남겼다(합친 순서대로).
+브랜치마다 따로는 초록이었지만 합치고 나서 드러난 이음새와 처리:
+
+| 수준 | 이음새 | 처리 |
+|---|---|---|
+| 높음 | 그림·이펙트 모듈이 함께 등록되자 참조 검사가 켜져 실제 Data 가 29개 오류(무기·적·소리 연결이 가리키는 `sprites/missiles.json`·`ui.json`·`effects/common.json` 이 어느 브랜치에도 없음) — 게임이 데이터 오류 화면으로 뜸 | 세 파일을 첫 판으로 넣음. 마법·아이콘은 가져오기 메타 값, 획득물·아이콘은 exe PNG 크기. 기획 13.7 의 `lghning`·`bigexp`·`firarwex`·`arrows` 는 가져오기 표에 없어 exe PNG 대체 그림 — WP0 이 표에 넣고 WP5 가 바꾼다 |
+| 높음 | `GameApp` 이 입력·봇 없이 돔(WP6 본문 전에 쓴 WP7 셸) — 키·마우스가 안 먹고 `--autoplay` 가 메뉴를 넘기지 못함, 타이틀 종료가 아무 일 없음 | `InputMap.Sample`·`FixedTick` 뒤 `AutoplayDriver.Step`·`QuitRequested`·전체 화면·창 비활성 멈춤·`ContentAvailability` 를 이음(13장 WP7 구현 기록 "남은 것" 1·4) |
+| 중간 | WP4 `EnemyMath` 사본이 WP3 `DamageMath` 와 반올림이 다름(x.5 에서 1 차이) | 정본 호출로 바꿈 |
+| 중간 | WP4 `Enemy.InvulnUntilTick` 을 WP3 `DamageResolve` 가 읽지 않음 | 무적 틱 전 요청을 버림 + 시험. 공통 조각으로 옮기는 일은 WP1g 요청 그대로 |
+| 중간 | WP0 이 넘긴 L1 짝 조각(35·25)·거울 짝 표 — 남의 시험 둘이 막고 있었음 | 넣고 두 시험을 고침(13장 WP0 구현 기록) |
+
+합친 뒤 실제 데이터·실제 모듈로 액트 1 판을 머리 없이 돈 결과(`Sim/RealActScenarioTests`, Scenario 분류): `--god` 씨앗 7 이 9.8분 35,197틱에 승리(방 1·2·3·4·6·8),
+불변식 통과, 공정성 `unseen_shots`·`unseen_charges`·`hidden_hits` 0, `DOOR_SKIP`·`REWARD_STALL` 0, 같은 씨앗 두 번 같은 `ROOM` 기록. `--god` 없는 자동 조작은 씨앗 8 승리, 7·9 패배(방 2·6).
+창을 띄우는 확인(그리기·입력·소리·캡처)은 하지 않았다.
+
 ---
 
 ## 부록 A. 원작 형식 규칙 (조사 문서·시제품에서 옮김)
