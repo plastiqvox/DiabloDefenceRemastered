@@ -93,14 +93,21 @@ public sealed class PauseOverlay(GameFlow flow, PlayScene play) : IScene
     {
         if (flow.Canvas is not { } c) return;
         c.Begin(rc);
-        Ui.Dim(c);
+        // 바탕 판: 왼쪽 메뉴(알림 줄 포함)와 오른쪽 빌드 목록을 한 판에 — 아래는 둘 중 긴 쪽
+        var world = play.World;
+        var hero = world.Hero;
+        var named = 0;
+        for (var i = 0; i < WeaponSlots.SlotCount; i++) if (hero.Weapons[i].Def is not null) named++;
+        for (var i = 0; i < PassiveSlots.SlotCount; i++) if (hero.Passives[i].Def is not null) named++;
+        for (var i = 0; i < BlessingSlots.SlotCount; i++) if (hero.Blessings[i].Def is not null) named++;
+        var buildBottom = 120f + 32f + named * 20f + 10f + StatLines(hero.MaxHp, hero.Stats).Count() * 16f;
+        var menuBottom = 200f + (_items.Count + 1) * _menu.Spacing + 10f;
+        Ui.Backdrop(c, new RectF(130, 110, 800, MathF.Max(buildBottom, menuBottom) + 16f));
         Ui.Centered(c, "일시정지", 300, 130, Theme.TitleText, Theme.Gold);
         _menu.Draw(c);
         if (_notice is { } n) Ui.Centered(c, n, 300, 200 + _items.Count * _menu.Spacing + 10, Theme.BodyText, Theme.Red);
 
         // 오른쪽 빌드 목록
-        var world = play.World;
-        var hero = world.Hero;
         var x = 560f;
         var y = 120f;
         c.Text("빌드", new Vector2(x, y), Theme.MenuText, Theme.Gold);
