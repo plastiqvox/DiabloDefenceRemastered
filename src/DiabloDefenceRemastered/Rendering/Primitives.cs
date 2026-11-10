@@ -44,20 +44,21 @@ public sealed class Primitives : IDisposable
     public Texture2D Diamond { get; }
 
     /// <summary>
-    /// 경계 흐림 띠(7.10 ②): 알파가 반경 비율 <paramref name="innerRatio"/>(= (R − edge)/R) 안 1, 1 에서 0, 밖 0. 색 흰색.
-    /// R·edge 가 바뀔 때만 다시 만든다(<see cref="BandFor"/>).
+    /// 경계 흐림 띠(7.10 ②): 텍스처 반지름을 1 로 놓고 알파가 <paramref name="innerRatio"/>(= (R − edge)/덮는 반경) 안 1, <paramref name="outerRatio"/>(= R/덮는 반경)에서 0, 그 밖 0. 색 흰색.
+    /// 비율이 바뀔 때만 다시 만든다.
     /// </summary>
-    public Texture2D BandFor(GraphicsDevice device, float innerRatio)
+    public Texture2D BandFor(GraphicsDevice device, float innerRatio, float outerRatio)
     {
-        var key = (int)MathF.Round(innerRatio * 1000f);
+        var key = ((int)MathF.Round(innerRatio * 1000f) << 12) | (int)MathF.Round(outerRatio * 1000f);
         if (_band is not null && _bandKey == key) return _band;
         _band?.Dispose();
         _bandKey = key;
-        var inner = Math.Clamp(innerRatio, 0f, 0.999f);
+        var outer = Math.Clamp(outerRatio, 0.001f, 1f);
+        var inner = Math.Clamp(innerRatio, 0f, outer - 0.0005f);
         _band = Make(device, LightSize, LightSize, (x, y) =>
         {
             var d = Dist(x, y, LightSize);
-            return d <= inner ? 1f : Math.Clamp((1f - d) / (1f - inner), 0f, 1f);
+            return d <= inner ? 1f : Math.Clamp((outer - d) / (outer - inner), 0f, 1f);
         });
         return _band;
     }
