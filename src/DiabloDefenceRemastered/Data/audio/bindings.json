@@ -1,0 +1,45 @@
+// 소리 연결 표 (설계서 6.15·7.9 표) — 무엇이 일어나면 어느 소리를 내나. 소유 WP8. 키 = 그 종류의 정의 ID(무기·투사체·이펙트·그림 묶음·직업·획득물·보상·스테이지).
+// 정의 파일(무기 WP3·적 WP4·이펙트 WP5)에는 소리 ID 를 적지 않는다. 연결이 없는 신호는 소리 없음(화살 맞음처럼 — 기획 12.7).
+// 단계 1 내용만 — 단계 2·3 의 무기·몬스터·보스 대사·장판 반복(hazard_loops)·정예 상자·물약 보상은 그 정의와 함께 더한다.
+// ui.room_clear 는 걸지 않는다(기획 12.7 v0.8: 방 정리·방 바뀜은 소리 없이 문구·화면 어둡게만).
+{
+  "sound_bindings": {
+    "weapons": {
+      "magic_missile": { "fire": "snd_cbolt" },
+      "fireball":      { "fire": "snd_fbolt" },
+      "arcane_orbit":  { "fire": "snd_holybolt" }
+    },
+    "projectiles": {
+      "pj_enemy_arrow": { "fire": "snd_bfire" }
+    },
+    "effects": {
+      "fx_fire_explosion": "snd_firimp",
+      "fx_bolt_hit":       "snd_elecimp"
+    },
+    "sprite_sets": {
+      "set_skelaxe": { "attack": "snd_skelaxe_attack", "hit": "snd_skelaxe_hit", "death": "snd_skelaxe_death" },
+      "set_skelbow": { "attack": "snd_skelbow_attack", "hit": "snd_skelbow_hit", "death": "snd_skelbow_death" },
+      "set_zombie":  { "attack": "snd_zombie_attack",  "hit": "snd_zombie_hit",  "death": "snd_zombie_death" }
+    },
+    "pickups": {
+      "gem_blue":       { "collect": "snd_gem" },
+      "gold":           { "collect": "snd_gold" },
+      "healing_potion": { "collect": "snd_invpot", "drop": "snd_flippot" }
+    },
+    "hero": {
+      "sorcerer": { "hurt": "snd_sorcerer_hurt", "death": "snd_sorcerer_death" }
+    },
+    "ui": {
+      "menu_move": "snd_titlemov", "menu_select": "snd_titlslct", "level_up": "snd_magic", "chest_open": "snd_chest",
+      "elite_pack": "snd_magic1", "door_open": "snd_dooropen", "belt_potion": "snd_invpot"
+    },
+    "rewards": {
+      "reward_tome":  { "collect": "snd_invbook", "open": "snd_readbook" },
+      "reward_chest": { "collect": "snd_chest" }
+    },
+    "music": {
+      "title": "mus_title",
+      "stage_cathedral": "mus_cathedral"
+    }
+  }
+}

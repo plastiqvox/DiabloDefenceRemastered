@@ -5465,6 +5465,42 @@ WP5(렌더·그림·미리보기) 단계 1 구현이 이 문서와 다르게 정
 **남은 것**(단계 1 완료 기준 중 창이 필요한 것 — 합친 뒤 검증 담당): `--preview sprites/enemies/effects/tiles/blend/fog` 캡처 판정, `--stress 300 --freeze-ai` 렌더 p99·`draw_calls` ≤ 600(`--reveal`·안개 켬 두 번, s = 2 한 번), `vram_mb`(R7·R38),
 10.2 "뒷벽·앞 턱·아치"·"예고·빛"·"안개 고정 장면"·"안개 흐름"·"안개 재현"·"방 흐름"(봉인·아이콘) 행. 기획 열린 질문 7·10·11·18 의 값 맞추기도 미리보기를 본 뒤.
 
+### WP8 구현 기록
+
+WP8(소리) 코드가 문서와 다르게 또는 더 정한 것. 코드가 정본이다(11.4 와 같은 규칙). 계약 파일(`Defs/AudioDefs.cs`·`Presentation.cs`·`AppServices.cs`·`IWorldBound.cs`)은 고치지 않았다.
+기획상 단계 2 묶음이지만 모듈·시험·단계 1 내용의 데이터를 먼저 냈다. 게임 실행 확인(10.2 — `--sound`·`--mute` 의 `AUDIO` 수, `AUDIO device="No Output"`, 해시 같음, `slow_frames`)은 다른 묶음과 합친 뒤.
+
+| 자리 | 문서 | 코드 | 이유 |
+|---|---|---|---|
+| 7.9 흐름 | `AudioSystem`(게임)이 연결 표로 소리 ID 를 고르고 `SoundMixer`(Core)가 고른다 | Core `Audio/` 에 더함: `SoundRouter`(신호·`FxEvent`·`CorpseSpawned` → `SoundRequest`), `SoundPipeline`(신호 → 고르기 → `ISoundSink` 재생 한 줄, 무음이면 재생만 끔), `HazardLoops`(장판 반복), `AudioReach`(액트 미리 읽기 목록), `MusicChoice`(곡 결정·`AUDIO music=` 줄). 게임 `AudioSystem` 은 앱 틱·재생(`SoundBank`·`MusicPlayer`)만 붙인다 | 시험 프로젝트는 게임을 참조하지 않는다(1.3) — 신호 소비(`BeltPotion` 포함)·"같은 신호 열 → 무음과 소리 켬의 `AUDIO` 수 같음"·방 이동을 그래픽 없이 시험하려고 |
+| 7.9 고르기 제한 | 몬스터 맞음 0.08s·죽음 4/같은 종 0.1s | 요청의 `SoundLimit`(`MonsterHit`·`MonsterDeath`, 같은 종 = 적 ID `Group`)으로 센다(분류 이름에 기대지 않음). **보스·중간 보스**(정의 `rank`)가 낸 몬스터 소리는 분류 `boss` 이고 이 두 제한을 받지 않는다(같은 소리 간격·자리 제한은 그대로) | 보스 죽음이 몬스터 죽음 4자리에 밀려 사라지지 않게. `boss` 로 올린 소리는 분류 `offscreen` 을 따른다(정의 `offscreen` 덮어쓰기는 정의 분류일 때만) |
+| 7.9 간격·시간 | 앱 틱 | `(지금 − 마지막) / 60 < 간격 − 1e-6` 이면 버림 — 0.05s = 정확히 3틱 뒤 통과, 맞음 0.08s 는 5틱(초당 최대 12). 한 프레임에 여러 스테이지 틱의 같은 소리가 오면 같은 앱 틱이라 둘째부터 간격으로 버린다 | 무음·소리 켬이 같은 묶음(`--time-scale`)이면 같은 수 |
+| 7.9 자리 | 길이 색인의 끝 틱 | 색인에 없는 파일은 1틱으로 세고 `AudioCounts.MissingLength` 에 따로 센다(종료 줄에는 없음). 반복 소리는 동시 수에 들지 않는다(재생 쪽 반복 칸) | 시작 검사가 따로 잡고, 무음·소리 켬이 같은 수를 센다 |
+| 7.9 좌우·위치 | `(x − 가운데) / (폭/2) × pan` | ±pan 으로 자른다(화면 밖이어도 내는 분류). 위치 없는 요청(UI·`ElitePack`·`DoorsOpened`·`RoomCleared`·`BeltPotion`)은 좌우 0·화면 밖 검사 없음 | 기획 12.7 "가장자리 ±0.5" |
+| 7.9 무작위 | 게임 쪽 난수 | Core `RandomStream`(시뮬레이션과 다른 인스턴스, 씨앗 = `AppOptions.Seed` ^ 상수). 파일·높낮이는 모든 제한을 통과한 뒤에만 뽑는다 | 같은 씨앗이면 같은 고르기 |
+| 6.15 `ui.room_clear` | 예에 `snd_magic` | 데이터에 걸지 않는다. `SoundRouter` 는 걸면 낸다 | 기획 12.7 v0.8 "방 정리·방 바뀜은 소리 없이" 가 6.15 예보다 새 결정 |
+| 7.9 보상 창 소리 | 오버레이가 `rewards.<id>.open` | `IAudioServices.PlayUi("rewards.<보상 ID>.open")`(`.collect` 도) — 연결 표 경로 그대로 받는다 | 계약에 `PlayUi(string)` 하나뿐. WP1g 요청 ② |
+| 7.9 종료 로그 | 종료 때 `AUDIO muted=… requested=…` | `AudioSystem : IDisposable` — `Dispose` 가 쓴다(`SoundPipeline.LogLine`) | 계약에 끝내기 함수가 없다. GameApp(WP7)이 `(app.Audio as IDisposable)?.Dispose()`. WP1g 요청 ① |
+| 7.9 자원 위치 | — | `AudioServices.Create(app)` = 실행 폴더 `Assets`(csproj 복사 위치). 소리 색인 `d1/sound/index.json`·manifest(묶음)를 직접 읽고, 없거나 깨졌으면 경고 후 길이 1틱·묶음 모두 있음. `Create(app, assetRoot)` 판도 둠 | `AppServices` 에 자원 경로·`ContentAvailability` 가 없다. WP1g 요청 ③ |
+| 7.9 장치 이름 | `AUDIO device="<장치 이름>"` | MonoGame 이 싣는 OpenAL Soft(`openal`)에 `alcGetCurrentContext` → `alcGetContextsDevice` → `alcGetString(0x1005)` 로 묻는다. 못 물으면 `ALSOFT_DRIVERS=null` 이면 `No Output`, 아니면 `unknown` | MonoGame 공개 API 에 장치 이름이 없다. 실제 이름은 실행 확인 못 함 |
+| 7.9 목소리 칸 | 24개 풀 | `voices` + 8 칸. 모든 칸이 실제로 아직 소리를 내면 그 소리만 못 틀고 `AUDIO device_busy=n`(종료 때, 0 이면 안 씀) | 고르기는 길이 색인으로 세므로 장치 지연이 있으면 칸이 모자랄 수 있다 — 고르기 결과와 무관 |
+| 7.9 일시정지 | 효과음 `Pause()`, 음악 50% | 나던 효과음·반복만 멈춘다. 일시정지 중에 고른 소리(메뉴 이동 등 UI)는 그대로 낸다 | 일시정지 메뉴 소리가 들려야 한다 |
+| 7.9 `SoundBank` 미리 읽기 | 그 스테이지에 쓸 소리만(고른 직업 `hero.<id>` 포함) | 적 소리는 `StageReach.Enemies` 의 적만, 나머지 줄(무기·투사체·이펙트·반복·획득물·UI·보상)과 `hero` 는 **줄 전부** | `PreloadStage(StageDef)` 가 직업을 받지 않는다(직업마다 두 소리라 작음). 레벨업 후보는 미리 모른다 |
+| 6.14 "소리" 검사 | 대상·소리·분류·파일 ≥ 1 | `AudioDataValidator` 가 더 본다: 파일 이름(`d1/sound/` 아래·소문자·`.wav`·상대 경로 규칙), 값 범위(`volume` ≥ 0·`max_instances` ≥ 1·`min_interval` ≥ 0·`pitch_jitter` 0..0.5), `rules.audio`(분류 중복·음량·기본 음량 0..1), 음악 `fallback` 존재, 경고: 모르는 `ui` 키·`hazard_loops` 소리가 `loop` 아님·한 번 소리 자리에 `loop` 소리. 오류 파일은 고정 이름(`audio/bindings.json`·`audio/sounds.json`·`rules/audio.json`), 비슷한 ID 제안 | 로더가 원소의 실제 파일을 넘기지 않는다(`IDataValidator` 계약). 소리 정의는 이 세 파일에만 둔다 |
+| 6.15 데이터 | 예 | 단계 1 내용만(무기 셋·해골·해골 궁수·좀비 묶음·마법사·보석·금화·물약·마법서·보물 상자·UI·문·곡 둘). 주인공 소리 ID 는 `snd_sorcerer_hurt`·`_death`(6.15 "직업 단계에 `snd_<직업>_…`"). 몬스터 소리 이름 규칙(`sklax`·`sklbw`·`zombie` + `a`·`h`·`d` + `1`·`2`)은 DevilutionX 참고(출처 주석) — 원본 목록 대조는 WP0 가져오기 때 | 단계 2·3 정의가 아직 없어 줄을 걸면 실제 데이터 엄격 시험이 깨진다 |
+
+**WP1g 요청**(계약 — 고치지 않고 자기 파일에서 우회함)
+1. `IAudioServices` 에 끝내기(`IDisposable` 또는 `Shutdown()`) — 종료 `AUDIO` 줄을 쓰는 자리. 지금은 구현 형이 `IDisposable`.
+2. (선택) `IAudioServices.PlayReward(RewardDef reward, bool open)` — 지금은 `PlayUi("rewards.<id>.open")` 문자열 경로.
+3. `AppServices` 에 자원 폴더(또는 시작 검사가 만든 `ContentAvailability`·`SoundIndex`) — 지금은 소리 서비스가 manifest·색인을 따로 읽는다.
+4. 문서만: 6.15 예의 `ui.room_clear: snd_magic` 을 기획 12.7 v0.8 에 맞춰 지우거나 "걸지 않음" 으로.
+
+**남은 것**
+1. 가져오기 소리 표 줄(WP0): `Data/audio/sounds.json` 의 효과음 파일 39개 + 곡 둘(`music\dintro.wav`·`dlvla.wav`)과 소리 색인 출력. 몬스터 소리 이름은 원본 목록으로 확인.
+2. 실제 데이터의 연결 대상(다른 묶음): 무기 `magic_missile`·`fireball`·`arcane_orbit`, 획득물 `gem_blue`·`gold`·`healing_potion`, 보상 `reward_tome`·`reward_chest`, 직업 `sorcerer`(WP3), 투사체 `pj_enemy_arrow`·스테이지 `stage_cathedral`(WP4), 이펙트 `fx_fire_explosion`·`fx_bolt_hit`(WP5) — ID 가 다르면 합칠 때 `bindings.json` 을 고친다(시험 `RealAudioDataTests` 가 목록을 굳혀 둠).
+3. 단계 2·3 줄: 무기 셋·진화 둘·몬스터 묶음·`special`(`set_skelbow` 블랙애시, `set_acid`)·보스 대사·`hazard_loops`(`fx_hellfire_pool` → `wallloop`)·정예 상자·물약 보상·성소·액트 2 곡.
+4. 실행 확인(합친 뒤): `--sound`/`--mute` 수 같음·`device="No Output"`·`--log-hash` 같음·장면 바뀜 `slow_frames`·방 이동 앞뒤 수·`AUDIO music=` 액트마다 한 줄. 귀로 듣기는 사용자 몫.
+
 ---
 
 ## 부록 A. 원작 형식 규칙 (조사 문서·시제품에서 옮김)
