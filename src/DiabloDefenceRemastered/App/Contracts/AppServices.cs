@@ -119,7 +119,7 @@ public interface IArtServices
 /// 무음(<see cref="AppOptions.Muted"/>)이어도 소리 색인으로 고르기를 그대로 돌려 <c>AUDIO</c> 수가 소리 켬과 같다.
 /// v0.7.1: <see cref="IWorldBound"/> — 방 이동마다 개체 키 반복 소리를 멈추고 쿨다운을 비운다(곡은 액트가 같으면 이어 틂).
 /// </summary>
-public interface IAudioServices : IWorldBound
+public interface IAudioServices : IWorldBound, IDisposable
 {
     bool Muted { get; }
     /// <summary>PlayScene 이 액트를 시작할 때만(v0.7 — 방마다가 아님): 그 액트에 쓸 소리·곡을 미리 읽는다.</summary>
@@ -135,6 +135,41 @@ public interface IAudioServices : IWorldBound
     void SetVolumes(float master, float sfx, float music);
     /// <summary>앱 틱마다: 페이드·덕킹(앱 틱으로 센다).</summary>
     void Update(AppTick now);
+    /// <summary>
+    /// 보상 창 소리(v0.9 WP1g — WP8 요청 2, 선택): 연결 표 <c>rewards.&lt;id&gt;.open</c>(창이 열림)·<c>.collect</c>(받음). 기본 구현은 지금의 <see cref="PlayUi"/> 문자열 경로 그대로.
+    /// 끝내기(종료 <c>AUDIO</c> 줄)는 <see cref="IDisposable.Dispose"/>(v0.9 WP1g — WP8 요청 1, GameApp 이 종료 때 부름).
+    /// </summary>
+    void PlayReward(RewardDef reward, bool open) => PlayUi($"rewards.{reward.Id}.{(open ? "open" : "collect")}");
+}
+
+/// <summary>
+/// 앱 개발 실행 훅(v0.9 WP1g — WP7 요청, 본문 WP7): 판을 가진 씬이 앱에 알리는 자리. 사람 실행에서는 null(<see cref="AppServices.DevHooks"/>).
+/// </summary>
+public interface IDevHooks
+{
+    /// <summary>화면이 다 열린 프레임(<c>--capture-on</c> 이름 — <c>levelup</c>·<c>chest</c>·<c>boss</c>·<c>result</c>·<c>doors</c>·<c>reward</c>·<c>shop</c>).</summary>
+    void CaptureEvent(string kind);
+    /// <summary>결과 화면이 열림(<c>--exit-on-result</c>·<c>RESULT</c>).</summary>
+    void ResultShown(RunResult result);
+    /// <summary>판의 시뮬레이션이 바뀜(방마다 — <c>--log-ticks</c> 의 월드 쪽 열).</summary>
+    void AttachProfiler(Simulation simulation);
+    /// <summary>판 해시 한 줄(<c>--log-hash</c>).</summary>
+    void HashRow(World world, RunState run);
+}
+
+/// <summary>
+/// 화면 신호·종료 요청·창 비활성 멈춤(v0.9 WP1g — WP6 요청 2: WP6 <c>GameFlow</c> 의 이벤트를 앱이 직접 부르던 우회를 계약으로). 구현 WP6(<c>GameFlow</c>), 받는 쪽 WP7(<c>GameApp</c>).
+/// </summary>
+public interface IAppSignals
+{
+    /// <summary>화면이 다 열린 순간(<c>--capture-on</c> 이름 그대로). 같은 이름이 여러 번 올 수 있다 — "처음" 은 받는 쪽이 고른다.</summary>
+    event Action<string>? Moment;
+    /// <summary>타이틀 <c>종료</c>·데이터 오류 화면에서 나감.</summary>
+    event Action? QuitRequested;
+    void Signal(string moment);
+    void Quit();
+    /// <summary>창이 비활성이 됨 → 사람 판이면 일시정지(3.3).</summary>
+    void RequestPause();
 }
 
 /// <summary>
@@ -205,6 +240,19 @@ public sealed class AppServices
     /// FixedTick 안에서 마우스 창 좌표를 월드로 바꿀 때(WP6 KeyboardMouseSource) <see cref="RenderContext.ScreenToWorld"/> 를 이것으로 부른다.
     /// </summary>
     public RenderContext? Render { get; set; }
+
+    // ── v0.9 WP1g(WP7·WP8·WP6 요청 — 본문은 그 묶음) ─────────────────────────
+
+    /// <summary>시작 검사(WP7)가 만든 있는 자원 묶음(6.17). 넣기 전엔 모두 있음.</summary>
+    public ContentAvailability Content { get; set; } = ContentAvailability.All;
+    /// <summary>시작 검사의 자원 문제(없거나 낡은 것 — 자원 없음 안내 화면의 줄). 문제가 없으면 빈 목록.</summary>
+    public IReadOnlyList<string> AssetProblems { get; set; } = [];
+    /// <summary>자원 폴더(manifest·소리 색인·그림이 있는 <c>Assets</c>). 넣기 전엔 null(쓰는 쪽이 실행 폴더 <c>Assets</c> 로).</summary>
+    public string? AssetRoot { get; set; }
+    /// <summary>개발 실행 훅(WP7). 사람 실행이면 null.</summary>
+    public IDevHooks? DevHooks { get; set; }
+    /// <summary>화면 신호·종료·비활성 멈춤(WP6 <c>GameFlow</c> 가 넣음 — 처음 만들 때).</summary>
+    public IAppSignals? Signals { get; set; }
 
     public bool HasDataErrors
     {

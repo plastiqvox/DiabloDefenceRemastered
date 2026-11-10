@@ -146,5 +146,6 @@ public static class AudioServices
         public void SetPaused(bool paused) { }
         public void SetVolumes(float master, float sfx, float music) { }
         public void Update(AppTick now) { }
+        public void Dispose() { }
     }
 }

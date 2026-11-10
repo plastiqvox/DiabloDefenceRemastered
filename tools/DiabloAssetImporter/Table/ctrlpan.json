@@ -1,0 +1,5 @@
+// 조작판 자르기 (설계서 1.4·6.19 가져오기 표 — v0.9 WP1g 가 모양만, 줄은 WP0). 체력 구슬 자리·액체(ctrlpan\panel8.cel·p8bulbs.cel)·물약 칸 한 칸.
+// 줄: { "out": "d1/ui/orb_frame", "cel": "ctrlpan\\panel8.cel", "width": 640, "frame": 1, "rect": [x0, y0, x1, y1] } — 사각형·폭은 원본으로 확인해 적는다(기획 12.1 은 기억한 값).
+{
+  "crops": []
+}

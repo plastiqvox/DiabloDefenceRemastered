@@ -72,7 +72,7 @@ public class ContractV08Tests
     [Fact]
     public void Upscale_ReadsStrictly_NineTables()
     {
-        Assert.Equal(9, ImportTable.FileNames.Count);
+        Assert.Equal(13, ImportTable.FileNames.Count);   // v0.9 WP1g: + ctrlpan·items·inv·towners
         Assert.Contains("upscale.json", ImportTable.FileNames);
         var r = ImportTable.Read(Tables());
         Assert.Empty(r.Errors);

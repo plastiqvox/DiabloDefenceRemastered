@@ -1,0 +1,5 @@
+// 바닥 아이템 (설계서 1.4·6.19 가져오기 표 — v0.9 WP1g 가 모양만, 줄은 WP0). items\fbook·fbttle*·goldflip 떨어짐 애니(마지막 프레임에서 멈춤).
+// 줄: { "out": "d1/items/fbook", "cel": "items\\fbook.cel", "width": 96, "frames": [1, 16] } — 이름·폭·프레임은 원본으로 확인(열린 질문 32).
+{
+  "items": []
+}
