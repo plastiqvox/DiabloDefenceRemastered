@@ -149,4 +149,31 @@ public sealed class DirectorTests(ITestOutputHelper output)
         Assert.False(w.Room.SpawningOpen);
         Assert.Equal(atEnd, w.DirectorState.IntervalSpawned);
     }
+
+    [Theory]
+    [InlineData(150f, true)]    // t 시작 2:30 ≥ elite_chance.from 2:00 → 방 시계 0:30 에 정예 무리
+    [InlineData(60f, false)]    // t 시작 1:00 → 판정 없음
+    public void Elite_check_once_at_room_clock_in_late_normal_rooms(float from, bool expectElite)
+    {
+        var defs = Defs([Grunt], map => TestDefs.Stage(map) with
+        {
+            SpawnIntervals = [Interval(0f, 600f, 0.5f, 100_000)],
+            EliteChance = new EliteChanceDef { From = new ClockTime(120f), At = new ClockTime(30f), Chance = 1f },
+        }, caps: Unlimited);
+        var room = TestDefs.Room(RoomKind.Normal, from, from + 60f, 3);
+        var t = new TestWorldBuilder().WithDefs(defs).WithRoom(RoomPhase.Enter, room: room).WithModules(FakeArena.Modules(weapons: false)).Build();
+        int Elites()
+        {
+            var n = 0;
+            foreach (var e in t.World.Enemies.Items) if (e.IsAlive && e.Rank != EnemyRank.Normal) n++;
+            return n;
+        }
+        t.Step(MathX.SecondsToTicks(29f, SimWorld.Dt));
+        Assert.Equal(0, Elites());
+        t.Step(MathX.SecondsToTicks(2f, SimWorld.Dt));
+        var at31 = Elites();
+        Assert.Equal(expectElite, at31 > 0);
+        t.Step(MathX.SecondsToTicks(20f, SimWorld.Dt));
+        Assert.Equal(at31, Elites());   // 한 번만
+    }
 }
