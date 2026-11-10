@@ -1,5 +1,6 @@
 // 마법 그림 가져오기 표 (설계서 1.4, 소유 WP0). 단계 1 = 무기 3종(기획 5.2): 매직 미사일 miniltng(방향 없음 8프레임, 폭 64),
 // 파이어볼 fireba1..16(16방향 14프레임, 폭 96), 비전 구체 holy1..16(16방향 14프레임, 폭 96). 폭은 이 PC 의 diabdat 를 probe 로 확인.
+// 폭발(기획 13.7): 큰 폭발 bigexp(방향 없음 16프레임, 폭 160), 불화살 폭발 firarwex(방향 없음 6프레임, 폭 64) — 폭·프레임 수는 probe cl2 로 확인.
 //
 // (v0.9, 설계서 6.19) 원본이 .cel 인 항목은 CEL 그림 묶음이다 — 방향 없음, 프레임 머리는 도구가 프레임마다 가린다(items·objects·towners·objcurs 는 있음, ctrlpan 은 없음).
 // 지금 표 모양(missiles 항목)에 싣는 것이라 키 이름이 "cl2" 다(평면 CEL 그림용 표·자를 사각형은 계약 변경 거리 — WP1g 에 넘김).
@@ -11,6 +12,8 @@
     { "out": "d1/missiles/fireba",   "cl2": "missiles\\fireba{d}.cl2", "dirs": 16, "width": 96 },
     { "out": "d1/missiles/holy",     "cl2": "missiles\\holy{d}.cl2", "dirs": 16, "width": 96 },
     { "out": "d1/missiles/miniltng", "cl2": "missiles\\miniltng.cl2", "width": 64 },
+    { "out": "d1/missiles/bigexp",   "cl2": "missiles\bigexp.cl2",   "width": 160 },
+    { "out": "d1/missiles/firarwex", "cl2": "missiles\firarwex.cl2", "width": 64 },
 
     // 바닥 아이템(기획 11.1·11.4 V8): 떨어짐 애니 전부(마지막 프레임 = 바닥에 놓임). 책 13·금화 10·물약 16프레임, 칸 96×160.
     // 물약 색은 이름 끝 글자: fbttlebr 붉은(체력 물약), fbttlebb 파란(마력 폭주). 나머지 fbttle·bl·by·db·dy·or·wh 는 쓰지 않음

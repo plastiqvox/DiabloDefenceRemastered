@@ -160,4 +160,38 @@ public class FxLightFogMathTests
         Assert.Equal("▼ 2층", GateSeals.FloorLabel(new RoomExit("gate_ne", null, RoomKind.Normal, null, false, null, 2)));
         Assert.Null(GateSeals.FloorLabel(new RoomExit("gate_ne", null, RoomKind.Normal, null, false, null)));
     }
+
+    [Theory]
+    [InlineData(GateSide.Nw)]
+    [InlineData(GateSide.Ne)]
+    [InlineData(GateSide.Se)]
+    [InlineData(GateSide.Sw)]
+    public void GateSeals_Shape_StaysInsideGateCells_OnInnerRow(GateSide side)
+    {
+        // 32×32 방(N 32)의 문 틈 = 변 위 메가 둘(4칸) × 깊이 2칸. 창살은 방 안쪽 줄에만, 룬은 문 틈 칸 안(플레이 관찰: 문 칸 밖으로 번지던 붉은 덩어리)
+        var iso = new IsoMath(32, 192);
+        var cells = new List<Int2>();
+        for (var k = 14; k < 18; k++)
+            for (var d = 0; d < 2; d++)
+                cells.Add(side switch
+                {
+                    GateSide.Nw => new Int2(d, k),
+                    GateSide.Ne => new Int2(k, d),
+                    GateSide.Se => new Int2(31 - d, k),
+                    _ => new Int2(k, 31 - d),
+                });
+        var zone = new GateZone("gate", side, cells);
+        var shape = GateSeals.Shape(zone, iso);
+
+        Assert.Equal(8, shape.Bars.Count);
+        foreach (var bar in shape.Bars)
+        {
+            var c = iso.CellOf(bar);
+            Assert.True(zone.Contains(c), $"{side} 창살 {bar} 이 문 틈 밖 칸 {c}");
+            var depth = side is GateSide.Nw or GateSide.Se ? c.X : c.Y;
+            Assert.Equal(side is GateSide.Nw or GateSide.Ne ? 1 : 30, depth);
+        }
+        Assert.Contains(cells, c => Vector2.Distance(iso.CellCenter(c.X, c.Y), shape.Center) < 40f);   // 룬 = 문 틈 칸 가운데(칸 사이 꼭짓점일 수 있음)
+        Assert.Empty(GateSeals.Shape(new GateZone("gate", side, []), iso).Bars);
+    }
 }

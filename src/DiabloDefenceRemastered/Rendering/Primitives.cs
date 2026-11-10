@@ -5,7 +5,7 @@ namespace DiabloDefenceRemastered.Rendering;
 
 /// <summary>
 /// 코드로 만드는 텍스처 (설계서 7.7·7.10·7.11, 소유 WP5) — 그래픽 장치 하나에 한 벌. 모두 premultiplied.
-/// 흰 1px(채우기·선), 방사형 빛(256px, 가운데 1 → 가장자리 0, 부드러운 끝), 원(예고 채움)·고리(예고 테두리 2px), 바닥 마름모(64×32 — 자원 없는 맵·봉인 막·디버그).
+/// 흰 1px(채우기·선), 방사형 빛(256px, 가운데 1 → 가장자리 0, 부드러운 끝), 원(예고 채움)·고리(예고 테두리 2px), 바닥 마름모(64×32 — 자원 없는 맵·디버그).
 /// </summary>
 public sealed class Primitives : IDisposable
 {

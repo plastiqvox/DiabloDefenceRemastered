@@ -163,4 +163,40 @@ public static class GateSeals
 
     /// <summary>층 문구(v0.8 — <c>NextFloor</c> 가 0 이 아니면 <c>▼ n층</c>).</summary>
     public static string? FloorLabel(in RoomExit exit) => exit.NextFloor != 0 ? $"▼ {exit.NextFloor}층" : null;
+
+    /// <summary>
+    /// 봉인 그림의 바닥 자리(월드 px). 문 틈 칸 중 방 안쪽 줄(문턱)에 낮은 창살 발 자리를 칸마다 둘(칸의 안쪽 끝에서 0.2칸 안 — 칸 안에 머문다),
+    /// 룬은 문 틈 칸 가운데. 칸이 없으면 창살 0. 그리기(크기·색)는 게임 <c>WorldRenderer</c>.
+    /// </summary>
+    public static GateSealShape Shape(GateZone zone, IsoMath iso)
+    {
+        if (zone.Cells.Count == 0) return new GateSealShape(default, []);
+        // 문턱 = 방 안쪽 줄: nw(왼쪽 열)·se(오른쪽 열)는 x, ne(윗줄)·sw(아랫줄)는 y 가 깊이 축
+        var (inward, along) = zone.Side switch
+        {
+            GateSide.Nw => (new Int2(1, 0), new Int2(0, 1)),
+            GateSide.Se => (new Int2(-1, 0), new Int2(0, 1)),
+            GateSide.Ne => (new Int2(0, 1), new Int2(1, 0)),
+            _ => (new Int2(0, -1), new Int2(1, 0)),
+        };
+        var inner = int.MinValue;
+        foreach (var c in zone.Cells) inner = Math.Max(inner, c.X * inward.X + c.Y * inward.Y);
+        var sum = Vector2.Zero;
+        var bars = new List<Vector2>(8);
+        foreach (var c in zone.Cells)
+        {
+            var center = iso.CellCenter(c.X, c.Y);
+            sum += center;
+            if (c.X * inward.X + c.Y * inward.Y != inner) continue;
+            var inPx = iso.CellCenter(c.X + inward.X, c.Y + inward.Y) - center;
+            var alongPx = iso.CellCenter(c.X + along.X, c.Y + along.Y) - center;
+            var foot = center + inPx * 0.3f;
+            bars.Add(foot - alongPx * 0.25f);
+            bars.Add(foot + alongPx * 0.25f);
+        }
+        return new GateSealShape(sum / zone.Cells.Count, bars);
+    }
 }
+
+/// <summary>봉인 그림 자리(<see cref="GateSeals.Shape"/>): 룬 가운데와 창살 발 자리(월드 px, 문턱을 따라 차례로).</summary>
+public readonly record struct GateSealShape(Vector2 Center, IReadOnlyList<Vector2> Bars);

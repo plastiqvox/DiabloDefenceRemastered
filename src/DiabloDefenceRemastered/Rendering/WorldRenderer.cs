@@ -454,17 +454,37 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         foreach (var (id, gate) in w.Gates)
         {
             var sealedNow = GateSeals.IsSealed(room, id);
-            var a = 0.5f * pulse * (sealedNow ? 1f : openFade);
+            var a = pulse * (sealedNow ? 1f : openFade);
             if (a <= 0.01f) continue;
-            var red = new Rgb(220, 30, 20).ToXna(a);
+            // ① 문 틈 바닥의 은은한 붉은 빛 — 칸마다 부드러운 방사형(칸보다 조금 커 이웃 칸과 이어진다). 칸마다 꽉 찬 마름모·벽 높이 사각형을 쌓던
+            //    옛 그림은 문 자리에 계단 모양 붉은 덩어리로 보였다(플레이 관찰).
+            var glow = SealGlow.ToXna(0.3f * a);
             foreach (var cell in gate.Cells)
+                BatchX.Centered(batch, prim.Light, grid.Iso.CellCenter(cell.X, cell.Y), new Vector2(88f, 44f), glow);
+            // ② 문턱의 낮은 창살(칸마다 둘 + 위 가로대)과 ③ 가운데 바닥 룬(작은 마름모 + 십자) — 모두 문 틈 칸 안
+            var shape = GateSeals.Shape(gate, grid.Iso);
+            var bar = SealBar.ToXna(0.55f * a);
+            var up = new Vector2(0f, -SealBarHeight);
+            for (var i = 0; i < shape.Bars.Count; i++)
             {
-                var c = grid.Iso.CellCenter(cell.X, cell.Y);
-                batch.Draw(prim.Diamond, new Rectangle((int)c.X - 32, (int)c.Y - 16, 64, 32), red);
-                batch.Draw(prim.Pixel, new Rectangle((int)c.X - 24, (int)c.Y - 72, 48, 64), new Rgb(200, 20, 10).ToXna(a * 0.6f));
+                BatchX.Line(batch, prim.Pixel, shape.Bars[i], shape.Bars[i] + up, 2f, bar);
+                if (i > 0) BatchX.Line(batch, prim.Pixel, shape.Bars[i - 1] + up, shape.Bars[i] + up, 1.5f, bar);
             }
+            if (shape.Bars.Count == 0) continue;
+            var rune = SealBar.ToXna(0.45f * a);
+            var (rc, rx, ry) = (shape.Center, new Vector2(12f, 0f), new Vector2(0f, 6f));
+            BatchX.Line(batch, prim.Pixel, rc - rx, rc - ry, 1f, rune);
+            BatchX.Line(batch, prim.Pixel, rc - ry, rc + rx, 1f, rune);
+            BatchX.Line(batch, prim.Pixel, rc + rx, rc + ry, 1f, rune);
+            BatchX.Line(batch, prim.Pixel, rc + ry, rc - rx, 1f, rune);
+            BatchX.Line(batch, prim.Pixel, rc - rx * 0.5f, rc + rx * 0.5f, 1f, rune);
+            BatchX.Line(batch, prim.Pixel, rc - ry * 0.5f, rc + ry * 0.5f, 1f, rune);
         }
     }
+
+    private static readonly Rgb SealGlow = new(200, 28, 16);
+    private static readonly Rgb SealBar = new(255, 70, 40);
+    private const float SealBarHeight = 18f;
 
     // ── 6층 빛 모으기·7층 ───────────────────────────────────────
 

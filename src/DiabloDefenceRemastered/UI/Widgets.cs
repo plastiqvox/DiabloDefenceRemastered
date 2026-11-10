@@ -115,6 +115,18 @@ public static class Ui
     /// <summary>화면 전체를 어둡게(오버레이 배경).</summary>
     public static void Dim(UiCanvas c, float alpha = Theme.DimAlpha) => c.Fill(Screen, Theme.Black, alpha);
 
+    /// <summary>
+    /// 메뉴 오버레이 바탕: 화면을 어둡게 + 내용 자리에 거의 불투명한 판(<see cref="OverlayPanelAlpha"/>). 어둡게만 하면 아래 씬의 글자(타이틀 메뉴·최고 기록,
+    /// 일시정지 메뉴·빌드 목록)가 25~40% 밝기로 남아 같은 크기의 메뉴 글자와 겹쳐 읽혔다(플레이 관찰). 카드·줄마다 판이 있는 레벨업·상자 창은 쓰지 않는다.
+    /// </summary>
+    public static void Backdrop(UiCanvas c, RectF content, float dim = Theme.DimAlpha)
+    {
+        Dim(c, dim);
+        Panel(c, content, OverlayPanelAlpha);
+    }
+
+    public const float OverlayPanelAlpha = 0.96f;
+
     /// <summary>테두리 있는 판.</summary>
     public static void Panel(UiCanvas c, RectF r, float alpha = 0.92f)
     {

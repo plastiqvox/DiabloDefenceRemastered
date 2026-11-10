@@ -62,4 +62,19 @@ public sealed class SightWallTests(ITestOutputHelper output)
         Assert.True(dark > 0, "대조군(시야 끔)이 벽 뒤에서 돌진하지 않아 대조가 되지 않는다");
         Assert.Equal(0, lit);
     }
+
+    [Fact]
+    public void Archer_too_close_behind_sight_only_row_holds_instead_of_jittering()
+    {
+        // 띠 최소(150)보다 가까운 벽 뒤(143px): 안 보이니 다가가면 L 줄을 지나 보이게 되고 → 너무 가까워 물러나고 → 다시 안 보임을 매 틱 되풀이했다
+        // (액트 1 씨앗 7 의 작은 방 — kite_switches 3921 > kite 적 초 2577). 지금은 벽 뒤에서 멈춘다.
+        var t = World(Defs([Archer], megaTiles: Mega, sight: TestDefs.Sight, heroLight: 420f, place: [LRow]));
+        t.PlaceHero(t.CellCenter(20, 19));
+        var e = Spawn(t, Archer.Id, t.CellCenter(20, 15), source: SpawnSource.Escort);
+        Assert.True(Vector2.Distance(e.Pos, t.Hero.Pos) < 150f);
+        t.Step(300);
+        output.WriteLine($"kite_switches={t.World.Fairness.KiteSwitches} shots={Spawner(t).Projectiles.Count} cell={t.World.Arena!.Iso.CellOf(e.Pos)}");
+        Assert.True(t.World.Fairness.KiteSwitches <= 2, $"kite 전환 {t.World.Fairness.KiteSwitches} > 2 — 벽 뒤에서 떨었다");
+        Assert.Empty(Spawner(t).Projectiles);
+    }
 }

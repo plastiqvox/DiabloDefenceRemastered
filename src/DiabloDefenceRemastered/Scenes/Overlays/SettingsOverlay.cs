@@ -97,10 +97,11 @@ public sealed class SettingsOverlay(GameFlow flow) : IScene
     {
         if (flow.Canvas is not { } c) return;
         c.Begin(rc);
-        Ui.Dim(c, 0.75f);
+        var hintY = _menu.Top + Rows.Length * _menu.Spacing + 8f;
+        Ui.Backdrop(c, new RectF(Theme.Width / 2 - 240, 76, Theme.Width / 2 + 240, hintY + 28), 0.75f);
         Ui.Centered(c, "설정", Theme.Width / 2, 90, Theme.TitleText, Theme.Gold);
         _menu.Draw(c);
-        Ui.Centered(c, "←→ 바꾸기 · Esc 돌아가기", Theme.Width / 2, Theme.Height - 50, Theme.SmallText, Theme.TextDim);
+        Ui.Centered(c, "←→ 바꾸기 · Esc 돌아가기", Theme.Width / 2, hintY, Theme.SmallText, Theme.TextDim);
         c.End();
     }
 }

@@ -1,17 +1,17 @@
 // 표시 이펙트·적 투사체 (설계서 6.4, 기획 13.7 — 소유 WP5). 합칠 때(검증 담당) 무기(WP3)·적(WP4)·소리 연결(WP8)이 가리키는 ID 가 없어 넣은 첫 판.
-// 기획 13.7 의 원작 그림(번개 lghning·큰 폭발 bigexp·불화살 폭발 firarwex·화살 arrows)이 아직 가져오기 표에 없어
-// 원작 DiabloDefence exe PNG(sprites/missiles.json 의 exe_*) 와 매직 미사일 그림으로 대신한다. WP0 이 표에 넣으면 WP5 가 sprite·frames 를 기획 표대로 바꾼다.
+// 기획 13.7 의 원작 그림 중 번개 lghning·화살 arrows 는 아직 가져오기 표에 없어
+// 원작 DiabloDefence exe PNG(sprites/missiles.json 의 exe_*) 와 매직 미사일 그림으로 대신한다. 큰 폭발 bigexp·불화살 폭발 firarwex 는 가져온다(v0.9 플레이 관찰). WP0 이 표에 넣으면 WP5 가 sprite·frames 를 기획 표대로 바꾼다.
 {
   "effects": [
     // 기획: 번개 lghning 1~8 ×0.35. 대체: 차지드 볼트 miniltng 8프레임
     { "id": "fx_bolt_hit", "sprite": "miniltng", "frames": [1, 8], "loop": false, "frame_time": 0.04, "scale": 0.5, "blend": "alpha" },
-    // 기획: 큰 폭발 bigexp 1~16, 반경에 맞춤, 빛·흔들림. 대체: exe 파이어볼 폭발 16프레임(칸 96)
-    { "id": "fx_fire_explosion", "sprite": "exe_fireball_explosion", "frames": [1, 16], "loop": false, "frame_time": 0.05,
-      "fit_radius": 40, "blend": "alpha",
+    // 기획: 큰 폭발 bigexp 1~16(칸 160), 반경에 맞춤(그림 반폭 최대 약 68px — 배율 1 일 때 덮는 반경 68), 빛·흔들림
+    { "id": "fx_fire_explosion", "sprite": "bigexp", "frames": [1, 16], "loop": false, "frame_time": 0.05,
+      "fit_radius": 68, "blend": "alpha",
       "light": { "color": [255, 160, 80], "radius_mul": 1.5, "duration": 0.3 },
       "shake": { "px": 1, "duration": 0.08 } },
-    // 기획: 불화살 폭발 firarwex 1~6 ×0.6. 대체: exe 파이어볼 폭발 앞 6프레임
-    { "id": "fx_spark", "sprite": "exe_fireball_explosion", "frames": [1, 6], "loop": false, "frame_time": 0.05, "scale": 0.4, "blend": "alpha" },
+    // 기획: 불화살 폭발 firarwex 1~6(칸 64) ×0.6
+    { "id": "fx_spark", "sprite": "firarwex", "frames": [1, 6], "loop": false, "frame_time": 0.05, "scale": 0.6, "blend": "alpha" },
     { "id": "fx_warning_line", "procedural": "warning_line", "tint": [255, 40, 40], "alpha": 0.35 }
   ],
   "projectiles": [
