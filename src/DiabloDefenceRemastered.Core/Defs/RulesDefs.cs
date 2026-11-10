@@ -30,34 +30,56 @@ public sealed record RulesDef
 }
 
 /// <summary>
-/// <c>rules.rooms</c> (v0.7, 설계서 6.10, 기획 2.5·10.8·11.4·15절 첫 값). 쓰는 곳: <see cref="Grace"/>·<see cref="CleanupLimit"/>·<see cref="EliteSpawnCap"/> = <c>RoomFlow</c>·감독,
-/// <see cref="Gates"/>·<see cref="Exits"/> = <c>RunPlanner</c>, <see cref="AreaScale"/> = <c>RunSession</c>, <see cref="RewardAnchor"/>·<see cref="ChestRing"/>·<see cref="FallbackReward"/> = <c>RoomFlow</c>,
-/// <see cref="RemainingMarker"/> = HUD 미니맵(WP6), <see cref="Transition"/> = <c>PlayScene</c>(앱 틱), <see cref="AutoplayDoorSkip"/> = <c>AutoplayPolicy</c>.
-/// <see cref="Transition"/>·<see cref="RemainingMarker"/> 를 뺀 값을 바꾸면 같은 씨앗의 판이 바뀐다(WP4 가 바꾸고 <c>Scenario</c>·13.5-23 을 다시 돌림).
+/// <c>rules.rooms</c> (v0.7 → v0.8 WP1f, 설계서 6.10, 기획 2.5·10.8·11.4·15절 첫 값). 쓰는 곳: <see cref="Grace"/>·<see cref="CleanupLimit"/>·<see cref="EliteSpawnCap"/> = <c>RoomFlow</c>·감독,
+/// <see cref="Gates"/>·<see cref="Exits"/> = <c>RunPlanner</c>, <see cref="AreaScale"/>·<see cref="Stairs"/> = <c>RunSession</c>, <see cref="RewardSpot"/>·<see cref="FallbackReward"/> = <c>RoomFlow</c>,
+/// <see cref="Transition"/>·<see cref="TransitionFloor"/> = <c>PlayScene</c>(앱 틱), <see cref="AutoplayDoorSkip"/> = <c>AutoplayPolicy</c>.
+/// <see cref="Transition"/>·<see cref="TransitionFloor"/> 를 뺀 값을 바꾸면 같은 씨앗의 판이 바뀐다(WP4 가 바꾸고 <c>Scenario</c>·13.5-23 을 다시 돌림).
+/// v0.8: <c>remaining_marker</c>(남은 적 점은 정리 시작부터 모두)·<c>reward_anchor</c>·<c>chest_ring</c>(보상 자리 = 주인공 앞, 3.6)은 없앴다 — 남아 있으면 모르는 속성 오류.
 /// </summary>
 public sealed record RoomRulesDef
 {
     /// <summary>들어옴 단계 길이(초, 3). 그동안 생성 없음.</summary>
     public required float Grace { get; init; }
-    /// <summary>정리 안전장치(초, 45) — 넘으면 남은 적을 무너뜨린다.</summary>
+    /// <summary>정리 안전장치(초, 25 — v0.8. v0.7 은 45) — 넘으면 남은 적을 무너뜨린다.</summary>
     public required float CleanupLimit { get; init; }
-    /// <summary>정리 단계에서 남은 적이 이 수 이하면 미니맵에 모두 점으로(그림 값).</summary>
-    public required int RemainingMarker { get; init; }
     /// <summary>정예 방 생성이 멈추는 방 시계(2:30).</summary>
     public required ClockTime EliteSpawnCap { get; init; }
     /// <summary>방 이동 어두워짐 길이(초, 앱 틱 — 그림 값).</summary>
     public required float Transition { get; init; }
+    /// <summary>층이 바뀌는 문(<c>RoomExit.NextFloor</c> ≠ 0)의 넘김 어둠(초, 1.0 — v0.8, 앱 틱 그림 값).</summary>
+    public required float TransitionFloor { get; init; }
     public required RoomGatesDef Gates { get; init; }
     public required ExitsDef Exits { get; init; }
     public required AreaScaleDef AreaScale { get; init; }
-    /// <summary>보상 물체 자리 기준점(<c>center</c>).</summary>
-    public required string RewardAnchor { get; init; }
-    /// <summary>정리 끝에 남은 정예 상자를 옮겨 놓는 둘레 반경(px).</summary>
-    public required float ChestRing { get; init; }
+    /// <summary>보상 자리(v0.8, 3.6 "보상 자리" — 정리가 끝난 순간 주인공 앞).</summary>
+    public required RewardSpotDef RewardSpot { get; init; }
     /// <summary>문 열기 거르기로 출구 문을 다 못 채울 때 쓰는 보상(보물 상자).</summary>
     public required DefRef<RewardDef> FallbackReward { get; init; }
+    /// <summary>계단에서 여는 칸 수(v0.8, 3.6 "계단 보상" — <c>RunSlots.OpenAt</c>).</summary>
+    public required StairsRulesDef Stairs { get; init; }
     /// <summary>자동 조작이 문 단계를 이 초 안에 못 끝내면 <c>DOOR_SKIP</c>(보상 단계면 <c>REWARD_STALL</c> 기록).</summary>
     public required float AutoplayDoorSkip { get; init; }
+}
+
+/// <summary>
+/// 보상 자리(v0.8, 6.10·3.6 — <c>RewardSpot.Find</c>/<c>Row</c>): 주인공 발에서 바라보는 쪽으로 <see cref="Distance"/> px,
+/// 여럿이면 수직 방향 <see cref="Spacing"/> px 간격 한 줄, 걸어 간 길의 clearance ≥ <see cref="Clearance"/> px.
+/// </summary>
+public sealed record RewardSpotDef
+{
+    /// <summary>주인공 앞 거리(px, 100).</summary>
+    public required float Distance { get; init; }
+    /// <summary>여럿 놓을 때 간격(px, 40).</summary>
+    public required float Spacing { get; init; }
+    /// <summary>자리까지 직선으로 걸을 수 있는 clearance 문턱(px, 30).</summary>
+    public required float Clearance { get; init; }
+}
+
+/// <summary>계단 보상(v0.8, 6.10 — 기획 v0.8.1 2.5): 액트가 바뀔 때마다 여는 칸 수. 열린 칸 = <c>RunSlots.OpenAt</c>(상한 6).</summary>
+public sealed record StairsRulesDef
+{
+    public required int WeaponSlots { get; init; }
+    public required int PassiveSlots { get; init; }
 }
 
 /// <summary>문 이름(v0.7, 6.10). 모두 맵의 문 넷 안(13.5-23 ④).</summary>
@@ -69,7 +91,7 @@ public sealed record RoomGatesDef
     public required string BossEntry { get; init; }
     /// <summary>출구 문 둘(<c>gate_nw</c>·<c>gate_ne</c>) — 순서가 <c>RoomPlan.ExitGates</c> 순서.</summary>
     public required IReadOnlyList<string> Exits { get; init; }
-    /// <summary>출구가 하나일 때(다음이 정예·보스 방, 액트 보스 방의 계단)의 문(<c>gate_ne</c>).</summary>
+    /// <summary>출구가 하나일 때(액트의 마지막 방 — 계단, v0.8: 다음이 정예·보스 방이어도 출구는 둘)의 문(<c>gate_ne</c>).</summary>
     public required string SingleExit { get; init; }
 }
 
@@ -143,6 +165,22 @@ public sealed record HeroRulesDef
     /// <summary>모든 직업의 기본 능력치(기획 4.1 표). 직업 <c>stats</c> 가 키별로 덮어쓴다.</summary>
     public IReadOnlyDictionary<StatKey, float> Stats { get; init; } = new Dictionary<StatKey, float>();
     public CrowdSlowDef? CrowdSlow { get; init; }
+    /// <summary>허리띠(v0.8, 6.18 — 기획 v0.8.1 11.4). null 이면 허리띠 없음. 구현 WP3, 수는 <c>Hero.Belt</c>·짐 <c>Belt</c>.</summary>
+    public BeltRulesDef? Belt { get; init; }
+}
+
+/// <summary>
+/// 허리띠(v0.8, 6.10): 체력이 최대 × <see cref="Threshold"/> 아래로 내려가는 순간 하나를 저절로 마신다(전부 회복, <see cref="Cooldown"/> 초에 한 번 — 버튼 없음).
+/// 셋 다 필수(기본값을 코드에 두지 않음).
+/// </summary>
+public sealed record BeltRulesDef
+{
+    /// <summary>허리띠 칸 수(2).</summary>
+    public required int Slots { get; init; }
+    /// <summary>저절로 마시는 체력 비율(0.3).</summary>
+    public required float Threshold { get; init; }
+    /// <summary>두 번 마시는 사이 최소 초(1.0).</summary>
+    public required float Cooldown { get; init; }
 }
 
 public sealed record CrowdSlowDef
@@ -165,13 +203,19 @@ public sealed record LevelUpRulesDef
 {
     public int Cards { get; init; } = 3;
     public LevelUpWeightsDef Weights { get; init; } = new();
+    /// <summary>판 시작(액트 1)의 열린 무기 칸 수. v0.8: 계단마다 <c>rules.rooms.stairs</c> 만큼 +, 상한 6(<c>RunSlots.OpenAt</c>).</summary>
     public int WeaponSlots { get; init; } = 4;
+    /// <summary>판 시작(액트 1)의 열린 패시브 칸 수(위와 같은 규칙).</summary>
     public int PassiveSlots { get; init; } = 4;
     public int Rerolls { get; init; }
     public float SkipHeal { get; init; }
     public float InputLock { get; init; }
     public IReadOnlyList<int> GuaranteeNewWeaponAt { get; init; } = [];
     public IReadOnlyList<FillerCardDef> Fillers { get; init; } = [];
+    /// <summary>
+    /// <c>단련</c> 채움 카드 ID(v0.8, 6.10 — <see cref="Fillers"/> 안에 있어야 함, 13.5-1). 0장 보상·보물 상자에 올릴 무기 없음·정예 상자 빈 강화가 쓴다(WP3).
+    /// </summary>
+    public string? Temper { get; init; }
     /// <summary>레벨 표 키·<see cref="StatKey"/> 이름 → 카드 문구 라벨.</summary>
     public IReadOnlyDictionary<string, StatLabelDef> StatLabels { get; init; } = new Dictionary<string, StatLabelDef>();
 }
@@ -184,12 +228,16 @@ public sealed record LevelUpWeightsDef
     public float NewPassive { get; init; }
 }
 
+/// <summary>
+/// 채움 카드(6.10). v0.8: 금화(<c>gold</c> — <c>filler_gold</c> 금화 주머니)는 없애고 <see cref="Stats"/>(판 끝까지 쌓이는 능력치 — 짐 <c>Mods</c>, <c>단련</c>)를 더했다.
+/// </summary>
 public sealed record FillerCardDef
 {
     public required string Id { get; init; }
     public string Name { get; init; } = "";
     public float Heal { get; init; }
-    public int Gold { get; init; }
+    /// <summary>고를 때마다 판 끝까지 더하는 능력치(v0.8 — <c>단련</c> max_hp +5).</summary>
+    public IReadOnlyDictionary<StatKey, float> Stats { get; init; } = new Dictionary<StatKey, float>();
     public IconDef? Icon { get; init; }
 }
 

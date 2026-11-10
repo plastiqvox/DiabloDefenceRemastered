@@ -394,10 +394,12 @@ public static class TestDefs
 
     /// <summary>합성 문 보상(마법서 — 무기 카드).</summary>
     public const string RewardTomeId = "test_reward_tome";
-    /// <summary>합성 문 보상(보물 상자 — 레벨업, <c>rules.rooms.fallback_reward</c>).</summary>
+    /// <summary>합성 문 보상(보물 상자 — 무기 강화 꾸러미 v0.8, <c>rules.rooms.fallback_reward</c>).</summary>
     public const string RewardChestId = "test_reward_chest";
-    /// <summary>합성 문 보상(완전 회복 물약).</summary>
+    /// <summary>합성 문 보상(완전 회복 물약 — 허리띠 물약 v0.8).</summary>
     public const string RewardPotionId = "test_reward_potion";
+    /// <summary>합성 문 보상(성소 — v0.8, 음산한 성소 모양). 보상 가중표에는 넣지 않는다(기존 순열 시험을 지킴) — 정의 표·짐 <c>Shrines</c> 대조에만.</summary>
+    public const string RewardShrineId = "test_reward_shrine";
     /// <summary>합성 정예 상자 획득물(<c>kind: chest</c> — 정예·보스 방 보상 시험).</summary>
     public const string EliteChestId = "test_elite_chest";
 
@@ -417,38 +419,46 @@ public static class TestDefs
         Draw = new PickupDrawDef { Procedural = "gem", Size = new Int2(16, 16) },
     };
 
-    /// <summary>합성 문 보상 셋(마법서·보물 상자·물약)과 그 물체. 6.18 예의 모양을 줄인 것.</summary>
+    /// <summary>
+    /// 합성 문 보상 넷(마법서·보물 상자·물약 + 성소 — v0.8 새 모양)과 그 물체. 6.18 예의 모양을 줄인 것.
+    /// 가중표(<c>rewards.weights</c>)에는 앞의 셋만 넣는다(<see cref="Basic"/>·<c>RoomActs</c>) — 성소는 정의 표에만.
+    /// </summary>
     public static (IReadOnlyList<RewardDef> Rewards, IReadOnlyList<PickupDef> Objects) Rewards()
     {
         var tome = RewardObject("obj_test_tome");
         var chest = RewardObject("obj_test_chest");
         var potion = RewardObject("obj_test_potion");
+        var shrine = RewardObject("obj_test_shrine");
         RewardDef[] rewards =
         [
             new() { Id = RewardTomeId, Name = "마법서", Kind = RewardKind.WeaponCards, Object = DefRef<PickupDef>.To(tome),
-                    Cards = new RewardCardsDef { OwnedWeapon = 100, NewWeapon = 100 }, Skip = new RewardSkipDef { Gold = 25 } },
-            new() { Id = RewardChestId, Name = "보물 상자", Kind = RewardKind.LevelUp, Object = DefRef<PickupDef>.To(chest), Gold = [30, 60] },
-            new() { Id = RewardPotionId, Name = "완전 회복 물약", Kind = RewardKind.FullHeal, Object = DefRef<PickupDef>.To(potion), SkipWhenHpAtLeast = 0.7f },
+                    Cards = new RewardCardsDef { OwnedWeapon = 100, NewWeapon = 100 }, Skip = new RewardSkipDef { Heal = 10 } },
+            new() { Id = RewardChestId, Name = "보물 상자", Kind = RewardKind.WeaponBundle, Object = DefRef<PickupDef>.To(chest),
+                    Bundle = new RewardBundleDef { WeaponLevels = 1, BeltPotions = 1, Gold = [30, 60] } },
+            new() { Id = RewardPotionId, Name = "완전 회복 물약", Kind = RewardKind.BeltPotions, Object = DefRef<PickupDef>.To(potion), BeltPotions = 2 },
+            new() { Id = RewardShrineId, Name = "음산한 성소", Kind = RewardKind.Shrine, Object = DefRef<PickupDef>.To(shrine),
+                    Shrine = new ShrineDef { Stats = new Dictionary<StatKey, float> { [StatKey.Armor] = 2f, [StatKey.DamagePct] = -0.05f } } },
         ];
-        return (rewards, [tome, chest, potion]);
+        return (rewards, [tome, chest, potion, shrine]);
     }
 
     /// <summary>
-    /// 합성 <c>rules.rooms</c> = 6.10 첫 값(유예 3s, 정리 45s, 정예 생성 2:30, 문 sw·se 로 들어와 nw·ne 로 나감, 셋 0.4, 넓이 배율 기준 <paramref name="reference"/> [0.6, 1.0]).
+    /// 합성 <c>rules.rooms</c> = 6.10 첫 값(v0.8: 유예 3s, 정리 25s, 정예 생성 2:30, 넘김 0.5s·층 1.0s, 문 sw·se 로 들어와 nw·ne 로 나감, 셋 0.4,
+    /// 넓이 배율 기준 <paramref name="reference"/> [0.6, 1.0], 보상 자리 100·40·30, 계단 +1·+1).
     /// </summary>
     public static RoomRulesDef RoomRules(RewardDef fallback, MapDef reference) => new()
     {
         Grace = 3f,
-        CleanupLimit = 45f,
-        RemainingMarker = 10,
+        CleanupLimit = 25f,
         EliteSpawnCap = new ClockTime(150f),
         Transition = 0.5f,
+        TransitionFloor = 1.0f,
         Gates = new RoomGatesDef { Entry = ["gate_sw", "gate_se"], BossEntry = "gate_sw", Exits = ["gate_nw", "gate_ne"], SingleExit = "gate_ne" },
         Exits = new ExitsDef { ThreeChance = 0.4f },
         AreaScale = new AreaScaleDef { Reference = DefRef<MapDef>.To(reference), Min = 0.6f, Max = 1.0f },
-        RewardAnchor = "center",
-        ChestRing = 48f,
+        RewardSpot = new RewardSpotDef { Distance = 100f, Spacing = 40f, Clearance = 30f },
         FallbackReward = DefRef<RewardDef>.To(fallback),
+        Stairs = new StairsRulesDef { WeaponSlots = 1, PassiveSlots = 1 },
         AutoplayDoorSkip = 20f,
     };
 
@@ -497,7 +507,7 @@ public static class TestDefs
         if (heroLight > 0f)
             lighting = (lighting ?? new LightingDef()) with { HeroLight = (lighting?.HeroLight ?? new HeroLightDef()) with { Radius = heroLight } };
         var (rewards, objects) = Rewards();
-        var stage = Stage(map, lighting: lighting, rewards: rewards);
+        var stage = Stage(map, lighting: lighting, rewards: [.. rewards.Take(3)]);   // 가중표는 셋(v0.8 성소는 정의 표에만)
         var enemies = new List<EnemyDef> { Enemy(set) };
         if (extraEnemies is not null) enemies.AddRange(extraEnemies);
         var weapon = Weapon();

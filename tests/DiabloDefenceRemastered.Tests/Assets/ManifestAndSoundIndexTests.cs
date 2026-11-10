@@ -5,7 +5,7 @@ namespace DiabloDefenceRemastered.Tests.Assets;
 public class ManifestAndSoundIndexTests
 {
     private const string ManifestJson = """
-        { "format": 2, "tool": "abc123", "runtime": "9.0.10",
+        { "format": 3, "tool": "abc123", "runtime": "9.0.10",
           "sources": [ { "name": "diabdat.mpq", "size": 517000000, "sha256": "00ff" } ],
           "table_hash": "AB12",
           "files": [ { "path": "d1/monsters/zombie.png", "size": 1234, "sha256": "11" },

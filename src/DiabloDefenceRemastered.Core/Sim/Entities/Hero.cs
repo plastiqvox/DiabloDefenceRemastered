@@ -50,10 +50,14 @@ public struct WeaponSlot
     public readonly bool IsEmpty => Def is null;
 }
 
+/// <summary>
+/// 무기 칸 그릇(v0.8 — 4 → 6, 설계서 6.10). 열린 칸 수는 <see cref="Hero.WeaponSlotsOpen"/>(판 시작 4, 계단마다 +1, 상한 6 — <c>RunSlots.OpenAt</c>).
+/// 열린 칸 밖 칸은 비어 있다(레벨업·상자·<c>--weapons</c> 가 열린 칸만 채움 — WP3).
+/// </summary>
 [InlineArray(SlotCount)]
 public struct WeaponSlots
 {
-    public const int SlotCount = 4;
+    public const int SlotCount = 6;
     private WeaponSlot _e0;
 }
 
@@ -66,10 +70,11 @@ public struct PassiveSlot
     public readonly bool IsEmpty => Def is null;
 }
 
+/// <summary>패시브 칸 그릇(v0.8 — 4 → 6). 열린 칸 수는 <see cref="Hero.PassiveSlotsOpen"/>(<see cref="WeaponSlots"/> 와 같은 규칙).</summary>
 [InlineArray(SlotCount)]
 public struct PassiveSlots
 {
-    public const int SlotCount = 4;
+    public const int SlotCount = 6;
     private PassiveSlot _e0;
 }
 
@@ -116,6 +121,15 @@ public sealed partial class Hero
     public PassiveSlots Passives;
     /// <summary>축복(v0.7 — <c>blessing</c> 패시브, 슬롯 밖 8칸). 방 사이에는 <c>HeroCarry.Blessings</c> 로 넘긴다.</summary>
     public BlessingSlots Blessings;
+    /// <summary>
+    /// 열린 무기 칸 수(v0.8 — 짐으로 넘김, 3.6). <see cref="Reset"/> 은 0 — 주인공 만들기(WP3)가 <c>RunSlots.OpenAt(World.Room?.Plan.Act ?? 1, …)</c> 로 정하고 짐 <c>Restore</c> 가 덮는다.
+    /// 읽기 WP4(자동 조작 문 우선순위)·WP6(HUD 칸)·WP7(해시).
+    /// </summary>
+    public int WeaponSlotsOpen;
+    /// <summary>열린 패시브 칸 수(v0.8 — <see cref="WeaponSlotsOpen"/> 과 같은 규칙).</summary>
+    public int PassiveSlotsOpen;
+    /// <summary>허리띠 물약 수(v0.8, 0..<c>rules.hero.belt.slots</c> — 쓰기 WP3, 읽기 WP6 HUD·WP4 문 우선순위·WP7 해시). 짐 <c>Belt</c> 로 방·액트 사이에 이어진다.</summary>
+    public int Belt;
 
     // 쓰기 WP2 / 읽기 WP3
     /// <summary>몸이 닿은 적 수(3 이상이면 다음 틱 이동 ×0.6).</summary>
@@ -138,6 +152,8 @@ public sealed partial class Hero
         for (var i = 0; i < WeaponSlots.SlotCount; i++) Weapons[i] = new WeaponSlot { MaxedAtTick = -1 };
         for (var i = 0; i < PassiveSlots.SlotCount; i++) Passives[i] = default;
         for (var i = 0; i < BlessingSlots.SlotCount; i++) Blessings[i] = default;
+        WeaponSlotsOpen = PassiveSlotsOpen = 0;   // 규칙을 받지 않는다 — 주인공 만들기(WP3)가 RunSlots.OpenAt 로, 짐 Restore 가 덮는다
+        Belt = 0;
         TouchingCount = 0;
         ResetCombat();
     }

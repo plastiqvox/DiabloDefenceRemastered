@@ -30,6 +30,8 @@ public sealed record MapDataResult(IReadOnlyList<MapDef> Maps, IReadOnlyList<Til
 /// <item>공용 STJ 옵션·변환기(<see cref="DefJson"/>) — 모르는 속성 오류.</item>
 /// <item><c>extends</c>·<c>abstract</c>·<c>*_add</c>·<c>*_patch</c> 를 쓰면 오류(병합 규칙이 두 벌이 될 일이 없게).</item>
 /// <item><c>MapDef.Tileset</c> 을 ID 로 연결, 배치 풀기(13.5-4 배치 쪽)와 타일셋 검사(13.5-12), 안쪽 방 검사(13.5-19 <c>ArenaLayout.ValidateRooms</c>, v0.6 — 경고는 <see cref="DataSeverity.Warning"/>)까지.</item>
+/// <item>(v0.8) <c>mirror: true</c> 맵은 <c>MapMirror.TryOf</c> 로 거울판을 만들어 같은 검사를 돌리고 원판 <c>MapDef.Mirrored</c> 에 둔다(결과 목록에는 원판만 — 거울판은 정의 표에 없다).
+/// 거울판 오류 문구는 <c>거울판 @m — </c> 로 시작한다.</item>
 /// <item>다른 종류의 데이터 오류·부품 등록과 무관하다. 단 JSON 문법이 깨진 파일은 두 종류가 있는지 알 수 없으므로 오류로 낸다.</item>
 /// </list>
 /// </summary>
@@ -167,8 +169,9 @@ public static class MapDataReader
             Report(src);
         }
 
-        foreach (var (def, src) in maps)
+        for (var mi = 0; mi < maps.Count; mi++)
         {
+            var (def, src) = maps[mi];
             if (!tilesetIds.TryGetValue(def.Tileset.Id, out var ts))
             {
                 errors.Add(new DataError(src.File, $"{src.JsonPath}.tileset", $"타일셋 '{def.Tileset.Id}' 가 없다"));
@@ -198,6 +201,24 @@ public static class MapDataReader
             layoutErrors.Clear();
             ArenaLayout.ValidateRooms(def, grid, layoutErrors);
             Report(src);
+
+            // (v0.8) 거울판: 짝 표로 만들고 원판과 같은 검사(배치 풀기·13.5-19·23 ③)를 돈다. 정의 표에는 넣지 않고 원판 Mirrored 에 둔다
+            if (!def.Mirror) continue;
+            layoutErrors.Clear();
+            var mirror = MapMirror.TryOf(def, ts, layoutErrors);
+            Report(src);
+            if (mirror is null) continue;
+            layoutErrors.Clear();
+            var mirrorGrid = ArenaLayout.TryExpand(mirror, ts, layoutErrors);
+            if (mirrorGrid is not null) ArenaLayout.ValidateRooms(mirror, mirrorGrid, layoutErrors);
+            ReportMirror(src);
+            maps[mi] = (def with { Mirrored = mirror }, src);
+        }
+
+        void ReportMirror(MapDataElement src)
+        {
+            foreach (var e in layoutErrors)
+                errors.Add(new DataError(src.File, DefJson.JoinPath(src.JsonPath, e.Path), $"거울판 {MapMirror.Suffix} — {e.Message}", e.Warning ? DataSeverity.Warning : DataSeverity.Error));
         }
 
         return new MapDataResult([.. maps.Select(m => m.Def)], [.. tilesets.Select(t => t.Def)], errors);

@@ -38,6 +38,21 @@ public sealed record TilesetDef : IDef
     public IReadOnlyList<SolDiffDef> SolKnownDiffs { get; init; } = [];
     /// <summary>기획 이유로 원본과 다르게 둔 칸(이유 필수). <see cref="SolKnownDiffs"/> 와 섞지 않는다. MVP 에는 없다.</summary>
     public IReadOnlyList<SolDiffDef> DesignDiffs { get; init; } = [];
+    /// <summary>
+    /// 거울판 짝 표(v0.8, 6.11 "거울판" — 계약 WP1f). null 이면 이 타일셋의 맵은 <c>mirror: true</c> 를 쓸 수 없다.
+    /// 짝·자리 짝 검사(13.5-12)는 <c>ArenaLayout.ValidateTileset</c>. <c>LayoutHash</c> 에 넣지 않는다 — 원판 배치·그림을 바꾸지 않는다.
+    /// </summary>
+    public TilesetMirrorDef? Mirror { get; init; }
+}
+
+/// <summary>
+/// 거울판 짝 표(v0.8, 6.11): <see cref="Pairs"/> = 서로 바뀌는 <c>pieces</c> 이름 둘(세로 벽 ↔ 가로 벽 등, <c>[a, b]</c>), <see cref="Self"/> = 뒤집어도 그대로인 조각.
+/// 둘레·문·바닥은 넣지 않는다 — 자리로 고르므로 거울판이 바뀐 자리의 조각을 다시 고른다(대신 자리 짝 검사).
+/// </summary>
+public sealed record TilesetMirrorDef
+{
+    public IReadOnlyList<IReadOnlyList<string>> Pairs { get; init; } = [];
+    public IReadOnlyList<string> Self { get; init; } = [];
 }
 
 /// <summary>테두리 여덟 자리(메가타일 격자 기준). corner_n = (0,0) 화면 맨 위, edge_ne = 윗줄(y = 0), edge_se = 오른쪽 열, edge_sw = 아랫줄, edge_nw = 왼쪽 열.</summary>
@@ -152,6 +167,20 @@ public sealed record MapDef : IDef
     /// 액트의 방 맵 풀(<see cref="RoomMapPoolDef"/>)에 든 맵은 그 종류를 담아야 한다(13.5-23 ②).
     /// </summary>
     public IReadOnlyList<RoomKind> RoomKinds { get; init; } = [];
+    /// <summary>
+    /// 거울판도 쓴다(v0.8, JSON <c>mirror</c>, 기본 거짓 — 6.11 "거울판"). 참이면 <c>MapDataReader</c> 가 읽을 때 <c>MapMirror.Of</c> 로 거울판을 만들어 <see cref="Mirrored"/> 에 둔다.
+    /// 타일셋 짝 표가 이 맵의 조각을 모두 덮어야 한다(아니면 로딩 오류).
+    /// </summary>
+    public bool Mirror { get; init; }
+    /// <summary>이 맵의 거울판(v0.8, <see cref="Mirror"/> 가 참일 때 읽기가 채움). 정의 표에는 없다(ID <c>&lt;원판 ID&gt;@m</c>).</summary>
+    [JsonIgnore]
+    public MapDef? Mirrored { get; init; }
+    /// <summary>거울판이면 원판 ID(v0.8 — 로그 <c>map=</c>·넓이 배율·<c>RoomRecord.MapId</c>), 원판이면 null.</summary>
+    [JsonIgnore]
+    public string? MirrorOf { get; init; }
+    /// <summary>거울판인가(v0.8 — <c>MapMirror.Of</c> 가 만든 정의).</summary>
+    [JsonIgnore]
+    public bool IsMirror => MirrorOf is not null;
 }
 
 /// <summary>배치(6.11 배치 풀기 1~5단계의 입력).</summary>

@@ -24,6 +24,8 @@ public enum StatKey : byte
     [JsonStringEnumMemberName("pickup_pct")] PickupPct,
     [JsonStringEnumMemberName("knockback_taken_pct")] KnockbackTakenPct,
     [JsonStringEnumMemberName("gold_pct")] GoldPct,
+    /// <summary>최대 체력 비율(v0.8, 6.10 — 매혹의 성소 대가 −10%). 최대 체력 = (기본 + 더하기) × (1 + 합), 지금 체력도 같은 비율로(WP3).</summary>
+    [JsonStringEnumMemberName("max_hp_pct")] MaxHpPct,
 }
 
 /// <summary>
@@ -44,7 +46,7 @@ public enum EnemyStatKey : byte
 
 public static class StatKeys
 {
-    public const int Count = 15;
+    public const int Count = 16;
     public const int EnemyCount = 6;
 
     private static readonly Dictionary<string, StatKey> HeroByName = BuildNames<StatKey>();

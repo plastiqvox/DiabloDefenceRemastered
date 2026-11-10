@@ -6,7 +6,7 @@ public class SpriteMetaTests
 {
     // 설계서 6.3 모양: 페이지 둘, 동작 둘(walk 2방향 × 2프레임, die 1 × 1)
     private const string Json = """
-        { "format": 2, "pages": [[256, 128], [64, 64]],
+        { "format": 3, "pages": [[256, 128], [64, 64]],
           "actions": {
             "walk": { "cell": [96, 80], "directions": 2, "frames": 2,
                       "rects": [[0, 0, 0, 40, 70, 28, 10], [0, 40, 0, 42, 70, 27, 10], [0, 82, 0, 0, 0, 0, 0], [0, 82, 0, 50, 72, 20, 8]] },
@@ -34,7 +34,7 @@ public class SpriteMetaTests
     public void SingleAction_NameMayBeOmitted()
     {
         var meta = SpriteMeta.Parse("""
-            { "format": 2, "pages": [[96, 96]], "actions": { "fireba": { "cell": [96, 96], "directions": 1, "frames": 1, "rects": [[0, 0, 0, 96, 96, 0, 0]] } } }
+            { "format": 3, "pages": [[96, 96]], "actions": { "fireba": { "cell": [96, 96], "directions": 1, "frames": 1, "rects": [[0, 0, 0, 96, 96, 0, 0]] } } }
             """);
         Assert.True(meta.TryGetAction(null, out var a));
         Assert.Equal(1, a.Frames);
@@ -47,7 +47,7 @@ public class SpriteMetaTests
             .Replace("[0, 40, 0, 42, 70, 27, 10]", "[0, 240, 0, 42, 70, 27, 10]")     // 페이지 밖(240 + 42 > 256)
             .Replace("[1, 0, 0, 60, 30, 18, 50]", "[2, 0, 0, 60, 30, 18, 50]")       // 없는 페이지
             .Replace("[0, 82, 0, 50, 72, 20, 8]", "[0, 82, 0, 50, 72, 60, 8]")       // 칸 밖(60 + 50 > 96)
-            .Replace("\"format\": 2", "\"format\": 1");
+            .Replace("\"format\": 3", "\"format\": 2");                          // v0.8: 형식 2(scale 없던 판) → 오류
         var errors = SpriteMeta.Parse(bad).Validate();
         Assert.Contains(errors, e => e.Contains("walk rects[1]") && e.Contains("페이지 0"));
         Assert.Contains(errors, e => e.Contains("die rects[0]") && e.Contains("없는 페이지"));

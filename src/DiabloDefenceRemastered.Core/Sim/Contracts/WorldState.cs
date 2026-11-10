@@ -199,6 +199,8 @@ public struct BannerState
 /// 쓰기: WP3(<see cref="UnseenShots"/>·<see cref="HiddenHits"/>), WP4(<see cref="UnseenCharges"/>·<see cref="KiteSwitches"/>).
 /// 읽기: WP2 <c>InvariantChecker</c>(열 <c>unseen_shots</c>·<c>unseen_charges</c>·<c>hidden_hits</c>·<c>kite_switches</c>), WP7 로그.
 /// 기준은 앞 셋이 0, <c>kite_switches</c> 는 살아 있는 <c>kite</c> 적 하나당 초당 1 이하.
+/// <b>저장 멤버 규칙</b>(v0.8.1 — <c>RunStats</c> 와 같음): 판 합(<c>RunState.Fairness</c>)이 계단 저장(<c>RunSnapshot</c>)으로 STJ 왕복하므로 모든 공개 멤버는 읽기·쓰기 가능한 값 형식(배열)이다.
+/// partial 이 아니다(조각 없음) — 멤버를 더하면 계약 변경이고 모양 지문 시험이 깨진다(<c>RunSnapshot.CurrentFormat</c> 을 함께 올림).
 /// </summary>
 public sealed class FairnessCounters
 {

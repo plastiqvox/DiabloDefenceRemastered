@@ -8,7 +8,7 @@ namespace DiabloDefenceRemastered.Core.Assets;
 /// 아틀라스 메타 <c>&lt;이름&gt;.json</c> (설계서 6.3, 계약 WP1b) — 가져오기 도구가 쓰고 렌더·시험이 읽는다. 변종 페이지 모두가 같은 메타를 쓴다
 /// (TRN 은 색만 바꾸고 투명은 RLE 가 정하므로 잘라 낸 사각형이 같다).
 /// <code>
-/// { "format": 2, "pages": [[W,H], …],
+/// { "format": 3, "scale": 1, "pages": [[W,H], …],
 ///   "actions": { "walk": { "cell": [w,h], "directions": d, "frames": f, "rects": [[p, x, y, w, h, ox, oy], …] }, … } }
 /// </code>
 /// <c>rects</c> 순서 = (방향 0 의 프레임 1..f, 방향 1 …). <c>p</c> = 페이지 번호(0 = <c>&lt;이름&gt;.png</c>, 1 = <c>&lt;이름&gt;_p2.png</c> …),
@@ -17,10 +17,15 @@ namespace DiabloDefenceRemastered.Core.Assets;
 /// </summary>
 public sealed record SpriteMeta
 {
-    /// <summary>메타 형식 번호. 다르면 읽는 쪽이 오류로 본다.</summary>
-    public const int CurrentFormat = 2;
+    /// <summary>메타 형식 번호. 다르면 읽는 쪽이 오류로 본다. 3(v0.8 — <c>scale</c>, 사용자 결정 U).</summary>
+    public const int CurrentFormat = 3;
 
     public int Format { get; init; }
+    /// <summary>
+    /// 그림 배율(v0.8 — 그림 픽셀 / 월드 px, 1 또는 2, 기본 1). <c>cell</c>·<c>rects</c>·<c>ox,oy</c>·페이지는 모두 <b>그림 픽셀</b>이고 그리는 쪽이 이 값으로 나눈다.
+    /// 정의의 <c>frame</c>·<c>origin</c> 과 견줄 때(13.5-7)도 칸을 이 값으로 나눈다.
+    /// </summary>
+    public int Scale { get; init; } = 1;
     /// <summary>페이지 크기(가로·세로 ≤ 4096).</summary>
     public IReadOnlyList<Int2> Pages { get; init; } = [];
     /// <summary>동작 이름 → 칸·방향·프레임·사각형.</summary>
@@ -46,13 +51,14 @@ public sealed record SpriteMeta
     }
 
     /// <summary>
-    /// 검사(10.1 Assets): 형식 판, 페이지 크기(1..4096), 동작마다 칸·방향·프레임 &gt; 0, 사각형 수 = 방향 × 프레임,
+    /// 검사(10.1 Assets): 형식 판, 그림 배율 <c>scale</c> ∈ {1, 2}(v0.8), 페이지 크기(1..4096), 동작마다 칸·방향·프레임 &gt; 0, 사각형 수 = 방향 × 프레임,
     /// 없는 페이지 번호, 사각형이 페이지 밖, 잘라 낸 사각형이 칸 밖(ox,oy 포함). 문제가 없으면 빈 목록.
     /// </summary>
     public IReadOnlyList<string> Validate()
     {
         var errors = new List<string>();
         if (Format != CurrentFormat) errors.Add($"메타 형식 {Format} ≠ {CurrentFormat}");
+        if (!AssetScale.IsSupported(Scale)) errors.Add($"그림 배율 scale {Scale} 는 1 또는 {UpscaleTable.SupportedOutputScale}");
         if (Pages.Count == 0) errors.Add("페이지가 없다");
         for (var p = 0; p < Pages.Count; p++)
             if (Pages[p].X is <= 0 or > 4096 || Pages[p].Y is <= 0 or > 4096)

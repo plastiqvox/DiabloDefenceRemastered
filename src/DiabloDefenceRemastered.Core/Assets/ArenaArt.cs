@@ -18,7 +18,7 @@ public enum ArenaCellKind : byte
 /// <summary>
 /// 맵 그림 목록 <c>&lt;맵 art&gt;/arena.json</c> (설계서 7.6, 계약 WP1b). 가져오기 도구(WP0)가 쓰고 렌더(WP5)·시작 검사(WP7)·13.5-10 이 읽는다.
 /// <code>
-/// { "format": 1, "map": "cathedral_arena", "layout_hash": "…", "box": [2560, 1408],
+/// { "format": 2, "map": "cathedral_arena", "layout_hash": "…", "box": [2560, 1408], "scale": 1,
 ///   "floor": [ { "file": "floor_0_0.png", "pos": [0, 0] }, … ],
 ///   "columns": "columns",
 ///   "cells": [ [tx, ty, kind, frame], … ] }
@@ -28,8 +28,9 @@ public enum ArenaCellKind : byte
 /// </summary>
 public sealed record ArenaArt
 {
-    public const int CurrentFormat = 1;
-    /// <summary>바닥 조각 한 변(px).</summary>
+    /// <summary>형식 번호. 2(v0.8 — <c>scale</c>, 사용자 결정 U).</summary>
+    public const int CurrentFormat = 2;
+    /// <summary>바닥 조각 한 변(월드 px — 그림 픽셀은 × <see cref="Scale"/>).</summary>
     public const int ChunkSize = 512;
     public const string FileName = "arena.json";
     public const string MinimapFile = "minimap.png";
@@ -39,6 +40,11 @@ public sealed record ArenaArt
     public required string LayoutHash { get; init; }
     /// <summary>외곽 상자(<c>IsoMath.BoxSize</c>).</summary>
     public Int2 Box { get; init; }
+    /// <summary>
+    /// 그림 배율(v0.8 — 그림 픽셀 / 월드 px, 1 또는 2, 기본 1). 바닥 조각 그림은 <c>512 × scale</c> 픽셀이고 <c>pos</c>·<c>box</c> 는 월드 px 그대로.
+    /// 기둥 아틀라스 메타(<see cref="SpriteMeta"/>)도 같은 <c>scale</c> 을 가진다.
+    /// </summary>
+    public int Scale { get; init; } = 1;
     public IReadOnlyList<ArenaFloorChunk> Floor { get; init; } = [];
     public string Columns { get; init; } = "columns";
     public IReadOnlyList<ArenaCell> Cells { get; init; } = [];
@@ -97,12 +103,13 @@ public sealed record ArenaArt
     }
 
     /// <summary>
-    /// 검사: 형식 판, <c>columns</c> 이름, 맵 ID·<c>layout_hash</c>·상자가 저장소 배치와 같음, <c>floor</c> = <see cref="FloorChunks"/>, <c>cells</c> 의 칸이 격자 안·종류 0..2·frame ≥ 1·(ty, tx, kind) 순.
+    /// 검사: 형식 판, 그림 배율 <c>scale</c> ∈ {1, 2}(v0.8), <c>columns</c> 이름, 맵 ID·<c>layout_hash</c>·상자가 저장소 배치와 같음, <c>floor</c> = <see cref="FloorChunks"/>, <c>cells</c> 의 칸이 격자 안·종류 0..2·frame ≥ 1·(ty, tx, kind) 순.
     /// </summary>
     public IReadOnlyList<string> Validate(ArenaGrid grid)
     {
         var errors = new List<string>();
         if (Format != CurrentFormat) errors.Add($"arena.json 형식 {Format} ≠ {CurrentFormat}");
+        if (!AssetScale.IsSupported(Scale)) errors.Add($"arena.json 그림 배율 scale {Scale} 는 1 또는 {UpscaleTable.SupportedOutputScale}");
         if (!AssetFormat.IsValidRelativePath(Columns) || Columns.Contains('/'))
             errors.Add($"기둥 아틀라스 이름 '{Columns}' 는 맵 그림 폴더 안 파일 이름이다(구분자·'..' 없음)");
         if (!string.Equals(Map, grid.Map.Id, StringComparison.Ordinal)) errors.Add($"맵 '{Map}' ≠ '{grid.Map.Id}'");

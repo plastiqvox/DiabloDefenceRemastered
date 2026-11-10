@@ -27,4 +27,9 @@ public sealed record RoomDef
     /// 화면·로그·<c>--room</c>·<c>RunSeeds</c>·<c>RunDepth</c> 가 모두 이것을 쓴다. 1부터 커지기만 하고, <c>slice</c> 가 아니면 배열 자리 + 1 과 같다(13.5-23 ①).
     /// </summary>
     public int Number { get; init; }
+    /// <summary>
+    /// 층(v0.8, JSON <c>floor</c> 선택, 6.12 — 기획 v0.8.1 2.5 "층"). 0 = 안 적음. 방 문구(<c>대성당 2층 — 3</c>, 감독 <c>Banner</c>)와
+    /// 층이 바뀌는 출구의 <c>RoomExit.NextFloor</c>(문 위 <c>▼ 2층</c>·넘김 어둠 <c>transition_floor</c>)에만 쓴다 — 난이도·씨앗과 무관.
+    /// </summary>
+    public int Floor { get; init; }
 }

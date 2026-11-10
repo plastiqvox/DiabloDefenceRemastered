@@ -6,6 +6,7 @@ public sealed record ActPlan(StageDef Act, int ActNumber, IReadOnlyList<RoomPlan
 /// <summary>
 /// 방 하나의 계획(3.6 결정 2). 맵·들어온 문·출구 문·보상 후보 순서·방 씨앗.
 /// <see cref="Index"/> 는 <c>rooms</c> 배열 자리(0부터, 코드 안), <see cref="Number"/> 는 보이는 방 번호(<c>RoomDef.Number</c>, v0.7.1 — 화면·로그·<c>--room</c>·<c>RunSeeds</c>·<c>RunDepth</c>).
+/// v0.8: <see cref="Map"/> 은 거울판이면 <c>MapMirror</c> 가 만든 거울판 정의이고, <see cref="GateIn"/>·<see cref="ExitGates"/> 는 그 맵의 실제 문 이름(짝 이름)이다.
 /// </summary>
 /// <param name="Act">액트 번호(1부터).</param>
 /// <param name="ExitGates">출구 문 순서(판의 마지막 방은 빈 목록). 문 열기(<c>RoomFlow</c>)가 이 순서로 보상을 단다.</param>
@@ -15,16 +16,22 @@ public sealed record RoomPlan(int Act, int Index, RoomDef Def, MapDef Map, strin
 {
     public int Number => Def.Number;
     public RoomKind Kind => Def.Kind;
+    /// <summary>거울판 방인가(v0.8 — 로그 <c>ROOM mirror</c>). 로그 <c>map=</c> 은 <see cref="MapId"/>.</summary>
+    public bool Mirrored => Map.IsMirror;
+    /// <summary>원판 맵 ID(v0.8 — 로그 <c>ROOM map=</c>·<c>RoomRecord.MapId</c>·넓이 배율).</summary>
+    public string MapId => Map.MirrorOf ?? Map.Id;
 }
 
 /// <summary>
-/// 판 흐름을 액트 단위로 미리 정하는 순수 함수 (v0.7, 설계서 3.6 결정 2 — 계약·구현 WP1e, 그 뒤 WP4). 공개 함수에 <c>World</c> 인자가 없다 — 플레이와 무관하다.
+/// 판 흐름을 액트 단위로 미리 정하는 순수 함수 (v0.7 → v0.8 WP1f, 설계서 3.6 결정 2 — 그 뒤 WP4). 공개 함수에 <c>World</c> 인자가 없다 — 플레이와 무관하다.
 /// 방마다 <c>RunSeeds.Flow(씨앗, 액트, 방 번호)</c> 로 난수 하나를 만들어 <b>이 순서로</b> 뽑는다(순서를 바꾸면 계약 변경 — 11.3):
 /// <list type="number">
-/// <item><b>방 맵</b> — 보스 방은 <c>room_maps.boss</c>, 아니면 그 종류 풀에서 균등. 풀이 둘 이상이면 바로 앞 방(배열 바로 앞 원소)의 맵을 뺀다(기획 10.8 "연달아 쓰지 않음").</item>
+/// <item><b>방 맵</b>(v0.8 — (맵, 방향) 쌍): 보스 방은 <c>room_maps.boss</c>, 아니면 그 종류 풀. 맵마다 원판, <c>mirror: true</c> 면 바로 뒤에 거울판(풀 순서 → 원판 → 거울판).
+/// 후보가 둘 이상이면 바로 앞 방(배열 바로 앞 원소)과 같은 쌍(같은 맵·같은 방향)을 빼고 균등 — 풀 1장이어도 거울판이 있으면 원판·거울판이 번갈아 나온다.</item>
 /// <item><b>들어온 문</b> — 보스 방 <c>gates.boss_entry</c>, 아니면 <c>gates.entry</c> 에서 균등.</item>
-/// <item><b>출구 문</b> — 판의 마지막 방이면 없음. 다음 방이 정예·보스 방이거나 이 방이 액트의 마지막 방(계단)이면 <c>gates.single_exit</c> 하나.
-/// 아니면 <c>gates.exits</c> 둘, <c>exits.three_chance</c> 면 남은 앞 문을 더해 셋(순서 = exits 뒤에 남은 앞 문).</item>
+/// <item><b>출구 문</b> — 판의 마지막 방이면 없음. 이 방이 액트의 마지막 방(계단)이면 <c>gates.single_exit</c> 하나.
+/// 아니면 <c>gates.exits</c> 둘, <c>exits.three_chance</c> 면 남은 앞 문을 더해 셋(순서 = exits 뒤에 남은 앞 문). v0.8: 다음이 정예·보스 방이어도 둘(셋) — 문마다 덤 보상이 다르다.
+/// ②③ 은 <c>rules.rooms.gates</c> 이름으로 뽑고 ① 이 거울판이면 짝 이름(<c>GateZones.MirrorGate</c>)으로 바꿔 담는다.</item>
 /// <item><b>보상 후보 순서</b> — 액트 <c>rewards.weights</c>(가중 &gt; 0) 전체의 가중 비복원 순열.</item>
 /// </list>
 /// 단계마다 난수를 <b>늘 정해진 개수만큼</b> 쓴다(①②③ 한 번씩, ④ 보상 수만큼) — 그래서 ②~④ 는 <c>Flow(n)</c> 만의 함수이고, 맵(①)만 앞 방 계획에 이어진다.
@@ -55,24 +62,25 @@ public static class RunPlanner
                 throw new ArgumentException($"액트 '{act.Id}' 의 보스 방 {def.Number} 에 보스(boss)가 없다(13.5-23 ①)");
             var rng = new RandomStream(RunSeeds.Flow(runSeed, actNumber, def.Number));
 
-            // ① 방 맵
-            MapDef map;
+            // ① 방 맵 — (맵, 방향) 쌍
+            var pairs = new List<MapDef>();
             if (def.Kind == RoomKind.Boss)
-            {
-                rng.NextUInt();
-                map = act.RoomMaps.Boss?.Def ?? throw new ArgumentException($"액트 '{act.Id}' 에 보스 방 맵(room_maps.boss)이 없다");
-            }
+                AddPair(act.RoomMaps.Boss?.Def ?? throw new ArgumentException($"액트 '{act.Id}' 에 보스 방 맵(room_maps.boss)이 없다"));
             else
             {
                 var pool = def.Kind == RoomKind.Elite ? act.RoomMaps.Elite : act.RoomMaps.Normal;
                 if (pool.Count == 0) throw new ArgumentException($"액트 '{act.Id}' 에 {Name(def.Kind)} 방 맵 풀이 없다(room_maps)");
-                var candidates = new List<MapDef>(pool.Count);
-                var previous = i > 0 ? plans[i - 1].Map : null;
-                foreach (var r in pool)
-                    if (pool.Count < 2 || previous is null || !string.Equals(r.Id, previous.Id, StringComparison.Ordinal)) candidates.Add(r.Def);
-                if (candidates.Count == 0) foreach (var r in pool) candidates.Add(r.Def);
-                map = candidates[Pick(rng, candidates.Count)];
+                foreach (var r in pool) AddPair(r.Def);
             }
+            var candidates = pairs;
+            if (pairs.Count >= 2 && i > 0)
+            {
+                var previous = plans[i - 1].Map.Id;
+                candidates = pairs.FindAll(m => !string.Equals(m.Id, previous, StringComparison.Ordinal));
+                if (candidates.Count == 0) candidates = pairs;
+            }
+            var map = candidates[Pick(rng, candidates.Count)];
+            var mirrored = map.IsMirror;
 
             // ② 들어온 문
             string gateIn;
@@ -87,19 +95,25 @@ public static class RunPlanner
                 gateIn = gates.Entry[Pick(rng, gates.Entry.Count)];
             }
 
-            // ③ 출구 문
+            // ③ 출구 문 — 하나는 계단(액트의 마지막 방)뿐(v0.8: 다음이 정예·보스여도 둘·셋)
             var three = rng.NextFloat() < rules.Exits.ThreeChance;
             var lastOfAct = i == act.Rooms.Count - 1;
-            IReadOnlyList<string> exits;
+            List<string> exits;
             if (lastOfAct && act.NextAct is null) exits = [];
-            else if (lastOfAct || def.Kind == RoomKind.Boss || act.Rooms[i + 1].Kind != RoomKind.Normal) exits = [gates.SingleExit];
+            else if (lastOfAct) exits = [gates.SingleExit];
             else
             {
-                var list = new List<string>(gates.Exits);
+                exits = new List<string>(gates.Exits);
                 if (three)
                     foreach (var e in gates.Entry)
-                        if (!string.Equals(e, gateIn, StringComparison.Ordinal) && !list.Contains(e)) list.Add(e);
-                exits = list;
+                        if (!string.Equals(e, gateIn, StringComparison.Ordinal) && !exits.Contains(e)) exits.Add(e);
+            }
+
+            // ②③ 거울판이면 짝 이름으로(분포는 그대로 — 들어오는 문 {sw, se}·출구 {nw, ne} 는 짝 바꾸기에 닫혀 있다)
+            if (mirrored)
+            {
+                gateIn = GateZones.MirrorGate(gateIn);
+                for (var k = 0; k < exits.Count; k++) exits[k] = GateZones.MirrorGate(exits[k]);
             }
 
             // ④ 보상 후보 순서
@@ -121,6 +135,14 @@ public static class RunPlanner
             }
 
             plans.Add(new RoomPlan(actNumber, i, def, map, gateIn, exits, order, RunSeeds.Room(runSeed, actNumber, def.Number)));
+
+            void AddPair(MapDef m)
+            {
+                pairs.Add(m);
+                if (!m.Mirror) return;
+                pairs.Add(m.Mirrored ?? throw new ArgumentException(
+                    $"맵 '{m.Id}' 이 mirror: true 인데 거울판이 없다 — 읽기(MapDataReader)·시험 정의는 MapMirror.WithMirror 로 만든다"));
+            }
         }
         return new ActPlan(act, actNumber, plans);
     }

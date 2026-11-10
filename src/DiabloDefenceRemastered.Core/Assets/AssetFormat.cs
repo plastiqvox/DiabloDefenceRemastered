@@ -18,8 +18,9 @@ public static class AssetFormat
     /// <summary>
     /// manifest 의 <c>format</c>. 시작 검사가 다르면 "자원 형식이 낡았다(판 a → b)".
     /// 2(v0.6, WP1d): manifest 모양 바뀜 — 원본·파일 줄의 <c>bundle</c>, 파일 줄 <c>sources</c>, <c>skipped_bundles</c>.
+    /// 3(v0.8, WP1f — 사용자 결정 U): manifest <c>upscale</c>·파일 줄 <c>scale</c>, 그림 메타 형식 3(<c>scale</c>), <c>arena.json</c> 형식 2(<c>scale</c>).
     /// </summary>
-    public const int Version = 2;
+    public const int Version = 3;
 
     /// <summary>가져오기 도구가 쓰는 폴더(Assets 뿌리 기준). 원작 exe PNG 는 뿌리, 도구는 이 아래만 쓴다.</summary>
     public const string Root = "d1";
@@ -115,4 +116,18 @@ public static class AssetJson
             }
         }
     }
+}
+
+/// <summary>
+/// 그림 배율 규칙(v0.8 → v0.8.1, 설계서 7.1 "그림 배율 s"). 메타·<c>arena.json</c> 의 <c>scale</c> 은 1 또는 <see cref="UpscaleTable.SupportedOutputScale"/>(2)이고,
+/// 시작 검사(WP7)는 그 값이 {1, s} 안이고 s 를 나누는지(그리는 배율 s ÷ <c>scale</c> 이 정수) 본다. 4배(s = 4)는 계약 변경(WP1g).
+/// </summary>
+public static class AssetScale
+{
+    /// <summary>메타·<c>arena.json</c> 이 가질 수 있는 배율인가(1 또는 2).</summary>
+    public static bool IsSupported(int scale) => scale == 1 || scale == UpscaleTable.SupportedOutputScale;
+
+    /// <summary>그림 배율 <paramref name="artScale"/>(s, manifest — <see cref="ManifestUpscale.ArtScale"/>)로 이 <paramref name="scale"/> 의 그림을 그릴 수 있는가: {1, s} 안이고 s 를 나눔.</summary>
+    public static bool FitsArtScale(int scale, int artScale) =>
+        artScale >= 1 && (scale == 1 || scale == artScale) && artScale % scale == 0;
 }

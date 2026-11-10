@@ -70,4 +70,31 @@ public static class GateZones
         GateSide.Ne => GateSide.Sw,
         _ => GateSide.Ne,
     };
+
+    /// <summary>
+    /// 거울판(대각선 뒤집기, v0.8 — 6.11 "거울판")의 변: nw(왼쪽 열) ↔ ne(윗줄), se(오른쪽 열) ↔ sw(아랫줄). 변 위 번호(<c>at</c>)는 그대로다.
+    /// </summary>
+    public static GateSide MirrorSide(GateSide side) => side switch
+    {
+        GateSide.Nw => GateSide.Ne,
+        GateSide.Ne => GateSide.Nw,
+        GateSide.Se => GateSide.Sw,
+        _ => GateSide.Se,
+    };
+
+    /// <summary>
+    /// 거울판의 문·입구 ID(v0.8): 방 맵 문 넷의 이름 짝 <c>gate_nw</c> ↔ <c>gate_ne</c>, <c>gate_sw</c> ↔ <c>gate_se</c>(<see cref="RoomMapRules.Gates"/> — 이름 = 변).
+    /// 그 밖의 이름은 그대로. <c>RunPlanner</c>(②③ 결과)·<c>RoomState.RemapEntry</c>/<c>RemapMarch</c>(이벤트 <c>entry:</c>)·<c>MapMirror</c>(문·입구 ID)가 같은 함수를 쓴다.
+    /// </summary>
+    public static string MirrorGate(string gateId)
+    {
+        foreach (var (id, side) in RoomMapRules.Gates)
+        {
+            if (!string.Equals(id, gateId, StringComparison.Ordinal)) continue;
+            var mirrored = MirrorSide(side);
+            foreach (var (other, otherSide) in RoomMapRules.Gates)
+                if (otherSide == mirrored) return other;
+        }
+        return gateId;
+    }
 }

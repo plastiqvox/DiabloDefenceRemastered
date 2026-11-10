@@ -1,6 +1,6 @@
 # Diablo Defence Remastered — 설계서 (Architecture)
 
-- 상태: v0.7.2 (설계 담당 — v0.7.2 줄은 WP1e 구현 담당).
+- 상태: v0.8.2 (설계 담당 — v0.7.2 줄은 WP1e 구현 담당, v0.8.2 줄은 WP1f 구현 담당).
   - v0.1: 첫 판.
   - v0.2: 세 리뷰(`docs/reviews/architecture-planner.md`, `architecture-implementer.md`, `architecture-verifier.md`)를 반영했다 — 지적별 처리는 13.1~13.3.
   - v0.3: 기획서 v0.4 의 **디아블로 1 원본 자원 사용**(사용자 요구 10)을 받았다 — 자원 가져오기 도구(1.4), 등각 아레나 좌표·타일 충돌(4.1·4.2),
@@ -41,7 +41,23 @@
     기록 비교 키(깊이 → 승리 → 시간)·깊이 기록 모양·저장 읽기 규칙, 게임 쪽 "월드 바뀜" 계약 `IWorldBound`, 맵 풀 전체의 기준점 검사·문 틈 닿음 검사, 자동 조작이 멈추는 단계 덮기, WP1e 를 형 / 구현-1 / 구현-2 로 나눔(11.1). 처리 목록은 13.18.
   - v0.7.2: WP1e 구현(형·구현-1·구현-2 를 한 번에)이 문서와 다르게·더 정한 것을 옮겼다 — `RoomDef.Number` 0 = 로더가 채움, 뽑기 단계마다 난수 개수 고정, `RoomState.ClearTick`, 정예 상자 자리를 `TryPlace` 규칙으로 직접, `RunStats.ResetCombat` 없앰, 시험 도우미 `FakeHeroCarry.cs`·합성 보상 셋. 기획 v0.8.1 의 넘긴 목록(29절)은 아직 받지 않았다. 처리 목록은 13.19.
     같은 판의 검증 반영: 일반 방 t 도 `to` − 1틱에서 멈춤(기획 v0.8.1 2.5), 죽은 틱에 `Exit` 로 가지 않음(`RoomFlow` 는 나감만 막고 같은 틱 승리는 먼저·`StageStepper`·`Advance`), 정예·보스 방에 주인 없으면 `PlanAct` 예외, WP1f 에서 바뀌는 멤버 목록(11.3).
-  기준 기획서: `docs/gdd.md` v0.8(설계에 넘긴 목록은 기획서 28절 끝. v0.8.1 의 넘긴 목록은 13.19 끝 — 설계 v0.8 에서 받는다). 같은 리뷰의 "둘 다" 지적 중 기획서 문장 쪽은 기획 담당이 v0.8.1 로 고친다 — 이 문서는 설계가 정한 쪽을 적었다(13.18). 출발점: `docs/brief.md`.
+  - v0.8: 기획서 v0.8.1 29절(v0.8 리뷰 반영에서 설계로 넘긴 것 1~19)과 **사용자 결정 U "AI 확대"**(2026-11-03 — Real-ESRGAN 일반 모델 `realesrgan-x4plus`)를 받았다.
+    방 구조 쪽: 문 보상 효과 다시 짬(`RewardKind` 넷 = 마법서·무기 강화 꾸러미·허리띠 물약·성소, 0장·빈 강화 = `단련` — 6.18), 정예·보스 앞 문도 둘 + 덤 보상(3.6 ③), 보상 자리 = 주인공 앞(`RewardSpot`), `cleanup_limit` 25·`remaining_marker`·`reward_anchor`·`chest_ring` 없앰(6.10),
+    시간 효과·허리띠·`단련`·성소 대가·칸 수가 짐(`HeroCarry`)으로 이어짐(3.6 결정 1 — 12.1 `[해석]` 닫음), 계단 보상(칸 +1)·**계단 저장**(`RunSnapshot`·`RunSession.Suspend`/이어 하기 생성자, 8.3), `--start-at` 상한 함수·입장 이벤트 바로 내보냄(3.6 결정 5),
+    **거울판**(타일셋 짝 표·`MapDef.Mirror`·`MapMirror`·(맵, 방향) 뽑기·문 이름 짝 바꾸기 — 6.11), 층(`RoomDef.Floor`·계단 문 `▼ n층`), `ROOM` 로그 `mirror`·`boss_s`·`picks_left`, 13.5-23 ⑥ 방 이벤트 자리·거울판 검사(6.14).
+    AI 확대 쪽: 가져오기 선택 기능 `--upscale realesrgan-x4plus`(기본 끔, 실행 파일·모델은 사용자 PC 에 따로 받고 해시 확인, 실패하면 원본 픽셀 — 1.4), 그림 배율 `scale`(메타·`arena.json`·manifest — 형식 판 3), 월드 렌더 타깃 2배(7.1), 확대한 묶음의 그림자는 AI 없이 도구가 매끈하게 늘려 시트에 굽는다(1.4).
+    11.3 의 "WP1f 에서 바뀌는 멤버" ①~⑧ 을 닫고 계약 갱신 묶음 **WP1f**(11.1)로 모았다 — WP0·WP2~WP8 은 WP1f 뒤에 기댄다. 처리 목록은 13.20.
+  - v0.8.1: v0.8 리뷰(`docs/reviews/architecture-v08-review.md`, 지적 25개 — 근거는 같은 사용자 결정 R·U)를 반영했다 — 들어온 문 바꾸기를 **시작 문 기준 바꾸기**로(시작 문이 들어온 문일 때만 — 서로 바꾸기는 맞은편 이벤트를 주인공 문으로 옮겼다 — 3.6 결정 5),
+    거울판 `entries` 의 ID 도 짝으로(6.11), 칸 그릇 6 에 `RunStats.DamageByWeapon` 을 맞추고 저장 멤버 규칙을 "공개 읽기·쓰기 멤버 + 모양 지문"으로(3.6·11.2), `Suspend` = 계단 문 `Exit` 틱과 같은 길, 이어 하기의 짐 ID 대조·`Carry` null 규칙,
+    시작 액트에 따른 열린 칸 수(`RunSlots.OpenAt`), 판 수명 상태는 짐·`RunState` 에만(11.2), AI 확대의 세 단계 처리·묶음 실행과 진행 감시·중간 캐시·변종 공통 알파·맵 그림 알파는 원본 점 확대·Vulkan 런타임 확인·가짜 확대 실행 파일(1.4),
+    `output_scale` 첫 판 2 고정, 짝 검사에 둘레·문 자리 짝(13.5-12), WP1f 표 세부(`Hero.Reset`·`DoorsOpened` 자리·`RewardSpot` 두 번째 문턱·`Applies` 둘·직렬화 바이트 비교). 처리 목록은 13.21.
+  - v0.8.2: WP1f 구현(형과 순수 로직을 한 번에 — 11.1 WP1f 표 #1~#20)이 문서와 다르게·더 정한 것을 옮겼다 — `RunSlots.OpenAt` 이 `rules.level_up` 을 받음, `RewardSpot.Find`/`Row` 의 내비 인자 판, 이어 하기 대조에 액트 번호를 더함,
+    `RunSnapshot` 의 JSON 옵션·`RoomsHash`·모양 지문 상수, `MapMirror.TryOf`/`WithMirror`, `UpscaleTable` 검사 세부·`AssetScale`, 시험 도우미(합성 성소·짝 표 타일셋·거울판·층). 처리 목록은 13.22.
+    같은 판의 검증 반영: 이어 하기의 액트 번호를 시작 액트에서 셈(헬파이어 곁가지 액트끼리 이어진 판), 좁은 통로의 보상 줄이 `Find` 의 문턱으로 당김, 모양 지문에 열거형 값 이름(지문만 다시 — `CurrentFormat` 1 그대로),
+    `rules.level_up` 키 경로 본문 일곱 곳, WP6 의 `Suspend` 예외 처리, WP0 시작 전 조건(기획서가 13.21 넘긴 것 2~6 을 받음). 13.22 끝 "검증 반영".
+  기준 기획서: `docs/gdd.md` v0.8.2(설계에 넘긴 목록은 기획서 28절·29절 끝 — v0.8 에서 모두 받음, 13.20). 기획 담당의 v0.8.3(v0.8.2 리뷰 반영 — `docs/reviews/gdd-v082-review.md`)이 나왔지만
+  13.21 끝 "기획서에 넘기는 것" 2~6 은 아직 받지 않아 기준 판을 올리지 않았다 — 그 자리는 설계서 문장이 우선이고, 기획서가 받으면 기준을 v0.8.3 이후 판으로 올린다(11.1 WP0 "시작 전").
+  두 문서에 걸친 지적은 설계서 쪽만 고치고 기획서 문장은 13.21 끝 "기획서에 넘기는 것" 으로 넘겼다(13.20 끝 목록도 그대로 유효). 출발점: `docs/brief.md`.
 - 이 문서는 **코드 구조·형식·알고리즘·작업 나누기**를 정한다. 수치·규칙은 기획서가 정하고, 여기서는 그것을 어디에 어떻게 담는지만 정한다.
   기획서와 다르게 해석한 곳은 그 자리에 `[해석]` 으로 표시하고 12.1 에 모았다.
 - 코드 조각은 인터페이스 시그니처 수준이다. 이름은 구현 때 바뀔 수 있지만 **11절 작업 묶음 사이의 계약**(굵게 표시한 형)은 WP1·WP1b 가 정한 뒤 고치려면 관련 묶음 담당과 합의한다.
@@ -60,6 +76,8 @@
 - 사용자 결정 M "넓은 방 + 안쪽 방"(요구 14)은 4.10·6.11·6.14 에 답한다: 원작 작은 방·짧은 벽은 배치 데이터(`grid` 놓기, 둘레에 겹쳐 붙이기)로 적고, 갇힌 바닥 칸은 길 검사 오류, 큰 적은 모든 방 기준점까지 길이 있어야 한다.
 - 사용자 결정 R "하데스처럼 방 구조로"(요구 15, v0.7)는 3.6·6.12·6.18·6.11·8·11.1 WP1e 에 답한다: 한 판 = 액트(지금의 스테이지 정의) 여럿, 액트 = 방 순번 표대로 방 여럿, **방 하나 = `World` 하나**(맵·적·안개·투사체는 방마다 새로, 주인공 빌드·누적 기록은 `RunState` 로 넘김).
   방 순서는 데이터로 고정이고 씨앗은 방 맵·들어오는 문·출구 문 수·문 보상 후보만 고른다(`RunPlanner`, `(씨앗, 액트, 방 번호)` 마다 따로 — 맵만 바로 앞 방 맵에 이어짐). 이미 있는 것(타일·맵 형식, 안개, 가져오기, 무기·레벨업, 몬스터, 직업, 헬파이어 묶음, 공정성, 결정성)은 그대로 두고, 이미 커밋된 `cathedral_arena` 는 액트 1 보스 방이자 단계 1 의 모든 방이다.
+- 사용자 결정 U "원작 그림을 AI 로 확대"(2026-11-03, v0.8 — 비교 시험 뒤 "AI 일반이 나은듯" → `realesrgan-x4plus`)는 1.4·7.1·7.5·11.1 WP0·WP1f·WP5 에 답한다: 가져오기 도구의 **선택 기능**이고 기본은 원본 픽셀이다.
+  확대 결과도 저장소에 넣지 않고(사용자 PC 에서 가져올 때 만들고 캐시), 확대 도구는 사용자 PC 에 따로 받는다. 시뮬레이션은 그림 배율을 모른다 — 같은 씨앗이면 확대 유무와 상관없이 결과가 같다.
 - 이 문서에서 **"시야"** 는 주인공 시야(안개)만 뜻한다. 카메라가 보는 사각형은 **화면 사각형**(`World.ViewRect`), 길찾기의 선분 검사(`HasClearLine`)는 **길 트임**이라 부른다(v0.5, 4.5).
 
 ## 0. 핵심 결정 한눈에
@@ -71,7 +89,8 @@
 | 헬파이어 묶음 (v0.6) | 같은 폴더의 `hellfire`·`hfmonk`·`hfmusic`·`hfvoice` MPQ = 콘텐츠 묶음 넷(`ContentBundle`). 가져오기 표 항목에 `bundle`, 정의(적·스테이지·직업·무기·음악)에 `requires`. MPQ 가 없으면 그 묶음만 건너뛰고(종료 코드 0) manifest 에 적음 → 시작 검사가 그 묶음 정의를 "꺼짐" 으로 세고 그 스테이지·직업 카드를 어둡게. 시뮬레이션은 묶음 유무를 모른다(6.17) |
 | 직업 (v0.6) | `HeroClassDef`(6.16): 그림 묶음·몸 반경·능력치 덮어쓰기·시작 무기·특성·`requires`. `rules.hero` = 공통 규칙 + 기본 능력치 + 고른 직업 ID. 월드는 `World.HeroClass` 하나를 받는다. MVP = `sorcerer` 하나 |
 | 맵 배치 (v0.6) | 넓은 방 + 안쪽 방: 둘레 테두리·문 + 조각 놓기(`at`·`line`·**`grid`** 블록, 둘레에 겹치는 **`over_border`**) + `open_center`·방 기준점 `room_*`. 갇힌 바닥 칸은 길 검사 오류, 큰 적(26·34)은 모든 방 기준점까지 길. 포위·소환·지점 예고 자리는 길 거리 ≤ 직선 × 1.5(4.10) |
-| 판 구조 (v0.7) | 판(`RunState`) → 액트(= `StageDef`, 방 순번 표·방 맵 풀·문 보상·`next_act`) → 방(`RoomPlan` → **방마다 새 `World`**). 방 흐름 들어옴 → 생존 → 정리 → 보상 → 문 은 새 단계 `SimPhase.RoomFlow` 의 상태 기계(`World.Room`). 판 흐름은 `RunPlanner`(순수, `(씨앗, 액트, 순번)` 마다 따로), 방 사이 이동은 Core `RunSession` 이 빌드(`IHeroCarry`)를 넘겨 다음 `World` 를 만든다. 난이도는 방 시계로 정한 **난이도 분 t**(3.6) |
+| 판 구조 (v0.7) | 판(`RunState`) → 액트(= `StageDef`, 방 순번 표·방 맵 풀·문 보상·`next_act`) → 방(`RoomPlan` → **방마다 새 `World`**). 방 흐름 들어옴 → 생존 → 정리 → 보상 → 문 은 새 단계 `SimPhase.RoomFlow` 의 상태 기계(`World.Room`). 판 흐름은 `RunPlanner`(순수, `(씨앗, 액트, 순번)` 마다 따로), 방 사이 이동은 Core `RunSession` 이 빌드(`IHeroCarry`)를 넘겨 다음 `World` 를 만든다. 난이도는 방 시계로 정한 **난이도 분 t**(3.6). v0.8: 방 맵 = (맵, 원판/거울판) 쌍, 시간 효과·허리띠·`단련`·성소 대가도 짐, 액트 보스 방 문 단계에서 **계단 저장**(`RunSnapshot`, 불러오면 지움) |
+| AI 확대 (v0.8) | 가져오기 `--upscale realesrgan-x4plus`(기본 끔): 사용자 PC 의 Real-ESRGAN ncnn-vulkan(해시 확인)으로 타일·벽·칸 폭 160 이상 몬스터를 4배 → 2배로 줄여 씀. 없거나 실패하면 원본 픽셀(종료 코드 6·manifest). 그림 배율은 메타 `scale`, 월드 렌더 타깃은 배율만큼(1920×1080). 확대 결과는 GPU 마다 바이트가 다를 수 있어 manifest 에 도구·모델 해시만 적는다 |
 | 개체 모델 | 범용 ECS 를 쓰지 않는다. **종류별 풀(EntityStore) + 고정 순서 시스템**. 개체 클래스는 `partial` 이고 묶음마다 자기 필드 조각을 가진다(11.2). 적의 다양성은 상속이 아니라 **행동 부품(전략) 조합** |
 | 데이터 | `Data/**/*.json`(경로 서수 정렬로 읽음), 한 파일에 여러 종류를 담을 수 있음(적 + 그 적의 투사체). `extends` 로 변형 정의. 로딩 때 오류를 모두 모아 보여 줌. 게임 정의는 가져오기가 만든 파일 이름만 알고 원작 경로는 모른다 |
 | 좌표 | 월드 = 등각 아레나 그림의 **화면 픽셀**(실수). 하위 타일 ↔ 월드는 `IsoMath` 한 곳. 화면 어느 방향이든 같은 속도(4.1) |
@@ -101,7 +120,7 @@ DiabloDefenceRemastered/
 │  └─ DiabloAssetImporter/          가져오기 도구(.NET 9 콘솔, War3Net.IO.Mpq + Core)                                  (WP0)
 │     ├─ Program.cs  Mpq/  Formats/(CL2·CEL·PAL·TRN·MIN·TIL·SOL·WAV 해석)  Bake/(시트·아틀라스·아레나·미니맵·아이콘·소리)
 │     ├─ Output/(PNG 쓰기·manifest·캐시·소리 색인)  Audit/(저장소에 원작 자원이 섞였는지 대조)
-│     └─ Table/                      가져오기 표 JSON 8개(원작 경로·TRN·칸 폭·쓸 프레임·그림자 알파·타일셋 원본 경로 → 만들 파일 이름. 원작 바이트 없음, 1.4)
+│     └─ Table/                      가져오기 표 JSON 9개(v0.8: + upscale.json — AI 확대 모델·허용 해시·범위. 원작 경로·TRN·칸 폭·쓸 프레임·그림자 알파·타일셋 원본 경로 → 만들 파일 이름. 원작 바이트 없음, 1.4)
 ├─ src/
 │  ├─ DiabloDefenceRemastered.Core/            클래스 라이브러리. MonoGame 참조 없음
 │  │  ├─ Common/        EntityId, EntityStore<T>, Pool<T>, SimRandom, StableHash, FacingMath(방향→열)·Compass, Rgb, Int2, RectI, MathX,
@@ -116,7 +135,8 @@ DiabloDefenceRemastered/
 │  │  ├─ Map/           IsoMath(하위 타일 ↔ 월드), TileCoord, MapDataReader(tilesets·maps 만 읽기), ArenaLayout(배치 → 메가타일 격자),
 │  │  │                 ArenaGrid(하위 타일 막힘·둘레 표시), ResolvedMap(입구·기준점·시작 = 월드 px)                  (계약, WP1b)
 │  │  │                 GateZones(문 틈 칸·맞은편 문), MapArea(걸을 넓이), RoomMapRules(작은 방 검사 상수)              (v0.7 계약·구현 WP1e)
-│  │  ├─ Assets/        AssetFormat(판 번호), AssetManifest, ImportTable(가져오기 표 8개 모양·만들 이름 목록), SpriteMeta,
+│  │  │                 MapMirror(거울판 MapDef — 짝 표로 다시 깖)                                                   (v0.8 계약·구현 WP1f)
+│  │  ├─ Assets/        AssetFormat(판 번호), AssetManifest, ImportTable(가져오기 표 9개 모양·만들 이름 목록 — v0.8 UpscaleTable), SpriteMeta,
 │  │  │                 ArenaArt(arena.json·바닥 조각 이름 규칙), SoundIndex(소리 길이)                                (계약, WP1b)
 │  │  │                 ContentAvailability(있는 묶음 → 꺼진 스테이지·직업, 6.17)                                       (계약·구현 WP1d)
 │  │  │                 DefAssetNames(정의 → 파일·주인 D, 13.5-10·시작 검사)                                   (v0.6.1 계약 WP1d, 본문 WP7)
@@ -136,7 +156,7 @@ DiabloDefenceRemastered/
 │  │  │  ├─ Enemies/    EnemySystem, 생애 상태, Parts/(행동 부품·적 동작), Ranks/(정예·우두머리·접두사), Buffs/
 │  │  │  ├─ Director/   생성 누적기, 방 이벤트(t → 방 시계), 상한 정리, 생성 출처·우선순위
 │  │  │  ├─ Run/        (v0.7) RunSeeds, RunPlanner(판 흐름 결정), RoomEvents(이벤트 → 방 시계), RoomFlow·RoomFlowSystem(방 흐름 상태 기계),
-│  │  │  │              RunState·RunSession(방마다 World 만들기·빌드 넘기기)                                          (계약·구현 WP1e, 그 뒤 WP4)
+│  │  │  │              RunState·RunSession(방마다 World 만들기·빌드 넘기기), v0.8: RewardSpot·RunSnapshot(계단 저장)·RoomStartLimits   (계약·구현 WP1e·WP1f, 그 뒤 WP4)
 │  │  │  └─ Autoplay/   자동 조작 정책(이동·카드 고르기·v0.7: 정리·보상 집기·문 고르기)
 │  │  ├─ Audio/         AudioModule(소리 연결 표 검사기), SoundMixer(동시 재생·우선순위 고르기, 순수 로직) — Sim 은 이 폴더를 쓰지 않는다  (WP8)
 │  │  ├─ Art/           ArtModule(시트 메타·PNG 크기 검사기), PngHeader
@@ -226,10 +246,12 @@ DiabloDefenceRemastered/
 
 ```powershell
 # 두 원본을 한 명령으로: 원작 exe PNG(import-assets.ps1) → diabdat(도구)
-powershell -ExecutionPolicy Bypass -File tools\import-all.ps1 -Diabdat "<…>\diabdat.mpq" -Exe "<…>\DiabloDefence.exe" [-Hellfire "<폴더>"] [-SkipBundles "<묶음,…|all>"]   # v0.6.1: 도구 옵션을 그대로 넘김
+powershell -ExecutionPolicy Bypass -File tools\import-all.ps1 -Diabdat "<…>\diabdat.mpq" -Exe "<…>\DiabloDefence.exe" [-Hellfire "<폴더>"] [-SkipBundles "<묶음,…|all>"] [-Upscale realesrgan-x4plus] [-UpscaleBin "<폴더>"] [-UpscaleGpu <n>]   # v0.6.1·v0.8: 도구 옵션을 그대로 넘김
 
 # 도구만
 dotnet run --project tools/DiabloAssetImporter -c Release -- import --diabdat <diabdat.mpq> [--out <Assets 폴더>] [--force] [--jobs <n>] [--hellfire <폴더>] [--skip-bundles <묶음,…|all>]
+                                                                [--upscale <모델>] [--upscale-bin <폴더>] [--upscale-gpu <n>]   # v0.8 AI 확대(아래 "AI 확대"), 기본 끔
+dotnet run --project tools/DiabloAssetImporter -- upscaler-check [--upscale-bin <폴더>] [--upscale-gpu <n>]   # v0.8: 확대 도구 해시·Vulkan 런타임 확인 + 임시 폴더에서 작은 그림 한 장을 변환해 장치 줄을 보임(Assets 는 안 만듦, v0.8.1)
 dotnet run --project tools/DiabloAssetImporter -- verify [--out <Assets 폴더>]           # manifest 와 파일 해시만 대조
 dotnet run --project tools/DiabloAssetImporter -- probe tiles --diabdat <…> --tileset l1 --tiles 1,2,15   # 성질 표(6.11)를 쓸 때 SOL 보기
 dotnet run --project tools/DiabloAssetImporter -- contact --diabdat <…> --out <저장소 밖 폴더>           # 사람이 눈으로 볼 견본 PNG
@@ -285,7 +307,7 @@ dotnet run --project tools/DiabloAssetImporter -- audit [--out <Assets 폴더>] 
 **MPQ 읽기와 스레드** — War3Net 의 `MpqArchive`·`MpqStream` 은 아카이브 하나의 기반 스트림을 `Seek`·`Read` 로 같이 쓰므로 여러 스레드가 동시에 읽으면 바이트가 섞인다.
 원본 항목 읽기(복호·압축 풀기)는 **주 스레드에서 차례로** 해서 `byte[]` 로 넘기고, `--jobs` 병렬은 해독·굽기·PNG 압축에만 쓴다. 캐시 키의 "입력 원본 항목 바이트 해시" 도 주 스레드가 읽은 바이트로 만든다.
 
-**가져오기 표** `tools/DiabloAssetImporter/Table/*.json` 8개 — 모양은 Core `Assets/ImportTable` 의 record 다. Core 가 표 전체를 **엄격하게**(모르는 속성 오류, 6.1 과 같은 STJ 옵션) 읽고,
+**가져오기 표** `tools/DiabloAssetImporter/Table/*.json` 9개(v0.8: `upscale.json` 을 더함 — 아래 "AI 확대") — 모양은 Core `Assets/ImportTable` 의 record 다. Core 가 표 전체를 **엄격하게**(모르는 속성 오류, 6.1 과 같은 STJ 옵션) 읽고,
 도구는 그 record 를 그대로 쓴다(도구가 따로 파싱하지 않는다). 13.5-10 시험은 같은 record 로 "만들 이름 목록" 을 만든다. 표는 WP0 소유다.
 
 ```json
@@ -352,6 +374,15 @@ dotnet run --project tools/DiabloAssetImporter -- audit [--out <Assets 폴더>] 
     // (헬파이어 스테이지 단계 예, v0.6) 지하실 L5 — 경로는 nlevels, 팔레트 하나. 덧그림 번호표는 그 단계에 확인
     { "id": "l5", "dir": "nlevels\\l5data", "cel": "l5.cel", "min": "l5.min", "til": "l5.til", "sol": "l5.sol",
       "pieces_per_subtile": 10, "palettes": { "l5base": "l5base.pal" }, "bundle": "hellfire" } ] }
+
+// Table/upscale.json (v0.8, 사용자 결정 U) — AI 확대의 모델·허용 해시·적용 범위. --upscale 을 주지 않으면 읽기만 하고 쓰지 않는다
+{ "models": {
+    "realesrgan-x4plus": { "scale": 4,                                   // 모델 배율(실행 파일 -s 값)
+      "files": { "realesrgan-ncnn-vulkan.exe": "<sha256>", "vcomp140.dll": "<sha256>",      // --upscale-bin 폴더 기준 상대 경로 → SHA-256.
+                 "models/realesrgan-x4plus.param": "<sha256>", "models/realesrgan-x4plus.bin": "<sha256>" } } },   // 값은 WP0 이 공식 릴리스 파일로 채움
+  "output_scale": 2,                                                     // 모델 결과(4배)를 이 배율로 줄여 씀(첫 값 — 기획 열린 질문 41). v0.8.1: 첫 판의 표 읽기는 2 만 받는다(다른 값은 표 오류 — 4 로 가려면 WP1g 계약 변경, 7.1 s)
+  "apply": { "maps": true, "monsters_min_width": 160 },                  // 첫 값: 맵 그림(바닥 조각·벽 기둥·아치 덧그림) + 칸 폭 160 이상 몬스터. 주인공·마법·아이콘·exe PNG 는 안 함(기획 19.6)
+  "include": [], "exclude": [] }                                         // 몬스터 표 항목 out 이름 또는 "tileset:<id>" 로 더하고 뺌(exclude 가 이김)
 ```
 
 - 공통 필드: `out`(출력 이름, `d1/` 로 시작), 원작 경로 틀(`{a}` = 동작 글자, `{d}` = 방향 파일 1..`dirs`), `width`, `frames`([처음, 끝], 1부터 — 파일이 더 많을 때 쓸 범위),
@@ -384,13 +415,15 @@ Assets/
   *.png  DIInop.cur                   원작 exe (import-assets.ps1)
   d1/
     manifest.json                     마지막에 쓴다: 형식 판(AssetFormat.Version), 도구 판(도구·Core 어셈블리 SHA-256), .NET 런타임 판, 원본 크기·SHA-256,
-                                      표 해시(Table/*.json 8개를 이름 순으로 이은 바이트의 SHA-256), 파일마다 경로·크기·SHA-256
+                                      표 해시(Table/*.json 9개를 이름 순으로 이은 바이트의 SHA-256 — v0.8: 8 → 9), 파일마다 경로·크기·SHA-256
+                                      (v0.8) `upscale`(확대 요청·결과·도구·모델 해시 — 아래 "AI 확대"), 파일 줄마다 `scale`(그림 배율, 1 이면 적지 않음)
                                       (v0.6) 원본 줄마다 묶음(`bundle`, 기본은 없음), `skipped_bundles`(건너뛴 묶음·MPQ·이유),
                                       파일 줄마다 `bundle`(그 파일을 만든 표 항목의 묶음 — 맵 그림은 타일셋 항목의 묶음)·`sources`(v0.6.1: 바이트를 읽은 MPQ 이름 목록,
                                       서수 정렬 — 고유 몬스터 페이지처럼 CL2 는 hellfire, TRN 은 diabdat 인 출력이 있다. v0.6 의 이름 하나 `source` 를 대신함)
     monsters/zombie.png  zombie@bluered.png  zombie@grey.png …  zombie.json     그림 묶음 한 페이지(모든 동작, 변종마다) + 메타(변종 공통, 6.3)
     hero/slt.png  slt.json            missiles/fireba.png  fireba.json …      icons/fireball.png …
     maps/cathedral_arena/arena.json  floor_<cx>_<cy>.png  columns.png  columns.json  minimap.png       (7.6, 이름 규칙은 아래 "아레나")
+    maps/cathedral_arena@m/…          (v0.8) 거울판 그림 — 맵 `mirror: true` 일 때만(6.11 "거울판"), 이름 규칙 같음
     sound/sfx/misc/cbolt.wav  sound/monsters/zombie/zombiea1.wav …  sound/music/dlvla.wav               원작 경로를 소문자·'/' 로 그대로
     sound/index.json                  소리 색인: 파일마다 표본 수·표본율·채널(7.9 고르기가 길이를 안다)
     import.log                        마지막 실행 보고
@@ -416,8 +449,11 @@ Assets/
 **결정론** — 같은 원본 + 같은 표 + 같은 맵·타일셋 정의 + 같은 도구 판 → 같은 바이트.
 - PNG 는 도구가 직접 쓴다: RGBA 8비트, 줄 필터 0 고정, `ZLibStream` 압축 수준 고정, `tIME`·글 덩어리 없음. JSON 은 정해진 키 순서·불변 문화·`\n`.
 - 작업 목록은 출력 경로 서수 정렬, 묶기 순서 고정, 사전 순회 결과에 기대지 않는다. 원본 읽기는 주 스레드에서 차례로, `--jobs` 병렬은 해독·굽기·PNG 압축에만(작업 하나는 한 스레드) → 결과가 같다.
+  (v0.8.1) `--upscale` 을 켜면 확대 대상 작업만 **세 단계**로 나뉜다(아래 "AI 확대" — 병렬 ① 해독·굽기·확대 전 판 → 주 스레드 ② 외부 프로그램(동시에 하나) → 병렬 ③ 줄이기·묶기·PNG). 확대하지 않는 작업은 지금처럼 한 스레드에서 끝까지 간다.
 - 확인: 도구 시험(시험이 만든 작은 MPQ 로 두 번 → manifest 같음, `--jobs 1` 과 `--jobs 8` → manifest 같음), WP0 완료 기준(실제 원본으로 두 번 → manifest 같음).
   압축 구현이 .NET 판마다 다를 수 있어 **같은 런타임 판 안에서만** 보장한다(manifest 에 런타임 판을 적는다).
+- **예외 — AI 확대 출력**(v0.8): `--upscale` 로 만든 파일(manifest 파일 줄 `scale` ≠ 1)은 같은 바이트를 보장하지 않는다. 외부 실행 파일이 GPU·드라이버마다 다른 부동소수 결과를 낼 수 있어서다.
+  그래서 manifest 에는 **도구·모델 파일 해시와 요청·결과**만 적고(아래 "AI 확대"), 위 "두 번 → manifest 같음" 은 확대를 끈 실행에만 요구한다. 확대 출력도 만들어진 뒤에는 캐시가 그대로 다시 쓰므로 같은 PC 의 두 번째 실행은 같다.
 
 **캐시** — 첫 실행은 PNG 압축이 대부분이라 수십 초 안팎으로 본다(WP0 이 재서 이 줄을 고친다).
 - `d1/.cache/index.json`: 작업마다 키 = SHA-256(도구 판 + 작업 명세 JSON + 입력 원본 항목 바이트의 해시 + 맵이면 펼친 배치 해시).
@@ -426,12 +462,80 @@ Assets/
   키가 같고 출력 파일이 있고 그 해시가 기록과 같으면 다시 만들지 않는다. `--force` 는 캐시를 무시한다. 캐시 적중·미적중 결과 바이트는 같다(시험).
 - **굽기 결과가 바뀌는 도구 변경은 `AssetFormat.Version` 을 올린다**(WP0 규칙 — 메타·`arena.json` 모양, 바닥/벽 나눔, 그림자·잘라 내기 규칙). 게임은 도구 바이트를 모르므로 이 번호로만 "도구가 바뀌어 다시 가져와야 함" 을 안다.
   번호를 안 올리는 실수는 맵 쪽이면 `layout_hash`(타일셋 정의 해시 포함, 6.11)가, 표 쪽이면 표 해시가 대부분 잡는다.
+- (v0.8) 캐시 키에 **실제로 쓸 확대 방식**을 더한다: 확대하지 않는 작업은 `"원본"`, 확대하는 작업은 (모델 이름, `upscale.json` 의 그 모델 `files` 해시들, `output_scale`, 확대 처리 판). GPU 번호는 넣지 않는다 —
+  같은 입력의 확대 결과가 GPU 마다 달라도 한 번 만든 것을 다시 쓴다(다시 만들려면 `--force`, 결과 바이트는 manifest 의 파일 해시가 안다 — 기획 19.6). 되돌아간 실행(아래)의 출력은 `"원본"` 키로만 남아, 다음에 확대가 되면 확대 대상만 다시 만든다.
+- (v0.8.1) **확대 중간 캐시** `d1/.cache/upscaled/`: 외부 프로그램이 돌려준 4배 그림을 (확대 전 판 PNG 바이트의 SHA-256 + 위 확대 방식) 키로 남긴다(색 판·알파 판 따로, 만든 때의 `gpu` 를 기록).
+  되돌아간 실행에서도 그때까지 **성공한 묶음의 결과는 남긴다** — 그 실행의 출력은 규칙대로 전부 원본이지만, 다음 실행은 남은 판만 돌려 이어서 끝낼 수 있다(진척이 쌓임). 출력 캐시(위)와 따로라 `"원본"` 키 출력과 섞이지 않는다.
+  `--force` 는 이 캐시도 무시한다. 새 manifest 에 없는 출력을 지우는 규칙과 무관하게, 키가 더 이상 쓰이지 않는 항목은 실행 끝에 지운다(쓰인 키 목록 밖).
+
+**AI 확대 `--upscale`** (v0.8, 사용자 결정 U — 2026-11-03, 기획 v0.8.2 19.6·brief 요구 16)
+
+사용자가 원작 그림 일부를 Real-ESRGAN 두 모델(일반 `realesrgan-x4plus`, 그림용 `realesrgan-x4plus-anime`)로 4배 확대해 비교했고 일반 모델을 골랐다(타일·큰 몬스터는 좋음, 작은 캐릭터는 얼굴·손이 뭉개짐, 그림자·투명 가장자리는 계단이 남음, 걷기 프레임마다 결과가 조금씩 달라 떨림을 봐야 함).
+가져오기의 **선택 기능**이다 — 주지 않으면(기본) 지금까지와 같은 원본 픽셀 출력이고 확대 프로그램을 찾지도 않으며 manifest 의 `upscale` 은 `"status": "off"` 다. 게임에는 켜고 끄는 설정이 없다(가져오기가 만든 그림을 그대로 씀).
+
+- **도구는 받지 않고 찾기만 한다**: 실행 파일·모델은 사용자가 공식 배포처에서 따로 받아 저장소 밖 폴더에 푼다(Real-ESRGAN ncnn-vulkan **v0.2.5.0** Windows 판 — 사용자 시험에 쓴 것, BSD-3-Clause). 도구는 내려받지 않는다(네트워크에 기대지 않음).
+  저장소·Assets·도구 출력 어디에도 넣지 않고 배포하지 않으므로 고지 의무는 없다 — README 자원 절에 이름·판·라이선스·받는 곳·풀 폴더 한 단락(WP0).
+  폴더는 `--upscale-bin <폴더>`(기획 19.6 의 이름), 기본 `%LOCALAPPDATA%\DiabloDefenceRemastered\realesrgan-ncnn-vulkan\`(저장소 밖).
+- **해시 확인 단계**: 시작할 때 `upscale.json` 의 그 모델 `files`(실행 파일·DLL·모델 두 파일) 마다 `--upscale-bin` 기준 파일을 SHA-256 으로 대조한다. 하나라도 없거나 다르면 실행 파일을 **띄우지 않는다**(모르는 실행 파일을 돌리지 않음) — 아래 "되돌아감".
+  허용 해시는 WP0 이 공식 배포판 파일에서 받아 표에 적는다(사용자 시험 때 받은 zip 의 SHA-256 `abc02804e17982a3be33675e4d471e91ea374e65b70167abc09e31acb412802d` — 같은 배포판인지 대조용). 새 판으로 바꿀 때는 표만 고친다(표 해시가 바뀌어 게임이 다시 가져오기를 알린다).
+  `--upscale <모델>` 의 이름이 표 `models` 에 없으면 입력 오류 **종료 코드 2**(아무것도 만들지 않음 — 되돌아가지 않는다). 지금 표에는 `realesrgan-x4plus` 하나다.
+- **Vulkan 런타임 확인**(v0.8.1): 실행 파일(v0.2.5.0)은 `vulkan-1.dll` 을 정적으로 가져온다(사용자 zip 의 PE 가져오기 표로 확인 — `vulkan-1.dll`·`ole32`·`KERNEL32`·`OLEAUT32`·`VCOMP140`). 런타임이 없는 PC 에서 띄우면 프로세스가 `STATUS_DLL_NOT_FOUND`(0xC0000135)로 뜨지 못하고 Windows 오류 창이 사용자 화면을 덮을 수 있다.
+  그래서 띄우기 전에 `Environment.SystemDirectory\vulkan-1.dll` 이 있는지 보고, 없으면 띄우지 않고 이유 `Vulkan 런타임 없음` 으로 바로 되돌아간다. 띄울 때는 오류 창이 뜨지 않게 도구 프로세스의 오류 모드(`SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX)` — 자식이 물려받음)를 먼저 정한다(물려받는지는 WP0 이 이 PC 에서 확인 — 안 되면 다른 길을 1.4 에 적음).
+  종료 코드 0xC0000135 는 이유 `Vulkan 런타임 없음(0xC0000135)` 으로 옮겨 적는다.
+- **띄우는 법**: `Process` 로 직접(셸 없음, `ArgumentList`, `CreateNoWindow`, 표준 입력 닫음, 작업 폴더 = 임시 폴더). 인자 `-i <입력 폴더> -o <출력 폴더> -n <모델> -m <upscale-bin>\models -s 4 -f png`, `--upscale-gpu <n>` 이면 `-g <n>`(없으면 프로그램 기본값).
+  `-m` 을 늘 준다(v0.8.1) — 도움말상 기본값이 상대 경로 `models` 라 작업 폴더(임시 폴더)나 다른 자리의 모델을 읽을 수 있다. 절대 경로로 해시를 확인한 모델 파일만 쓰게 한다.
+  **묶음으로 나눠 돌린다**(v0.8.1): 확대할 판을 (작업 이름 서수, 판 이름) 순으로 늘어놓고 입력 픽셀 합이 `UpscaleBatchPixels`(도구 상수, 첫 값 16MP — WP0 실측 뒤 고침)를 넘지 않게 끊어 묶음마다 한 번 띄운다(작업마다 띄우지 않음, 동시에 하나).
+  **시간 제한은 진행 기준**이다: 출력 폴더의 결과 파일 수가 `UpscaleNoProgress`(첫 값 2분) 동안 하나도 늘지 않으면 그 묶음을 죽이고 실패로 본다(v0.8 의 "한 번에 10분" 은 큰 몬스터 몇 묶음·맵·거울판만으로도 중급 GPU 에서 넘을 수 있어 첫 실행이 늘 되돌아갈 수 있었다).
+  메모리 부족 같은 오류 종료는 그 묶음만 `-t 128`(작은 타일)로 한 번 다시 돌린다. 성공한 묶음의 결과는 바로 확대 중간 캐시(위 "캐시")에 넣는다.
+  **실패 판정**(묶음마다): 종료 코드 ≠ 0, 진행 없음, 입력 판마다 결과 PNG 가 **없음**(이 프로그램은 그림 하나를 못 읽어도 0 으로 끝날 수 있다 — 결과 파일로만 판정), 결과 크기 ≠ 입력 × 4. 하나라도 걸리면 아래 "되돌아감".
+  임시 폴더는 `d1/.cache/tmp/`(git 무시 안, 끝나면 지움 — 원본 바이트가 든 PNG 를 저장소 밖 `%TEMP%` 에 흘리지 않는다).
+  끝 보고에 `확대 진척 n/m`(중간 캐시 적중 + 이번에 만든 판 / 필요한 판)과 묶음별 걸린 시간을 적는다. 첫 실행 시간은 WP0 이 이 PC 에서 재서 이 문단의 상수와 기획 19.6 의 "첫 실행 수 분" 을 고친다.
+- **적용 범위**(첫 값, `upscale.json` `apply` — 기획 19.6 표): 맵 그림(바닥 조각·벽 기둥·아치 덧그림 — 미니맵 빼고)과 칸 폭 160 이상 몬스터 항목(그 항목의 모든 변종·동작 — 한 그림 묶음 안에서 배율이 섞이지 않게). 어느 묶음이 드는지 끝 보고에 적는다.
+  주인공·칸 160 미만 몬스터(얼굴·손이 뭉개짐 — 기획 열린 질문 40), 마법·이펙트·아이콘·물체·UI·원작 exe PNG 는 하지 않는다. `include`·`exclude` 로 항목마다 켜고 끈다 — 몬스터는 표 항목 `out`(`d1/monsters/diablo`), 맵 그림은 `tileset:<id>`(그 타일셋을 쓰는 모든 맵 그림).
+  판정 함수는 둘이다(v0.8.1, Core `UpscaleTable` — 순수): `Applies(ImportUnitEntry entry)` = (`include` 에 `out` 이 있거나 칸 폭 ≥ `monsters_min_width`) 이고 `exclude` 에 없음 — **칸 폭은 그 항목 동작들의 가장 넓은 칸 폭**(동작마다 `width` 가 다르면, 한 묶음 안에서 배율이 섞이지 않게 항목 단위로 정함),
+  `Applies(string tilesetId)` = (`apply.maps` 이거나 `include` 에 `tileset:<id>`) 이고 `exclude` 에 없음(맵 그림은 표 항목이 아니라 배치에서 나오므로 그 맵의 타일셋 ID 로 판정 — 거울판 `<art>@m` 도 같은 타일셋).
+- **대조는 원본 픽셀에서**: 성질 표 ↔ SOL, 칸 폭·프레임 수, `audit` 방 배열(13.5-22)은 모두 확대 전 원본에서 한다. 확대는 해독·굽기 뒤 묶기 전의 마지막 단계다.
+- **처리 순서**(그림 하나 — 결정적인 부분은 도구 코드, 색 바이트만 외부 프로그램에 따라 다름):
+  ① 원본 픽셀 해독(지금과 같음). 몬스터는 그림자 칸(색인 0)을 **몸과 떼어** 따로 둔다(그림자 마스크).
+  ② **투명 칸 색 채우기**: 알파 0 칸의 색을 가장 가까운 불투명 칸 색으로 채운다(바깥으로 **여백 폭(16px) 이상** — v0.8.1: v0.8 의 8px 은 ③ 의 여백보다 좁아 여백 바깥 8px 에 검정이 남았다. 투명 칸의 검정이 가장자리에 번져 검은 테가 생기지 않게).
+  ③ **이음매 막기**: 프레임(벽 기둥 하나)마다 원본 16px 여백(② 의 번진 색)을 두고 펼친 판을 만든다 — 이웃 프레임 색이 섞이지 않게. 바닥 조각은 이웃 바닥을 32px 더 구운 판(굽기가 배치에서 바로 그림)을 확대해 가운데만 자른다 — 조각 경계 질감이 이어진다.
+  같은 그림 판(바이트가 같은 판)은 한 번만 넣는다(v0.8.1 — 같은 기둥 그림·같은 프레임이 여러 번 나와도 GPU 는 한 번).
+  ④ 외부 프로그램으로 색(불투명 RGB)을 4배. **알파는 그림 종류에 따라 둘로 나눈다**(v0.8.1):
+  **맵 그림**(바닥 조각·벽 기둥·아치 덧그림)의 알파는 AI 에 넣지 않고 원본 알파를 **2배 점 확대**(최근접)한다 — 바닥 마름모 가장자리와 기둥 경계는 원작에서 정확히 맞물리는 기하 모양이라 AI 알파를 문턱으로 자르면 경계가 ±1px 흔들려 바닥과 벽이 만나는 곳마다 틈·겹침이 생길 수 있다. 점 확대면 7.6 의 "1px 틈·겹침 없음" 이 그대로 선다.
+  **몬스터**는 알파를 흑백 그림으로 같은 모델에 따로 4배(기획 19.6 첫 값) 하되, **프레임마다 한 번만**(변종 공통 — TRN 은 투명을 바꾸지 않으므로 알파가 같다) 확대해 모든 변종이 같이 쓴다. 그래서 변종마다 잘린 사각형이 같고 메타 하나를 같이 쓰는 규칙(1.4 변환 규칙 "잘라 묶기")이 선다.
+  ⑤ `output_scale` 2 로 줄임: 2×2 상자 평균(정수). 몬스터 알파는 줄인 뒤 **0.5 에서 잘라** 있음·없음으로(계단도 후광도 없는 가장자리 — 기획 열린 질문 42).
+  ⑥ **그림자**는 AI 에 넣지 않는다: ① 의 마스크를 도구 코드로 매끈하게 2배(4배 쌍삼차 → 2×2 상자 평균 → 1px 흐림, 고정 소수점 — GPU 와 무관하게 늘 같음), 검정 × 표 `shadow_alpha`(0.5)로 **몸 아래에 깔아 같은 시트에 굽는다**.
+  그래서 게임은 그림자를 따로 그리지 않고 지금처럼 시트를 그린다(기획 19.6 이 설계에 맡긴 "판을 도구가 미리 굽을지" — 도구가 굽는다. 게임 쪽 그리기 경로·그리기 호출이 늘지 않음). 확대하지 않는 그림은 지금 그대로다.
+  ⑦ 잘라 묶기(지금 규칙 그대로, 사각형·페이지 크기만 2배). 페이지가 4096 을 넘으면 지금처럼 다음 페이지로(끝 보고에 2페이지 이상 묶음).
+- **작업 나누기 — 세 단계**(v0.8.1, `--jobs` 와의 관계 — 기획 30절이 넘긴 것): 확대 대상 작업(위 "적용 범위")만 아래처럼 나눈다. 확대하지 않는 작업은 지금처럼 한 스레드에서 끝까지 간다.
+  (1) **병렬**(`--jobs`): 작업마다 해독·굽기 → ①~③ 의 확대 전 판(색 판·몬스터 알파 판) → 판마다 확대 중간 캐시 조회. 출력 캐시(위 "캐시")가 적중한 작업은 여기서 끝.
+  (2) **주 스레드**: 미적중 판만 모아 같은 판을 한 번으로 줄이고 위 "띄우는 법" 의 묶음 순서로 외부 프로그램을 돌린다(GPU 는 동시에 하나 — `--jobs` 와 무관). 결과는 중간 캐시에.
+  (3) **병렬**(`--jobs`): 작업마다 ⑤ 줄이기·알파 자르기·⑥ 그림자 굽기·⑦ 묶기·PNG·출력 캐시 기록.
+  (2) 에서 실패하면 (3) 은 확대 대상 작업 **전부**를 확대 없이(맵 그림·몬스터 모두 원본 경로, 출력 캐시 키 `"원본"`) 돈다 — (1) 에서 이미 확대 출력 캐시가 적중한 작업도 원본으로 다시 만든다(일부만 확대된 채로 두지 않음, 아래).
+  순서가 (작업 이름 서수, 판 이름)로 고정이라 `--jobs 1` 과 `--jobs 8` 의 외부 프로그램 입력·묶음이 같다.
+- **되돌아감**(기획 19.6 — 확대를 못 해도 가져오기는 끝난다): 실행 파일·모델이 없음, 해시 다름, Vulkan 런타임 없음(v0.8.1), 띄울 수 없음·오류 종료(Vulkan 장치 없음 포함)·진행 없음, 결과 파일 없음·크기 틀림 — 어느 것이든 **확대를 모두 버리고** 그 실행의 모든 그림을 원본 픽셀로 만든다.
+  일부만 확대된 채로 두지 않는다(바닥 조각 반만 확대된 화면이 되지 않게 — 헬파이어 묶음의 "전부 있거나 전부 없다" 와 같은 뜻). 그래서 manifest 의 `status` 는 `off`·`done`·`fallback` 셋뿐이다.
+  끝 보고 맨 끝에 `경고: AI 확대를 하지 못해 원본 픽셀로 만듦 — <이유>` 한 줄, manifest `reason`. **종료 코드 6**(경고와 함께 성공 — Assets 는 온전하고 게임이 돈다. 확대를 원한 사용자·스크립트가 0 과 가른다). `import-all.ps1` 은 0 과 6 을 성공으로, 6 이면 그 경고 줄을 다시 보인다.
+- **manifest `upscale`**(Core `AssetManifest.Upscale` = `ManifestUpscale`, v0.8): `{ "status": "off|done|fallback", "model": "realesrgan-x4plus", "tool": "realesrgan-ncnn-vulkan v0.2.5.0", "files": { "<상대 경로>": "<sha256>", … }, "output_scale": 2, "gpu": "default|<n>", "reason": "…" }`.
+  확대한 파일의 줄에 `"scale": 2`. 픽셀이 같다는 것은 요구하지 않는다(위 "결정론" 예외 — 파일 크기·해시는 그 PC 의 섞임·깨짐을 보는 시작 검사·`verify` 용이고 PC 사이에 견주는 값이 아니다).
+  `gpu` 는 이번 옵션 값이 아니라 **만든 때의 값**이다(v0.8.1 — 중간 캐시가 판마다 기록한 `gpu`. 캐시 적중이면 이번 실행은 GPU 를 돌리지 않았으므로). 판마다 다르면 `"mixed"`. 첫 판은 `default` 또는 번호 문자열.
+- **출력 모양**(형식 판 `AssetFormat.Version` 2 → 3, v0.8): 그림 메타(6.3 `SpriteMeta`, 형식 3)에 `scale`(그림 픽셀 / 월드 px — 1 또는 2, 기본 1). 메타의 `cell`·`rects`·`ox,oy` 는 모두 **그림 픽셀**이고 그리는 쪽이 `scale` 로 나눈다.
+  프레임 수·방향·동작은 배율과 무관 — 정의와의 대조(13.5-7)는 칸 크기를 `scale` 로 나눠 본다. 게임 정의(`sprite_set`·`map`·`tileset`)는 확대를 모른다.
+  `arena.json` 에 `scale`(형식 2 — 바닥 조각 `512 × scale` 그림 픽셀, `pos` 는 월드 px 그대로), 기둥 아틀라스 메타도 `scale`. 형식 판이 올라가므로 옛 자원은 시작 검사 ① 이 "자원 형식이 낡았다" 로 막는다.
+- **시험**(10.1 `Pipeline`, 자원 없이 — 기획 19.6 "가짜 확대 프로그램"). v0.8.1 에 두 겹으로 나눴다:
+  **가짜 실행 파일**: 시험이 빌드하는 작은 콘솔 프로그램(`tests/FakeUpscaler` — 최근접 4배, 실제 프로그램과 같은 인자 `-i -o -n -m -s -f -g -t` 를 받음, 환경 변수로 "오류 종료·잠자기(진행 없음)·결과 하나 빼기·크기 틀림·0xC0000135 흉내" 를 고름)로 **`Process` 경로 전체**를 본다 —
+  인자 목록·셸 없이 띄우기·`-m` 경로·종료 코드 판정·진행 없음 → 죽이고 실패·`-t 128` 로 한 번 다시·결과 파일 없음 → 실패·묶음 나누기·해시 확인 단계. 시험은 확대 표(허용 해시)를 **주입**한다(도구의 표 읽기가 시험용 `UpscaleTable` 을 받는 내부 진입점 — 가짜 실행 파일의 해시로 바꿔 낌. 실제 `Table/upscale.json` 은 바꾸지 않는다).
+  **`IUpscaler` 가짜**(픽셀을 4배로 늘리기만): 처리 ①~⑦ 단위 시험 — 크기·여백·채우기 반경·같은 판 한 번·맵 알파 점 확대(바닥·기둥 경계 줄이 원본 2배와 같음)·몬스터 알파 프레임마다 한 번(변종 사각형 같음)·알파 0.5 자르기·그림자 굽기·메타 `scale`·캐시 키(GPU 를 바꿔도 적중)·**`--jobs 1` = `--jobs 8`**(확대 경로 포함)·**일부 중간 캐시 적중 + 나머지 실패 → 전부 원본**(적중한 판은 중간 캐시에 남음)·다음 실행이 남은 판만 돌림.
+  되돌아감(없음·해시 다름·Vulkan 런타임 없음·결과 파일 없음·결과 크기 틀림·진행 없음 → 모두 원본 + 종료 코드 6 + `status: fallback` + 출력 해시가 확대를 끈 실행과 같음), 모르는 모델 → 2, `--upscale` 없으면 확대 프로그램 폴더를 읽지 않음을 본다.
+  실제 프로그램은 이 PC 에서 WP0 완료 기준으로 한 번(11.1 WP0 v0.8 — 기획 19.6 확인 항목 ①~⑧ 의 견본을 만듦).
+- **`upscaler-check`**(v0.8.1): 해시 확인 + Vulkan 런타임 확인 뒤, 임시 폴더(`d1/.cache/tmp/`)에서 도구가 만든 작은 무늬 그림(원작 바이트 아님, 16×16) 한 장을 변환해 종료 코드·결과 크기와 표준 오류의 장치 줄(GPU 이름)을 보인다. 이 프로그램에는 GPU 목록만 내는 옵션이 없어서다. `--upscale-gpu` 를 주면 그 장치로. Assets 는 만들지 않는다.
 
 **실패와 보고**
 - 시작할 때 `d1/manifest.json` 을 먼저 지우고, 표의 모든 항목을 만든 뒤에만 쓴다 → 중간에 실패하면 빌드·실행이 "자원 없음" 으로 본다(반쯤 채운 Assets 로 뜨지 않음, 기획 19.2).
 - 파일은 임시 이름으로 쓰고 바꿔치기한다. 새 manifest 에 없는 `d1/` 아래 파일은 지운다(`d1/` 밖은 건드리지 않음).
 - 종료 코드: 0 성공(묶음 MPQ 가 없거나 쓸 수 없어 그 묶음을 건너뛴 것 포함 — v0.6.1), 1 처리 안 된 예외, 2 원본을 못 찾음·못 엶(`diabdat.mpq`, 또는 `--hellfire` 로 직접 준 폴더의 열리지 않는 묶음 MPQ),
-  3 표에 있는데 원본에 없는 파일(목록 전부 — 기본 항목, 또는 `--hellfire` 로 직접 준 묶음 MPQ), 4 대조 실패(성질 표·프레임 범위·형식, v0.6.1: `audit` 의 DUN 배열 같음 포함).
+  3 표에 있는데 원본에 없는 파일(목록 전부 — 기본 항목, 또는 `--hellfire` 로 직접 준 묶음 MPQ), 4 대조 실패(성질 표·프레임 범위·형식, v0.6.1: `audit` 의 DUN 배열 같음 포함),
+  (v0.8) 6 성공이지만 요청한 AI 확대를 못 해 원본 픽셀로 만듦(위 "AI 확대 — 되돌아감"). 모르는 확대 모델 이름은 2.
 - 끝 보고(표준 출력 + `d1/import.log`): 종류별 만든 수·크기, 캐시 적중 수, 걸린 시간, 없는 파일 목록, 원본 SHA-256, (v0.6) 묶음마다 `만듦`/`건너뜀(이유)` 한 줄,
   (v0.6.1) 쓸 수 없어 건너뛴 묶음은 맨 끝에 `경고:` 줄(위 "헬파이어 묶음") — 종료 코드만 보는 `import-all.ps1` 도 이 줄을 그대로 보인다.
 - 캐시 키(v0.6): 원본 항목 바이트 해시가 이미 키에 있으므로 같은 이름을 hfvoice → hfmonk 로 바꿔 읽으면 키가 달라져 다시 만든다. 건너뛴 묶음의 옛 출력은 "새 manifest 에 없는 `d1/` 아래 파일은 지운다" 규칙으로 지워진다.
@@ -454,7 +558,8 @@ Assets/
   하나라도 있으면 타이틀 대신 **안내 화면**(DataError 화면, 무엇이 없는지 + 명령 한 줄, 기획 19.3)을 띄운다.
   "꺼짐" 만 있으면 타이틀로 가고, **꺼진 스테이지·직업이 하나라도 있으면** 타이틀 아래 한 줄(기획 12.5 — `헬파이어 자원 없음 — 수도사·지하실 꺼짐`, 8.1. v0.6.1: 문구의 앞말은 `skipped_bundles` 의 이유로 고른다 —
   `없음`·`--skip-bundles` 는 "없음", `열 수 없음`·`판 다름` 은 "읽지 못함(<MPQ 이름>)", 문구 자체는 기획 12.5). 음악만 대체되는 경우(`hfmusic` 만 없음)는 꺼지는 것이 없으므로 한 줄을 띄우지 않고 로그 `AUDIO music=… fallback=…` 만 남긴다.
-  로그 `ASSETS` 줄에 `bundles=… skipped=… disabled=…`(9절 — `disabled` 는 꺼진 스테이지·직업 ID).
+  로그 `ASSETS` 줄에 `bundles=… skipped=… disabled=…`(9절 — `disabled` 는 꺼진 스테이지·직업 ID). v0.8: `upscale=<off|done|fallback> art_scale=<1|2>`(7.1 — `done` 이면 2).
+  확대 결과(`fallback` 포함)는 오류도 꺼짐도 아니다 — 안내 화면·타이틀 한 줄을 띄우지 않는다.
   개발 옵션 실행이면 화면 없이 로그 + 종료 코드 5. 단 개발 옵션이 `--capture*`·`--quit-after`·`--window`·`--log` 뿐이면(`--autoplay` 없음) 안내 화면을 띄운 채 캡처하고 종료 코드 5 — 안내 화면을 캡처로 확인하는 길(10.2).
 - 게임의 자원 폴더를 바꾸는 방법은 **빌드 하나**다: `dotnet build -p:DdrAssetDir=<빈 폴더> -p:SkipAssetCheck=true -o <임시 폴더>`(복사가 비어 출력에 `Assets\d1` 이 없다).
   게임은 `DDR_ASSETS` 를 읽지 않는다(그 변수는 시험 전용, 1.3). 실행 옵션으로 자원 폴더를 바꾸는 길은 두지 않는다 — 검사·읽기 경로가 두 벌이 된다.
@@ -651,11 +756,13 @@ Draw:
 - 방 씨앗으로 `World` 를 만들면 "앞 방 플레이와 상관없이 같은 순번 방의 생성이 같다"(기획 2.5)가 구조로 선다.
 - 값: 방마다 저장소 풀·격자 할당과 길 계산(4.2 clearance 수 ms, 필드). 방 이동은 0.5s 어두워짐(앱 틱, 시뮬레이션 밖) 안이고 한 판에 20번이라 틱 중 할당 0(4.9)과 무관하다. 시간은 WP2 가 잰다(R33).
 - 잃는 것은 방 사이에 이어져야 하는 상태뿐이고, 그것을 아래 표로 **명시적으로** 넘긴다.
+- **시간 효과 시계**(v0.8, 기획 v0.8.1 2.5): 주인공의 시간 효과(버프·마력 폭주 — WP3)는 **생존·정리 단계에서만 흐른다**. 보상·문 단계, 방 넘김(시뮬레이션 밖), 다음 방의 들어옴(유예) 동안은 멈춘다 — 정리 끝에 먹은 마력 폭주가 다음 방 첫머리에 쓰인다.
+  판정은 한 곳 `World.TimedEffectsRun`(= `Room is null || Room.Phase is Survive or Cleanup`, 계약 WP1f)이고 WP3 가 시간 효과를 줄이는 자리에서 읽는다. 그래서 효과의 끝은 절대 틱(`EndTick`)이 아니라 **남은 틱**으로 센다(멈춘 동안 줄지 않게 — WP3 조각). 짐에는 남은 틱을 그대로 넣는다.
 
 | 넘긴다 (`RunState` — 판 수명) | 방마다 새로 (`World` — 방 수명) |
 |---|---|
-| 주인공 빌드 `HeroCarry`: 레벨·경험치·재추첨 남은 수·체력·무기 칸(정의·레벨·진화)·패시브 칸·축복 칸 — WP3 `IHeroCarry` 가 `Capture`/`Restore`. 칸 목록은 **칸 번호 순서 그대로**이고 `Restore` 는 같은 번호 칸에 놓는다(v0.7.1 — `RunStats.DamageByWeapon[칸]` 이 무기를 칸 번호로 세므로). 대기(레벨업·상자·보상)는 넘기지 않는다 — 나갈 때 늘 0 이다(3.6 `Doors` 줄, `Capture` 는 0 이 아니면 예외) | 맵·`Arena`·`Resolved`·`InnerRooms`(v0.7.1 이름 — 맵 안 안쪽 방 바닥)·`Gates`, 충돌·내비·플로우 필드·공간 해시, `Visibility`(가 본 곳 지움) |
-| `RunStats`(처치·금화·피해·무기별 피해 — 판 누적. `World.RunStats` 가 `RunState.Stats` 를 가리킴). **지우는 곳이 없다**(v0.7.1): `RunSession` 이 판 시작 때 새로 만들고, 월드 설치·주인공 만들기·WP3 `ResetCombat` 은 부르지 않는다 — 공개 `RunStats.Reset()` 은 WP1e-형이 없앤다(지금 부르는 코드 없음) | 적·투사체·장판·예고·획득물, 버프·마력 폭주 같은 시간 효과·피격 무적(`[해석]` — 기획 v0.8.1 이 2.5 "방 사이" 로 정함, 13.18 열린 질문 1) |
+| 주인공 빌드 `HeroCarry`: 레벨·경험치·재추첨 남은 수·체력·무기 칸(정의·레벨·진화)·패시브 칸·축복 칸 — WP3 `IHeroCarry` 가 `Capture`/`Restore`. 칸 목록은 **칸 번호 순서 그대로**이고 `Restore` 는 같은 번호 칸에 놓는다(v0.7.1 — `RunStats.DamageByWeapon[칸]` 이 무기를 칸 번호로 세므로). 대기(레벨업·상자·보상)는 넘기지 않는다 — 나갈 때 늘 0 이다(3.6 `Doors` 줄, `Capture` 는 0 이 아니면 예외). **v0.8**(기획 v0.8.1 2.5 "방 사이에 이어지는 것"): + 열린 칸 수(무기·패시브 — 계단에서 +1), 허리띠 물약 수, 판 끝까지 가는 능력치(`단련` 쌓임·성소 대가 — `Mods`), 받은 성소(`Shrines` — 한 판에 한 번), **시간 효과의 남은 틱**(`Effects` — 마력 폭주 등) | 맵·`Arena`·`Resolved`·`InnerRooms`(v0.7.1 이름 — 맵 안 안쪽 방 바닥)·`Gates`, 충돌·내비·플로우 필드·공간 해시, `Visibility`(가 본 곳 지움) |
+| `RunStats`(처치·금화·피해·무기별 피해 — 판 누적. `World.RunStats` 가 `RunState.Stats` 를 가리킴). **지우는 곳이 없다**(v0.7.1): `RunSession` 이 판 시작 때 새로 만들고, 월드 설치·주인공 만들기·WP3 `ResetCombat` 은 부르지 않는다 — 공개 `RunStats.Reset()` 은 WP1e-형이 없앤다(지금 부르는 코드 없음) | 적·투사체·장판·예고·획득물, 피격 무적(새 방은 시작 유예가 대신함), 무기 쿨다운·무기 내부 시간 상태(새 방에 들어오면 모두 준비 — 기획 v0.8.1 2.5). v0.7 의 `[해석]` "버프·마력 폭주는 방이 바뀌면 끝남" 은 v0.8 에서 닫았다 — 시간 효과는 넘긴다(위) |
 | 판 흐름: 지금 액트·순번·지금 액트의 `ActPlan`·고른 문·다음 방 보상·방 기록(`RoomRecord`)·걸린 시간 | `Rng`(방 씨앗)·`Tick`(0 부터)·감독 상태·`InnerRoomPresence`·`BossBars`·`Banner`·`Fairness`(방이 끝날 때 `RunState.Fairness` 에 더함) |
 | — 조명은 넘기지 않는다: 방을 만들 때 그 액트의 `light_change` 중 t < 방 t 시작인 것을 시간 순서로 다시 적용한다(`RoomEvents.Schedule` 의 `Replay`, v0.5.1 `--start-at` 규칙과 같은 함수). 그래서 `--room` 시작도 같은 조명이다. **v0.7.1**: 적용은 Core 순수 함수 `LightingState.Apply(LightChangeParams)` 이고 `World` 생성자가 **첫 틱 전에** 한다 — 감독(WP4) 없이도 서고, 방 첫 틱의 시야(1단계)가 바뀐 반경으로 계산된다 | `Lighting`(스테이지 조명 + 위 다시 적용) |
 
@@ -679,23 +786,34 @@ public sealed record RoomPlan(int Act, int Index, RoomDef Def, MapDef Map, strin
 {
     public int Number => Def.Number;         // v0.7.1: 보이는 방 번호(RoomDef.Number) — 화면·로그·--room·RunSeeds·RunDepth 가 모두 이것. Index 는 rooms 배열 자리(0부터, 코드 안)
     public RoomKind Kind => Def.Kind;
+    public bool Mirrored => Map.IsMirror;    // v0.8: 거울판(Map 은 MapMirror 가 만든 거울판 MapDef — 6.11 "거울판"). 로그 map= 은 Map.MirrorOf ?? Map.Id
 }
 ```
+
+- **v0.8 거울판과 문 이름**: `GateIn`·`ExitGates` 는 **그 방 맵(거울판이면 거울판)의 실제 문 이름**이다. 뽑기 ②③ 는 `rules.rooms.gates` 의 이름으로 하고, 거울판이면 그 결과를 짝 이름(`gate_nw` ↔ `gate_ne`, `gate_sw` ↔ `gate_se` — `GateZones.MirrorGate`)으로 바꿔 담는다.
+  이벤트의 `entry:` 이름도 같은 짝 바꾸기를 거친다(`RoomState.RemapEntry`, 결정 5) — 그래서 거울판 방의 계획 전체(들어온 문·출구 순서·보스 입장 문)가 원판 계획의 거울 모양이다(보스 방: 원판 들어옴 `gate_sw`·보스 `gate_ne` → 거울판 `gate_se`·`gate_nw`).
+  보스가 주인공 맞은편 문에서 나오는 것은 데이터(보스 이벤트 `entry:gate_ne`, 보스 방 들어온 문 `gate_sw`)와 v0.8.1 의 **시작 문 기준 바꾸기**(결정 5 끝 — 이벤트의 시작 문이 들어온 문일 때만 바꿈)가 함께 만든다. v0.8 문서의 "늘 맞은편" 은 v0.7.1 의 서로 바꾸기 아래에서는 틀렸다(보스가 들어온 문으로 옮겨졌다 — 13.21).
+  들어오는 문 후보 {sw, se}·출구 {nw, ne} 는 짝 바꾸기에 닫혀 있어 뽑기의 분포는 그대로다.
 
 - **방 번호 `RoomDef.Number`**(v0.7.1, JSON `number`, 선택): 없으면 배열 자리 + 1. `slice: true` 판(단계 1)은 기획 번호를 그대로 적는다(1·2·3·4·6·8) — 그래서 `--room 1:6` 은 단계 1 과 단계 2 에서 같은 t 의 방이고, 씨앗(`RunSeeds`)도 단계 2 에서 밀리지 않는다.
   13.5-23 ①: 번호는 1부터 커지기만 하고, `slice` 가 아니면 배열 자리 + 1 과 같아야 한다. HUD 분모는 그 액트 마지막 방 번호(`대성당 6 / 8`), `--room a:n` 의 `n` 이 표에 없는 번호면 옵션 오류(64).
 
 - `actNumber` = 시작 액트(기본 액트 사슬의 뿌리 = 앞 액트가 없고 `requires` 가 빈 액트)부터 `next_act` 를 따라 센 번호(1부터). `--stage stage_catacombs` 로 시작해도 액트 2 다 — 깊이 기록·`--room 2:n` 이 같은 번호를 쓴다.
 - 방마다 판 흐름 씨앗 `Flow(씨앗, 액트, 방 번호)` 으로 `SimRandom` 하나를 만들어 **이 순서로** 뽑는다(순서를 바꾸면 계약 변경):
-  ① **방 맵** — 보스 방은 `room_maps.boss` 하나, 아니면 그 종류의 풀에서 균등. 풀이 둘 이상이면 **바로 앞 방(배열 바로 앞 원소)의 맵을 뺀다**(기획 10.8 "연달아 쓰지 않음" — 앞 방 맵도 씨앗만으로 정해지므로 플레이와 무관).
-  그래서 방 n 의 **맵은 앞 방들의 계획에 이어지고**(풀이 둘이면 첫 방이 정하는 번갈이), ②~④ 는 `Flow(n)` 만의 함수다(v0.7.1 — 시험 문구도 이대로, 10.1 `Run`).
+  ① **방 맵** — 후보 = (맵, 방향) 쌍(v0.8, 기획 v0.8.1 10.8 "거울판"): 보스 방은 `room_maps.boss`, 아니면 그 종류의 풀. 맵마다 원판, 그 맵이 `mirror: true` 면 바로 뒤에 거울판(풀 순서 → 원판 → 거울판).
+  후보가 둘 이상이면 **바로 앞 방(배열 바로 앞 원소)과 같은 쌍(같은 맵·같은 방향)을 빼고** 균등(앞 방 맵도 씨앗만으로 정해지므로 플레이와 무관). v0.7 의 "앞 방과 같은 맵을 뺀다" 는 풀 2장이면 A·B·A·B 로 굳어 씨앗이 첫 맵만 골랐다 —
+  v0.8 은 같은 맵의 다른 방향은 바로 이어 나올 수 있고, 풀이 1장(단계 1·2 의 대성당)이어도 거울판이 있으면 원판·거울판이 번갈아 나온다. 보스 방도 같은 규칙(보스 맵 원판·거울판)이다.
+  그래서 방 n 의 **맵은 앞 방들의 계획에 이어지고**, ②~④ 는 `Flow(n)` 만의 함수다(v0.7.1 — 시험 문구도 이대로, 10.1 `Run`). 난수는 v0.7.2 대로 단계마다 하나(①)다.
   ② **들어온 문** — 보스 방은 `rules.rooms.gates.boss_entry`(`gate_sw`), 아니면 `gates.entry`(`gate_sw`·`gate_se`)에서 균등.
-  ③ **출구 문** — 판의 마지막 방이면 없음. 다음 방이 정예·보스 방이거나 이 방이 액트 보스 방이면(계단) `gates.single_exit`(`gate_ne`) 하나.
+  ③ **출구 문** — 판의 마지막 방이면 없음. 이 방이 액트의 마지막 방(보스 방 — 계단)이면 `gates.single_exit`(`gate_ne`) 하나.
   아니면 `gates.exits`(`gate_nw`·`gate_ne`) 둘, `exits.three_chance`(0.4) 면 남은 앞 문(`entry` 중 들어온 문이 아닌 것)을 더해 셋. 순서 = `exits` 순서 뒤에 남은 앞 문.
+  **v0.8**(기획 v0.8.1 2.5 "문 갈래"): 다음 방이 정예·보스 방이어도 출구는 둘(셋) — v0.7 의 "다음이 정예·보스면 하나" 를 지웠다. 어느 문이든 그 방으로 가고 문마다 덤 보상이 다르다(아래 "문 열기").
+  ②③ 의 이름은 `rules.rooms.gates` 이름으로 뽑고, ① 이 거울판이면 짝 이름으로 바꿔 담는다(위 "v0.8 거울판과 문 이름").
   ④ **보상 후보 순서** — 그 액트 `rewards.weights` 전체를 가중 비복원 추출한 순열(JSON 순서 배열, 3.4). 상태 거르기는 하지 않는다(아래 "문 열기").
 - 순번은 데이터(`rooms`) 순서 그대로다 — 씨앗으로 섞지 않는다(기획 2.5 "방 순서 고정"). 그래서 `PlanAct` 결과는 (액트 정의, 액트 번호, 판 씨앗, `rules.rooms`)만의 함수이고(고른 문·카드와 무관 — `RunPlanner` 에 `World` 입력이 없다), 액트 시작 때 한 번 만들어 `RunState` 에 둔다.
-- **방의 보상**(`RoomState.Reward` — 그 방을 정리하면 받는 것): 액트의 첫 방(배열 자리 0)은 `rewards.first_room`(액트 1 마법서·액트 2 보물 상자), 정예·보스 방은 없음(그 방 중간 보스·보스가 떨군 정예 상자가 보상 — 기획 11.4 `reward_elite`),
-  그 밖의 일반 방은 앞 방에서 고른 문의 보상. `--room` 으로 그 방부터 시작하면 **앞 방(배열 바로 앞 원소) `RewardOrder` 의 첫 칸**(상태 거르기 없이 — 앞 방이 없으므로)이다. `[해석]`
+- **방의 보상**(`RoomState.Reward` — 그 방을 정리하면 받는 것): 액트의 첫 방(배열 자리 0)은 `rewards.first_room`(액트 1 마법서·액트 2 보물 상자), 그 밖의 방은 **종류와 상관없이** 앞 방에서 고른 문의 보상이다.
+  v0.8(기획 v0.8.1 11.4 `reward_elite`): 정예·보스 방의 보상 = 그 방 중간 보스·보스가 떨군 정예 상자(정의 없음, `GatesExit` 로 묶음) + **덤 보상**(`RoomState.Reward` — 그 방으로 들어온 문의 보상). v0.7 의 "정예·보스 방은 `Reward = null`" 을 바꿨다.
+  `--room` 으로 그 방부터 시작하면 **앞 방(배열 바로 앞 원소) `RewardOrder` 의 첫 칸**(상태 거르기 없이 — 앞 방이 없으므로)이다 — v0.8 부터 정예·보스 방도 같다. `[해석]`
 
 **결정 3 — 방 흐름은 상태 기계 하나 `RoomFlow`, 새 단계 `SimPhase.RoomFlow`(3.5 16번)에서 돈다.**
 
@@ -704,7 +822,8 @@ public sealed record RoomPlan(int Act, int Index, RoomDef Def, MapDef Map, strin
 public enum RoomKind : byte { Normal, Elite, Boss }
 // Core Sim/Contracts/RoomState.cs (계약 WP1e)
 public enum RoomPhase : byte { Enter, Survive, Cleanup, Reward, Doors, Exit }
-public readonly record struct RoomExit(string GateId, RewardDef? Reward, RoomKind NextKind, EnemyDef? NextBoss, bool Stairs, string? NextActName);
+public readonly record struct RoomExit(string GateId, RewardDef? Reward, RoomKind NextKind, EnemyDef? NextBoss, bool Stairs, string? NextActName,
+                                       int NextFloor = 0);   // v0.8: 다음 방 층이 이 방과 다르면 그 층(문 위 `▼ 2층`, 넘김 어둠 transition_floor), 같거나 층을 안 적은 액트면 0
 public sealed record RoomStart(RunState Run, RoomPlan Plan, RewardDef? Reward, float AreaScale, bool IsLastInRun, int StartClockTicks = 0);
 public sealed class RoomState                          // World.Room — 쓰기는 생성자와 RoomFlowSystem 뿐
 {
@@ -719,7 +838,12 @@ public sealed class RoomState                          // World.Room — 쓰기�
     public IReadOnlyList<RoomExit> Exits { get; }      // Doors 단계부터(그 전엔 빈 목록 — 문은 모두 봉인)
     public string? ChosenExit { get; }
     public bool ExitArmed { get; }                     // v0.7.1: Doors 에서 주인공이 열린 출구 문 틈 밖에 한 번 섰음(아래 Doors 줄)
-    public string RemapEntry(string entryId);          // v0.7.1 서로 바꾸기: 들어온 문 → 맞은편(GateZones.Opposite), 맞은편 → 들어온 문, 나머지 그대로
+    public string RemapEntry(string entryId);          // v0.8.1 시작 문 기준 바꾸기(결정 5 끝): 거울판 방이면 먼저 짝 이름(GateZones.MirrorGate), 그다음 그 문이 들어온 문이면 맞은편(GateZones.Opposite), 아니면 그대로
+    public (string At, string Toward) RemapMarch(string atEntry, string towardEntry);   // v0.8.1: 행진 — 짝 이름 뒤 시작 문이 들어온 문이면 시작 → 맞은편, 목표는 들어온 문 ↔ 맞은편만 맞바꿈(나머지 두 문 그대로). 시작 문이 다르면 둘 다 그대로
+                                                       // (v0.7.1 의 "서로 바꾸기"(맞은편 → 들어온 문)는 없앴다 — 맞은편 문의 보스·대장·행진이 주인공이 막 들어온 문으로 옮겨졌다)
+    public int BossClockTicks { get; }                 // v0.8: 정예·보스 방에서 중간 보스·보스를 잡은 방 시계(로그 boss_s), 못 잡았거나 일반 방이면 −1
+    public bool TimedEffectsRun { get; }               // v0.8: Phase is Survive or Cleanup — 주인공 시간 효과가 흐름(결정 1 "시간 효과 시계", World.TimedEffectsRun 이 감쌈)
+    public Vector2 RewardSpot { get; }                 // v0.8: 보상 단계에 들어간 순간 정한 보상 자리(월드 px, RewardSpot.Find — 아래 "보상 자리"). 그 전엔 주인공 시작 자리
 }
 ```
 
@@ -730,8 +854,8 @@ public sealed class RoomState                          // World.Room — 쓰기�
 | `Survive` 정예 방 | `EnemyKilled`(`DefIndex` == `Plan.Def.Miniboss` 정의의 인덱스 — 틱 이벤트에는 `DefIndex` 만 있다, `Cause == Damage`) | 위와 같음. 그 전이라도 방 시계 `elite_spawn_cap`(2:30) 부터 `SpawningOpen` 거짓. 이벤트 적과 `miniboss` 가 같은지는 13.5-23 ⑤ 가 막는다(다르면 이 줄이 영영 안 옴) |
 | `Survive` 보스 방 | `BossDefeated` | 판의 마지막 방이면 `BeginVictory()`(3.5). 아니면 `CollapseEnemies()` → 바로 `Reward`(정리 단계 없음, 기획 2.5) + `RoomCleared(Boss)` |
 | `Cleanup` | 살아 있는 적(입장·등장 중 포함) 0 | 판의 마지막 방이면 `BeginVictory()`(단계 1). 아니면 `Reward` + 틱 이벤트·신호 `RoomCleared` |
-| `Cleanup` | 정리 단계 ≥ `cleanup_limit`(45s) | `CollapseEnemies()`, `Collapsed = true`, 그다음 위 줄과 같음 |
-| `Reward` 시작 | — | `Reward` 가 있으면 `Spawner.SpawnPickup(new PickupSpawn(reward.Object, center, Reward: reward))`(`center` = `rules.rooms.reward_anchor` 기준점). **`PickupSpawn.Reward != null` 이면 `SpawnPickup` 이 `GatesExit = true` 로 만든다**(v0.7.1, WP3 — 물약처럼 창이 없는 보상도 집기 전에는 문이 안 열림). 살아 있는 정예 상자는 — **이번 틱에 생긴 것(`SpawnTick == Tick`)도 포함**(v0.7.1: 마지막이 아닌 보스 처치 틱에 `DeathRewards` 가 떨군 상자) — `RoomFlow` 가 `GatesExit = true` 로 표시하고 `center` 둘레(`chest_ring` px, `PlacementResolver.TryPlace`)로 옮긴다 |
+| `Cleanup` | 정리 단계 ≥ `cleanup_limit`(25s — v0.8, 기획 v0.8.1 2.5. v0.7 은 45s) | `CollapseEnemies()`, `Collapsed = true`, 그다음 위 줄과 같음 |
+| `Reward` 시작 | — | (v0.8) **보상 자리** `RewardSpot` = `RewardSpot.Find(world, rules.rooms.reward_spot)`(아래 "보상 자리" — 정리가 끝난 순간 주인공 앞). 놓을 것 = `Reward`(덤 보상 포함) 하나 + 살아 있는 정예 상자 전부 — **이번 틱에 생긴 것(`SpawnTick == Tick`)도 포함**(v0.7.1: 마지막이 아닌 보스 처치 틱에 `DeathRewards` 가 떨군 상자). 순서 = 보상 → 상자(저장소 순서)이고 자리는 `RewardSpot.Row(...)`(보상 자리에서 주인공 바라보는 방향의 수직으로 `spacing` 40px 간격, 가운데 맞춤). `Reward` 는 `Spawner.SpawnPickup(new PickupSpawn(reward.Object, 자리, Reward: reward))` — **`PickupSpawn.Reward != null` 이면 `SpawnPickup` 이 `GatesExit = true` 로 만든다**(v0.7.1, WP3). 상자는 `RoomFlow` 가 `GatesExit = true` 로 표시하고 그 자리로 옮긴다. v0.7 의 `reward_anchor`(`center`)·`chest_ring` 은 없앴다 |
 | `Reward` | `GatesExit` 인 살아 있는 획득물 0 이고 **끌려오는 획득물 0**(v0.7.1 — WP3 의 끌어당김 상태 `Pickup.Magnetized`, 정리 끝 끌어당긴 보석·금화가 다 닿을 때까지) 이고 `PendingLevelUps`·`PendingChests`·`PendingRewards` 0 이고 `AwaitingChoice == None` | `Exits` 를 만든다(아래 "문 열기") → `Doors`, 신호 `DoorsOpened`. `ExitArmed` = 주인공 발 칸이 열린 출구 문의 나가는 자리 **밖** |
 | `Doors` | (주인공 발 칸 ∈ 열린 출구 문의 나가는 자리(`World.Gates[id].Cells`) 이고 `ExitArmed`), 또는 `Command.Buttons` 에 `CommandButtons.Exit`(그 문 = `Command.ExitIndex` 번째 `Exits`, 자동 조작 `DOOR_SKIP`, 9절) — 둘 다 **대기 0·`AwaitingChoice == None`·끌려오는 획득물 0** 일 때만 | `ChosenExit`, `Exit`. `ExitArmed` 는 발 칸이 나가는 자리 밖인 틱마다 참이 된다 — 보상을 집다 문 틈에 서 있던 주인공이 문 위 보상을 보기도 전에 나가지 않게(기획 "들어서면") |
 | `Exit` | — | 시뮬레이션은 더 돌지 않는다(`StageStep.RoomExit`, 3.3). 앱이 `RunSession.Advance()` |
@@ -741,10 +865,19 @@ public sealed class RoomState                          // World.Room — 쓰기�
   막는 곳 둘을 더 둔다: `StageStepper` 는 `Outcome == Running` 일 때만 `RoomExit` 를 돌려주고(끝나 가는 판은 돌아서 `Defeat` 로 끝남), `RunSession.Advance()` 는 `Outcome != Running` 이면 예외(죽은 주인공의 짐을 넘기지 않음).
 - **무너짐** `World.CollapseEnemies()`: 살아 있는 적 전부 `Dead`(`KillCause.Collapse` — 훅·보상·처치 수 없음, 3.5). 적 투사체·장판·예고는 `EndTick` 이 `Phase ≥ Reward` 인 동안 지운다(승리 대기와 같은 함수).
   정리 단계의 분열·소환은 그대로 일어나고(기획 2.4) 그 적도 정리 대상이다.
-- **문 열기**(기획 11.4): 다음 방이 일반 방이면 `Plan.RewardOrder` 를 앞에서부터 보며 `IProgression.RewardAvailable(r)`(WP3 — 마법서: 줄 무기 카드가 있음, 성소: 줄 축복이 있음, 물약: 체력 < 최대 × `skip_when_hp_at_least`)인 것을 출구 문 수만큼 고른다.
+- **문 열기**(기획 11.4): 다음 방이 액트 안에 있으면(종류와 상관없이 — v0.8) `Plan.RewardOrder` 를 앞에서부터 보며 `IProgression.RewardAvailable(r)`(WP3 — v0.8 거르기: 마법서 = 줄 무기 카드가 있음, 물약 = 허리띠가 차지 않음, 마법에 걸린 성소 = 진화 아닌 무기 ≥ 2, 매혹의 성소 = `pick_max_level` 이하 무기 있음, 성소 = 이 판에 안 받음, 보물 상자 = 늘 참)인 것을 출구 문 수만큼 고른다.
   모자라면 `rules.rooms.fallback_reward`(보물 상자)로 채운다(같은 종류가 두 문에 올 수 있음). 출구 문 순서 = `ExitGates` 순서. 상태가 같으면 결과가 같다(결정적).
-  거르기는 문을 여는 이 순간 한 번뿐이다 — 실제로 집는 것은 다음 방 정리 뒤라 그 사이 레벨업으로 줄 카드가 0장이 될 수 있다. 그때는 집는 순간 그 보상의 건너뛰기(`skip`)로 바로 처리한다(6.18 "받는 길", v0.7.1).
-  다음 방이 정예·보스 방이면 보상 없음 + `NextKind`·`NextBoss`(문 위 `정예`·보스 이름), 액트 보스 방이면 `Stairs`·`NextActName`(`지하묘지로`).
+  거르기는 문을 여는 이 순간 한 번뿐이다 — 실제로 집는 것은 다음 방 정리 뒤라 그 사이 레벨업으로 줄 카드가 0장이 될 수 있다. 그때는 집는 순간 창 없이 **`단련`**(`rules.level_up.temper`)으로 바로 처리한다(6.18 "받는 길" — v0.8, 기획 v0.8.1 11.4. v0.7.1 은 그 보상의 `skip` 금화).
+  다음 방이 정예·보스 방이면 보상(= 덤) + `NextKind`·`NextBoss`(문 위 `정예`·보스 이름과 덤 아이콘), 액트 보스 방이면 보상 없음 + `Stairs`·`NextActName`(`지하묘지로`). 다음 방 `RoomDef.Floor` 가 이 방과 다르면 `NextFloor`(문 위 `▼ 2층` — 계단 문도).
+- **보상 자리** `RewardSpot.Find(World, RewardSpotDef)`(v0.8, Core `Sim/Run/RewardSpot.cs` — 계약·구현 WP1f, 기획 v0.8.1 11.4): 정리가 끝난 순간(보스 방은 보스가 무너진 순간) 주인공 발에서 `Hero.Facing` 방향으로 `distance`(100px) 떨어진 자리를 원한다.
+  방향 후보 = 바라보는 쪽, ±45°, ±90°, ±135°, 180°(이 순서, + 쪽 먼저). 후보마다 주인공 발에서 그 방향으로 8px 씩 나아가며 `INavWorld.IsInsideMap` 이고 `Clearance ≥ clearance`(30px)인 동안만 걷는다 — 직선이 끊기지 않으므로 그 자리는 주인공과 길로 이어진다.
+  `distance` 까지 간 첫 방향의 끝을 쓰고, 없으면 가장 멀리 간 방향의 끝(같으면 앞 후보).
+  어느 방향도 8px 을 못 가면(v0.8.1 — 문 틈·기둥 사이처럼 좁은 곳에서는 발 앞 8px 점의 clearance 가 30 미만이라 모두 실패한다) **같은 차례를 clearance 문턱 = 주인공 반경(`Hero.Radius`)으로 한 번 더** 돌고, 그래도 못 가면 주인공 발 자리.
+  (두 번째 차례의 자리는 주인공이 선 곳과 같은 좁은 길이라 집을 수 있다 — 기획 "가장 가까운 걸을 수 있는 칸" 에 더 가깝다.) 여럿 놓을 때 `RewardSpot.Row(spot, facing, count, spacing)` 는 수직 방향 줄이고, 줄의 각 자리가 위 조건(맵 안·clearance — v0.8.2: 자리를 찾은 차례의 문턱, 두 번째 차례면 주인공 반경. 13.22)을 못 지키면 그 자리 대신 `spot` 쪽으로 8px 씩 당긴다.
+  난수를 쓰지 않는다(같은 자리·같은 방향이면 같은 자리). `TryPlace`(WP2)를 기다리지 않으려고 `INavWorld` 질의 둘만 쓴다(v0.7.2 의 상자 자리와 같은 까닭 — 13.19). 자원 없는 시험은 TestKit 의 직선 내비로 돈다.
+  `center` 기준점은 남는다 — 큰 적 길 검사(13.5-5)의 목적지이고 13.5-23 ③ 이 여전히 요구한다. 보상 자리로는 쓰지 않는다.
+- **사냥 모드**(v0.8, 기획 v0.8.1 2.5): `Phase == Cleanup` 인 동안 적의 거리 유지(`kite`)·도망 부품을 끄고 길을 따라 주인공에게 다가가게 한다(원거리 공격 규칙·시야 조건은 그대로). 판정은 감독·적 부품(WP4)이 `World.Room.Phase` 를 읽어 한다 — 계약 변경 없음.
+  남은 적 미니맵 점은 정리 단계에 들어가면 수와 상관없이 모두(WP6) — v0.7 의 `remaining_marker`(10 이하부터) 키는 없앴다.
 - **나가는 자리**(기획 10.8 "문 틈 4칸 × 안쪽 2칸"): 그 문의 열린 메가타일 둘의 하위 칸 중 걷기 막힘 없는 칸(`GateZones`, 6.11 — 문 틈 그 자체, 앞 턱 문은 두 줄, 뒷벽 문도 메가 두께라 두 줄). 충돌은 바뀌지 않는다. `[해석]`
   주인공이 문마다 그 칸 하나 이상에 닿는지는 13.5-23 ③ 의 길 검사(v0.7.1, WP2 — 13.5-5 의 "몸이 걸칠 수 있다" 판정)가 본다. 13.5-5 는 진입점 `inside` 까지만 보므로 이것만으로는 문 틈을 보장하지 않는다.
 - 보스 방이 판의 마지막이 아니면 `RoomCleared(Boss)` 를 받은 WP3 가 체력을 전부 채운다(기획 11.4). 보석·금화 끌어당김은 `RoomCleared` 를 받은 WP3 `Pickups`(다음 틱, 끌어당김 룬과 같은 동작).
@@ -757,12 +890,29 @@ public readonly record struct RoomRef(int Act, int Room);                   // -
 public readonly record struct RunDepth(int Act, int Room) : IComparable<RunDepth>;   // 가장 깊이 간 곳(액트 → 방 번호 사전순). 기록 비교 키는 8.3(깊이 → 승리 → 시간)
 public sealed record RunStart(ulong Seed, StageDef StartAct, HeroClassDef? HeroClass, RunOptions Options, int StartRoomIndex = 0);
 //   --room a:n → 앱(WP7)이 RunPlanner.ActAt(defs, a) 로 액트를 찾고 StartRoomIndex = Number == n 인 rooms 원소의 배열 자리. 없는 번호는 옵션 오류(64)
-public sealed record HeroCarry(int Level, int Xp, int RerollsLeft, float Hp,
-                               IReadOnlyList<CarriedSlot> Weapons, IReadOnlyList<CarriedSlot> Passives, IReadOnlyList<CarriedSlot> Blessings);
+// v0.8(WP1f): 위치 인자 record → init 속성 record(필드를 더할 때 기존 생성 호출·FakeHeroCarry 가 깨지지 않게). JSON 왕복(계단 저장 RunSnapshot)도 이 모양 그대로
+// v0.8.1: 짐에 필드가 필요하면 WP1g 로 모은다(sealed 계약 record — WP3 가 조각으로 더할 길이 없다). 판 수명 상태를 모듈 인스턴스·정적 필드에 숨기지 않는다(11.2)
+public sealed record HeroCarry
+{
+    public required int Level { get; init; }   public required int Xp { get; init; }   public required int RerollsLeft { get; init; }   public required float Hp { get; init; }
+    public IReadOnlyList<CarriedSlot> Weapons { get; init; } = [];   public IReadOnlyList<CarriedSlot> Passives { get; init; } = [];   public IReadOnlyList<CarriedSlot> Blessings { get; init; } = [];
+    public required int WeaponSlotsOpen { get; init; }   public required int PassiveSlotsOpen { get; init; }   // v0.8: 열린 칸 수(rules.level_up.*_slots 로 시작, 계단마다 rules.rooms.stairs 만큼 +)
+    public int Belt { get; init; }                                        // v0.8: 허리띠 물약 수(0..rules.hero.belt.slots)
+    public IReadOnlyList<CarriedStat> Mods { get; init; } = [];           // v0.8: 판 끝까지 가는 능력치 더하기(단련 max_hp +5 쌓임·성소 대가 — 같은 키는 하나로 합침, StatKey 순)
+    public IReadOnlyList<string> Shrines { get; init; } = [];             // v0.8: 이 판에 받은 성소 보상 ID(서수 순 — 한 판에 한 번)
+    public IReadOnlyList<CarriedEffect> Effects { get; init; } = [];      // v0.8: 시간 효과의 남은 틱(Id 서수 순 — 이름은 WP3 가 정함, 예 buff ID)
+}
 public readonly record struct CarriedSlot(string Id, int Level, bool Evolved);
-public interface IHeroCarry { HeroCarry Capture(World world); void Restore(World world, HeroCarry carry); }   // WP3 이 ModuleContext.SetHeroCarry 로 등록
+public readonly record struct CarriedStat(StatKey Stat, float Add);
+public readonly record struct CarriedEffect(string Id, int TicksLeft, float Value);
+public interface IHeroCarry
+{
+    HeroCarry Capture(World world); void Restore(World world, HeroCarry carry);   // WP3 이 ModuleContext.SetHeroCarry 로 등록
+    string? Validate(HeroCarry carry, GameDefs defs);   // v0.8.1: 이어 하기 전 WP3 만 아는 뜻(시간 효과 ID·진화 짝·칸 수 범위) 확인 — null = 맞음, 아니면 이유(Restore 전에 RunSnapshotMismatchException)
+}
 public readonly record struct RoomRecord(int Act, int Number, string MapId, string GateIn, string? RewardId, string? Door,
-                                         int ClearTick, int CleanupTicks, bool Collapsed, int Ticks, int Level);
+                                         int ClearTick, int CleanupTicks, bool Collapsed, int Ticks, int Level,
+                                         bool Mirrored = false, int BossClockTicks = -1, int PicksLeft = -1);   // v0.8: ROOM 로그 mirror·boss_s·picks_left(IProgression.PicksLeft, 없으면 −1). MapId = 원판 ID
 public sealed class RunState
 {
     public ulong Seed { get; }   public StageDef StartAct { get; }   public HeroClassDef? HeroClass { get; }
@@ -777,17 +927,49 @@ public sealed class RunSession
     public RunState Run { get; }   public World World { get; }       // 지금 방(World.Simulation 이 들어 있음)
     public void Advance();                                           // World.Room.Phase == Exit 이고 World.Outcome == Running 일 때만(아니면 예외, v0.7.2)
     public RunState Conclude();                                      // v0.7.1: Outcome 이 Victory·Defeat 일 때만(아니면 예외). 두 번째부터는 아무것도 안 하고 같은 RunState. 그 뒤 Advance 는 예외
+    // ── v0.8 계단 저장(기획 v0.8.1 2.5, 8.3 — 계약·구현 WP1f) ──
+    public RunSession(GameDefs defs, ModuleContext modules, RunSnapshot snapshot, RunOptions options);   // 이어 하기: 다음 액트 1번 방부터. 정의가 안 맞으면 RunSnapshotMismatchException
+    public bool CanSuspend { get; }                                  // 메뉴용: 액트 보스 방 Doors(계단 출구가 열림)·Outcome == Running·대기 0·AwaitingChoice None·주인공 살아 있음
+                                                                     //   또는(v0.8.1) Phase == Exit 이고 ChosenExit == 계단 문(자동 조작 판이 계단으로 나간 틱 — Advance 자리)
+    public RunSnapshot Suspend();                                    // v0.8.1: 계단 문 Exit 틱과 같은 길(아래 "계단 저장") → Advance ①~③ 정산까지만 하고 판 상태를 돌려줌. 그 뒤 Advance·Conclude 는 예외
 }
+// Core Sim/Run/RunSnapshot.cs (v0.8) — 계단 저장 한 칸. STJ 로 그대로 쓰고 읽는다(저장 파일 모양 = 이 record, 8.3)
+public sealed record RunSnapshot(int Format, ulong Seed, string StartActId, string? HeroClassId, string NextActId, int NextActNumber, string NextActRoomsHash,
+                                 HeroCarry? Carry, RunStats Stats, FairnessCounters Fairness, int ElapsedTicks, RunDepth Depth, IReadOnlyList<RoomRecord> Rooms)
+{
+    public const int CurrentFormat = 1;          // v0.8.1: 짐·RunStats·FairnessCounters·이 record 의 모양이 바뀌면 올린다(모양 지문 시험이 지킴 — 아래 "계단 저장")
+}
+public static class RoomStartLimits { public static int? MaxStartClockTicks(RoomDef room, RoomRulesDef rules); }   // v0.8 --start-at 상한(결정 5 끝)
+public static class RunSlots { public static (int Weapons, int Passives) OpenAt(int actNumber, LevelUpRulesDef? levelUp, RoomRulesDef rooms); public static (int Weapons, int Passives) OpenAt(int actNumber, RulesDef rules); }   // v0.8.1 열린 칸 수(아래 "계단 보상" — v0.8.2 13.22: 시작 칸 수는 rules.level_up)
 ```
 
 - 생성자: 시작 액트의 `ActPlan`(액트 번호 = `ActNumber`) → 시작 방(`StartRoomIndex`, 기본 순번 0)의 `World` 를 만들고 `ModuleContext.CreateSimulation` → `ApplyRunSetups(options)`(`--level`·`--weapons`·`--passives`·`--god` …). `RunOptions.StartAt` 은 이 첫 방의 방 시계 시작(`RoomStart.StartClockTicks`)이다.
 - `Advance()`: ① `IHeroCarry.Capture(World)` ② **방 닫기**(`CloseRoom` — 내부 함수 하나): `RoomRecord`·`ElapsedTicks += World.Tick`·`Fairness` 더하기·그 방의 `INNER_ROOMS` 줄 자료 ③ 고른 문의 보상을 `NextReward` 로 ④ 다음 방 — 액트의 마지막 방(계단)이면 `next_act` 의 `ActPlan` 을 만들고 배열 자리 0
   ⑤ 새 `World(defs, RoomStart)`(방 씨앗) + 시뮬레이션 → `ApplyRunSetups(options with { Level = null, Weapons = [], Passives = [], StartAt = null })`(무적·계측만 다시) → `IHeroCarry.Restore(world, carry)`.
   등록된 `IHeroCarry` 가 없으면(WP3 없는 시험) ①⑤ 의 짐은 건너뛴다.
+  **계단 보상**(v0.8, 기획 v0.8.1 2.5): ④ 에서 액트가 바뀌면 짐을 `carry with { WeaponSlotsOpen = 열린 칸(다음 액트 번호).Weapons, PassiveSlotsOpen = ….Passives }` 로 바꿔 넘긴다.
+  **열린 칸 수는 액트 번호만의 함수**(v0.8.1, Core `RunSlots.OpenAt(actNumber, levelUp, rooms)`·`OpenAt(actNumber, rules)` = `min(6, rules.level_up.*_slots + (actNumber − 1) × rules.rooms.stairs.*_slots)`, 6 = `WeaponSlots.SlotCount`·`PassiveSlots.SlotCount`) —
+  판 시작(주인공 만들기 WP3 가 `World.Room?.Plan.Act ?? 1` 로 부름)과 계단(위)이 같은 함수를 쓴다. 그래서 `--room 2:n`·`--stage stage_catacombs` 로 액트 2 에서 시작해도 보통 판의 액트 2 와 같은 5칸이다(v0.8 은 계단을 안 지나 4칸이었다).
+  `--weapons`·`--passives` 의 수가 시작 액트의 열린 칸보다 많으면 옵션 오류(64, 데이터를 읽은 뒤 — WP7 이 같은 함수로 확인. 조용히 잘리지 않게).
+- **계단 저장**(v0.8, 기획 v0.8.1 2.5 — 계약·구현 WP1f, 저장 파일은 WP7·화면은 WP6, 8.3): `Suspend()` 는 **계단 문으로 나가는 틱과 같은 길**을 탄다(v0.8.1 — v0.8 은 문 단계에서 틱 없이 정산해, 끊지 않은 판보다 보스 방 `Ticks`·`ElapsedTicks`·그 틱의 재생이 달랐다):
+  ⓐ `Phase == Doors`(메뉴에서 부름)면 시뮬레이션을 **한 틱** `PlayerCommand(Vector2.Zero, CommandButtons.Exit, ExitIndex = 계단 문의 Exits 자리)` 로 돌린다 — 끊지 않은 판이 같은 틱에 계단 문 `Exit` 명령을 낸 것과 같은 틱이다(Doors 에는 적·대기가 없어 그 틱에 `Exit` 로 간다. 못 가면 `InvalidOperationException` — `CanSuspend` 조건이면 일어나지 않음).
+  ⓑ `Phase == Exit` 이고 `ChosenExit` 가 계단 문이면(자동 조작 판이 계단으로 나간 틱, 사람이 문 틈을 밟은 틱) 틱을 더 돌리지 않는다 — `Advance` 를 부를 자리에서 대신 부른다.
+  그다음 계단 문으로 `Advance` 하는 것과 **같은 정산**(① 짐 담기 + 계단 보상 ② `CloseRoom(계단 문)` ③ `NextReward = null`)까지만 하고
+  새 `World` 를 만들지 않고 `RunSnapshot`(씨앗·시작 액트·직업·다음 액트 ID·번호·그 액트 `rooms_hash`(8.3 깊이와 같은 식)·짐·`RunStats`·공정성·걸린 시간·깊이·방 기록)을 돌려준다.
+  이어 하기 생성자는 그 값으로 `RunState` 를 되살리고 다음 액트의 `PlanAct` → 1번 방(`first_room` 보상) → `Restore(carry)` — `Advance` ④⑤ 와 같은 함수(`Enter`)를 탄다. 그래서 **이어 한 판의 판 해시 = 끊지 않은 판**(기획 15절 — 시험 10.1 `Run`): 방 씨앗이 앞 방과 무관하고(3.4), 넘기는 것이 짐·`RunState` 둘뿐이다.
+  **비교 기준**(v0.8.1): "끊지 않은 판" 은 끊은 판이 `Suspend` 한 틱에 계단 문 `Exit` 명령(ⓐ) 또는 같은 문 틈 밟기(ⓑ)로 나간 판이다 — 시험·자동 조작 판 전체 실행 모두 이 정의로 견준다.
+  **판 수명 상태는 짐·`RunState` 에만 둔다**(v0.8.1, 11.2 규칙): 모듈 인스턴스(`ModuleContext` 에 등록한 객체의 필드)·정적 필드에 판 수명 상태를 두면 이어 하기(새 `ModuleContext`)에서 사라져 같음이 깨진다. 짐에 새 필드가 필요하면 WP1g 로 모은다.
+  **저장 멤버 규칙**(v0.8.1 — v0.8 의 "공개 필드만" 을 바꿈): `RunStats`·`FairnessCounters` 의 상태는 **공개 읽기·쓰기 멤버**(공개 필드, 또는 공개 get·set 속성)이고 형은 값 형식·그 배열뿐이다. get 만 있는 속성(특히 배열·컬렉션)은 STJ 가 역직렬화 때 건너뛰어 조용히 0 이 되므로 금지 — `RunStats.DamageByWeapon` 은 `{ get; set; } = new float[WeaponSlots.SlotCount]`(6)이고 `WeaponSlotCount = 4` 상수는 없앤다.
+  STJ 는 필드 포함 옵션으로 왕복한다. 시험(WP1f): 반사로 **공개 필드 + 공개 속성 전부**를 0 아닌 값으로 채워 왕복 → 다시 쓴 JSON 바이트 같음, get 만 있는 공개 속성·허용 밖 형이 하나라도 있으면 실패(규칙 강제).
+  **모양 지문**(v0.8.1 — R41): `RunSnapshot` 에서 닿는 형 전부(짐·`CarriedSlot`·`RunStats`·`FairnessCounters`·`RoomRecord`·`RunDepth`)의 공개 멤버 (이름, 형) 목록과 거기서 닿는 열거형의 값 JSON 이름 목록(v0.8.2 — `StatKey` 값을 없애거나 바꿔도 깨지게)을 서수로 이은 해시를 시험이 계산해 `RunSnapshot.CurrentFormat` 옆 기대 값과 견준다 — WP3·WP4 가 `RunStats` 조각에 멤버를 더하면 시험이 깨지고, 고치는 사람이 `CurrentFormat` 과 기대 값을 함께 올린다. 다른 `Format` 의 저장은 버린다(아래).
+  **정의가 안 맞으면**(이어 하기 생성자, `Restore` 전에 모두 확인 → `RunSnapshotMismatchException`): `Format` ≠ `CurrentFormat`, 시작·다음 액트·직업이 없음, `rooms_hash` 다름, 다음 액트 번호 다름(v0.8.2 — 시작 액트의 번호 + 시작 액트에서 `next_act` 를 따라간 걸음 수, 사슬에 없으면 불일치. 13.22), 짐의 정의 ID 가 없음(v0.8.1 — `Weapons`·`Passives`·`Blessings` 의 `Id` = 무기·패시브 정의, `Shrines` = 성소 보상 정의),
+  `DamageByWeapon` 길이 ≠ 6, `IHeroCarry` 등록 여부와 `Carry` null 여부가 다름(`Carry` 는 `IHeroCarry` 가 없는 판 — WP3 없는 시험 — 에서만 null), `IHeroCarry.Validate` 가 이유를 돌려줌(시간 효과 ID·진화 짝 등 WP3 만 아는 것).
+  앱은 저장을 버리고 로그 한 줄(8.3) — `TakeRun` 이 이미 지웠으므로 예외가 `Restore` 안에서 터져 앱이 죽거나 짐 일부가 조용히 빠진 판으로 이어지는 길을 막는다. `Suspend` 는 `CanSuspend` 일 때만(아니면 예외).
+  자동 조작 정책(WP4)은 방마다의 판단 상태를 월드가 바뀔 때 비운다 — 판단이 (`World`, 그 방 상태)의 함수여야 끊었다 이은 판이 같다. 로그용 목록(`DoorSkips` 등)은 판단에 쓰지 않는다.
 - **`Conclude()`**(v0.7.1): 판이 끝난 방(마지막 방의 승리, 어느 방이든 패배·포기)은 `Exit` 에 닿지 않아 `Advance` 가 불리지 않는다 — 그 방을 같은 `CloseRoom` 으로 닫는다(`RoomRecord.Door = null`).
   `PlayScene` 이 `StageStep.Finished` 를 처음 받은 앱 틱에 한 번 부르고(3.3), 결과 화면·`RESULT`·`RecordResult`(`RunTime` = `ElapsedTicks`)·시나리오 시험은 그 뒤의 `RunState` 만 읽는다. 빠뜨리면 걸린 시간이 마지막 방만큼 짧아 기록 비교(8.3)가 틀린 값으로 고른다.
 - **넓이 배율**(기획 10.8): `RunSession` 이 판 시작 때 쓰일 수 있는 맵(지금 액트 사슬의 모든 풀)을 한 번씩 펼쳐 `MapArea.WalkableCells`(6.11)를 세고 `AreaScale = clamp(칸 수 / 기준 맵 칸 수, min, max)`(`rules.rooms.area_scale`, 기준 `cathedral_arena`)를 `RoomStart` 에 넣는다. 감독이 동시 최대에 곱한다(반올림).
-- **판의 끝**: 마지막 액트(다음 액트 없음)의 마지막 방이 끝나면 승리(위 표), 패배·포기는 v0.6 그대로. `RunState` 가 결과 화면·저장·`RESULT` 로그의 출처다(8.3·9절). 판 중간 저장은 없다(기획 2.5 — 열린 질문 33. `HeroCarry` 가 기록이라 액트 사이 저장을 넣을 때 직렬화만 더하면 된다).
+- **판의 끝**: 마지막 액트(다음 액트 없음)의 마지막 방이 끝나면 승리(위 표), 패배·포기는 v0.6 그대로. `RunState` 가 결과 화면·저장·`RESULT` 로그의 출처다(8.3·9절). 판 중간 저장은 액트 사이의 **계단 저장** 하나다(v0.8 — 위. 방 안·액트 1 에서 끄면 그 판은 끝, 기획 v0.8.1 2.5).
 - **방 없는 월드**: `World(defs, seed, stage)` 처럼 `RoomStart` 없이 만들면 `World.Room == null` 이고 v0.6 처럼 그 액트의 보스 맵(없으면 첫 일반 맵) 하나에서 돈다(`RoomFlow` 꺼짐, `DifficultyMinutes = StageMinutes`). 시험·`--preview`·`--map` 만 쓴다. 게임 판은 늘 `RunSession` 이다.
 - **생성자 둘**(v0.7.1): 방 월드는 `World(GameDefs defs, RoomStart room)` 하나로만 만든다 — 씨앗 = `room.Plan.RoomSeed`, 액트 = `room.Run.Act.Act`, 직업 = `room.Run.HeroClass` 라 서로 다른 값이 들어올 길이 없다. 방 없는 월드는 `World(defs, seed, stage?, heroClass?)` 그대로.
 
@@ -807,10 +989,20 @@ public readonly record struct LightSet(string Path, float[] Value);          // 
 ```
 
 - 이벤트 시각은 `PartDef.At`(v0.7 — 로더가 스테이지 이벤트의 `at` 을 매개변수에서 꺼내 둔다, WP7)이고 **t** 다. 방 [t 시작, t 끝)(보스 방은 t 시작 이상)에 드는 이벤트만 그 방 것이고, 방 시계 = max(t − t 시작, `grace`)(기획 13.4).
-- t < 방 t 시작인 `light_change` 는 `Replay`(시간 순). 그 밖의 지난 이벤트는 버린다. `startClockTicks`(`--start-at`) 보다 이른 방 이벤트는 `light_change` 면 `Replay` 뒤에 붙이고 나머지는 버린다.
+- t < 방 t 시작인 `light_change` 는 `Replay`(시간 순). 그 밖의 지난 이벤트는 버린다. `startClockTicks`(`--start-at`) 보다 이른 방 이벤트는 `light_change` 면 `Replay` 뒤에 붙이고,
+  **`miniboss`·`boss`(입장 이벤트)는 버리지 않고 방 시계 `startClockTicks` 로 옮겨 바로 내보낸다**(v0.8, 기획 v0.8.1 15절 — 정예·보스 방을 `--start-at` 으로 시작해도 생존이 끝날 수 있게), 나머지는 버린다. 보스 광폭화 시계는 감독(WP4)이 그만큼 흐른 것으로 친다.
+- **`--start-at` 상한**(v0.8, 계약·구현 WP1f — v0.7.1 9절 규칙을 Core 한 곳으로): `RoomStartLimits.MaxStartClockTicks(room, rules)` = 일반 방 `SurviveTicks`(그 미만만), 정예 방 `elite_spawn_cap`(그 미만만), 보스 방 `null`(상한 없음).
+  옵션 파싱(WP7)이 이것으로 64 를 내고, `RunSession` 생성자도 같은 함수로 `ArgumentOutOfRangeException`(앱을 거치지 않는 시험·시나리오의 잘못을 조용히 넘기지 않게).
+- **방 이벤트 자리 검사**(v0.8, 13.5-23 ⑥ — 계약·구현 WP1f, 검사기 등록은 WP4): `RoomEvents.CheckPlacement(StageDef act, RoomRulesDef rules) → IReadOnlyList<DataError>` — 이벤트를 위와 같은 규칙으로 방 시계에 놓은 뒤
+  ① `RoomEvents.StrongKinds`(`elite_pack`·`escort`·`ring` — 기획 "강적(정예 무리·해골 대장)·포위 고리")가 방 시계 `StrongEarliest`(0:20) 전이면 **오류**(`miniboss`·`boss` 입장은 예외),
+  ② 2번 방부터의 일반 방에 생존 끝 `ClimaxWindow`(0:45) 안의 `RoomEvents.ClimaxKinds`(`march`·`ring`·`elite_pack`·`escort`) 이벤트가 없으면 **경고**. 상수·종류 목록은 Core 상수다(기획 13.5-23 의 수 — 데이터 아님, `RoomMapRules` 와 같은 까닭).
+  이벤트 종류 이름은 `PartDef` 의 종류 문자열로만 본다(매개변수 형은 WP4 — 몰라도 됨).
   `Replay` 는 `World(defs, RoomStart)` 생성자가 첫 틱 전에 `LightingState.Apply` 로 적용한다(v0.7.1 — 결정 1 표). 감독은 방 안에서 시각이 된 `light_change` 만 같은 함수로 적용한다.
-- 생존 단계가 끝나면 감독이 남은 `Events` 를 버린다(이 함수 밖 — 감독 상태). `entry:` 바꾸기는 이벤트 부품이 `Room.RemapEntry` 로 시작 문(`at_entry`)과 목표 문(`toward_entry`)에 **둘 다** 한다.
-  v0.7.1: 바꾸기는 **서로 바꾸기**다(들어온 문 ↔ 맞은편). 한쪽만 바꾸면 기획 10.3 의 6:30 행진(`at_entry gate_se`·`toward_entry gate_nw`)이 `gate_se` 로 들어온 방에서 "nw 에서 nw 쪽으로" 가 되어 가로지르기가 사라진다 — 서로 바꾸면 시작과 목표가 늘 함께 맞다.
+- 생존 단계가 끝나면 감독이 남은 `Events` 를 버린다(이 함수 밖 — 감독 상태). `entry:` 바꾸기는 이벤트 부품이 한다 — 문 하나(`miniboss`·`boss`·`at_entry` 만 있는 생성)는 `Room.RemapEntry`, 목표 문이 있는 행진은 `Room.RemapMarch(at_entry, toward_entry)`(v0.8: 거울판 방이면 둘 다 안에서 짝 이름을 먼저 — 부품은 따로 할 일이 없다).
+  **v0.8.1 시작 문 기준 바꾸기**(기획 v0.8.3 2.4 "바꾸기는 한쪽만이다"): 이벤트의 **시작 문**(`entry:`)이 **들어온 문일 때만** 그 이벤트를 바꾼다 — 시작 문은 맞은편으로, 행진이면 목표 문에서 들어온 문 ↔ 맞은편만 맞바꾼다(목표가 맞은편이었으면 들어온 문이 됨 — 시작한 문으로 다시 가지 않게, 나머지 두 문은 그대로). 시작 문이 들어온 문이 아니면 시작·목표 모두 그대로다(목표 문이 들어온 문인 행진도 그대로 — 주인공이 들어온 쪽으로 가로지를 뿐 등 뒤에서 쏟아지지 않는다).
+  예: 6:30 행진(`at_entry gate_se`·`toward_entry gate_nw`)은 `gate_sw` 로 들어온 방에서 그대로, `gate_se` 로 들어온 방에서 `gate_nw` → `gate_se`. 보스(`entry:gate_ne`)는 보스 방이 늘 `gate_sw` 로 들어오므로 그대로 `gate_ne` — 맞은편이다.
+  v0.7.1 의 **서로 바꾸기**(들어온 문 ↔ 맞은편)는 없앴다: 맞은편 문에 적힌 이벤트(보스 `gate_ne`, 2번 방 행진·7·8번 방 대장의 `gate_ne`, 5·7·8번 방의 `gate_nw`)를 주인공이 **막 들어온 문**으로 옮겨, 해골왕이 모든 판에서 방 시계 0:03 에 주인공 등 뒤 문으로 나왔다(시험 `fromSw.RemapEntry("gate_ne") == "gate_sw"` 가 그 동작을 굳히고 있었다 — WP1f #8 에서 고침).
+  13.5-23 ⑤ 는 들어올 수 있는 문마다(거울판 포함) 바꾼 뒤 **시작 문 = 들어온 문이면 오류**(맞은편 문이 없는 맵 등), 행진의 시작 문 = 목표 문이면 오류를 본다.
 
 ---
 
@@ -1447,7 +1639,9 @@ public interface IDataValidator { string Name { get; } void Validate(GameDefs de
     `{ "format": 2, "pages": [[W,H], …], "actions": { "walk": { "cell": [w,h], "directions": d, "frames": f, "rects": [[p, x, y, w, h, ox, oy], …] }, … } }` —
     `rects` 는 (방향 0 의 프레임 1..f, 방향 1 …) 순서, `p` = 페이지 번호(0 = `<이름>.png`, 1 = `<이름>_p2.png` …), `x,y,w,h` = 페이지 안 사각형, `ox,oy` = 칸 왼쪽 위에서 그 사각형까지(잘라 낸 위치).
     빈 프레임은 `w = h = 0`.
+    v0.8(형식 3, 사용자 결정 U — 1.4 "AI 확대"): `"scale": 1|2`(그림 픽셀 / 월드 px, 기본 1). 확대한 묶음도 그림자는 시트에 구워져 있다(AI 없이 늘림 — 1.4 ⑥). `cell`·`rects`·`ox,oy` 는 그림 픽셀이고, 정의의 `frame`·`origin` 과 견줄 때 `scale` 로 나눈다(13.5-7).
   - 그리기: 화면 왼쪽 위 = `위치 − origin × scale + (ox, oy) × scale`, 원본 사각형 = `(x, y, w, h)`. 프레임마다 크기가 달라도 칸 기준 `origin` 하나로 발이 맞는다.
+    (여기 `scale` 은 정의의 크기 배율이다. v0.8 메타 `scale` m 이 있으면 `(ox, oy)` 와 그린 크기에 `scale ÷ m` 을 쓴다 — 7.1 그림 배율 s 는 그다음에 타깃 변환으로 곱한다.)
   - 한 묶음의 모든 동작이 한 텍스처라, 같은 종·같은 변종이면 걷기·공격·죽기 중인 개체가 섞여 정렬돼도 텍스처가 바뀌지 않는다(7.4 그리기 호출).
 - **`source: "grid"`**(원작 exe PNG, 그리고 가져오기 도구가 만든 아이콘처럼 한 장짜리): v0.2 그대로 — `sheet` = 정의끼리 검사용 크기, `slack` = 남는 픽셀 허용, 열 = 방향, 행 = 프레임(brief 4절).
   `color_key` 속성이 **없으면** 로더가 검정 `[0,0,0]` 을 채운다(v0.2 기본 그대로), `"color_key": null` 을 **적으면** PNG 알파를 그대로 쓴다(가져오기가 만든 아이콘).
@@ -1949,6 +2143,8 @@ public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public
   무엇을 주는지는 획득물이 아니라 그것을 가리키는 `RewardDef`(6.18)가 정하고, 놓을 때 `Pickup.Reward` 에 실린다. 정리 끝에 남은 정예 상자와 보상 물체는 `Pickup.GatesExit` 가 참 — 다 집어야 출구 문이 열린다(3.6).
 - (v0.7) **축복 패시브**(기획 6절): `"blessing": true` 인 패시브(`bless_divine` 등 여섯). 패시브 칸을 쓰지 않고(`Hero.Blessings` 8칸), 레벨업·채움·마법서·상자 후보에 안 나오고 성소 창에만, 레벨 있음, 진화의 짝이 아님, `trait` 와 함께 참이면 오류(13.5-23).
   능력치는 패시브와 같은 길(4.1)로 더한다(WP3). HUD 패시브 칸에 그리지 않고 일시정지 빌드 목록에 "축복" 으로(WP6).
+  **v0.8**(기획 v0.8.1 6절·11.4): 성소가 축복 창을 주지 않게 바뀌어 축복 패시브는 **E**(MVP 데이터에 없음). 형(`PassiveDef.Blessing`·`Hero.Blessings`·`HeroCarry.Blessings`)과 `--passives` 로 주는 길·검사는 남긴다 — E 에서 바로 쓰고, 지금도 시험이 있다.
+  축복을 주던 보상 종류 `RewardKind.BlessingCards` 는 없앴다(6.18 — 데이터·길이 없는 계약은 남기지 않는다).
 - 능력치 키는 `StatKey` 열거형(기획 4.1 표 그대로, JSON 이름 = 키). 패시브 `per_level` 의 키가 열거형에 없으면 오류(13.5-9).
 - 경험치 보석은 드롭 표가 아니라 규칙이다(죽으면 항상 1개, 값 = 적 경험치). 보석 색은 값 범위로 `pickups` 에서 고른다.
 
@@ -1962,16 +2158,18 @@ public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public
   "rules": {
     "hero": { "class": "sorcerer", "invuln_after_hit": 0.25,                        // v0.6: 그림·반경·시작 무기는 직업 정의로(6.16)
               "stats": { "max_hp": 100, "move_speed": 95, "armor": 0, "regen": 0, "pickup_radius": 60 },   // 모든 직업의 기본값(기획 4.1 = 마법사 값)
-              "crowd_slow": { "touching": 3, "mul": 0.6 } },
+              "crowd_slow": { "touching": 3, "mul": 0.6 },
+              "belt": { "slots": 2, "threshold": 0.3, "cooldown": 1.0 } },                  // v0.8 허리띠(기획 v0.8.1 11.4): 체력 < 최대 × threshold 인 순간 하나를 저절로(전부 회복), cooldown 초에 한 번
     "xp_curve": [ { "from": 1, "to": 1, "base": 5, "per": 0 },
                   { "from": 2, "to": 19, "base": 5, "per": 10, "origin": 1 },
-                  { "from": 20, "to": 39, "base": 185, "per": 13, "origin": 19 },
-                  { "from": 40, "to": null, "base": 445, "per": 16, "origin": 39 } ],
+                  { "from": 20, "to": 39, "base": 185, "per": 30, "origin": 19 },       // v0.8: 기획 v0.8.1 4.3(13 → 30)
+                  { "from": 40, "to": null, "base": 785, "per": 40, "origin": 39 } ],   // v0.8: 445 + 16 → 785 + 40
     "level_up": { "cards": 3, "weights": { "owned_weapon": 100, "owned_passive": 100, "new_weapon": 70, "new_passive": 70 },
-                  "weapon_slots": 4, "passive_slots": 4, "rerolls": 3, "skip_heal": 10, "input_lock": 0.4,
+                  "weapon_slots": 4, "passive_slots": 4, "rerolls": 3, "skip_heal": 10, "input_lock": 0.4,   // 칸 수 = 시작 값(v0.8: 계단마다 rules.rooms.stairs 만큼 +, 상한 6)
                   "guarantee_new_weapon_at": [2, 3],
                   "fillers": [ { "id": "filler_potion", "name": "체력 물약", "heal": 30, "icon": { "sprite": "HealingPotionIcon" } },
-                               { "id": "filler_gold", "name": "금화 주머니", "gold": 25, "icon": { "sprite": "GoldIcon" } } ],
+                               { "id": "filler_temper", "name": "단련", "heal": 5, "stats": { "max_hp": 5 }, "icon": { "sprite": "…" } } ],   // v0.8: 금화 주머니 → 단련(쌓임, 짐 Mods)
+                  "temper": "filler_temper",                                                // v0.8: 0장 보상·보물 상자에 올릴 무기 없음·정예 상자 빈 강화가 쓰는 채움 카드(fillers 안 ID)
                   "stat_labels": {
                     "damage": { "label": "피해" }, "cooldown": { "label": "쿨", "unit": "s" }, "count": { "label": "발 수" }, "radius": { "label": "반경" },
                     "max_hp": { "label": "최대 체력" }, "damage_pct": { "label": "피해", "format": "pct" }, "move_pct": { "label": "이동", "format": "pct" } } },
@@ -2002,6 +2200,10 @@ public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public
 
 - **`rules.hero`**(v0.6, 계약 변경 WP1d): `class` = 고른 직업이 없을 때 쓰는 직업(MVP·`--hero` 없음·저장 없음 → `sorcerer`, 기본 직업이어야 함 — 13.5-20), `stats` = 모든 직업의 기본 능력치(기획 4.1 표),
   `invuln_after_hit`·`crowd_slow` = 모든 직업 공통. v0.5 의 `sprites`·`radius`·`start_weapons` 는 직업 정의로 옮겼다(6.16). 능력치 = `rules.hero.stats` 를 직업 `stats` 가 키별로 **덮어쓰고**, 그 위에 직업 특성·패시브를 **더한다**(기획 4.1 규칙).
+  v0.8: 그 위에 짐의 `Mods`(판 끝까지 — `단련`·성소 대가)를 더한다. 새 능력치 키 `max_hp_pct`(`StatKey.MaxHpPct` — 매혹의 성소 −10%, 최대 체력 = (기본 + 더하기) × (1 + 합), 지금 체력도 같은 비율로).
+- **v0.8 계약**(WP1f, 기획 v0.8.1 4.4·11.4): `HeroRulesDef.Belt`(`BeltRulesDef` — `slots`·`threshold`·`cooldown`, 셋 다 `required`, 없으면 허리띠 없음), `LevelUpRulesDef.Temper`(채움 카드 ID — `fillers` 안에 있어야 함, 13.5-1),
+  `FillerCardDef.Stats`(`StatKey` → 더함, 짐 `Mods` 에 쌓임). `filler_gold`(금화 주머니)는 데이터에서 빠진다 — MVP 에 금화를 쓸 곳이 없다(기획 v0.8.1 26). 무기·패시브 칸의 그릇은 `WeaponSlots`·`PassiveSlots.SlotCount` 4 → **6**(열린 칸은 `Hero.WeaponSlotsOpen`·`PassiveSlotsOpen`, 짐이 넘김).
+  `ChestItemKind.Gold` → **`Temper`**(정예 상자의 빈 강화 = `단련`, 기획 v0.8.1 11.1).
 - 카드 문구 `피해 14 → 18` 은 레벨 표 두 행을 비교해 `stat_labels` 로 만든다 → 새 무기도 문구가 저절로 생긴다.
   패시브 카드(`최대 체력 +20`, `피해 +10%`)도 같은 표에서 `StatKey` 라벨과 `format`(`abs` 기본 / `pct`)으로 만든다. 표에 없는 키를 쓰는 무기·패시브는 검증 경고.
 - `level_up_push`: 선택 창이 닫힌 다음 스테이지 틱에 주인공 반경 150 안 적을 80px 밀어낸다(피해 0, 기획 12.6).
@@ -2036,19 +2238,23 @@ public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public
 // rules/rooms.json (v0.7 — WP4. 기획 2.5·10.8·11.4·15절 첫 값)
 {
   "rules": {
-    "rooms": { "grace": 3, "cleanup_limit": 45, "remaining_marker": 10, "elite_spawn_cap": "02:30", "transition": 0.5,
+    "rooms": { "grace": 3, "cleanup_limit": 25, "elite_spawn_cap": "02:30", "transition": 0.5, "transition_floor": 1.0,
                "gates": { "entry": ["gate_sw", "gate_se"], "boss_entry": "gate_sw", "exits": ["gate_nw", "gate_ne"], "single_exit": "gate_ne" },
                "exits": { "three_chance": 0.4 },
                "area_scale": { "reference": "cathedral_arena", "min": 0.6, "max": 1.0 },
-               "reward_anchor": "center", "chest_ring": 48, "fallback_reward": "reward_chest",
+               "reward_spot": { "distance": 100, "spacing": 40, "clearance": 30 }, "fallback_reward": "reward_chest",
+               "stairs": { "weapon_slots": 1, "passive_slots": 1 },
                "autoplay_door_skip": 20 }
   }
 }
 ```
 
 - (v0.7, 계약 `RulesDef.Rooms` = `RoomRulesDef?`, 필드는 모두 `required` — `rules.sight` 처럼 기본값을 코드에 두지 않는다) 스테이지가 있는 데이터에 없으면 로딩 오류(WP7). 쓰는 곳: `grace`·`cleanup_limit`·`elite_spawn_cap` = `RoomFlow`·감독,
-  `gates`·`exits` = `RunPlanner`, `area_scale` = `RunSession`, `reward_anchor`·`chest_ring`·`fallback_reward` = `RoomFlow`, `remaining_marker` = HUD 미니맵(WP6), `transition` = `PlayScene`(앱 틱), `autoplay_door_skip` = `AutoplayPolicy`.
-- 시뮬레이션 값(`transition`·`remaining_marker` 를 뺀 나머지)을 바꾸면 같은 씨앗의 판이 바뀐다 — WP4 가 바꾸고 `Scenario`·13.5-23 을 다시 돌린다.
+  `gates`·`exits` = `RunPlanner`, `area_scale`·`stairs` = `RunSession`, `reward_spot`·`fallback_reward` = `RoomFlow`, `transition`·`transition_floor` = `PlayScene`(앱 틱), `autoplay_door_skip` = `AutoplayPolicy`(보상 단계 `REWARD_STALL` 도 같은 초).
+- **v0.8**(기획 v0.8.1 2.5·11.4 — WP1f 계약 변경): `cleanup_limit` 45 → 25. **없앤 키** `remaining_marker`(남은 적 점은 정리 시작부터 모두 — 키가 남으면 모르는 속성 오류), `reward_anchor`·`chest_ring`(보상 자리 = 주인공 앞, 3.6 "보상 자리").
+  **새 키** `reward_spot`(`RewardSpotDef` — `distance` 100·`spacing` 40·`clearance` 30, px), `stairs`(`StairsRulesDef` — 계단에서 여는 칸 수, 3.6 "계단 보상"), `transition_floor`(층이 바뀌는 문의 넘김 어둠, 1.0s — 기획 v0.8.1 2.5 "층").
+  13.5-23 ④ 의 "`reward_anchor` 가 `center`" 는 없어졌다(`center` 는 맵 쪽 ③ 이 그대로 요구). 시작 칸 수 + `stairs` × (사슬의 액트 수 − 1) ≤ 6(`WeaponSlots.SlotCount`) 을 13.5-23 ④ 에 더한다.
+- 시뮬레이션 값(`transition`·`transition_floor` 를 뺀 나머지)을 바꾸면 같은 씨앗의 판이 바뀐다 — WP4 가 바꾸고 `Scenario`·13.5-23 을 다시 돌린다.
 - 맵 검사 상수 둘(작은 방 N ≤ 36, 문 진입점 150px)은 여기 두지 않고 Core `Map/RoomMapRules` 상수다 — 맵 검사(`ArenaLayout.ValidateRooms`)는 `MapDataReader` 안에서 돌아 `rules` 를 모르고, 가져오기 도구도 같은 검사를 돈다(6.2). `[해석]`
 
 ### 6.11 타일셋 `tilesets`, 맵 `maps` (v0.3: 원작 타일 아레나, 기획 10.1)
@@ -2069,6 +2275,9 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
                    "blood_wall_v": 166, "blood_wall_corner": 168, "blood_wall_h": 169, "blood_floor": 172, "door_closed": 26,   // 피 방 번호(v0.6.4: 13.16 — 원본 SOL 에서 167 은 세로 7070, 모서리는 168)
                    "wall_post": 3 },                 // v0.6.4: 닫힌 문은 26(98 은 피 튄 아치 벽 — 13.16), 작은 모서리 기둥 3(┘ 자리, 아래 "벽 맞물림")
       "marks":   { "pillar": [15], "grate": [36], "closed_door": [26] },   // v0.6: 검증용 표시(13.5-19). 번호는 이름 붙인 것만(25·11·12 는 이름을 붙일 때 같이 표시). 키는 TileMark 의 JSON 이름
+      "mirror":  { "pairs": [ ["wall_v", "wall_h"], ["wall_end_v", "wall_end_h"], ["blood_wall_v", "blood_wall_h"],   // v0.8 거울판 짝 표(6.11 "거울판", 기획 v0.8.1 10.8)
+                              ["grate_h", "grate_v"], ["door_closed", "door_closed_v"] ],    //   grate_v·door_closed_v 의 번호(35·25 후보)·성질은 WP0 이 원본으로 확인해 pieces 에 더함
+                   "self":  [ "pillar", "wall_corner", "wall_post", "blood_floor", "blood_wall_corner" ] },   // 뒤집어도 같은 조각
       "props": {                                     // 메가타일 → 하위 칸 4개 (위-왼, 위-오른, 아래-왼, 아래-오른). 출처: 원본 확인(probe tiles)
         "13": "....", "162": "....", "163": "....",
         "15": "x...",                                // 기둥: 막힌 칸은 위-왼 하나(TIL p24, SOL 13 = 걷기·투사체, 시야 통과). 나머지 셋은 걸을 수 있는 칸의 위 조각
@@ -2155,6 +2364,7 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
       "room_areas": { "room_blood": [0, 0, 5, 5], "room_grate": [13, 0, 19, 6],       // v0.6.3: 방 영역(메가, 끝 미포함) → 방 바닥·문 수(아래 "방 영역과 방 바닥")
                       "room_west": [0, 13, 6, 19], "room_south": [13, 13, 19, 19] },  //   문 수: 피 방·창살 방 1(방 체류 압박 대상), ㄱ 안·Γ 안 2
       "room_kinds": ["normal", "boss"],               // v0.7: 이 맵을 쓸 수 있는 방 종류(기획 10.8 — 액트 1 보스 방 + 단계 1 의 모든 방. 정예 방에는 안 씀). 실제 파일에는 WP5 가 더한다
+      "mirror": true,                                  // v0.8: 거울판도 쓴다(타일셋 짝 표가 이 맵의 조각을 모두 덮어야 함 — 아니면 로딩 오류). 기본 거짓
       "art": "d1/maps/cathedral_arena" }
   ]
 }
@@ -2242,7 +2452,8 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 - **`cathedral_arena` 의 새 역할**(사용자 결정 R — 버리지 않음): 액트 1 **보스 방**(해골왕)이고, 작은 방 맵이 생기기 전인 **단계 1 의 모든 일반 방**이다(들어오는 문만 바뀜). `room_kinds: ["normal", "boss"]`.
   정예 방에는 쓰지 않는다(기획 10.8 — 같은 큰 방을 한 액트에서 두 번 이상 보지 않게). 단계 2 에 대성당 작은 방 2장이 생기면 그 스테이지의 일반 풀에서 빠진다(맵의 `room_kinds` 는 그대로 둬도 됨 — 풀이 정한다).
   피 방·창살 방(문 하나)·방 보급·방 체류 압박은 이 큰 방에서만 일한다(작은 방에는 문 하나인 방이 없다, 아래).
-- **문 넷과 `center` 필수**: `room_kinds` 가 빈 목록이 아니면 `gates` 가 정확히 `gate_nw`(nw)·`gate_ne`(ne)·`gate_se`(se)·`gate_sw`(sw) 넷이고 `entries` 도 그 넷, 기준점 `center` 가 있다(보상 자리, 기획 10.8·11.4). 이벤트의 `entry:` 이름이 맵이 바뀌어도 같게 하려는 것이다(13.5-23).
+- **문 넷과 `center` 필수**: `room_kinds` 가 빈 목록이 아니면 `gates` 가 정확히 `gate_nw`(nw)·`gate_ne`(ne)·`gate_se`(se)·`gate_sw`(sw) 넷이고 `entries` 도 그 넷, 기준점 `center` 가 있다(v0.7 은 보상 자리 — v0.8 부터는 큰 적 길 검사 13.5-5 의 목적지로만, 보상 자리는 주인공 앞 3.6). 이벤트의 `entry:` 이름이 맵이 바뀌어도 같게 하려는 것이다(13.5-23).
+  **입구와 문이 같은 자리**(v0.8.1, 13.5-23 ③ — `ValidateRooms`, 원판·거울판 모두): 입구마다 `inside` 에서 가장 가까운(칸 마름모 중심 거리) 문 틈 칸(`GateZones.Compute` 의 `Cells`)이 **같은 ID 문**의 칸이어야 한다. 아니면 `입구 gate_nw 가 문 gate_ne 앞에 있음` 오류 — ID 넷이 있는지만 보던 검사는 입구 좌표가 다른 문 앞에 있어도 통과했다.
 - **문 틈 칸·맞은편 문** `Map/GateZones`(계약·구현 WP1e, 결정적): `GateZones.Compute(MapDef, ArenaGrid) → IReadOnlyDictionary<string, GateZone>`,
   `GateZone(string GateId, GateSide Side, IReadOnlyList<Int2> Cells)` — 그 문의 열린 메가타일 둘의 하위 칸 중 걷기 막힘 없는 칸(행 우선). `World.Gates` 가 생성자에서 한 번 계산한다.
   쓰는 곳: 나가는 자리 판정(`RoomFlow`), 봉인 그리기·문 위 아이콘 자리(WP5, 7.11), 미니맵 문 점(WP6). `GateZones.Opposite(MapDef, gateId)`: 변이 맞은편(nw ↔ se, ne ↔ sw)인 문 — 들어온 문 바꾸기(`RoomState.RemapEntry`).
@@ -2251,6 +2462,29 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 - **작은 방 검사**(`room_kinds` 가 있고 N ≤ `RoomMapRules.SmallRoomMaxN`(36) — 기획 13.5-23, `ArenaLayout.ValidateRooms` 에 더함, WP1e): 문 하나인 방 바닥(`RoomFloor.OneDoor`)이 없음(막다른 방 없음, 기획 10.8),
   문 넷 진입점(`entries` 의 `inside`)에서 `RoomMapRules.DoorClearance`(150px) 안에 **둘레가 아닌** 걷기 막힘 칸이 없음(칸 마름모 중심 거리 — 13.5-6 의 60px 와 같은 대상. 둘레 벽은 진입점에서 약 100px 라 빼야 규칙이 선다). 모두 오류.
 - 맵 하나의 `open_center` 크기(작은 방 6×6)는 맵 데이터가 정한다 — 검사는 v0.6 그대로(안 기둥 ≤ 2)다.
+
+**거울판** (v0.8, 기획 v0.8.1 10.8 — 계약·구현 WP1f) — 맵 하나로 방이 둘이 되는 싼 변형. 대각선 뒤집기(하위 (tx,ty) ↔ (ty,tx), 메가 [mx,my] ↔ [my,mx] — 화면 좌우 뒤집기)다.
+그림을 뒤집지 않는다(원작 타일 그림은 빛 방향이 있어 뒤집으면 틀림) — **조각 이름을 짝으로 바꿔 다시 깐다**.
+
+- **타일셋 짝 표** `mirror`(계약 `TilesetDef.Mirror` = `TilesetMirrorDef(Pairs, Self)`): `pairs` = 서로 바뀌는 조각 이름 둘(세로 벽 ↔ 가로 벽, 세로 벽 끝 ↔ 가로 벽 끝, 가로 창살 ↔ 세로 창살, 닫힌 문 가로 ↔ 세로 — L1 1 ↔ 2, 6 ↔ 7), `self` = 뒤집어도 그대로인 조각(모서리·작은 모서리 기둥·기둥·바닥).
+  **짝 검사**(13.5-12 에 더함, 오류): 이름이 `pieces` 에 있음, 한 이름은 한 번만, 짝 (a, b) 마다 `props[b]` = `T(props[a])`, `self` 마다 `props[a]` = `T(props[a])` — `T` = 하위 칸 넷(위-왼, 위-오른, 아래-왼, 아래-오른)의 위-오른 ↔ 아래-왼 바꾸기.
+  성질이 맞지 않는 짝은 거울판의 충돌·시야를 틀리게 하므로 표에 넣을 수 없다. 비교하는 것은 **최종 성질**(`props` — 보정을 반영한 값)뿐이다(v0.8.1 — v0.8 의 "보정이 있는 조각은 짝도 같은 칸에 보정" 규칙은 없앴다:
+  짝 조각의 원본 SOL 이 이미 그 값이면 원작 수정판에 없는 "보정" 을 지어내게 만들었다. `sol_known_diffs` 는 원작 수정판이 고친 SOL 오류만 담는 자리다 — R24). 짝 조각의 원본 SOL 이 전치와 다르면 그 조각은 자기 성질 대조(1.4)를 따로 통과해야 하고,
+  원작 수정판의 보정이 있으면 `sol_known_diffs`, 없으면 `design_diffs`(이유 "거울판 짝 맞춤" — 기획 v0.8.3 10.1 의 예외)에 둔다. 그것도 안 되면 그 조각은 짝 표에 못 들고, 쓰는 맵은 거울판을 못 단다(WP0 v0.8 ③).
+  둘레(`borders`)·문(`gates`)·바닥(`floor`)은 짝 표에 넣지 않는다 — 자리로 고르므로(뒤집은 배치의 윗줄은 늘 `edge_ne` 번호) 거울판이 바뀐 자리의 조각을 다시 고른다.
+  대신 **자리 짝 검사**(v0.8.1, 13.5-12 — `mirror` 표가 있는 타일셋만)를 둔다: 같은 재료(`borders`·`gates` 의 키)마다 둘레 자리 짝 `edge_nw` ↔ `edge_ne`·`edge_sw` ↔ `edge_se`·`corner_w` ↔ `corner_e` 는 `props[b]` = `T(props[a])`, `corner_n`·`corner_s` 는 자기 전치와 같음,
+  문은 변 짝 nw ↔ ne·sw ↔ se 의 `open`·`end_a`·`end_b` 끼리 같은 비교(변을 따라 가는 순서가 전치로 보존되므로 `end_b` ↔ `end_b`). L1 은 지금 통과한다(1 ↔ 2·6 ↔ 7·18 ↔ 19·23 ↔ 24, 4·20 자기 전치) — 다음 타일셋(L2 등)에서 거울판 충돌이 원판의 전치와 조용히 달라지는 것을 막는다.
+- **맵** `mirror`(계약 `MapDef.Mirror`, bool, 기본 거짓): 참이면 `MapDataReader` 가 읽을 때 거울판 `MapDef` 를 하나 더 만든다 — `MapMirror.Of(MapDef, TilesetDef) → MapDef`(Core `Map/MapMirror.cs`, 순수·결정적).
+  거울판: `Id` = `<원판 ID>@m`(정의 표에는 없음 — ID 로 찾는 코드가 원판을 조용히 받지 않게), `MirrorOf` = 원판 ID, `IsMirror` = 참, `Art` = `<원판 art>@m`(가져오기가 따로 굽는다, 1.4 출력), 원판의 `Mirrored` 속성이 거울판을 가리킨다(`JsonIgnore` 셋).
+  바꾸는 것: `place` 의 `at`·`line` 좌표와 `origin` 을 뒤집고 `grid` 블록을 전치(줄 ↔ 칸)하고 조각 이름을 짝으로, 문의 변(nw ↔ ne, sw ↔ se)과 ID(`gate_nw` ↔ `gate_ne`, `gate_sw` ↔ `gate_se` — `GateZones.MirrorGate`), `entries` 의 좌표 뒤집기와 **ID 도 같은 짝으로**(v0.8.1 — 입구 ID 는 문 ID 와 같다. v0.8 의 "ID 그대로" 면 거울판에서 입구 `gate_nw` 가 ne 변, 곧 문 `gate_ne` 앞에 놓여 주인공이 `GateIn` 과 다른 문에서 들어오고 `GateZones`(문 기준)와 이벤트 진입점(입구 기준)이 어긋났다),
+  `hero_start`·`anchors` 좌표 뒤집기(**기준점 ID 는 그대로** — `center`·`room_*` 는 문 이름이 아니다),
+  `hero_start.facing` 좌우(서 ↔ 동, 남서 ↔ 남동, 북서 ↔ 북동 — 남·북 그대로), `open_center`·`room_areas` 사각형 뒤집기([x0,y0,x1,y1] → [y0,x0,y1,x1] — 벽 메가가 위 줄·왼쪽 열을 막는 규칙이 뒤집어도 맞다). `border`·`palette`·`size`·`room_kinds`·`wall_fade` 는 그대로.
+  짝 표에 없는 조각을 쓴 맵에 `mirror: true` 면 로딩 오류(`maps/x.json: 거울판 — 조각 grate_h 의 짝이 타일셋 l1 짝 표에 없다`). 바닥 섞기 해시는 거울판 ID 로 하므로 바닥 무늬는 원판과 다르다(그림만, 성질은 같음).
+- **같은 검사**: 거울판도 원판과 똑같이 `ArenaLayout.Expand`·13.5-4~6·19·23(③ 문 넷·작은 방, 문 틈 닿음)·13.5-22(`audit` 의 DUN 배열 대조 — 거울판 배치도 펼쳐 대조)를 돈다(그림·시야·충돌 모두 다시 깐 배치에서 나온다).
+  `RoomFloors`·`GateZones`·`MapArea` 도 거울판 `MapDef` 를 그대로 받는다 — 거울판을 아는 코드는 `MapMirror`·`RunPlanner` ①·`RoomState.RemapEntry`/`RemapMarch` 셋뿐이다.
+- **쓰는 곳**: `RunPlanner` ① 의 (맵, 방향) 뽑기(3.6), `ROOM` 로그 `map=<원판 ID> mirror=1`, `--map <id>@m`(미리보기 — 9절), 가져오기 굽기 목록(원판 + `mirror: true` 인 맵의 거울판), 시작 검사 ③·13.5-10 의 맵 그림 이름(거울판 `art` 포함), 넓이 배율(`AreaScaleOf` — 거울판은 원판 값).
+  점 빛 `[tx,ty]` 는 거울판에서 엉뚱한 자리가 되므로 거울판을 쓰는 액트도 점 빛은 기준점 ID 만 쓴다(13.5-23 ⑤ — "방 맵이 둘 이상" 조건에 "거울판이 있는 맵이 하나라도" 를 더함).
+- `cathedral_arena` 는 L1 짝 표가 그 맵의 조각(창살 `grate_h`·닫힌 문 `door_closed` 포함)을 다 덮은 뒤에 `mirror: true` 를 단다(WP0 이 짝 조각 번호·성질을 확인 → WP5). 그 전의 단계 1 은 들어오는 문만 바뀐다.
 
 ### 6.12 스테이지 `stages` — v0.7: 스테이지 = 액트
 
@@ -2263,16 +2497,17 @@ v0.7(사용자 결정 R, 기획 2.5·13.1): 스테이지 정의 하나가 **액�
     { "id": "stage_cathedral", "name": "대성당", "next_act": "stage_catacombs",
       "room_maps": { "normal": ["cathedral_room_a", "cathedral_room_b"], "elite": ["cathedral_room_a", "cathedral_room_b"], "boss": "cathedral_arena" },
       "rooms": [                                                       // 순번 = 배열 순서(1부터 보임). t 범위는 0:00 부터 빈틈 없이(13.5-23)
-        { "kind": "normal", "from": "00:00", "to": "01:00" },          // 일반 방 생존 시간 = to − from
-        { "kind": "normal", "from": "01:00", "to": "02:15" },
-        { "kind": "normal", "from": "02:15", "to": "03:30" },
-        { "kind": "normal", "from": "03:30", "to": "05:00" },
-        { "kind": "elite",  "from": "05:00", "to": "06:00", "miniboss": "rotfeast" },   // 정예 방: 처치까지(t 는 to − 1틱에서 멈춤 — 구간 [5:00, 6:00) 을 끝까지 씀), 생성은 elite_spawn_cap 까지
-        { "kind": "normal", "from": "06:00", "to": "07:30" },
-        { "kind": "elite",  "from": "07:30", "to": "08:30", "miniboss": "blackash" },
-        { "kind": "normal", "from": "08:30", "to": "10:00" },
-        { "kind": "boss",   "from": "10:00", "boss": "skeleton_king" } ],                  // 보스 방: to 없음(t 안 멈춤)
-      "rewards": { "weights": { "reward_tome": 30, "reward_chest": 30, "reward_shrine": 25, "reward_potion": 15 },
+        { "kind": "normal", "from": "00:00", "to": "01:00", "floor": 1 },          // 일반 방 생존 시간 = to − from. floor(v0.8) = 원작 층(방 문구·계단 문)
+        { "kind": "normal", "from": "01:00", "to": "02:15", "floor": 1 },
+        { "kind": "normal", "from": "02:15", "to": "03:30", "floor": 2 },
+        { "kind": "normal", "from": "03:30", "to": "05:00", "floor": 2 },
+        { "kind": "elite",  "from": "05:00", "to": "06:00", "miniboss": "rotfeast", "floor": 2 },   // 정예 방: 처치까지(t 는 to − 1틱에서 멈춤 — 구간 [5:00, 6:00) 을 끝까지 씀), 생성은 elite_spawn_cap 까지
+        { "kind": "normal", "from": "06:00", "to": "07:30", "floor": 3 },
+        { "kind": "elite",  "from": "07:30", "to": "08:30", "miniboss": "blackash", "floor": 3 },
+        { "kind": "normal", "from": "08:30", "to": "10:00", "floor": 4 },
+        { "kind": "boss",   "from": "10:00", "boss": "skeleton_king", "floor": 4 } ],                  // 보스 방: to 없음(t 안 멈춤)
+      "rewards": { "weights": { "reward_tome": 30, "reward_chest": 30, "reward_potion": 15,             // v0.8(기획 v0.8.1 11.4): 성소 셋, 축복 성소 reward_shrine 없앰
+                                "shrine_enchanted": 9, "shrine_fascinating": 8, "shrine_gloomy": 8 },   //   단계마다 그 단계에 있는 ID 만 적는다(단계 1 = 마법서·보물 상자)
                    "first_room": "reward_tome", "gold_scale": 1.0 },                     // 액트 2: first_room reward_chest, gold_scale 1.5(기획 11.4)
       "lighting": { "ambient": [200, 200, 215], "darkness": 0.5,
                     "hero_light": { "color": [255, 240, 220], "radius": 420 },
@@ -2304,6 +2539,8 @@ v0.7(사용자 결정 R, 기획 2.5·13.1): 스테이지 정의 하나가 **액�
 - 배율 식 `[a, b]` = a + b × t(v0.7 — v0.6 은 "경과 분"). 구간은 `from`/`to`(t), 보스 중 구간은 `during: "boss"`(보스 방에서 보스가 나온 뒤). 이벤트 종류 = 기획 13.4, 각 종류가 `PartKind.StageEvent` 부품(레지스트리 등록, WP4).
 - **방 순번 표 `rooms`**(v0.7, 계약 `StageDef.Rooms` = `IReadOnlyList<RoomDef>`): 원소 = `kind`(`normal`·`elite`·`boss`), `from`·`to`(t 범위 — `ClockTime`, 보스 방은 `to` 없음), `miniboss`(정예 방의 중간 보스 `DefRef<EnemyDef>` — 처치가 생존 끝, 문 위 표시),
   `boss`(보스 방 — 13.5-23 대조·문 위 이름), `number`(v0.7.1, 선택 — 보이는 방 번호, 없으면 배열 자리 + 1, 3.6). 일반 방 생존 시간 = `to − from`(따로 적지 않음 — 기획 2.5 "생존 시간 = t 범위 길이"). 정예 방의 `to` 는 t 가 멈추는 곳일 뿐이다.
+  `floor`(v0.8, 계약 `RoomDef.Floor` int, 선택 — 0 = 안 적음, 기획 v0.8.1 2.5 "층"): 방 문구 `대성당 2층 — 3`(감독 `Banner`)과 층이 바뀌는 출구의 `RoomExit.NextFloor`(문 위 `▼ 2층`·넘김 어둠 `transition_floor`)에만 쓴다 — 난이도·씨앗과 무관.
+  한 액트의 방이 모두 적거나 모두 안 적고, 적었으면 1 이상이고 줄지 않는다(13.5-23 ①). 액트를 넘는 계단(대성당 4층 → 지하묘지 5층)도 `NextFloor` 를 단다.
   v0.7.1: 정예 방의 t 는 `to` 가 아니라 **`to` − 1틱**에서 멈춘다 — 구간은 `[from, to)` 로 찾으므로 `to` 에서 멈추면 중간 보스가 1:00 넘게 살아 있을 때 다음 방의 센 구간·새 종(6:00 구간의 썩은 시체 등)이 정예 방에 나온다.
   `RoomDef` 는 데이터 모양이고, 방 하나의 실행 상태는 `World.Room`(3.6)이다.
 - **방 맵 풀 `room_maps`**(계약 `RoomMapPoolDef`: `Normal`·`Elite` = `IReadOnlyList<DefRef<MapDef>>`, `Boss` = `DefRef<MapDef>?`): 순번 표에 있는 종류마다 맵이 하나 이상(13.5-23). 고르기는 `RunPlanner`(3.6).
@@ -2316,7 +2553,7 @@ v0.7(사용자 결정 R, 기획 2.5·13.1): 스테이지 정의 하나가 **액�
 - (v0.5.3, 기획 v0.6.2 9.4·10.3·10.4 — v0.7: 방으로) 중간 보스는 액트 1 이 정예 방 5 로트피스트·7 블랙애시, 액트 2 가 3 데스스핏·6 스틸메이스·9 슬러지 남작이다. `miniboss` 이벤트는 그 정예 방 t 시작(5:00 등)에 두고 방 시계 0:03 에 입장한다.
   정예 방이 따로라 v0.6 의 "앞 중간 보스가 살아 있어도 다음이 제 시각에 나옴"(겹침)은 생기지 않는다(기획 9.4). 정예 방이 쓰는 구간(t 시작 ~ `to` 직전 — v0.7.1)은 앞 구간보다 줄인 값이고, 이 리듬은 검증 13.5-18(6.14)이 경고로 지킨다.
   위 예는 이벤트 일부만 보인다 — 전체 값은 기획 10.3·10.4 표가 정본이다.
-- **이벤트는 방으로 옮겨진다**(v0.7, 3.6 `RoomEvents`): 시각 `at` 은 t 이고, 그 t 가 든 방의 방 시계 `t − 방 t 시작`(유예 0:03 전이면 0:03)에 온다. 생존이 끝나면 남은 것은 버린다. `entry:` 는 들어온 문과 그 맞은편을 서로 바꾼다(`Room.RemapEntry`, v0.7.1 — 시작 문·행진 목표 문 둘 다).
+- **이벤트는 방으로 옮겨진다**(v0.7, 3.6 `RoomEvents`): 시각 `at` 은 t 이고, 그 t 가 든 방의 방 시계 `t − 방 t 시작`(유예 0:03 전이면 0:03)에 온다. 생존이 끝나면 남은 것은 버린다. `entry:` 는 시작 문이 들어온 문일 때만 바꾼다(`Room.RemapEntry`·`RemapMarch`, v0.8.1 — 시작 문은 맞은편, 행진 목표 문은 들어온 문 ↔ 맞은편만 맞바꿈. v0.7.1 의 서로 바꾸기는 없앰, 3.6 결정 5).
   **기준점은 맵마다 다르다**(v0.7.1): 이벤트가 가리키는 기준점(`toward`·`anchor` 등)은 그 t 가 든 방 종류의 풀에 있는 **모든 맵**에 있어야 한다(13.5-23 ⑤). 맵 풀이 여럿인데 한 맵에만 있는 기준점을 쓰면 판 중간 `RunSession.Advance` 에서 `World` 생성이 예외가 된다.
   `light_change` 는 그 액트 끝까지 남는다 — 방을 만들 때 지난 것을 다시 적용한다(3.6).
 - **넓이 배율**(v0.7, 기획 10.8): 감독은 구간의 `max_alive` 에 `World.Room.AreaScale` 을 곱해(반올림) 쓴다. `per_second` 는 곱하지 않는다.
@@ -2324,13 +2561,13 @@ v0.7(사용자 결정 R, 기획 2.5·13.1): 스테이지 정의 하나가 **액�
 - v0.6 의 `victory`(`boss` / `survive` + 시각)는 v0.7 에서 없앴다 — 판의 끝은 `RunSession` 이 안다(마지막 액트의 마지막 방 — `RoomState.IsLastInRun`, 3.5·3.6).
 - **단계 1 세로 조각**(기획 14.1·10.3): 그때는 폴른 원·썩은 시체·핀드·불타는 해골 궁수 정의가 아직 없어 전체 구간표가 "없는 적" 오류가 된다.
   WP4 는 단계 1 에 `stages/stage_cathedral.json` 을 **단계 1 판**(5종 가중치, `slice: true` 로 일반 방 여섯, 보스·중간 보스 이벤트 없음, `room_maps.normal` = `cathedral_arena` 하나, 보상 가중은 마법서·보물 상자 둘)으로 쓰고, 단계 2 에서 전체 판으로 바꾼다. 두 판을 같이 두지 않는다.
-  풀이 맵 하나라 "연달아 쓰지 않음" 은 꺼지고 들어오는 문만 바뀐다(기획 10.8).
+  풀이 맵 하나라 "연달아 쓰지 않음" 은 꺼지고 들어오는 문만 바뀐다(기획 10.8). v0.8: `cathedral_arena` 가 `mirror: true` 를 달면 원판·거울판이 번갈아 나온다(3.6 ①).
 - `march` 방향(v0.3, 등각 맵이라 방위보다 목표가 자연스럽다): `toward`(기준점 ID) / `toward_entry`(입구 ID — 그 진입점 쪽) / `heading`(방위, v0.2 그대로) 중 하나, `straight` = 직진 시간.
   `toward_entry` 행진은 그 진입점에 닿으면 직진 시간이 남아 있어도 보통 행동으로 바뀐다(기획 10.3 v0.5 — 빠른 핀드가 맞은편 벽까지 가서 멈춰 있지 않게, 6.6 `MoveOrder.Target`).
   매개변수 이름은 이벤트 부품을 만드는 WP4 가 정한다(11.3).
 - **조명**(계약 변경 WP1b): v0.2 의 `kind_lights`(장애물 종류별 빛)는 장애물 종류와 함께 없앴다. 대신 `lights: [{ "id", "at": 기준점 ID 또는 [tx,ty], "color", "radius", "flicker", "pulse": { "period", "amount" } }]`
   (점 빛, MVP 두 스테이지는 비어 있음 — 기획 10.3·10.4 "화로·기둥 빛 없앰"). `[tx,ty]` 는 `TileCoord` 이고 `World.Lighting` 은 로딩 때 월드 px 로 바꾼 값을 가진다(4.1 `ResolvedMap`).
-  v0.7.1: 점 빛은 액트(모든 방)의 것이라, 방 맵이 둘 이상인 액트(`room_maps` 의 서로 다른 맵 수 ≥ 2)는 `at` 에 **기준점 ID 만** 쓰고 그 기준점이 액트의 모든 방 맵에 있어야 한다(13.5-23 ⑤ — 크기가 다른 맵에서 같은 `[tx,ty]` 는 엉뚱한 자리). 맵마다 다른 빛이 필요해지면 점 빛을 `MapDef` 로 옮긴다(계약 변경).
+  v0.7.1: 점 빛은 액트(모든 방)의 것이라, 방 맵이 둘 이상인 액트(`room_maps` 의 서로 다른 맵 수 ≥ 2 — v0.8: 또는 `mirror: true` 인 맵이 하나라도 있음)는 `at` 에 **기준점 ID 만** 쓰고 그 기준점이 액트의 모든 방 맵에 있어야 한다(13.5-23 ⑤ — 크기가 다른 맵에서 같은 `[tx,ty]` 는 엉뚱한 자리). 맵마다 다른 빛이 필요해지면 점 빛을 `MapDef` 로 옮긴다(계약 변경).
 - `unit_min_light`(선택, 기본 0 = 끔): 주인공·적·시체·획득물이 받는 빛의 하한(0~1, 기획 10.5 의 "유닛 밝기 하한"). 바닥·벽은 원작처럼 어둡게 두고 이것들만 어둠에서 읽히게 한다(7.7).
   값은 기획 10.3~10.5(v0.5): 두 스테이지 모두 0.6, 어둠 스테이지 1 0.5·스테이지 2 0.6·스테이지 2 11:30 부터 0.7(상한 0.7), 주인공 빛 반경 420·400(380~480 안 — v0.5.1: 기획 v0.6.1 이 스테이지 2 를 380 → 400).
   `light_change` 의 경로에도 들어간다. v0.5: 하한은 **그리는 대상**(안개 알파 > 0 — 시야 안, 또는 늘 보이는 보스·닿은 적)에만 쓴다(7.7·7.10, 기획 10.5).
@@ -2438,7 +2675,7 @@ v0.7(사용자 결정 R, 기획 2.5·13.1): 스테이지 정의 하나가 **액�
 | 13.5-9 | 패시브 키 ∈ `StatKey`, 접두사·버프 키 ∈ `EnemyStatKey` | Data |
 | 13.5-10 | 정의가 가리키는 파일 이름(atlas 페이지 × 변종, 메타, grid PNG, 맵 `art` 폴더의 파일 — `arena.json`·`columns.*`·`minimap.png`·바닥 조각 이름 규칙(1.4)으로 계산한 `floor_*`, 소리·음악 파일, 소리 색인) ⊂ **가져오기 표가 만드는 이름 + `Table/exe.json`** — 자원 없이 돈다(기획 13.5-10). 두 쪽으로 나눈다: ① 표 → 이름 목록(`ImportTable`, 기본 분류) ② 정의 → 이름 추출과 대조(실제 `Data/` 를 WP7 로더로 읽으므로 `Integration`). **v0.6 묶음판**: ② 에서 정의 D(적·스테이지·직업·무기·음악 — 그림 묶음·소리·이펙트처럼 `requires` 가 없는 정의는 그것을 가리키는 D 들의 것으로)가 닿는 파일 이름의 묶음(`ImportTable.OutputBundles(arenas)`)이 기본이거나 D 의 `requires` 안. **v0.6.1 귀속 규칙**: 맵 그림(`art` 폴더의 파일) → 그 맵을 쓰는 스테이지 D(그래서 "스테이지 `requires` ⊇ 맵 타일셋 항목의 `bundle`" 이 여기서 서다). 소리 연결 표 줄 → `hero.<id>` 는 그 직업, `enemies.<id>` 는 그 적, `sprite_sets.<s>` 는 `s` 를 쓰는 적·직업들, `weapons.<w>` 는 그 무기, `music.<스테이지>` 는 그 줄이 가리키는 음악 정의(음악 D), `projectiles`·`effects`·`hazard_loops` 는 그것을 가리키는 D 들(없으면 기본), `ui`·`pickups`·`music.title` 은 기본. ② 의 "정의 → 이름(주인 D 포함)" 추출은 Core 함수 하나 `DefAssetNames.For(GameDefs, arenas) → (D, 파일)` 목록(WP7, D 가 없으면 기본 — v0.6.2)이고 시작 검사 ③ 의 교차 확인(1.4 끝)이 같은 함수를 쓴다 | 시험 `tests/…/Assets/` (WP0 작성, ② 는 통합 때 기본으로) |
 | 13.5-11 | 아래 "추가(경고)" 의 구별 경고(기획 13.5-11) | Data |
-| 13.5-12 | 성질 표의 키 = 타일셋이 이름 붙인 번호(`floor`·`borders`·`gates`·`pieces`, 번호 ≥ 0 — `ArenaLayout.ValidateTileset`), 성질·`sol`·`use` 글자가 8글자(`.wLWmxMX`, 6.11 — v0.5) 안, `sol_known_diffs`·`design_diffs` 원소의 메가타일이 성질 표에 있음, `why` 가 비면 오류, **v0.6: `marks` 의 번호가 이름 붙인 번호 안** | Map(WP1b `MapDataReader`, 글자 WP1c, `marks` WP1d) — 늘 돈다 |
+| 13.5-12 | 성질 표의 키 = 타일셋이 이름 붙인 번호(`floor`·`borders`·`gates`·`pieces`, 번호 ≥ 0 — `ArenaLayout.ValidateTileset`), 성질·`sol`·`use` 글자가 8글자(`.wLWmxMX`, 6.11 — v0.5) 안, `sol_known_diffs`·`design_diffs` 원소의 메가타일이 성질 표에 있음, `why` 가 비면 오류, **v0.6: `marks` 의 번호가 이름 붙인 번호 안**, **v0.8 짝 표**(`mirror` — 6.11 "거울판"): 이름이 `pieces` 안·한 번만, 짝은 **최종** 성질이 전치(위-오른 ↔ 아래-왼)로 같고 `self` 는 자기 전치와 같음(v0.8.1: v0.8 의 "보정 칸도 짝에서 전치 자리" 는 없앰), **v0.8.1 자리 짝**: 둘레 `edge_nw` ↔ `edge_ne`·`edge_sw` ↔ `edge_se`·`corner_w` ↔ `corner_e`(`corner_n`·`corner_s` 는 자기 전치), 문 변 nw ↔ ne·sw ↔ se 의 `open`·`end_a`·`end_b` 가 전치로 같음, 맵 `mirror: true` 인데 짝 표에 없는 조각을 씀 | Map(WP1b `MapDataReader`, 글자 WP1c, `marks` WP1d, 짝 표 WP1f) — 늘 돈다 |
 | 13.5-13 | 큰 피해 패턴·부품의 예고(6.5 판정, `rules.enemies.telegraph_required`): 예고 필수인데 없거나 `min_time` 보다 짧으면 **오류**, 무거운 근접 단일 대상의 타격 프레임까지 시간이 `heavy_melee_windup` 미만이면 **오류** | Data + 부품(WP4 매개변수 검사) |
 | 13.5-14 | 정의 `scale` 이 0.65~1.6 밖, 또는 정의 `scale` × 받을 수 있는 가장 큰 등급 배율 > `rules.ranks.max_scale` 이면 경고(넘는 쪽은 생성 때 잘림, 6.5) | Data |
 | 13.5-15 (v0.5) | 스테이지마다 주인공 빛 반경(= 시야 반경 — 정의 값과 그 스테이지 `light_change` 가 넣는 `hero_light.radius` 값 모두)이 **380 이상(기획 10.5-3 하한 — v0.5.1, 원거리 적이 없는 스테이지에도) 화면 가로 반폭(`ViewSize.X / 2` = 480) 이하**이고, **그 스테이지에 나오는 적**(구간 가중치·이벤트·소환·분열·호위 — v0.6.1: `StageReach.Enemies`, 아래 "나오는 적 계산") 중 `kite` 를 가진 적의 `range_band` 최대 + `rules.sight.edge` + `rules.sight.ranged_margin`(40 + 20 = 60) **이상**. 어기면 오류: `stage_catacombs: 빛 반경 360 < burning_archer 거리 유지 최대 340 + 60`. 주인공 빛(`hero_light`)이 없거나 반경 0 이하면 같은 오류다 — 그래서 `VisibilityField.Enabled` 가 거짓인 것은 맵 없는 시험 월드뿐이다(4.11) | Data(380·반폭) + WP4 검사기(`kite` 매개변수를 읽음) |
@@ -2448,7 +2685,7 @@ v0.7(사용자 결정 R, 기획 2.5·13.1): 스테이지 정의 하나가 **액�
 | 13.5-20 (v0.6) | **자원 묶음**(오류, 기획 13.5-20): `requires` 에 `hfvoice` 없음(원본 우선순위 전용, 1.4). 참조 덮기 — 스테이지가 내는 적(**`StageReach.Enemies`** — 구간·이벤트·보스·`summon`·분열·호위, v0.6.1), 직업의 시작 무기·특성 패시브가 가리키는 정의의 `requires` ⊆ 가리키는 쪽의 `requires`. 스테이지 음악(`music.<스테이지>`)은 `requires` 가 스테이지 것 밖이면 `fallback` 이 있어야 함. `rules.hero.class` 의 직업은 `requires` 가 빔(기본 직업). 음악 `fallback` 은 `requires` 가 비고 다시 `fallback` 이 없음. **v0.6.1 해금 사슬 → v0.7 다음 액트 사슬**: `requires` 가 빈 액트의 `next_act` 가 `requires` 가 비지 않은 액트를 가리키면 오류(6.12), `rooms[].miniboss`·`boss` 도 참조 덮기에 든다(`StageReach` 가 셈). 맵에는 `requires` 가 없다 — 맵 그림 묶음과 스테이지의 대조는 13.5-10 묶음판(v0.7: 맵 그림 → 그 맵을 `room_maps` 에 둔 스테이지들) | Data (WP7) + 13.5-10 시험(WP0) |
 | 13.5-21 (v0.6) | **직업**(오류, 기획 13.5-21): 시작 무기 ≥ 1 이고 모두 그 직업이 고를 수 있음(`classes` 가 비었거나 그 직업 포함), 특성(v0.6.1: `traits` 의 패시브)은 `trait: true`·`max_level` 1·진화의 짝 패시브가 아니고 그 패시브의 `classes` 가 비었거나 그 직업 포함, **직업 `radius` ≤ 14**(v0.6.1 — 13.5-5 길 검사의 주인공 등급. 미리보기로 키우려면 길 검사 등급을 같이 올린다, 기획 13.5-21), `stats` 키 ∈ `StatKey`(형이 보장), 그림 묶음에 `idle`·`walk`·`cast_fire`·`cast_lightning`·`cast_magic`·`die` 클립, 시작 무기 중 `cast_clip: attack` 이 있으면 `attack` 클립, 시전 클립 `event_frame` ≤ 프레임 수(13.5-7 과 같은 자리), 직업 ID 마다 소리 연결 `hero.<id>` 가 있음(경고 — WP8 검사기) | Data (WP7), 소리 WP8 |
 | 13.5-22 (v0.6.1) | **원작 방 DUN 칸 배열을 옮기지 않음**(오류, 기획 13.5-22, 사용자 결정 B): 원본이 있을 때 표 `audit_dun` 의 DUN 과 `Data/maps/*.json` 을 펼친 메가 격자에 4×4 창이 같은 곳(바닥·0 을 하나로 보고, 그 창의 바닥 아닌 칸 ≥ 8)이 있으면 실패. DUN 은 메모리에서만 읽음. **v0.7.1**: 맵이 본뜬 원작 방(맵 JSON 첫머리 주석 `// 본뜬 원작 방: bonecha1.dun, …`)은 모두 그 타일셋 항목의 `audit_dun` 에 있어야 한다 — 시험 `Data/SourceCommentTests` 가 원문으로 대조(자원 없이 늘 돎, WP0) | 도구 `audit`(WP0) — 원본이 없으면 건너뜀 표시 |
-| 13.5-23 (v0.7) | **방 구조**(오류, 기획 13.5-23 — 자원 없이 늘 돈다). ① **순번 표**(Data, WP7): 일반 방 6~8개, 보스 방은 마지막 하나뿐, 1번 방은 일반 방, 일반 방 생존(`to − from`) 1:00~2:00, t 범위가 0:00 부터 빈틈·겹침 없이(보스 방은 `from` 만), 정예 방마다 `miniboss` 가 있고 그 적이 `rank: miniboss`, 보스 방 `boss` 가 `rank: boss` 이고 `boss` 이벤트의 적과 같음. `slice: true` 면 "일반 방 6~8"·"보스 방"·"빈틈" 셋을 끈다. v0.7.1: `number` 가 1부터 커지기만 함, `slice` 가 아니면 배열 자리 + 1 과 같음. ② **방 맵 풀**(Data, WP7): 순번 표에 있는 종류마다 맵 ≥ 1, 풀의 맵마다 `room_kinds` 가 그 종류를 담음, 보스 맵 하나. ③ **맵 쪽**(`ArenaLayout.ValidateRooms`, WP1e — `room_kinds` 가 빈 목록이 아닌 맵): 문 넷 이름·변·입구 넷·`center`, 작은 방(N ≤ 36) 문 하나인 방 바닥 없음·진입점 150px 안 둘레 아닌 막힌 칸 없음(6.11 "방 맵"). 풀의 맵마다 13.5-4~6·19 는 그대로. **v0.7.1 문 틈 닿음**(Nav/Validation, WP2 — 반경 격자가 필요해 `ValidateRooms` 가 아님): 문 넷마다 나가는 자리 칸(`GateZones.Cells`) 중 하나 이상에 주인공 시작에서 반경 14 내비로 닿음(13.5-5 와 같은 "닿는 내비 칸 중심이 그 칸 마름모에서 14px 안"). 아니면 `문 틈에 못 닿음 gate_ne` — 문 틈 옆 끝 조각·`over_border` 벽이 틈을 좁히면 사람 판이 문 단계에서 멈춘다(봇은 `DOOR_SKIP` 으로 덮여 드러나지 않음). ④ **문 보상**(Data, WP7): 가중 > 0 인 보상 ≥ 2(출구 문 둘을 채움), `first_room` 있음, `rules.rooms.fallback_reward` 있음, 참조(물체 획득물 `kind: reward`·아이콘·축복 패시브) 존재, 축복 패시브는 `blessing: true` 이고 `trait` 아님. `rules.rooms` 의 `gates` 이름이 문 넷 안·`reward_anchor` 가 `center`. ⑤ **이벤트**(WP4 검사기, 13.5-18 자리): 모든 이벤트의 `At` 이 어느 방 범위 안이고 그 방 생존 안(정예 방은 `elite_spawn_cap` 안, 보스 방 제한 없음), `room_supply` 의 기준점이 그 방(보스 방) 맵의 `room_*`·`OneDoor`, `miniboss`·`boss` 이벤트가 그 정예·보스 방 t 시작에 있음. **v0.7.1**: 정예 방 범위의 `miniboss` 이벤트가 **정확히 하나**이고 그 `enemy` == `rooms[].miniboss`(다르면 정예 방 생존이 끝나지 않음 — 3.6), 보스 방 범위의 `boss` 이벤트도 정확히 하나. 이벤트가 가리키는 기준점(`toward`·`anchor`)이 그 t 가 든 방 종류 풀의 **모든 맵**에 있음, 점 빛 `at` 은 방 맵이 둘 이상인 액트에서 기준점 ID 만이고 그 기준점이 액트의 모든 방 맵에 있음(6.12). 들어온 문 바꾸기(서로 바꾸기, 들어올 수 있는 문마다)를 했을 때 행진의 시작 문 = 목표 문이면 **오류**, 같은 방 시계·같은 문에 두 이벤트가 겹치면 **경고** | Data (WP7) + Map(WP1e) + Nav(WP2, 문 틈 닿음) + WP4 검사기 |
+| 13.5-23 (v0.7) | **방 구조**(오류, 기획 13.5-23 — 자원 없이 늘 돈다). ① **순번 표**(Data, WP7): 일반 방 6~8개, 보스 방은 마지막 하나뿐, 1번 방은 일반 방, 일반 방 생존(`to − from`) 1:00~2:00, t 범위가 0:00 부터 빈틈·겹침 없이(보스 방은 `from` 만), 정예 방마다 `miniboss` 가 있고 그 적이 `rank: miniboss`, 보스 방 `boss` 가 `rank: boss` 이고 `boss` 이벤트의 적과 같음. `slice: true` 면 "일반 방 6~8"·"보스 방"·"빈틈" 셋을 끈다. v0.7.1: `number` 가 1부터 커지기만 함, `slice` 가 아니면 배열 자리 + 1 과 같음. ② **방 맵 풀**(Data, WP7): 순번 표에 있는 종류마다 맵 ≥ 1, 풀의 맵마다 `room_kinds` 가 그 종류를 담음, 보스 맵 하나. ③ **맵 쪽**(`ArenaLayout.ValidateRooms`, WP1e — `room_kinds` 가 빈 목록이 아닌 맵): 문 넷 이름·변·입구 넷·`center`·**입구가 같은 ID 문 앞**(v0.8.1 — `inside` 에서 가장 가까운 문 틈 칸이 같은 ID 문, 6.11 "방 맵"), 작은 방(N ≤ 36) 문 하나인 방 바닥 없음·진입점 150px 안 둘레 아닌 막힌 칸 없음(6.11 "방 맵"). 풀의 맵마다 13.5-4~6·19 는 그대로. **v0.7.1 문 틈 닿음**(Nav/Validation, WP2 — 반경 격자가 필요해 `ValidateRooms` 가 아님): 문 넷마다 나가는 자리 칸(`GateZones.Cells`) 중 하나 이상에 주인공 시작에서 반경 14 내비로 닿음(13.5-5 와 같은 "닿는 내비 칸 중심이 그 칸 마름모에서 14px 안"). 아니면 `문 틈에 못 닿음 gate_ne` — 문 틈 옆 끝 조각·`over_border` 벽이 틈을 좁히면 사람 판이 문 단계에서 멈춘다(봇은 `DOOR_SKIP` 으로 덮여 드러나지 않음). ④ **문 보상**(Data, WP7): 가중 > 0 인 보상 ≥ 2(출구 문 둘을 채움), `first_room` 있음, `rules.rooms.fallback_reward` 있음, 참조(물체 획득물 `kind: reward`·아이콘·축복 패시브) 존재, 축복 패시브는 `blessing: true` 이고 `trait` 아님. `rules.rooms` 의 `gates` 이름이 문 넷 안(v0.7 의 "`reward_anchor` 가 `center`" 는 v0.8 에 키와 함께 없앰). ⑤ **이벤트**(WP4 검사기, 13.5-18 자리): 모든 이벤트의 `At` 이 어느 방 범위 안이고 그 방 생존 안(정예 방은 `elite_spawn_cap` 안, 보스 방 제한 없음), `room_supply` 의 기준점이 그 방(보스 방) 맵의 `room_*`·`OneDoor`, `miniboss`·`boss` 이벤트가 그 정예·보스 방 t 시작에 있음. **v0.7.1**: 정예 방 범위의 `miniboss` 이벤트가 **정확히 하나**이고 그 `enemy` == `rooms[].miniboss`(다르면 정예 방 생존이 끝나지 않음 — 3.6), 보스 방 범위의 `boss` 이벤트도 정확히 하나. 이벤트가 가리키는 기준점(`toward`·`anchor`)이 그 t 가 든 방 종류 풀의 **모든 맵**에 있음, 점 빛 `at` 은 방 맵이 둘 이상인 액트에서 기준점 ID 만이고 그 기준점이 액트의 모든 방 맵에 있음(6.12). 들어온 문 바꾸기(v0.8.1 시작 문 기준 바꾸기 — v0.7.1 은 서로 바꾸기, 들어올 수 있는 문마다·v0.8.1: 거울판을 쓰는 맵이 그 방 풀에 있으면 거울판 이름으로도)를 했을 때 **바꾼 뒤 이벤트의 시작 문(`miniboss`·`boss`·`at_entry`) = 들어온 문이면 오류**(v0.8.1 — 바꾸는 규칙의 구현도 이 검사가 잡는다), 행진의 시작 문 = 목표 문이면 **오류**, 같은 방 시계·같은 문에 두 이벤트가 겹치면 **경고**. **v0.8**(기획 v0.8.1 13.5-23): ① 에 `floor` 규칙(모두 적거나 모두 안 적음, ≥ 1, 줄지 않음), ③ 을 **거울판에도**(`mirror: true` 맵은 `MapMirror.Of` 결과로 ③·13.5-4~6·19 를 한 번 더 — 문 틈 닿음 포함), ④ 에서 `reward_anchor` 조건을 빼고 "시작 칸 수 + `stairs` × (액트 수 − 1) ≤ 6"·`rules.level_up.temper` 가 `fillers` 안·성소 보상의 `pick_max_level` ≥ 1 을 더함, ⑤ 의 점 빛 조건에 "거울판이 있는 액트", **⑥ 방 이벤트 자리**(`RoomEvents.CheckPlacement`, WP1f 구현·WP4 등록 — 3.6 결정 5): 강적·포위가 방 시계 0:20 전 **오류**, 2번 방부터의 일반 방에 끝 0:45 안 절정 없음 **경고** | Data (WP7) + Map(WP1e·WP1f 거울판) + Nav(WP2, 문 틈 닿음) + WP4 검사기 |
 | 소리 | 소리 연결 표의 대상(무기·투사체·이펙트·그림 묶음·적·획득물·스테이지·**직업**(v0.6)·**보상**(v0.7))과 소리 ID 가 있음, 분류가 `rules.audio` 에 있음, 소리 파일 ≥ 1 | Audio (WP8) |
 | 추가(오류, v0.5) | 스테이지가 있는데 `rules.sight` 가 없음(6.10) | Data (WP7) |
 | 추가(오류) | `extends` 순환·없는 부모, `abstract` 정의를 생성에 씀, 부품 `(종류, type)` 미등록, 부품 매개변수 검사, `*_patch` 의 없는 id, 클립·이벤트 프레임 범위, 큰 피해 패턴의 예고 필수(13.5-13), 참조 쪽 덮어쓰기는 색조·크기만, 부품 슬롯 > 12, 여러 틱 동작이 `actions` 마지막이 아님, `rules` 하위 키 중복, atlas 그림에 `sheet`·`color_key`·`slack` 속성, 쓰는 클립(`special`·`cast_*`)이 그림 묶음에 없음, `tilesets`·`maps` 에 `extends`·`*_add`·`*_patch` | Data + 부품 |
@@ -2515,9 +2752,10 @@ public static class StageReach
     "pickups":      { "gold": { "collect": "snd_gold" }, "healing_potion": { "collect": "snd_invpot", "drop": "snd_flippot" } },
     "hero":         { "sorcerer": { "hurt": "snd_hero_hurt", "death": "snd_hero_death" } },     // v0.6: 키 = 직업 ID(6.16)
     "ui":           { "menu_move": "snd_titlemov", "menu_select": "snd_titlslct", "level_up": "snd_magic", "chest_open": "snd_chest", "elite_pack": "snd_magic1",
-                      "door_open": "snd_dooropen", "room_clear": "snd_magic" },                              // v0.7: 출구 문 열림(sfx\items\dooropen.wav — 원작 문 소리, 기획 12.7)
+                      "door_open": "snd_dooropen", "room_clear": "snd_magic", "belt_potion": "snd_invpot" },                            // v0.7: 출구 문 열림(sfx\items\dooropen.wav — 원작 문 소리, 기획 12.7)
     "rewards":      { "reward_tome": { "collect": "snd_invbook", "open": "snd_readbook" }, "reward_chest": { "collect": "snd_chest" },
-                      "reward_shrine": { "collect": "snd_magic" }, "reward_potion": { "collect": "snd_invpot" } },   // v0.7: 키 = 보상 ID(6.18). open = 보상 창이 열릴 때
+                      "reward_potion": { "collect": "snd_invpot" }, "shrine_enchanted": { "collect": "snd_magic" }, "shrine_fascinating": { "collect": "snd_magic", "open": "snd_magic" },
+                      "shrine_gloomy": { "collect": "snd_magic" } },   // v0.7: 키 = 보상 ID(6.18). open = 보상 창이 열릴 때. v0.8: 성소 셋(reward_shrine 없앰), ui.belt_potion = 허리띠 저절로 마심(CueKind.BeltPotion)
     "music":        { "title": "mus_title", "stage_cathedral": "mus_cathedral", "stage_catacombs": "mus_catacombs" }
   }
 }
@@ -2662,19 +2900,26 @@ public sealed record DisabledContent(IReadOnlyList<StageDef> Stages, IReadOnlyLi
 ### 6.18 문 보상 `rewards` (v0.7, 사용자 결정 R, 기획 11.4·13.1)
 
 ```json
-// Data/rewards.json (WP3)
+// Data/rewards.json (WP3) — v0.8(기획 v0.8.1 11.4 다시 짬): 문 보상은 레벨업 창에 없는 것을 준다
 { "rewards": [
-    { "id": "reward_tome",   "name": "마법서",         "kind": "weapon_cards",   "object": "obj_tome",   "icon": { "sprite": "obj_book_icon" },
-      "cards": { "owned_weapon": 100, "new_weapon": 100 }, "skip": { "gold": 25 } },
-    { "id": "reward_chest",  "name": "보물 상자",      "kind": "level_up",       "object": "obj_chest",  "icon": { "sprite": "obj_chest_icon" }, "gold": [30, 60] },
-    { "id": "reward_shrine", "name": "성소",           "kind": "blessing_cards", "object": "obj_shrine", "icon": { "sprite": "obj_shrine_icon" }, "skip": { "gold": 25 } },
-    { "id": "reward_potion", "name": "완전 회복 물약", "kind": "full_heal",      "object": "obj_potion", "icon": { "sprite": "obj_potion_icon" }, "skip_when_hp_at_least": 0.7 } ] }
-// pickups.json 에 더함: obj_tome·obj_chest·obj_shrine·obj_potion = { "kind": "reward", "draw": { "sprite": … }, "magnet": false }  (단계 1 은 대체 그림, 기획 11.4)
+    { "id": "reward_tome",   "name": "마법서",         "kind": "weapon_cards",  "object": "obj_tome",   "icon": { "sprite": "obj_book_icon" },
+      "cards": { "owned_weapon": 100, "new_weapon": 100 }, "skip": { "heal": 10 } },                       // 건너뛰기 = 체력 10(레벨업 건너뛰기와 같음)
+    { "id": "reward_chest",  "name": "보물 상자",      "kind": "weapon_bundle", "object": "obj_chest",  "icon": { "sprite": "obj_chest_icon" },
+      "bundle": { "weapon_levels": 1, "belt_potions": 1, "gold": [30, 60] } },                              // 고르지 않음: 무작위 무기 +1(없으면 단련) + 허리띠 1 + 금화 × gold_scale
+    { "id": "reward_potion", "name": "완전 회복 물약", "kind": "belt_potions",  "object": "obj_potion", "icon": { "sprite": "obj_potion_icon" }, "belt_potions": 2 },
+    { "id": "shrine_enchanted",   "name": "마법에 걸린 성소", "kind": "shrine", "object": "obj_shrine",       "icon": { "sprite": "obj_shrine_icon" },
+      "shrine": { "all_weapons": 1, "random_weapon": -1 } },                                                // 모두 +1, 그중 무작위 하나는 대신 −1(Lv1 은 안 맞음, 진화 빼고)
+    { "id": "shrine_fascinating", "name": "매혹의 성소",     "kind": "shrine", "object": "obj_shrine_red",   "icon": { "sprite": "obj_shrine_red_icon" },
+      "shrine": { "pick_weapon": 2, "pick_max_level": 7, "stats": { "max_hp_pct": -0.10 } } },              // 고른 무기 +2(창 — OfferSource.Shrine), 대가 최대 체력 −10%
+    { "id": "shrine_gloomy",      "name": "음산한 성소",     "kind": "shrine", "object": "obj_shrine_dark",  "icon": { "sprite": "obj_shrine_dark_icon" },
+      "shrine": { "stats": { "armor": 2, "damage_pct": -0.05 } } } ] }                                      // 방어 +2, 대가 피해 −5%. 어두운 그림(색조 0.6)은 그림 정의 쪽(WP5)
+// pickups.json 에 더함: obj_tome·obj_chest·obj_potion·obj_shrine·obj_shrine_red·obj_shrine_dark = { "kind": "reward", "draw": { "sprite": … }, "magnet": false }
+//   (원작 물체 그림 검증 전까지 exe PNG·코드 그림이 정식 대체 — 기획 v0.8.1 11.4·열린 질문 32)
 ```
 
 ```csharp
-// Core Defs/RewardDefs.cs (계약 WP1e)
-public enum RewardKind : byte { WeaponCards, BlessingCards, LevelUp, FullHeal }     // JSON weapon_cards / blessing_cards / level_up / full_heal
+// Core Defs/RewardDefs.cs (계약 WP1e → v0.8 WP1f)
+public enum RewardKind : byte { WeaponCards, WeaponBundle, BeltPotions, Shrine }   // JSON weapon_cards / weapon_bundle / belt_potions / shrine (v0.7 의 blessing_cards·level_up·full_heal 없앰)
 public sealed record RewardDef : IDef
 {
     public required string Id { get; init; }   public string Name { get; init; } = "";
@@ -2682,35 +2927,52 @@ public sealed record RewardDef : IDef
     public required DefRef<PickupDef> Object { get; init; }      // 방 안 물체(kind: reward 획득물)
     public IconDef? Icon { get; init; }                           // 문 위 아이콘(48px)·HUD 방 줄
     public RewardCardsDef? Cards { get; init; }                   // weapon_cards: 후보 가중(owned_weapon·new_weapon)
-    public RewardSkipDef? Skip { get; init; }                     // 건너뛰기 = 금화(gold) 또는 회복(heal)
-    public int[]? Gold { get; init; }                             // level_up: [최소, 최대] × 액트 gold_scale
-    public float? SkipWhenHpAtLeast { get; init; }                // full_heal: 이 비율 이상이면 후보에서 빠짐
+    public RewardSkipDef? Skip { get; init; }                     // 창의 건너뛰기 = 회복(heal, 체력 값). v0.8: gold 없앰
+    public RewardBundleDef? Bundle { get; init; }                 // weapon_bundle
+    public int BeltPotions { get; init; }                         // belt_potions: 허리띠에 넣는 수(차 있으면 그 자리에서 마심)
+    public ShrineDef? Shrine { get; init; }                       // shrine
     public IReadOnlyList<ContentBundle> Requires { get; init; } = [];
 }
-// GameDefs.Rewards(DefTable<RewardDef>), Kinds 에 "rewards"
+public sealed record RewardBundleDef { public int WeaponLevels { get; init; } = 1; public int BeltPotions { get; init; } public int[]? Gold { get; init; } }   // Gold [최소, 최대] × 액트 gold_scale
+public sealed record ShrineDef
+{
+    public int AllWeapons { get; init; }        // 진화 아닌 가진 무기 모두 +n(만렙은 안 오름)
+    public int RandomWeapon { get; init; }      // 0 이 아니면 그중 무작위 하나는 AllWeapons 대신 이 값(Lv1 무기는 고르지 않음, 방 난수 Drop)
+    public int PickWeapon { get; init; }        // 0 이 아니면 고른 무기 하나 +n — 창(LevelUpOffer.Source = Shrine), 후보 = PickMaxLevel 이하 진화 아닌 무기
+    public int PickMaxLevel { get; init; }
+    public IReadOnlyDictionary<StatKey, float> Stats { get; init; } = new Dictionary<StatKey, float>();   // 판 끝까지(짐 Mods)
+}
+// GameDefs.Rewards(DefTable<RewardDef>), Kinds 에 "rewards". 종류마다 필요한 칸이 없거나 다른 종류의 칸이 있으면 로딩 오류(13.5-23 ④)
 ```
 
-- **정예 상자 보상**(기획 `reward_elite`)은 정의를 두지 않는다 — 정예·보스 방은 `RoomState.Reward = null` 이고, 중간 보스·보스가 떨군 정예 상자(드롭 표 `dt_miniboss`, 6.9)를 `RoomFlow` 가 `GatesExit` 로 묶는다(3.6). 같은 일을 두 곳에서 정하지 않게. `[해석]`
+- **정예 상자 보상**(기획 `reward_elite`)은 정의를 두지 않는다 — 중간 보스·보스가 떨군 정예 상자(드롭 표 `dt_miniboss`, 6.9)를 `RoomFlow` 가 `GatesExit` 로 묶는다(3.6). 같은 일을 두 곳에서 정하지 않게. `[해석]`
+  v0.8: 정예·보스 방에는 여기에 **덤 보상**(그 방으로 들어온 문의 보상 — `RoomState.Reward`)이 더해진다. 둘 다 보상 자리 줄에 놓인다(3.6 "보상 자리").
+- **성소는 종류마다 한 판에 한 번**: 받은 성소 ID 는 짐 `Shrines` 에 쌓이고 `RewardAvailable` 이 거른다(같은 판에 두 번 오면 음산한 성소 방어가 돌 피부와 합쳐 7 을 넘는다 — 기획 6절).
 - **`GatesExit` 를 다는 곳 둘**(v0.7.1): 문 보상 물체는 `SpawnPickup` 이 `PickupSpawn.Reward != null` 이면 만들 때 단다(WP3), 정예 상자는 `Reward` 시작 때 `RoomFlow` 가 단다(이번 틱에 생긴 상자 포함). 그 밖의 획득물은 달지 않는다.
-- **받는 길**(WP3, `Pickups` 단계): 보상 물체를 주우면 `Kind` 마다 — `WeaponCards`·`BlessingCards` → 보상 대기 +1(`IProgression.PendingRewards`, 창은 레벨업 오버레이 재사용 — 8.1),
-  `LevelUp` → 경험치를 `XpToNext` 만큼(레벨업 1회 — 기획 "큰 영혼석") + 금화 `Gold × gold_scale`(방 난수 `Drop`), `FullHeal` → 체력 전부. 신호 `RewardCollected`.
+- **받는 길**(WP3, `Pickups` 단계 — v0.8): 보상 물체를 주우면 `Kind` 마다 — `WeaponCards` → 보상 대기 +1(`IProgression.PendingRewards`, 창은 레벨업 오버레이 재사용 — 8.1, `Source = Tome`),
+  `WeaponBundle` → 진화 아니고 만렙 아닌 가진 무기 중 무작위 하나 +`WeaponLevels`(방 난수 `Drop`, 없으면 `단련`) + 허리띠 `BeltPotions`(단계 2 부터 데이터) + 금화 `Gold × gold_scale`,
+  `BeltPotions` → 허리띠에 넣고 넘치는 만큼은 그 자리에서 마심(체력 전부), `Shrine` → `AllWeapons`·`RandomWeapon` 바로 적용 + `Stats` 를 짐 `Mods` 에 + ID 를 `Shrines` 에, `PickWeapon` 이 있으면 보상 대기 +1(`Source = Shrine`, 고른 무기 +`PickWeapon`). 신호 `RewardCollected`.
+  v0.7 의 `LevelUp`("큰 영혼석" — 레벨업 1회)·`FullHeal`(줍는 순간 전부 회복)·`BlessingCards` 는 없앴다(기획 v0.8.1 11.4 — 레벨업 창과 같거나, 위험이 지난 뒤에 오던 것).
 - **보상 물체는 상태와 상관없이 늘 집힌다**(v0.7.1, 물약 포함 — 획득물 체력 물약의 "체력이 가득이면 안 집힘"(기획 11.1)은 `kind: reward` 에 쓰지 않는다. 쓰면 체력이 가득일 때 문이 영영 안 열린다).
-  **0장 보상**: 줍는 순간 그 보상이 줄 카드가 0장이면(문을 연 뒤 레벨업으로 무기 칸이 차고 모두 Lv8, 축복이 모두 최대) 대기를 만들지 않고 그 보상의 `skip`(금화 25)으로 바로 처리한다 — 거르기(`RewardAvailable`)는 문을 열 때 한 번뿐이라(3.6) 그 사이 바뀐 상태를 여기서 받는다.
-  그래서 보상 창은 늘 카드 ≥ 1장으로 열리고 자동 조작이 0장 창에서 멈추지 않는다(9절).
+  **0장 보상**(v0.8): 줍는 순간 그 보상이 줄 카드가 0장이면(문을 연 뒤 레벨업으로 무기 칸이 차고 모두 만렙, 매혹의 성소에 Lv7 이하 무기가 없음) 대기를 만들지 않고 **`단련`**(`rules.level_up.temper`)으로 바로 처리한다 — 거르기(`RewardAvailable`)는 문을 열 때 한 번뿐이라(3.6) 그 사이 바뀐 상태를 여기서 받는다.
+  (v0.7.1 은 그 보상의 `skip` 금화 25 — 금화는 MVP 에 쓸 곳이 없다, 기획 v0.8.1 26.) 그래서 보상 창은 늘 카드 ≥ 1장으로 열리고 자동 조작이 0장 창에서 멈추지 않는다(9절).
+- **거르기** `RewardAvailable`(WP3, 문을 열 때 한 번 — 3.6): 마법서 = 줄 무기 카드 ≥ 1, 물약 = 허리띠가 차지 않음, 성소 = 짐 `Shrines` 에 없음 + (`RandomWeapon` 이면 진화 아닌 무기 ≥ 2, `PickWeapon` 이면 `PickMaxLevel` 이하 진화 아닌 무기 ≥ 1), 보물 상자 = 늘 참. v0.7 의 `skip_when_hp_at_least` 는 없앴다.
 - **보상 창 계약**(WP1e 형, WP3 구현 — `Sim/Contracts/Progression.cs`):
 
 ```csharp
-public enum OfferSource : byte { LevelUp, Tome, Shrine }
+public enum OfferSource : byte { LevelUp, Tome, Shrine }      // v0.8: Shrine = 매혹의 성소의 무기 고르기 창(축복 창 아님)
 public sealed record LevelUpOffer(int Level, IReadOnlyList<LevelUpCard> Cards, int RerollsLeft, OfferSource Source = OfferSource.LevelUp);
 // IProgression 에 더함
 int PendingRewards { get; }
-LevelUpOffer RewardOffer();            // 대기 중인 마법서·성소 창(Source = Tome·Shrine). 카드 = 무기만 / 축복만
-void ChooseReward(int index); void RerollReward(); void SkipReward();   // 재추첨은 레벨업과 같은 수를 나눠 씀(기획 4.4)
-bool RewardAvailable(RewardDef reward); // 문 열기 거르기(3.6) — 줄 카드가 있나·체력 문턱
+LevelUpOffer RewardOffer();            // 대기 중인 마법서·매혹의 성소 창(Source = Tome·Shrine). 카드 = 무기만
+void ChooseReward(int index); void RerollReward(); void SkipReward();   // 재추첨은 레벨업과 같은 수를 나눠 씀(기획 4.4). 건너뛰기 = RewardDef.Skip(체력)
+bool RewardAvailable(RewardDef reward); // 문 열기 거르기(3.6, 위 "거르기")
+int PicksLeft { get; }                 // v0.8: 빌드에 남은 칸 레벨(열린 칸마다 (최대 − 지금), 빈 칸은 최대) — 0 이면 만렙. ROOM 로그 picks_left
 // ChoiceKind 에 Reward. EndTick 의 대기 순서 = LevelUp → Chest → Reward
 ```
 
-- 대기 순서를 레벨업 → 상자 → 보상으로 둔 이유: 보물 상자(레벨업 1회)·끌어당긴 보석이 만든 레벨업과 정예 상자 진화를 먼저 끝내야 마법서 카드가 지금 칸 상태로 만들어진다. 출구 문은 셋이 다 비어야 열린다(3.6 `Reward` 줄).
+- 대기 순서를 레벨업 → 상자 → 보상으로 둔 이유: 끌어당긴 보석이 만든 레벨업과 정예 상자 진화를 먼저 끝내야 마법서 카드가 지금 칸 상태로 만들어진다. 출구 문은 셋이 다 비어야 열린다(3.6 `Reward` 줄).
+- **허리띠**(v0.8, 기획 v0.8.1 11.4 — 계약 `Hero.Belt`(int, 공통 조각 — HUD 가 읽음)·`rules.hero.belt`, 구현 WP3): 체력이 최대 × `threshold` 아래로 내려가는 순간 하나를 저절로 마신다(전부 회복, `cooldown` 초에 한 번 — 버튼 없음). 짐 `Belt` 로 방·액트 사이에 이어진다.
 - 소리는 정의에 두지 않고 `sound_bindings.rewards.<id>`(6.15). 문 위 표시·방 안 물체 그리기는 7.11.
 
 ---
@@ -2723,6 +2985,13 @@ bool RewardAvailable(RewardDef reward); // 문 열기 거르기(3.6) — 줄 카
   1. 정수 배율 k = ceil(min(창W/960, 창H/540)) 로 `WorldRT` 를 점 샘플링(PointClamp)해 960k×540k 중간 타깃에 키운다.
   2. 그것을 선형 샘플링으로 창 안 레터박스 사각형(비율 16:9 유지, 남는 곳 검정)에 줄여 그린다.
   → 정수 배율에서는 그대로 날카롭고, 비정수 배율에서도 번짐이 1px 테두리 정도로 줄어든다(sharp bilinear).
+- **그림 배율 s**(v0.8, 사용자 결정 U — 1.4 "AI 확대"): 시작 검사가 manifest `upscale.status` 가 `done` 이면 s = manifest `upscale.output_scale`, 아니면 1 로 정한다(로그 `ASSETS … art_scale=`).
+  v0.8.1: 첫 판은 `output_scale` 이 늘 2 다(표 읽기가 2 만 받음 — 1.4). 시작 검사는 메타·`arena.json` 의 `scale` 이 **{1, s} 안이고 s 를 나누는지**(그리는 배율 s ÷ `scale` 이 정수인지) 본다 — 어기면 시작 검사 ① 과 같은 "자원 형식이 낡았다" 안내. 4배 판(s = 4)은 계약 변경(WP1g — 13.20 열린 질문 2). `WorldRT` 는 **(960·s)×(540·s)**(s = 2 면 1920×1080)이고
+  월드 → 타깃 변환에 배율 s 를 곱한다. 카메라·`World.ViewRect`·생성 띠는 그대로 960×540 월드 px 이다 — **시뮬레이션은 s 를 모른다**(같은 씨앗이면 s 와 상관없이 `--log-hash` 가 같다, 10.2).
+  그림마다 그리는 배율 = s ÷ 메타 `scale`: 확대한 그림(scale 2)은 1:1, 원본 그림(scale 1)은 2배 점 확대. 둘 다 정수라 월드 그리기는 모두 `PointClamp` 하나로 된다. 카메라·개체 위치는 **타깃 픽셀**(= 1/s 월드 px — s = 2 면 월드 반 픽셀)로 내린다(그림 떨림 방지 규칙을 2배 화면 기준으로, 기획 19.6).
+  빛 지도·안개 타깃(7.7·7.10)은 월드 px 해상도 그대로 두고 곱하기 그리기에서 선형으로 s 배 늘린다(부드러운 값이라 해상도를 올릴 까닭이 없다). 위 1·2 단계의 960·540 을 960·s·540·s 로 읽는다(창 1920×1080 이면 k = 1).
+  9~10층(월드 UI·HUD)은 지금처럼 `PresentRT` 해상도다. 첫 값 "4배 결과를 2배로 줄여 1920×1080" 은 기획 열린 질문 41 이다(화면 배율·성능 — R38). 텍스처는 확대한 그림만큼 4배(큰 방 바닥 약 14MB → 약 58MB, 기획 19.6) — WP5 가 `vram_mb` 로 다시 잰다(R7·R38).
+  v0.8.1: 이 어림은 맵 하나 값이다. 액트 단위로 읽는 맵 그림(7.5)에는 `mirror: true` 인 맵의 **거울판 그림 `<art>@m` 이 원판만큼 더해지므로**(거울판 맵마다 ×2) 액트의 맵 그림 합은 (풀의 맵 수 + 거울판 수) × 맵 하나 값으로 본다.
 - 최종 결과는 `PresentRT` 에 모은다(월드 + UI). 백버퍼에는 그것을 한 번 늘여 복사한다. 캡처는 `PresentRT` 를 저장한다.
   `PresentRT` 크기는 백버퍼와 따로 정한다: `--window` 값이 있으면 그 크기로 고정(창이 화면 배율·작은 모니터 때문에 줄어도 캡처 크기·배율 k 가 바뀌지 않음), 없으면 창 크기.
 - 전체 화면은 테두리 없는 창(`HardwareModeSwitch = false`). F11·Alt+Enter. 개발 옵션 실행에서는 F11 을 받지 않는다(실제 입력을 읽지 않음, 3.2).
@@ -2801,6 +3070,8 @@ bool RewardAvailable(RewardDef reward); // 문 열기 거르기(3.6) — 줄 카
   시작이 느리다고 재 보면 그때 StbImageSharp(FontStashSharp 가 끌어오는 2.30.16 — 쓰려면 csproj 에 명시 참조)로 작업 스레드에서 해독 → 주 스레드에서 `new Texture2D` + `SetData` 로 바꾼다(R7).
 - **그림자**: 원작 그림자(색인 0, 불투명 검정)는 가져올 때 검정 × `shadow_alpha`(0.5 첫 값, 기획 8.1·열린 질문 11)로 바뀐다. 값을 바꾸려면 표를 고치고 다시 가져온다(캐시가 그 작업만 다시 만든다).
   그림자는 rgb 가 0 이라 색조·발광·가산 번쩍임이 더해도 변하지 않고, 알파 배율만 같이 걸린다(기획 8.1 "버그 아님").
+  **v0.8 확대한 묶음의 그림자**(사용자 결정 U — AI 로 확대하면 그림자 가장자리에 계단·지저분한 테가 생김, 기획 19.6): 그림자는 AI 에 넣지 않고 가져오기 도구가 원본 그림자 모양을 **매끈하게 2배**(도구 코드 — 결정적) 해
+  몸 아래에 같은 시트로 굽는다(1.4 "AI 확대" ⑥). 그래서 게임은 확대 여부와 상관없이 그림자를 따로 그리지 않는다 — 그리기 경로·그리기 호출이 그대로다. 진하기는 같은 `shadow_alpha`(0.5)라 확대 안 한 그림의 그림자와 같다(기획 19.6 확인 항목 ④).
 - **변종(TRN)**: 가져올 때 구운 **파일**이다(`zombie@bluered.png` — 묶음 한 페이지의 변종). 실행 중에 색을 바꾸지 않는다. 이유: 커스텀 셰이더를 쓰지 않으므로(2.2) 실행 중 TRN 은 CPU 로 텍스처를 한 벌 더 만드는 것과 같아
   그림 메모리 이득이 없고, 색인 PNG 해독기·팔레트 데이터를 게임에 따로 둬야 한다. 디스크만 변종 수만큼 늘어난다.
 - **그림 메모리**: 칸 그대로의 시트면 변종 하나(좀비 묶음 서기·걷기·공격·죽기)가 25MB 안팎, 스테이지 1 의 변종 12개 + 보스면 300MB 를 넘는다. 프레임을 잘라 묶으면 약 1/3 로 본다(추정, WP0 가 잰다 —
@@ -2808,6 +3079,7 @@ bool RewardAvailable(RewardDef reward); // 문 열기 거르기(3.6) — 줄 카
   게다가 `TextureStore` 는 **스테이지 시작 때 그 스테이지에서 나올 수 있는 것만** 읽는다: 나오는 적(구간 가중치·이벤트·소환·분열·호위 — v0.6.1: `StageReach.Enemies`, 6.14)의 (그림 묶음 × 변종),
   주인공, 모든 무기·이펙트·투사체·획득물·아이콘, 그 맵의 그림. 스테이지를 바꾸면 쓰지 않는 것은 내린다. 로그 `ASSETS stage=… textures=… vram_mb=…`(R7).
   v0.7: 단위는 **액트**다 — 액트 시작 때(판 시작·계단) 그 액트 **방 맵 풀의 모든 맵 그림**·보상 물체·아이콘까지 읽고, 방 이동 때는 읽지 않는다(0.5s 어두워짐 안에 디스크 읽기가 끼지 않게, 기획 28절 넘긴 것 2). 계단에서 앞 액트 것을 내린다.
+  v0.8.1: 풀의 맵이 `mirror: true` 면 거울판 그림 `<art>@m` 도 같이 읽는다(방 이동 때 읽지 않는 규칙 그대로 — 7.1 의 메모리 어림에 들어감).
 - **색조**: SpriteBatch 색 = 색조 × 알파(premultiplied 이므로 `new Color(r*a, g*a, b*a, a)`). 곱하기라 어둡게만 된다(기획 8.1 그대로).
 - **발광**: 같은 프레임을 `BlendState.Additive` 로 발광 색 × 알파로 한 번 더(7층). 발광 색·알파·맥동·번쩍임·발밑 원·알파 배율은 모두 `Enemy.Visual`(6.6)에서 읽는다 — 렌더는 부품 종류를 모른다.
 - **적 투사체**: 투사체 진영이 `Enemy` 면 몸체 위에 붉은 테 빛(가산, (255,60,40) 약하게)을 더해 주인공 투사체(가산 한 겹 더)와 구별한다(기획 5.1 — 원작 화살을 양쪽이 같이 써서 더 중요해짐).
@@ -2830,6 +3102,10 @@ v0.2 의 `ObstacleBaker`(맵 질감으로 장애물 몸체·옆면·그림자를
 ```
 
 - `floor` 의 파일 이름·`pos` 는 1.4 의 **바닥 조각 이름 규칙**(`ArenaArt.FloorChunks`) 그대로다 — `pos = (512cx, 512cy)` 월드 px. 시작 검사와 13.5-10 이 자원 없이 같은 목록을 계산한다.
+  v0.8: `arena.json` 에 `scale`(1·2, 형식 판 2). 확대한 맵은 바닥 조각이 `512 × scale` 그림 픽셀, 기둥 그림이 `64·scale × 160·scale` 이고 그리는 배율은 7.1 의 s ÷ `scale` — 자리·정렬 키·가림 판정은 모두 월드 px 그대로다.
+  벽 기둥은 하나씩 확대하므로 이웃 기둥과 맞닿는 세로 가장자리에 **색** 이음매가 보일 수 있다(1.4 ③ 여백으로 줄임) — `--preview tiles` 로 본다(10.2, R38).
+  v0.8.1: 맵 그림의 알파는 원본을 2배 점 확대하므로(1.4 ④) 바닥 조각·기둥의 경계 모양은 원본 2배 그대로다 — 아래 "1px 틈·겹침 없음" 은 확대해도 선다. 이음매는 색만의 문제이고, 번진 색 여백은 이웃 기둥의 질감을 보지 못하므로 여백을 늘려서는 이어지지 않는다.
+  보이면 대처는 **벽 줄을 배치째 확대한 뒤 기둥으로 자르기**(같은 그림 한 프레임 규칙을 그 맵 그림에서는 포기 — 아틀라스가 커짐) 또는 **맵 범위에서 기둥 빼기**(바닥 조각만 확대 — 지금 표에는 기둥만 끄는 칸이 없어 `UpscaleTable` 계약 변경, WP1g. 13.20 열린 질문 4).
   `cells` 는 (ty, tx, kind) 순 정렬. 같은 칸에 kind 1 과 2 가 같이 있을 수 있다. 칸의 무리(뒷둘레·앞둘레·안쪽, 7.4)는 파일에 적지 않고 게임이 `ArenaGrid` 로 계산한다.
 - **바닥(0층)**: 바닥 칸(성질 `.`·`L`)의 바닥 삼각형 두 조각을 모두 구운 512×512 조각들. 화면에 걸친 조각만 그린다. 한 장으로 구우면 텍스처 한도를 넘는다(기획 10.2).
   원작 "바닥 먼저 전부, 그다음 벽" 순서가 이것으로 지켜진다(한 번에 그리면 앞 칸 바닥이 뒤 칸 벽 밑동을 덮는다).
@@ -3060,9 +3336,10 @@ v0.5 처럼 "벽·대상 모양을 값 g 의 회색으로 최댓값 혼합" 하�
 
 - **문 봉인**: `World.Room.Phase < Doors` 이거나 `Exits` 에 없는 문(들어온 문 포함)은 문 틈 칸(`World.Gates[id].Cells`)의 마름모 위에 붉은 빛 막(코드 그림, 알파 0.5, 스테이지 틱으로 느리게 일렁임 — 3.4 표시 시간)을 4층 앞 벽 단계와 같은 자리에 그린다.
   열린 출구 문은 막을 걷고(0.3s 앱 틱 사라짐) 문 위(벽 높이 위)에 보상 아이콘 48px(`RoomExit.Reward.Icon`), 주인공이 300px 안이면 그 아래 이름. 정예 방 문은 아이콘 테를 붉게 + `정예`, 보스 방 문은 보스 이름 글자, 계단은 `지하묘지로`(`NextActName`).
+  v0.8: 정예·보스 방으로 가는 문에도 덤 보상 아이콘이 있다(이름 `정예 상자 + 마법서` 꼴 — 기획 v0.8.1 11.4), `NextFloor` 가 0 이 아니면 아이콘 아래 `▼ 2층`(계단 문 포함). 성소는 성소 이름.
   막은 그림뿐이다 — 충돌·시야를 바꾸지 않는다(기획 2.5 "봉인 표시만"). 원작 그림으로 바꿀지는 기획 열린 질문 32.
-- **보상 물체**: `kind: reward` 획득물이라 보통 획득물 그리기(시체·보석과 같은 층, 안개 알파 — 7.10)를 그대로 탄다. 정리 끝에 `center` 에 놓이고 가 본 곳이 아니어도 미니맵에 금색 점(8.2).
-- **방 이동 어두워짐**: `PlayScene` 이 `rules.rooms.transition`(0.5s) 동안 앱 틱으로 검정 덮개를 0 → 1 → 0(가운데에서 `RunSession.Advance`, 새 `World` 의 첫 프레임은 덮개 1). 시뮬레이션은 돌지 않는다. 캡처 시각은 앱 틱이라 그대로 재현된다.
+- **보상 물체**: `kind: reward` 획득물이라 보통 획득물 그리기(시체·보석과 같은 층, 안개 알파 — 7.10)를 그대로 탄다. 정리 끝에 보상 자리(v0.8 — 주인공 앞, 3.6 "보상 자리". v0.7 은 `center`)에 놓이고 가 본 곳이 아니어도 미니맵에 금색 점(8.2).
+- **방 이동 어두워짐**: `PlayScene` 이 `rules.rooms.transition`(0.5s — v0.8: 고른 출구의 `NextFloor` 가 0 이 아니면 `transition_floor` 1.0s) 동안 앱 틱으로 검정 덮개를 0 → 1 → 0(가운데에서 `RunSession.Advance`, 새 `World` 의 첫 프레임은 덮개 1). 시뮬레이션은 돌지 않는다. 캡처 시각은 앱 틱이라 그대로 재현된다.
 - 카메라는 새 `World` 의 주인공(들어온 문 진입점)에서 바로 시작한다(보간 없음 — `PrevPos = Pos`). 작은 방(2048×1152)도 화면(960×540)보다 커서 카메라 규칙(7.2)은 그대로다.
 - **월드 바뀜**(v0.7.1, 계약 WP1e-형 — 게임 `App/Contracts/IWorldBound.cs`): Core 는 새 `World` 라 저절로 새로 시작하지만 게임 쪽 서비스는 월드를 넘어 산다. 그대로 두면 ① `FxSystem` 의 시체·피해 숫자·이펙트가 옛 방의 "생긴 틱" 을 들고 있어 새 `World.Tick`(0)에서 나이가 음수가 되어 안 사라지고
   ② `EntityId` 가 새 저장소에서 다시 쓰여 개체 ID 를 키로 쓰는 소리 반복·쿨다운·Fx 붙임이 다른 개체에 붙고 ③ 안개의 칸 바뀜 값·맵 크기 텍스처, 미니맵 픽셀·가 본 곳 배열, 맵 그림 묶음이 옛 맵을 가리킨다. 묶음마다 따로 고치면 빠뜨리기 쉬우므로 한 곳에 둔다.
@@ -3101,7 +3378,7 @@ public interface IAutoplayDriver { AppTick Now { get; } bool Ready(IScene scene)
 | `HeroSelectScene` (직업 단계, WP9) | 씬 | 카드 4장(서기 그림·이름·설명·특성, 꺼진 직업은 어둡게 + MPQ 이름) → Play. 고른 직업은 저장의 `last_hero` |
 | ~~`StageSelectScene`~~ | — | **v0.7 에서 없앰**(기획 12.5 — 액트는 판 안에서 이어지고 해금이 없다). 헬파이어 액트의 갈래(기획 열린 질문 38)가 생기면 다시 본다 |
 | `PlayScene` | 씬 | 월드 + HUD. v0.7: **`RunSession` 소유**(3.6) — 지금 방 `World` 를 돌리고 `StageStep.RoomExit` 면 0.5s 어두워짐 가운데 `Advance()`(앞뒤로 표시 이벤트 소비·`IWorldBound.Attach` — 7.11, v0.7.1), 액트가 바뀌면 미리 읽기·음악(7.9). 판 끝(`StageStep.Finished`) → `RunSession.Conclude()` 한 번(v0.7.1) → Result |
-| `LevelUpOverlay` | 오버레이(멈춤) | `World.AwaitingChoice == LevelUp` 이면 Play 가 **같은 앱 틱 안에서** 올림(3.3). v0.7: `== Reward` 면 같은 오버레이를 `IProgression.RewardOffer()` 로 연다 — 제목 `마법서`·`성소`(`OfferSource`), 띠 색(무기 주황·축복 보라), 건너뛰기 문구는 그 보상의 `skip`, 빛 기둥 없음(기획 12.2). 고르기는 `ChooseReward`/`RerollReward`/`SkipReward` |
+| `LevelUpOverlay` | 오버레이(멈춤) | `World.AwaitingChoice == LevelUp` 이면 Play 가 **같은 앱 틱 안에서** 올림(3.3). v0.7: `== Reward` 면 같은 오버레이를 `IProgression.RewardOffer()` 로 연다 — 제목 `마법서`·`매혹의 성소`(`OfferSource` — v0.8: 성소 창은 무기 고르기, 축복 띠 색은 E), 띠 색(무기 주황), 건너뛰기 문구는 그 보상의 `skip`(체력 — v0.8), 빛 기둥 없음(기획 12.2). 고르기는 `ChooseReward`/`RerollReward`/`SkipReward` |
 | `ChestOverlay` | 오버레이(멈춤) | 상자 열기 1.2s 연출 |
 | `PauseOverlay` → `SettingsOverlay` | 오버레이(멈춤) | Esc/P, 포기 → 패배 처리 |
 | `ResultScene` | 씬 | 승리 3s / 패배 2s 뒤 → 다시 하기(같은 시작 액트·직업, 새 씨앗) / 타이틀. v0.7: 도달한 곳(`RunState.Depth` — `지하묘지 6 / 11`, 승리면 `도살자 처치`)·걸린 시간(`ElapsedTicks`)·방 줄(방마다 받은 보상 아이콘)·무기별 피해(기획 12.4) |
@@ -3117,11 +3394,11 @@ public interface IAutoplayDriver { AppTick Now { get; } bool Ready(IScene scene)
 
 ### 8.2 HUD (기획 12.1)
 
-- `Hud` 하나가 `World` 를 읽어 그린다: 경험치 막대, 시간, 보스 막대(최종 위·중간 아래), 무기·패시브 칸, 처치·금화, 미니맵, 체력 구슬, 지속 효과, 알림 문구.
+- `Hud` 하나가 `World` 를 읽어 그린다: 경험치 막대, 시간, 보스 막대(최종 위·중간 아래), 무기·패시브 칸(v0.8: 열린 칸 수 `Hero.WeaponSlotsOpen`·`PassiveSlotsOpen` 만큼 — 계단 뒤 5), 처치·금화, 미니맵, 체력 구슬과 허리띠 칸 둘(v0.8 `Hero.Belt`, `CueKind.BeltPotion` 에 깜빡임), 지속 효과, 알림 문구.
 - **방 줄·방 상태**(v0.7, 기획 12.1 — v0.6 의 판 시간 `07:42` 대신): `Hud` 는 `World` 와 함께 `RunState` 를 받는다. 위 가운데 `대성당 4 / 9`(액트 이름·`RoomPlan.Number` / 그 액트 마지막 방 번호 — v0.7.1, `slice` 판은 `6 / 8`) + `rooms` 원소마다 작은 칸 —
   지난 방 = `RunState.Rooms[i].RewardId` 의 아이콘, 지금 방 = 밝은 테, 앞 방 = `RunState.Act.Rooms[i].Kind`(일반 회색 점·정예 붉은 마름모·보스 붉은 네모). 그 아래 방 상태: `Survive` = 남은 시간(`SurviveTicks − ClockTicks`, 정예·보스 방은 없음),
   `Cleanup` = `남은 적 n`(살아 있는 적 수), `Doors` = `문을 고르라`. 방 문구 `대성당 — 3`(1.5s)은 `World.Banner` 에 감독이 방 시작 때 쓴다(WP4).
-- **미니맵**(v0.7): 그 방 맵의 `minimap.png`. `Cleanup` 이고 살아 있는 적 ≤ `rules.rooms.remaining_marker`(10)면 **모든 남은 적**을 붉은 작은 점으로(가 본 곳·시야와 상관없이 — 기획 2.5), 보상 물체·옮겨진 정예 상자는 금색, 열린 출구 문은 보상 색 점(`World.Gates[id]` 가운데).
+- **미니맵**(v0.7): 그 방 맵의 `minimap.png`. `Cleanup` 이면(v0.8 — 수와 상관없이 정리 시작부터. v0.7 은 `remaining_marker` 10 이하부터) **모든 남은 적**을 붉은 작은 점으로(가 본 곳·시야와 상관없이 — 기획 2.5), 보상 물체·옮겨진 정예 상자는 금색, 열린 출구 문은 보상 색 점(`World.Gates[id]` 가운데).
 - **보스 막대 여러 줄**(v0.5.3, 기획 12.1 v0.6.2): `World.BossBars`(`List<BossBar(Id, Name, Final)>`, WP4 씀)는 **등장 순서**로 쌓고 죽거나 무너진 적의 줄을 뺀다. 계약 형은 그대로다.
   HUD 는 `Final` 인 줄을 맨 위 큰 막대(480×10, 2페이즈 선)로, 나머지를 목록 순서대로 그 아래 작은 막대(320×6)로 그린다. `Final` 이 없으면 목록 첫 줄(가장 먼저 나온 중간 보스)이 큰 막대다.
   최대 4줄(중간 보스 3 + 최종 보스 — 기획 12.1). 넘으면 `Final` 과 먼저 나온 중간 보스 3줄만 그리고 로그에 경고 한 번(MVP 데이터로는 생기지 않는다). 체력은 그 적에서 읽는다.
@@ -3169,6 +3446,16 @@ public interface ISaveService
 ```
 
   쓰는 곳: WP6(판 시작 때 고른 직업으로 `SetLastHero`, 결과에 `HeroClassId`·`Reached`·`RunTime` 을 채워 `RecordResult`, 타이틀이 `BestRecord`), WP7(`SaveStore` 구현).
+- **계단 저장**(v0.8, 기획 v0.8.1 2.5 — MVP 단계 3. 계약 WP1f, 파일 WP7, 화면 WP6): 저장 칸 **하나**, 파일 `%LOCALAPPDATA%\DiabloDefenceRemastered\run.json`(`save.json` 과 따로 — 깨져도 기록·설정과 무관), 내용 = `RunSnapshot`(3.6 결정 4) 그대로 + `version`.
+  - 쓰기: 액트 보스 방의 문 단계(`RunSession.CanSuspend`)에서 일시정지 메뉴 `저장하고 끝내기` → `Suspend()` → `SaveRun` → 타이틀. 임시 파일 → 바꿔치기(save.json 과 같음).
+  - 읽기: 타이틀이 `PeekRun()` 으로 `이어 하기 (지하묘지)`(다음 액트 이름) 한 줄을 보이고, 고르면 `TakeRun()` — **읽는 순간 파일을 지운다**(다시 끄면 그 판은 끝, 판 중간 저장으로 죽음을 되돌리지 못하게). 그 값으로 `RunSession` 이어 하기 생성자.
+    생성자가 `RunSnapshotMismatchException`(정의가 바뀜 — 3.6)이면 저장은 이미 지워졌고 로그 한 줄 + 타이틀 한 줄 `이어 할 판을 읽지 못했다`. JSON 이 깨졌으면 `run.json.bad` 로 옮긴다(save.json 과 같은 규칙).
+    v0.8.1: 불일치에는 짐의 정의 ID(무기·패시브·축복·성소)가 지금 데이터에 없는 것, `Format` 이 지금 `RunSnapshot.CurrentFormat` 과 다른 것(짐·`RunStats` 모양이 바뀜 — 3.6 "모양 지문")이 든다 — `Restore` 안에서 예외가 터지거나 짐 일부가 조용히 빠진 판으로 잇지 않는다.
+    `required` 멤버가 빠진 JSON 은 STJ 예외라 깨진 파일과 같이 `.bad` 다. 저장 파일 모양에는 "없는 값 = 기본" 규칙을 두지 않는다(R41 — 모양이 바뀌면 `Format` 을 올려 버림).
+  - 쓰는 틱(v0.8.1): 메뉴의 `저장하고 끝내기` 는 `Suspend()` 하나다 — `Suspend` 가 시뮬레이션을 한 틱 계단 문 `Exit` 명령으로 돌린 뒤 정산한다(3.6 "계단 저장" ⓐ). 앱은 그 틱을 따로 돌리지 않는다(멈춤 중이어도 이 한 틱은 Core 가 돈다 — 렌더·소리 신호는 버림).
+  - 새 게임: 저장이 있으면 "이어 할 판이 지워진다" 를 한 번 묻고 `DiscardRun()`. 버린 판은 기록하지 않는다(첫 값 — 기획 열린 질문, 13.20).
+  - 기록: 이어 한 판도 한 판이다 — `RunState` 를 되살리므로 결과의 깊이·시간·처치가 판 전체 값이고 `RecordResult` 는 지금처럼 판 끝에 한 번.
+  - 개발 옵션 실행은 `run.json` 도 **읽지도 쓰지도 않는다**(`--save-dir` 이면 그 폴더만 — 아래). `ISaveService` 에 더함: `RunSnapshotInfo? PeekRun()`(`NextActId`·`HeroClassId`·`NextActNumber`), `RunSnapshot? TakeRun()`, `void SaveRun(RunSnapshot)`, `void DiscardRun()`.
 - 설정(`GameSettings`, 계약 변경 WP1b): 전체 화면, 화면 흔들림, 미니맵, 피해 숫자, **음량 셋**(전체·효과음·음악, 0~100% 10% 단위 — 기획 12.3). 저장 파일에 없으면 음량은 `rules.audio.defaults`(80·80·60%) — `GameSettings` 의 음량은 `float?`(null = 없음)이고 기본값은 rules 한 곳에만 둔다.
 - `--save-dir <폴더>` 로 위치를 바꾼다. 개발 옵션 실행(9절 목록)인데 `--save-dir` 가 없으면 사용자 저장 파일을 **읽지도 쓰지도 않는다** — 기본값(창 모드, 기록 없음)으로 시작하고 메모리에만 저장한다.
   읽기까지 막는 이유: 사용자가 켜 둔 전체 화면이 검증 실행에서 화면을 덮고, 사용자의 마지막 직업에 따라 자동 조작의 판이 달라지기 때문이다(brief 7절 — v0.6 까지는 해금 상태도 이유였다).
@@ -3186,13 +3473,13 @@ public interface ISaveService
 | `--autoplay` | 자동 조작(기획 15절). 메뉴도 넘김(각 화면 0.5s 뒤). `--background` 를 함께 켬. 실제 키보드·마우스는 읽지 않음. **안개를 무시한다**(v0.5): `AutoplayPolicy` 는 `World.Visibility` 를 읽지 않고 월드 전체로 판단한다(기획 10.7·15절) — 봇 판단이 그리기 상태에 묶이지 않고, 적 규칙의 시야 조건은 봇이든 사람이든 같다 |
 | `--stage <id>` | 타이틀을 건너뛰고 그 **액트의 1번 방**부터 판을 시작(v0.7 — 판이 그 액트에서 시작하는 개발 판. 액트 2 부터면 Lv1 시작 무기라 `--level`·`--weapons` 를 같이 준다, 기획 15절). `stage_cathedral`, `stage_catacombs`. v0.6: 꺼진 스테이지(헬파이어 묶음 없음, 6.17)면 시작하지 않고 로그에 이유 + 종료 코드 5 |
 | `--room <액트>:<순번>` (v0.7) | 그 방부터 시작(예: `--room 1:9` = 액트 1 보스 방, 둘 다 1부터 — 액트 번호는 뿌리 액트부터 `next_act` 사슬, 3.6. 순번 = 보이는 방 번호 `RoomDef.Number`(v0.7.1) — `slice` 판의 `--room 1:5` 는 없는 번호라 옵션 오류). `--stage` 를 겸한다(같이 주면 옵션 오류). 앞 방은 건너뛰고(보상 없음) 빌드는 `--level`·`--weapons`·`--passives` 로 준다. 방 맵·들어오는 문·방 씨앗은 처음부터 돈 판의 그 방과 같다(`RunPlanner`·`RunSeeds`, 3.6). 그 방의 보상 = 앞 순번 `RewardOrder` 첫 칸. 범위 밖이면 옵션 오류(64, 데이터를 읽은 뒤). `AppOptions.StartRoom`(`RoomRef?`) → `RunPlanner.ActAt` 로 `RunStart.StartAct`·`StartRoomIndex` |
-| `--map <id>` (v0.7) | `--preview tiles`·`--preview fog` 의 맵을 고른다(방 맵이 여럿이 되어 `--stage` 하나로 못 고름). 없으면 `--stage`(없으면 뿌리 액트)의 보스 맵. 그 밖의 실행에서는 옵션 오류 |
+| `--map <id>` (v0.7) | `--preview tiles`·`--preview fog` 의 맵을 고른다(방 맵이 여럿이 되어 `--stage` 하나로 못 고름). 없으면 `--stage`(없으면 뿌리 액트)의 보스 맵. 그 밖의 실행에서는 옵션 오류. v0.8: `<id>@m` 은 그 맵의 거울판(6.11 "거울판" — `mirror: true` 가 아니면 옵션 오류) |
 | `--hero <id>` (v0.6) | 그 직업으로 시작(`AppOptions.HeroClass`, 직업 고르기 화면을 건너뜀 — 기획 15절). 없으면 저장의 `last_hero`(개발 옵션 실행은 저장을 안 읽으므로 `rules.hero.class` = `sorcerer`). 없는 ID 는 옵션 오류(64, 데이터를 읽은 뒤 판정), 꺼진 직업은 종료 코드 5 와 이유. 개발 옵션 판정(저장 보호)에 든다 |
 | `--autoplay-visit rooms` (v0.6) | `--autoplay` 와 함께만(아니면 옵션 오류). 자동 조작이 이동 규칙에 더해 맵의 방 기준점(`room_*`)을 이름 순으로 차례로 들른다(기준점 쪽 가중 0.8, 반경 60 안에 닿으면 다음 방, 끝나면 처음부터 — 기획 15절). **v0.6.1**: 기준점 쪽 방향은 직선이 아니라 **길 방향**(`INavWorld.TryPathStep(주인공, 기준점, 14)` 의 다음 꺾임점, 0.5초마다 다시 구함 — 문이 반대쪽 벽에 있는 방에서 벽에 붙어 미끄러지지 않게), 40초 안에 못 닿으면 다음 방으로 넘어간다. 정책 인스턴스가 기록(`Events` — 닿음·넘김 각각 방 ID·스테이지 틱, `RoomStats` — 방마다 들른 수·넘긴 수·방 안에 있던 틱·그동안 받은 피해)을 가지고, WP6 이 새 기록마다 로그 `VISIT room=<id> stage_tick=…` 또는 `VISIT_SKIP room=<id> stage_tick=…` 를, 판 끝에 방마다 `VISITS room=<id> visits=… skips=… inside_s=… damage=…` 를 쓴다(기획 15절). "방 안" 은 방 바닥 칸(v0.6.3: `World.Rooms.IndexAt(주인공 자리)` 가 그 방 — 방 체류 압박과 같은 계산, 6.11). `AppOptions.AutoplayVisit`(Core `AutoplayVisit` 열거형) → WP6 이 `new AutoplayPolicy(visit)` 로 판마다 하나 만듦. 기준점이 없는 맵이면 경고 한 줄 뒤 보통 자동 조작. 결정적이다(봇 입력이 시뮬레이션에 들어가므로 같은 씨앗·같은 옵션이면 같은 해시 — 방 번호 상태는 정책 인스턴스에, 시뮬레이션 상태가 아님). v0.6.3: 이 옵션과 상관없이 판 끝에 방마다 `ROOMS room=<id> doors=… inside_s=… damage=… supplies=…`(WP7, `World.RoomPresence` — 기획 10.1 첫 플레이 로그). **v0.7**: 방 하나가 1~2분이라 들르기는 **판 전체에서 그 판이 쓴 맵마다** 센다 — 정책은 `World` 가 바뀌어도 판마다 하나(`RoomStats` 키 = `(맵 ID, 기준점 ID)` — `RoomVisit`·`RoomVisitStats` 에 `MapId` 를 더함, `VISIT`·`VISIT_SKIP`·`VISITS` 줄에 `map=`), 기준점이 없는 방 맵에서는 이동 규칙만, 방 단계가 `Cleanup` 뒤(보상·문)면 들르기를 쉰다(기획 15절). `ROOMS` 줄은 방이 끝날 때마다 `act=`·`room=`(순번)·`map=` 을 붙이고 기준점은 `anchor=` 로 쓴다(6.12). **v0.7.1**: 줄 이름 `ROOMS` → `INNER_ROOMS`(판 단위 `ROOM` 줄과 한 글자 차이였다), 읽는 속성 `World.InnerRooms`·`World.InnerRoomPresence` |
-| 자동 조작의 방 규칙 (v0.7, 기획 15절) | `--autoplay` 의 정책(WP4 `AutoplayPolicy`)이 `World.Room.Phase` 를 본다: `Cleanup` 에서 남은 적 ≤ `remaining_marker` 면 가장 가까운 남은 적 쪽 길 방향(`TryPathStep`)을 가중 0.8 로 더함, `Reward` 에서 보상 물체·`GatesExit` 상자로 길 방향, 보상 창은 `PickCard` 규칙(마법서 = 무기 순위, 성소 = 가진 축복 +1 먼저 → 축복 정의 순서), `Doors` 에서 **문 우선순위**(체력 < 50% 면 완전 회복 > 마법서(무기 칸이 남았거나 진화 재료 무기가 Lv8 아님) > 보물 상자 > 성소 > 나머지, 같으면 화면 왼쪽 문 — `Exits` 순서가 아니라 문 틈 가운데의 화면 x, **그것도 같으면 화면 y 가 작은(위) 문, 그다음 `Exits` 순서**(v0.7.1 — 출구 셋일 때 `gate_nw`·`gate_sw` 는 마름모 대칭이라 화면 x 가 같다))로 고른 문의 나가는 자리로 길 방향. `Doors` 가 `rules.rooms.autoplay_door_skip`(20s) 안에 안 끝나면 `PlayerCommand` 에 `CommandButtons.Exit` 깃발 + `ExitIndex = 그 문 번호`(3.6 — 시뮬레이션이 받는 명령이라 결정적, 정책이 상태를 직접 바꾸지 않는다. v0.7.1: 기본값 `PlayerCommand.None`(= `default`)은 깃발이 없어 "안 나감" 이다)와 정책 기록 `DoorSkips`. WP6 이 새 기록마다 로그 `DOOR_SKIP act=<n> room=<n> stage_tick=<틱>`. **v0.7.1 멈추는 단계 덮기**: ① **정예 방**에서 `SpawningOpen` 이 거짓이 되면(2:30 뒤 — 남은 것은 중간 보스와 남은 적) 중간 보스 쪽 길 방향을 가중 0.8 로 더한다(`Cleanup` 규칙과 같게 — `kite` 중간 보스와 서로 멀어지기만 하지 않게). ② **보상 창**의 카드가 0장일 수는 없다(6.18 — 줍는 순간 `skip` 으로 처리). ③ `Reward` 단계가 `autoplay_door_skip`(20s) 안에 안 끝나면 정책 기록 `RewardStalls` → 로그 `REWARD_STALL act=<n> room=<n> phase=<단계> stage_tick=<틱>`(한 번, 상태는 바꾸지 않음 — 원인을 드러내기만). 시험 기준은 `DOOR_SKIP`·`REWARD_STALL` 둘 다 0 |
+| 자동 조작의 방 규칙 (v0.7, 기획 15절) | `--autoplay` 의 정책(WP4 `AutoplayPolicy`)이 `World.Room.Phase` 를 본다: `Cleanup` 에서 남은 적 ≤ 10(v0.8: 정책 상수 — `remaining_marker` 키는 없앰, 6.10)이면 가장 가까운 남은 적 쪽 길 방향(`TryPathStep`)을 가중 0.8 로 더함, `Reward` 에서 보상 물체·`GatesExit` 상자로 길 방향, 보상 창은 `PickCard` 규칙(마법서·매혹의 성소 = 무기 순위 — v0.8: 축복 창 규칙 없앰), `Doors` 에서 **문 우선순위**(v0.8, 기획 v0.8.1 15절: 체력 < 50% 이고 허리띠가 비었으면 완전 회복 물약 > 마법서(무기 칸이 남았거나 진화 재료 무기가 Lv8 아님) > 보물 상자 > 성소(마법에 걸린 > 매혹의 > 음산한) > 나머지 — 정예·보스 방 앞 문은 덤 보상으로 같은 순위, 같으면 화면 왼쪽 문 — `Exits` 순서가 아니라 문 틈 가운데의 화면 x, **그것도 같으면 화면 y 가 작은(위) 문, 그다음 `Exits` 순서**(v0.7.1 — 출구 셋일 때 `gate_nw`·`gate_sw` 는 마름모 대칭이라 화면 x 가 같다))로 고른 문의 나가는 자리로 길 방향. `Doors` 가 `rules.rooms.autoplay_door_skip`(20s) 안에 안 끝나면 `PlayerCommand` 에 `CommandButtons.Exit` 깃발 + `ExitIndex = 그 문 번호`(3.6 — 시뮬레이션이 받는 명령이라 결정적, 정책이 상태를 직접 바꾸지 않는다. v0.7.1: 기본값 `PlayerCommand.None`(= `default`)은 깃발이 없어 "안 나감" 이다)와 정책 기록 `DoorSkips`. WP6 이 새 기록마다 로그 `DOOR_SKIP act=<n> room=<n> stage_tick=<틱>`. **v0.7.1 멈추는 단계 덮기**: ① **정예 방**에서 `SpawningOpen` 이 거짓이 되면(2:30 뒤 — 남은 것은 중간 보스와 남은 적) 중간 보스 쪽 길 방향을 가중 0.8 로 더한다(`Cleanup` 규칙과 같게 — `kite` 중간 보스와 서로 멀어지기만 하지 않게). ② **보상 창**의 카드가 0장일 수는 없다(6.18 — 줍는 순간 `단련` 으로 처리, v0.8. v0.7.1 은 `skip`). ③ `Reward` 단계가 `autoplay_door_skip`(20s) 안에 안 끝나면 정책 기록 `RewardStalls` → 로그 `REWARD_STALL act=<n> room=<n> phase=<단계> stage_tick=<틱>`(한 번, 상태는 바꾸지 않음 — 원인을 드러내기만). 시험 기준은 `DOOR_SKIP`·`REWARD_STALL` 둘 다 0 |
 | `--start-at <mm:ss>` | (v0.7) 시작 방의 **방 시계** 그 시각부터(`RunOptions.StartAt` → 첫 방 `RoomStart.StartClockTicks` — 3.6, 둘째 방부터는 쓰지 않음). 그 전 방 이벤트는 건너뜀 — 단 **상태형 이벤트(`light_change`)는 앞 방들 것과 그 시각 이전 것을 시간 순서로 차례로 적용한 뒤 시작**(v0.5.1 규칙 그대로, `RoomEvents.Schedule` 의 `Replay`). t·구간·배율은 그 시각 값. 보스 방이면 보스 등장(방 시계 0:03)보다 늦은 시각이면 보스를 바로 내보내고 광폭화 시계를 그만큼 흐른 것으로 친다. 시각 상한(v0.7.1 — 방 종류마다, `SurviveTicks` 는 정예·보스 방에서 0 이라 하나로 쓰면 그 방들이 모두 막힘): 일반 방 = 생존 길이, 정예 방 = `elite_spawn_cap`(2:30), 보스 방 = 상한 없음. 넘으면(같음 포함) 옵션 오류(64). v0.6 의 "판 시각 — 보스 시각 이후면 바로 보스" 는 `--room 1:9` 로 바뀜 |
 | `--time-scale <n>` | 실제 시간 n 배속. 결과는 n 과 상관없이 같다(3.4) `[해석]` |
-| `--god`, `--level <n>`, `--weapons <id:lv,…>`, `--passives <id:lv,…>` | 기획 15절. v0.6: 고른 직업이 고를 수 없는 무기(`classes`)는 옵션 오류(64, 데이터를 읽은 뒤) |
+| `--god`, `--level <n>`, `--weapons <id:lv,…>`, `--passives <id:lv,…>` | 기획 15절. v0.6: 고른 직업이 고를 수 없는 무기(`classes`)는 옵션 오류(64, 데이터를 읽은 뒤). v0.8.1: 무기·패시브 수가 시작 액트의 열린 칸(`RunSlots.OpenAt` — 액트 1 은 4, 액트 2 는 5, 3.6 "계단 보상")보다 많으면 옵션 오류(64 — 조용히 자르지 않음) |
 | `--stress <적 수>[,<투사체 수>]` | 상한을 그 값으로 올리고 스테이지 구성 가중치대로 맵 전체·생성 띠에 즉시 채운다(`--god` 함께 켬, 생성 출처 `Stress`). 투사체 수를 주면 그 수를 유지하는 시험용 발사를 더함. v0.7: `--room` 이 없으면 그 액트의 **보스 방**(큰 방 — v0.6 측정과 같은 맵)에서 돈다. 방 흐름은 생존 단계에 묶어 둔다(정리·문으로 넘어가지 않음) |
 | `--freeze-ai` | 적 생각·이동을 멈춘다(렌더 정적 장면, `--stress` 와 함께) |
 | `--capture <png>` | 캡처 파일 경로. 상대 경로는 현재 폴더 기준. 원작 그림이 찍히므로 **저장소 밖**(스크래치·임시 폴더)에 둔다(R24 — 저장소의 `out/`·`logs/` 는 `.gitignore` 로 막지만 다른 곳은 못 막는다) |
@@ -3223,7 +3510,7 @@ public interface ISaveService
 - 개발 옵션 실행은 `new GameApp()` 전에 환경 변수 `SDL_WINDOW_NO_ACTIVATION_WHEN_SHOWN=1`(`--background`)과 `ALSOFT_DRIVERS=null`(`--sound-device default` 가 없을 때, 7.9)을 둔다.
 - 종료 코드: 0 정상, 1 처리 안 된 예외(로그에 스택), 2 데이터 오류, 3 요청한 캡처가 하나라도 안 생김, 4 벽시계 시간 초과, 5 자원 없음·낡음, 64 옵션 오류.
 - 고정 로그 문장(판정용): 첫 줄 재현 정보(3.4 — v0.6: `hero=<직업 ID>` 포함), `ASSETS manifest=… format=… stage=… textures=… vram_mb=… bundles=… skipped=… disabled=…`(v0.6 — 만든 묶음, 건너뛴 묶음, 꺼진 스테이지·직업 ID), `SCENE <이름> app_tick=…`, `RESULT start=<시작 액트 ID> hero=… outcome=victory|defeat depth=<액트>:<순번> run_time=… level=… kills=… seed=…`(v0.7 — v0.6 의 `stage=`·`stage_time=` 대신),
-  `ROOM act=<n> room=<n> map=<id> gate_in=<id> reward=<id|-> door=<id|-> clear_tick=<틱> cleanup_s=<초> collapsed=<0|1> level=<방을 나갈 때 레벨>`(v0.7 — 방이 끝날 때마다 `RunState.Rooms` 의 새 줄, 사람 판도, 기획 15절. `level=` 은 설계가 더함)·`DOOR_SKIP act=<n> room=<n> stage_tick=<틱>`(v0.7, 자동 조작)·`REWARD_STALL act=<n> room=<n> phase=<단계> stage_tick=<틱>`(v0.7.1, 자동 조작),
+  `ROOM act=<n> room=<n> map=<원판 id> mirror=<0|1> gate_in=<id> reward=<id|-> door=<id|-> clear_tick=<틱> cleanup_s=<초> collapsed=<0|1> boss_s=<초|-> picks_left=<n|-> level=<방을 나갈 때 레벨>`(v0.7 — 방이 끝날 때마다 `RunState.Rooms` 의 새 줄, 사람 판도, 기획 15절. `level=` 은 설계가 더함. v0.8: `mirror`·`boss_s`(`RoomRecord.BossClockTicks`, 일반 방 `-`)·`picks_left`(`RoomRecord.PicksLeft`, WP3 없으면 `-`) — 기획 v0.8.1 15절)·`DOOR_SKIP act=<n> room=<n> stage_tick=<틱>`(v0.7, 자동 조작)·`REWARD_STALL act=<n> room=<n> phase=<단계> stage_tick=<틱>`(v0.7.1, 자동 조작),
   `INNER_ROOMS act=<n> room=<n> map=<id> anchor=<기준점 ID> doors=… inside_s=… damage=… supplies=…`(v0.7 — 방마다, 안쪽 방 기준점마다 한 줄. v0.6.3 의 `room=<기준점>` 은 `anchor=` 로 옮김. v0.7.1 에 `ROOMS` 에서 이름을 바꿈. 판의 마지막 방 것은 `Conclude` 때), `VISIT room=… stage_tick=…`·`VISIT_SKIP room=… stage_tick=…`·`VISITS room=… visits=… skips=… inside_s=… damage=…`(v0.6.1, `--autoplay-visit rooms`),
   `AUDIO device="…"`, `AUDIO muted=… requested=… played=… dropped_cap=… dropped_interval=… dropped_offscreen=…`,
   `FOG stage_tick=… in_sight=… explored=… enemies_drawn=… enemies_hidden=… reveal=0|1`(v0.5.1 — 캡처마다, 그 프레임의 시야 안 칸·가 본 칸·그린 적·숨긴 적 수. `--reveal` 이면 `enemies_hidden=0`), 끝 줄 `EXIT code=…`.
@@ -3253,7 +3540,7 @@ $p.ExitCode
 | `Assets` | `SpriteMeta` 읽기·검사(사각형이 페이지 밖·개수 ≠ 방향 × 프레임·없는 페이지 번호면 오류), `ImportTable`(표 8개 엄격 읽기·모르는 속성 오류, 이름 목록: 묶음 × 변종 페이지, 마법 방향 묶기, 아이콘, 소리 `vars` 펼치기 → `d1/sound/…`, 동작별 `width`·`shadow_alpha` 덮어쓰기 순서), `ArenaArt`(바닥 조각 이름 규칙 — 합성 배치에서 손으로 센 조각 목록과 같음, `cells` frame 1부터), manifest 판 대조. **13.5-10**: ① 표 → 이름 목록(기본) ② 실제 정의가 가리키는 이름 ⊂ 표가 만드는 이름 + `exe.json`(`Integration`, WP7 로더 필요). **도구 경로와 게임 경로의 `LayoutHash` 가 같음**(실제 `Data/`, `Integration`). 자원이 있으면(`DDR_ASSETS`) manifest·메타·PNG IHDR 를 정의와 대조, 없으면 건너뜀 표시, 판·표 해시가 다르면 "낡음" 건너뜀 표시(1.3). **v0.6**: 표 `bundle`·`prefer` 엄격 읽기(`optional` 은 모르는 속성 오류), `OutputBundles(arenas)`(묶음 항목 이름 → 묶음, 기본 → null, **v0.6.1: 합성 `l5` 타일셋 항목 `bundle: hellfire` 를 쓰는 맵의 `arena.json`·`floor_*`·`columns.*`·`minimap.png` → hellfire**), manifest `skipped_bundles`(이유 넷)·파일 `bundle`·`sources` 읽기, `ContentAvailability`(빈 `skipped_bundles` → 모두 있음, `hellfire` 건너뜀 → `requires: [hellfire]` 스테이지만 `MissingFor` 비지 않음, `Disabled(defs)` 가 꺼진 스테이지·직업만·`hfmusic` 만 없으면 `Any` 거짓, `Skipped` 가 이유를 돌려줌), 13.5-10 묶음판(`Integration` — 맵 그림·소리 연결 줄 귀속 규칙 포함) | WP1b(형), WP0(이름 대조), v0.6 WP1d(형·`ContentAvailability`) |
 | `Data` | 규칙별 고장 난 작은 JSON(`Fixtures/`)으로 각 오류가 정확한 파일·경로로 나오는지. `extends` 병합·순환, `*_add`·`*_patch`, **페이즈 누적 풀기(patch → add → remove, 같은 ID 자리 지킴)**, 모르는 속성, 비슷한 ID 제안, 항목마다 오류 모음, `rules` 하위 키 합치기·중복, **파일 목록을 뒤섞어 읽어도 `GameDefs` 해시가 같다**, 가중치가 JSON 순서 배열, 변종이 그림 묶음에 없으면 오류. **v0.6**: `hero_classes` 종류 읽기·연결, 13.5-20(기본 스테이지 구간표에 `requires: [hellfire]` 적 → 오류, `requires: [hfvoice]` → 오류, `rules.hero.class` 가 묶음 직업 → 오류, 음악 `fallback` 이 다시 묶음 → 오류), 13.5-21(시작 무기 `classes` 밖·클립 없음·`attack` 클립 없음 → 오류), 소리 연결 `hero` 가 직업 ID 키. **v0.6.1**: 기본 스테이지의 `unlock`(v0.7: `next_act`) 이 묶음 스테이지 → 오류, 특성 패시브가 `trait` 아님·`classes` 밖 → 오류, 맵 정의에 `requires` → 모르는 속성 오류, `StageReach.Enemies`(합성: 소환으로만 나오는 적·분열체의 분열체·페이즈 패턴 소환 포함, 고리가 있어도 끝남, 결정적 순서)와 그것을 쓴 13.5-20(기본 스테이지의 적이 `requires: [hellfire]` 적을 소환 → 오류) | WP7 |
 | `Data`(실제, `Integration`) | 실제 `Data/` 를 엄격 모드로 읽어 오류 0(모든 모듈 검사기 포함 — 길 검사·소리 연결 표). 모든 모듈 등록이 필요하므로 통합 때 기본으로 옮김 | WP7 작성, WP6 통합 |
-| `Run` (v0.7) | (v0.7.1: 시험마다 **[구현-1]**(단계 1 — 일반 방·한 액트) / **[구현-2]**(단계 2 전 — 정예·보스 분기·계단·넓이 배율·작은 방) 표시는 11.1 WP1e 의 경계를 따른다. 표시가 없는 것은 구현-1.) **`RunPlanner`**(합성 액트 — 일반·정예·보스 방과 작은 맵 둘·큰 맵 하나): 같은 입력 같은 `ActPlan`, 씨앗을 바꾸면 달라짐, **`ActPlan` 전체는 (액트 정의, 액트 번호, 씨앗, `rules.rooms`)의 함수이고 맵은 앞 방 계획에 이어짐, 들어온 문·출구 수·보상 순서는 `Flow(씨앗, 액트, 방 번호)` 만의 함수**(v0.7.1 — 다른 방 번호의 결과를 바꿔 끼워도 그 셋은 그대로), `RunPlanner` 의 공개 함수에 `World` 인자가 없음(플레이와 무관), 풀이 둘이면 이웃 순번 맵이 같지 않음(씨앗 1,000개)·하나면 늘 그 맵, 보스 방 들어온 문 `gate_sw`, 정예·보스 앞 방과 액트 보스 방 출구 하나(`gate_ne`)·판의 마지막 방 출구 없음, 셋 비율 0.4 ± 0.03(씨앗 1만), 보상 순서 = 가중 비복원 순열(모든 종류 한 번씩, 첫 칸 분포가 가중 비율 ± 0.02). **`RunSeeds`** 두 줄기가 다름·`RunPlanner` 의 뽑기 순서 고정(맵 → 문 → 출구 → 보상 — 바꾸면 고정 값 시험이 깨짐). **`RoomEvents.Schedule`**: t → 방 시계, 유예 전 이벤트는 0:03, 방 밖 t 버림, 보스 방은 끝 없음, 지난 `light_change` 가 `Replay` 에 시간 순, `startClockTicks` 앞 이벤트 버림(상태형은 `Replay`), 같은 틱 정의 순서. **`RemapEntry`**(v0.7.1 서로 바꾸기): 6:30 행진(`at_entry gate_se`·`toward_entry gate_nw`)이 들어온 문 `gate_sw` 면 그대로, `gate_se` 면 `gate_nw` → `gate_se` 로 시작과 목표가 함께 바뀜(두 경우 모두 시작 ≠ 목표), 들어온 문도 맞은편도 아닌 문은 그대로. **`LightingState.Apply`**: 경로 다섯 종류, `World(defs, RoomStart)` 가 첫 틱 전에 `Replay` 를 적용(감독 없는 합성 월드에서 앞 방에서 바뀐 어둠·주인공 빛 반경이 첫 틱 시야 계산에 들어감). **`RoomFlow`**(표 3.6 의 줄마다 한 시험, 합성 월드): 유예 3s 동안 `SpawningOpen` 거짓, 일반 방 생존 끝 → 정리, 정예 방 중간 보스 `Damage` 처치 → 정리(`Collapse` 로는 안 넘어감)·2:30 에 `SpawningOpen` 거짓, 보스 방 마지막 → `VictoryPending`·아니면 무너짐 + 보상(정리 없음), 정리 중 분열체도 기다림, 45s → 무너짐·`Collapsed`, 마지막 일반 방 정리 → 승리, 보상 물체가 `center` 에 하나·남은 정예 상자 `GatesExit`, 대기(레벨업·상자·보상) 남으면 문 안 열림, 문 열기 거르기(`RewardAvailable` 거짓 칸 건너뜀·모자라면 `fallback_reward`), 나가는 자리 밖·닫힌 문 틈·들어온 문 틈에서는 안 나감, `CommandButtons.Exit` 로 나감, 주인공 죽음은 어느 단계든 패배, 정리 중 t 멈춤·보스 방 t 안 멈춤. **v0.7.1**: `PlayerCommand.None` 으로 `Doors` 단계를 600틱 돌려도 `Exit` 로 안 감, **보상 물체를 줍기 전에는 문이 안 열림(물약·마법서 각각 — 물약은 체력 가득이어도 집히고 열림)**, 끌려오는 보석이 남아 있으면 보상을 집어도 `Doors` 가 아님, 문 틈에 서서 `Reward` → `Doors` 가 되면 `Exit` 아님(밖으로 한 걸음 → 다시 들어서면 `Exit`), `Doors` 에서 나가는 자리에 선 틱에 레벨업 대기가 생기면 그 틱은 `Exit` 아님, [구현-2] 마지막이 아닌 액트 보스 처치 틱에 떨어진 정예 상자가 `GatesExit`·열기 전에는 `Doors` 아님, [구현-2] 정예 방 t 가 `to` − 1틱에서 멈춤(방 시계 2:00 의 `DifficultyMinutes` < `to`), [구현-2] 정예 방 생존 끝 = `DefIndex` 가 `miniboss` 인 `EnemyKilled`. **`RunSession`**(합성 액트 + 시험용 `FakeHeroCarry`): 방 이동마다 새 `World`(이전 저장소·`Visibility` 를 같이 쓰지 않음), 짐 왕복(레벨·체력·칸이 그대로), `RunStats`·`ElapsedTicks`·`Fairness` 누적(**v0.7.1: 두 방 뒤 `Kills` 가 두 방의 합 — 월드 설치·주인공 만들기가 `RunStats` 를 지우지 않음**), [구현-2] 계단 → 다음 액트 1번 방(`ActPlan` 새로)·`light_change` 다시 적용(앞 방에서 바뀐 어둠이 다음 방에 있음), **`--room` 같음**: 처음부터 돈 판이 방 번호 n 에 들어온 순간과 `RunStart(StartRoomIndex: n 의 배열 자리)` 의 첫 방이 맵·들어온 문·방 씨앗·같은 짐을 넣었을 때 첫 600틱 **방 해시**(3.4 — 판 누적·고른 문 빼고) 열이 같음(주인공 정지 명령), 마지막 방 뒤 `Advance` 는 예외. **`Conclude`**(v0.7.1): 진 방(생존 중 주인공 HP 0)·마지막 방 승리 각각에서 `Conclude` 뒤 `ElapsedTicks` = 모든 방 `World.Tick` 의 합(마지막 방 포함)·`Rooms` 수 = 들어간 방 수(마지막 줄 `Door = null`)·`Fairness` 합, 두 번 불러도 같은 값, `Conclude` 뒤 `Advance` 예외, 판이 안 끝났을 때 `Conclude` 예외 | WP1e(그 뒤 WP4) |
+| `Run` (v0.7) | (v0.7.1: 시험마다 **[구현-1]**(단계 1 — 일반 방·한 액트) / **[구현-2]**(단계 2 전 — 정예·보스 분기·계단·넓이 배율·작은 방) 표시는 11.1 WP1e 의 경계를 따른다. 표시가 없는 것은 구현-1.) **`RunPlanner`**(합성 액트 — 일반·정예·보스 방과 작은 맵 둘·큰 맵 하나): 같은 입력 같은 `ActPlan`, 씨앗을 바꾸면 달라짐, **`ActPlan` 전체는 (액트 정의, 액트 번호, 씨앗, `rules.rooms`)의 함수이고 맵은 앞 방 계획에 이어짐, 들어온 문·출구 수·보상 순서는 `Flow(씨앗, 액트, 방 번호)` 만의 함수**(v0.7.1 — 다른 방 번호의 결과를 바꿔 끼워도 그 셋은 그대로), `RunPlanner` 의 공개 함수에 `World` 인자가 없음(플레이와 무관), 풀이 둘이면 이웃 순번 맵이 같지 않음(씨앗 1,000개)·하나면 늘 그 맵, 보스 방 들어온 문 `gate_sw`, 액트 보스 방 출구 하나(`gate_ne` — v0.8: 정예·보스 앞 방은 둘·셋, WP1f)·판의 마지막 방 출구 없음, 셋 비율 0.4 ± 0.03(씨앗 1만), 보상 순서 = 가중 비복원 순열(모든 종류 한 번씩, 첫 칸 분포가 가중 비율 ± 0.02). **`RunSeeds`** 두 줄기가 다름·`RunPlanner` 의 뽑기 순서 고정(맵 → 문 → 출구 → 보상 — 바꾸면 고정 값 시험이 깨짐). **`RoomEvents.Schedule`**: t → 방 시계, 유예 전 이벤트는 0:03, 방 밖 t 버림, 보스 방은 끝 없음, 지난 `light_change` 가 `Replay` 에 시간 순, `startClockTicks` 앞 이벤트 버림(상태형은 `Replay`), 같은 틱 정의 순서. **`RemapEntry`**(v0.7.1 서로 바꾸기): 6:30 행진(`at_entry gate_se`·`toward_entry gate_nw`)이 들어온 문 `gate_sw` 면 그대로, `gate_se` 면 `gate_nw` → `gate_se` 로 시작과 목표가 함께 바뀜(두 경우 모두 시작 ≠ 목표), 들어온 문도 맞은편도 아닌 문은 그대로. **v0.8.1(WP1f)**: 서로 바꾸기를 없앰 — `gate_sw` 로 들어온 방에서 `RemapEntry("gate_ne")` = `gate_ne`(보스·대장이 맞은편 그대로, v0.7.1 시험 `== "gate_sw"` 를 뒤집음), 거울판 보스 방(`gate_se` 로 들어옴)의 보스 `gate_ne` → `gate_nw`, 시작 문이 들어온 문이 아닌 행진은 목표가 들어온 문이어도 그대로. **`LightingState.Apply`**: 경로 다섯 종류, `World(defs, RoomStart)` 가 첫 틱 전에 `Replay` 를 적용(감독 없는 합성 월드에서 앞 방에서 바뀐 어둠·주인공 빛 반경이 첫 틱 시야 계산에 들어감). **`RoomFlow`**(표 3.6 의 줄마다 한 시험, 합성 월드): 유예 3s 동안 `SpawningOpen` 거짓, 일반 방 생존 끝 → 정리, 정예 방 중간 보스 `Damage` 처치 → 정리(`Collapse` 로는 안 넘어감)·2:30 에 `SpawningOpen` 거짓, 보스 방 마지막 → `VictoryPending`·아니면 무너짐 + 보상(정리 없음), 정리 중 분열체도 기다림, `cleanup_limit`(v0.8 25s — 시험은 합성 값) → 무너짐·`Collapsed`, 마지막 일반 방 정리 → 승리, 보상 물체가 보상 자리(v0.8 주인공 앞 — v0.7 은 `center`)에 하나·남은 정예 상자 `GatesExit`, 대기(레벨업·상자·보상) 남으면 문 안 열림, 문 열기 거르기(`RewardAvailable` 거짓 칸 건너뜀·모자라면 `fallback_reward`), 나가는 자리 밖·닫힌 문 틈·들어온 문 틈에서는 안 나감, `CommandButtons.Exit` 로 나감, 주인공 죽음은 어느 단계든 패배, 정리 중 t 멈춤·보스 방 t 안 멈춤. **v0.7.1**: `PlayerCommand.None` 으로 `Doors` 단계를 600틱 돌려도 `Exit` 로 안 감, **보상 물체를 줍기 전에는 문이 안 열림(물약·마법서 각각 — 물약은 체력 가득이어도 집히고 열림)**, 끌려오는 보석이 남아 있으면 보상을 집어도 `Doors` 가 아님, 문 틈에 서서 `Reward` → `Doors` 가 되면 `Exit` 아님(밖으로 한 걸음 → 다시 들어서면 `Exit`), `Doors` 에서 나가는 자리에 선 틱에 레벨업 대기가 생기면 그 틱은 `Exit` 아님, [구현-2] 마지막이 아닌 액트 보스 처치 틱에 떨어진 정예 상자가 `GatesExit`·열기 전에는 `Doors` 아님, [구현-2] 정예 방 t 가 `to` − 1틱에서 멈춤(방 시계 2:00 의 `DifficultyMinutes` < `to`), [구현-2] 정예 방 생존 끝 = `DefIndex` 가 `miniboss` 인 `EnemyKilled`. **`RunSession`**(합성 액트 + 시험용 `FakeHeroCarry`): 방 이동마다 새 `World`(이전 저장소·`Visibility` 를 같이 쓰지 않음), 짐 왕복(레벨·체력·칸이 그대로), `RunStats`·`ElapsedTicks`·`Fairness` 누적(**v0.7.1: 두 방 뒤 `Kills` 가 두 방의 합 — 월드 설치·주인공 만들기가 `RunStats` 를 지우지 않음**), [구현-2] 계단 → 다음 액트 1번 방(`ActPlan` 새로)·`light_change` 다시 적용(앞 방에서 바뀐 어둠이 다음 방에 있음), **`--room` 같음**: 처음부터 돈 판이 방 번호 n 에 들어온 순간과 `RunStart(StartRoomIndex: n 의 배열 자리)` 의 첫 방이 맵·들어온 문·방 씨앗·같은 짐을 넣었을 때 첫 600틱 **방 해시**(3.4 — 판 누적·고른 문 빼고) 열이 같음(주인공 정지 명령), 마지막 방 뒤 `Advance` 는 예외. **`Conclude`**(v0.7.1): 진 방(생존 중 주인공 HP 0)·마지막 방 승리 각각에서 `Conclude` 뒤 `ElapsedTicks` = 모든 방 `World.Tick` 의 합(마지막 방 포함)·`Rooms` 수 = 들어간 방 수(마지막 줄 `Door = null`)·`Fairness` 합, 두 번 불러도 같은 값, `Conclude` 뒤 `Advance` 예외, 판이 안 끝났을 때 `Conclude` 예외 | WP1e(그 뒤 WP4) |
 | `Geometry` | 원·사각형·다각형(오목 포함) 부호 거리, 밀어내기 방향, 선분 교차, 원 중심에 놓인 점 | WP2 |
 | `Visibility` (v0.5) | `VisibilityField`(합성 맵): 빈 방에서 반경 안 칸 모두 보임·`R + 64` 밖 안 보임, 시야 막힘 벽 뒤 칸 가림·벽 칸 자신은 보임, **꼭짓점 규칙**(대각선으로 이은 벽 새지 않음·기둥 하나 모서리 스침은 안 막음), `x` 기둥 뒤 보임·`X` 기둥 뒤 가림, 맵 밖 칸은 문 틈으로만 보임(둘레 벽 뒤 맵 밖 안 보임), **선 걷기 = 느린 기준 구현**(무작위 격자 200개 × 모든 칸), 같은 칸 안 이동은 다시 계산 안 함(횟수 계측)·칸·반경 바뀜은 다시, 계산 범위 밖으로 나간 칸 `InSight` 거짓, 가 본 칸 N×N 만·단조 증가·6틱 주기·`ExploredVersion`·`ExploredHash`(같은 집합 같은 값, 개수가 같고 집합이 다르면 다른 값), **두 줄 벽(v0.5.1)**: 합성 `XXXX` 메가타일 두 줄 벽에서 안쪽 줄이 보이면 바깥 줄도 보임·가 본 칸, 옆 메가타일로 퍼지지 않음, `L`·`M` 칸은 함께 보임에 들지 않음, `IsClearlyVisible` 경계(R − 40, 화면 안쪽 16px — 아래 254, **위는 몸 위 끝** `pos.y − top`, top 0 이면 254)·`ClearReach`(양옆 = R − 40, 정위 = 254 − top, 대각선은 사각형·원 교점), `Enabled` 거짓이면 질의 늘 참·`ClearReach` +∞, **반경 바뀜은 다음 틱부터**(`light_change` 가 바꾼 틱의 질의는 옛 반경, 다음 틱 새 반경), **첫 계산은 첫 `BeginTick`**(생성자 뒤 `Setup` 이 주인공을 옮기면 옮긴 자리 둘레만 가 본 칸), 첫 계산 `ChangedTick = −9`, **바뀜 값 잇기**(9틱 안에 왕복하면 `ChangedTick = t − (9 − a)`), 할당 0(`Update` 1,000번), `Perf`: 스테이지 1 크기 다시 계산 1회 ≤ 0.1ms. `FogMath`: 칸 바뀜 9틱 경사, **9틱 안 왕복 시 `CellLevel` 연속**(바뀐 틱 앞뒤 차이 ≤ 1/9, 매 틱 뒤집혀도 0·1 로 튀지 않음), 경계 흐림 알파, 그리기용 오버로드(주인공 위치를 바꾸면 알파가 그 위치 기준), 보스·닿은 적(`TouchReach` 가 `touch_margin` 보다 큰 적은 그 거리까지)·`ForceShown` 1, 꺼짐 1 | WP1c |
 | `Nav` | `ArenaCollision`: 평행사변형 합집합 = 막힌 칸 합집합(점 표본 1만 개), `w` 칸은 걷기만·투사체 통과, 시야 글자는 도형에 영향 없음(**합성 타일셋 시험** — v0.6 부터 실제 스테이지 1 의 창살 칸으로도), 둘레 도형 `IsBoundary` 는 `phase_through` 도 막음. clearance 알려진 점 값(바깥 마름모 경계 포함), 작은 손 격자에서 플로우 방향, A* 최적성(무작위 격자 200개에서 다익스트라와 비교 — **끈 당기기 전** 경로), 코너 자르기 없음, 다듬은 경로가 막힌 곳을 지나지 않음, 목표 못 갈 때 가장 가까운 곳, 시작이 3칸 밖까지 막힘. **두 스테이지 실제 맵 전수(자원 없이)**: (a) 모든 통과 칸에서 `dir` 을 따라가면 칸 수 이하 걸음에 시작점(고리 없음) (b) 모든 통과 칸 중심의 점 유닛이 이중선형 방향으로 10초 안에 주인공 120px 안 (c) 마름모 네 꼭짓점 쪽·기둥 옆·(스테이지 2) 협로 안·(v0.6) 각 안쪽 방 기준점에 주인공을 둬도 `S`·`M` 필드가 모든 통과 칸에서 dist < 65535 (d) 13.5-4~6. **v0.6**: 갇힌 바닥 칸(합성: 둘레 바로 옆 메가 벽 줄 → 오류, `over_border` 겹침·하위 3칸 띄움 → 통과, 사방이 막힌 방 → 오류), 26·34 등급 진입점 → 모든 `room_*`(문을 2칸 → 1칸으로 좁힌 합성 방 → 34 오류), (v0.6.1) 합성 T 자 접합(세로 벽이 가로 벽 밑에 붙는 메가에 세로 조각만) → 13.5-4 80px 오류·모서리 조각 → 통과, 진입점 60px 규칙, `w` 창살 칸: 걷기 도형만·투사체 선 통과·길 검사에서 막힘, `PathLength`(트인 선 = 직선 거리, 벽 너머 방 안 = 문 돌아가는 길이, `maxLength` 넘으면 +∞, 결정적). **v0.7.1 문 틈 닿음**(13.5-23 ③): 합성 방 맵에서 문 틈 한쪽을 벽 끝 조각으로 막아 반경 14 가 못 들어가게 한 배치 → `문 틈에 못 닿음` 오류, 막지 않은 배치·실제 `cathedral_arena` → 통과 | WP2 |
@@ -3262,9 +3549,9 @@ $p.ExitCode
 | `Invariants` | 계측기가 일부러 만든 NaN·맵 밖(바깥 마름모)·장애물 안·멈춘 적을 센다 | WP2 |
 | `Combat` | `DamageMath` — 기획 4.2 예(오라+함성 = ×1.55, 반올림 마지막, 방어 후 최소 1, 치명), `damage_pct` 한 번만, 발사 시점 고정, 시간 배율 제외 대상, 등급 배율, 피격 무적, `--god`, 승리 대기 중 주인공 피해 무시, 입장 중 적만 있는 월드에서 매직 미사일이 쏘지 않음·장판 위를 지나도 HP 그대로, **투사체 `on_end` 장판(맞음·사거리 끝·장애물)**, 신호(`WeaponFired` 발동당 하나, 피격 무적 중 `HeroHurt` 없음) | WP3 |
 | `Weapons` | `WeaponStats.Resolve`(count+projectile_count, area_pct 는 선언된 키에만, 쿨 상한 0.6/마력 폭주 0.8, **damage 는 damage_pct 와 무관**, `null` = 상시), 조준 5종, 패턴별 발사 결과(발 수·퍼짐각·궤도 위치·접선 `Vel`), 관통·튕김이 같은 적을 두 번 안 때림, 적별 타격 간격 | WP3 |
-| `Progression` | 경험치 곡선(1→5, 2→15, 19→185, 20→198, 40→461), 레벨업 후보(가중치·칸 참·초반 보장·채움·3장 미만), 재추첨 수, 상자(진화 우선·중간 보스 3회·강화 없으면 금화), 레벨업 밀어내기(반경 150, 80px). **v0.6 직업**: 주인공 만들기(기본 능력치 → 직업 덮어쓰기 → 특성 더하기 — 합성 직업 둘로 `max_hp`·`cooldown_pct` 값), 시작 무기 = 직업 것, `classes` 가 다른 직업의 무기는 후보에 안 나옴, `requires` 가 스테이지·직업 밖인 무기는 후보에 안 나옴, 특성은 슬롯을 쓰지 않음. **v0.6.1**: 특성 = `trait` 패시브(1레벨 `per_level` 이 능력치에 더해짐, 레벨업·상자 후보에 안 나옴), 특성 둘을 단 합성 직업, 패시브·진화 `classes` 거르기. **v0.7 문 보상·축복·짐**: 보상 물체 줍기 → 종류별(마법서 = 무기 카드만·성소 = 축복 카드만으로 `RewardOffer` 의 `Source`, 보물 상자 = 정확히 레벨업 1회 + 금화 × `gold_scale`, 물약 = 체력 전부), `RewardAvailable`(무기 칸이 차고 모두 만렙이면 마법서 거짓, 축복 모두 최대면 성소 거짓, 체력 70% 이상이면 물약 거짓), 재추첨 수를 레벨업과 나눠 씀, 건너뛰기 금화, 대기 순서 레벨업 → 상자 → 보상, 축복은 패시브 칸을 안 쓰고 능력치에 더해짐·레벨업·상자 후보에 안 나옴, `RoomCleared` 다음 틱 보석·금화가 끌어당겨짐·보스 `RoomCleared` 면 체력 전부, `IHeroCarry` 왕복(Capture → 새 월드 Restore → 능력치·칸·레벨·체력·재추첨 수가 같음, 진화 무기 포함). **v0.7.1**: `IHeroCarry` 가 칸 번호를 지킴(무기 둘을 칸 0·2 에 둔 빌드 → 새 월드에서도 0·2, 두 방 뒤 `RunStats.DamageByWeapon[칸]` 이 그 무기 피해의 합), 대기가 남은 월드에서 `Capture` 는 예외, `SpawnPickup(Reward: r)` 의 획득물이 `GatesExit`, **0장 보상**(문 연 뒤 무기 칸이 차고 모두 Lv8 → 마법서 줍기 = 금화 25·`PendingRewards` 0, 축복 모두 최대 → 성소 줍기 = 금화 25), 체력 가득 + 완전 회복 물약 → 집힘, `ResetCombat`·주인공 만들기가 `RunStats` 를 안 건드림 | WP3 |
+| `Progression` | 경험치 곡선(1→5, 2→15, 19→185, 20→215, 40→825 — v0.8 곡선, 6.10), 레벨업 후보(가중치·칸 참·초반 보장·채움·3장 미만), 재추첨 수, 상자(진화 우선·중간 보스 3회·강화 없으면 금화), 레벨업 밀어내기(반경 150, 80px). **v0.6 직업**: 주인공 만들기(기본 능력치 → 직업 덮어쓰기 → 특성 더하기 — 합성 직업 둘로 `max_hp`·`cooldown_pct` 값), 시작 무기 = 직업 것, `classes` 가 다른 직업의 무기는 후보에 안 나옴, `requires` 가 스테이지·직업 밖인 무기는 후보에 안 나옴, 특성은 슬롯을 쓰지 않음. **v0.6.1**: 특성 = `trait` 패시브(1레벨 `per_level` 이 능력치에 더해짐, 레벨업·상자 후보에 안 나옴), 특성 둘을 단 합성 직업, 패시브·진화 `classes` 거르기. **v0.7 문 보상·축복·짐**: 보상 물체 줍기 → 종류별(마법서 = 무기 카드만·성소 = 축복 카드만으로 `RewardOffer` 의 `Source`, 보물 상자 = 정확히 레벨업 1회 + 금화 × `gold_scale`, 물약 = 체력 전부), `RewardAvailable`(무기 칸이 차고 모두 만렙이면 마법서 거짓, 축복 모두 최대면 성소 거짓, 체력 70% 이상이면 물약 거짓), 재추첨 수를 레벨업과 나눠 씀, 건너뛰기 금화, 대기 순서 레벨업 → 상자 → 보상, 축복은 패시브 칸을 안 쓰고 능력치에 더해짐·레벨업·상자 후보에 안 나옴, `RoomCleared` 다음 틱 보석·금화가 끌어당겨짐·보스 `RoomCleared` 면 체력 전부, `IHeroCarry` 왕복(Capture → 새 월드 Restore → 능력치·칸·레벨·체력·재추첨 수가 같음, 진화 무기 포함). **v0.7.1**: `IHeroCarry` 가 칸 번호를 지킴(무기 둘을 칸 0·2 에 둔 빌드 → 새 월드에서도 0·2, 두 방 뒤 `RunStats.DamageByWeapon[칸]` 이 그 무기 피해의 합), 대기가 남은 월드에서 `Capture` 는 예외, `SpawnPickup(Reward: r)` 의 획득물이 `GatesExit`, **0장 보상**(문 연 뒤 무기 칸이 차고 모두 Lv8 → 마법서 줍기 = 금화 25·`PendingRewards` 0, 축복 모두 최대 → 성소 줍기 = 금화 25), 체력 가득 + 완전 회복 물약 → 집힘, `ResetCombat`·주인공 만들기가 `RunStats` 를 안 건드림 | WP3 |
 | `Enemies` | **전수 연기 시험**(6.13), 점화 중 죽으면 폭발 없음, 분열 3마리 일반 등급·튕김 80px(장애물에서 멈춤)·0.3s 대기, 대장 죽음 → **그 대장의 호위만** 공포 1.5s, 호위 없는 대장 죽음 → 주변 해골 공포 없음, **`panic_on_ally_death`(반경 150 안 같은 종 죽음 → 0.8s 도망, 1.5s 안에 다시 안 겁먹음, 정예는 안 겁먹음, `Collapse`·`Culled` 로는 안 겁먹음)**, `escort` 대형 120·풀림 250·출처별 호위 수(이벤트 값 / 기본 8 / 구간 0), 행진 직진 시간 뒤 보통 행동(`toward`·`toward_entry`), `kite` 거리 띠·물러날 수 없으면 제자리 사격, `shoot_projectile` 가리면 안 쏨, **시야 조건(v0.5): 또렷이 보이지 않는 궁수는 쏘지 않고 다가옴(시야 막힘 벽 뒤·R − 40 밖·화면 위아래 밖 세 경우), 보이게 되면 그 틱부터 쏨, 돌진은 또렷이 보일 때만 시작·돌진 중 안 보여도 안 끊김, 보스 패턴·근접·자폭은 시야 무관**. v0.5.1 — 시야 조건이 판정을 바꾸는지 드러나게 짠다: 벽 뒤 경우는 **시야만 막는 `L` 줄**(걷기·투사체는 트임) 뒤에 궁수·돌진 적을 둔다(`X` 벽이면 `ProjectileLineClear`·`HasClearLine` 이 먼저 막아 `SeenClearly` 를 빼먹어도 통과한다). R − 40 밖 경우는 `TestWorldBuilder` 로 빛 반경을 띠 최대 + 20 쯤으로 낮춘다(13.5-15 를 거치지 않음). 화면 위 경우는 몸 위 끝이 화면 안쪽 16px 밖이고 발은 안인 자리. **각 시험은 같은 배치에서 시야를 끈 월드(`Enabled = false`)로 쏘거나 돌진하는지 대조군을 같이 본다**. **떨림(R29)**: 주인공 바로 위에 궁수를 두고 ① 주인공이 위로 다가갈 때 ② 멈춰 있을 때 10초 동안 `kite` 상태(다가감·물러남·쏨) 전환 수 ≤ 6, ③ 주인공이 아래로 물러날 때 궁수가 따라옴, 위쪽 궁수가 그 자리에서 쏨(위쪽 한계가 띠 최소보다 작아도). **자폭 점화 중 `ForceShown`**, 생성 때 `BodyTop`·`TouchReach`(사거리 여분 + 10 이 16 을 넘는 합성 근접 적). **중간 보스(v0.5.3)**: `clear_sight` 패턴은 `L` 줄 뒤(대조군: 시야 끈 월드에서는 시작)·R − 40 밖에서 시작하지 않고 조건 없는 패턴(사방 산성 분출)은 시작함, 시작 뒤 이벤트 프레임 전에 주인공을 `L` 줄 뒤로 옮기면 투사체 0·쿨은 씀(`shoot_projectile` 도 같은 시험), `clear_sight` 패턴 투사체의 `SightGated` 가 참, `rank: miniboss` 의 `kite` 가 `L` 줄 뒤에서 다가옴(시야 끈 대조군은 멈추고 쏨), 클립 없는 `trigger: cooldown` 동작이 그 틱의 이동 의도를 막지 않음(걷는 중 2s 마다 장판), 중간 보스 `split_on_death` → 머드맨 3 일반 등급·`Source = Split`·같은 틱 `EnemyKilled` 하나·히트 스톱 5틱, `Collapse` 면 분열 없음, `BossBars` 가 등장 순서·죽으면 빠짐(최종 보스는 `Final`). **함성 대상(결정 C)**: `buff_area` 를 쓰는 `rank: miniboss` 적이 자기 자신과 반경 안 다른 중간 보스·보스에게 버프를 걸지 않음, 오버로드 정예 함성 반경 안 도살자의 식칼 피해가 35 그대로(`DamageMath` 까지 통과한 값), 돌진 예고·시간, `ground_hazard` 동시 20 상한, `war_cry` 겹치지 않음(큰 값 하나), 버프 면역(`slow`), `phase_through` 경계만 막힘·`alpha_over`, `heavy_strike` 넉백, `summon` 상한 30·절대 상한 360, 보스 페이즈 50% 1회·패턴 덮어쓰기·쿨다운이 같은 패턴에 남음·`voice` 신호, 패턴 `actions` 두 개가 같은 프레임, 접두사 합치기·제외 조건, `attack_cooldown_pct` 가 모든 능력 쿨에, 승리 때 `Collapse`(분열·폭발·드롭 없음) | WP4 |
-| `Director` | 누적기(무리 1~3, `spawn_group`, 최대 수에서 3 고정), 생성 위치가 생성 띠 안·걸을 수 있음·여유 거리(v0.5 의 "보이지 않음" 조건은 v0.5.1 에서 뺌 — 6.12), 12번 실패 → 먼 입구, **마름모 모서리 주인공에서 입구 대체 비율 기록**(R23), 상한 300/360 과 출처별 막는 순서·지우는 순서(`Culled` 는 보상·시체 없음), 포위 고리 반경 줄이기·생략(마름모 밖 자리, v0.6: 벽 너머 방 안 자리 — 길 거리 > 직선 × 1.5), 정예 종류 뽑기에서 `elite_eligible: false` 제외, `--start-at` 이 지난 이벤트 건너뜀·**지난 `light_change` 는 차례로 적용**(12:00 시작 스테이지 2 의 `World.Lighting` = 처음부터 돈 판의 12:00 값 — v0.7: `--room 2:11` 의 보스 방 = 처음부터 돈 판의 그 방)·보스 시각 이후면 보스 바로(v0.7: 방 시계 판, 9절), **생성 수**: 상한 무한·처치 없음 월드에서 구간마다 `floor(초당 × 구간 길이)` ± 3, **중간 보스 이벤트(v0.5.3)**: 앞 중간 보스가 살아 있어도 다음 `miniboss` 가 제 시각에 나옴, 13.5-18 검사기가 고장 난 작은 스테이지 셋(간격 1:30, 중간 보스 구간이 앞보다 큼, 같은 묶음 중간 보스 둘)에서 경고 하나씩·실제 두 스테이지에서 경고 0. **v0.7 방**: 감독이 `World.DifficultyMinutes` 로 구간·배율을 고름(방 시계 0:30·t 시작 3:30 → 4:00 구간), `SpawningOpen` 이 거짓이면 누적기·이벤트가 멈춤(유예·정리·정예 방 2:30), 생존 끝에 남은 방 이벤트 버림, 정리 중 분열은 나옴, `max_alive × AreaScale`(0.65 → 200 이 130), 정예 판정 = t 시작 ≥ 2:00 인 일반 방에서 방 시계 0:30 한 번(정예·보스 방에서는 없음), 이벤트 `entry:` 가 들어온 문이면 맞은편 문(행진 목표 문도), 위치 후보가 없는 일반 생성은 들어온 문을 빼고 가장 먼 문, 방 시작 때 지난 `light_change` 다시 적용(액트 2 10번 방 1:30 의 어둠 0.7 이 11번 보스 방에 있음), 방 문구 `대성당 — n` 을 `Banner` 에, 방 없는 월드(`Room == null`)는 v0.6 그대로. 13.5-18 방 판(정예 방 사이 일반 방 0 → 경고)·13.5-23 ⑤(방 밖 이벤트·정예 방 2:30 밖 이벤트 → 오류, 바꾼 문 겹침 → 경고). **v0.7.1**: 정예 방 방 시계 2:00(중간 보스가 1:00 넘게 삶)에도 감독이 그 정예 방 구간(5:00–6:00 줄)을 쓰고 다음 구간의 새 종이 안 나옴, 13.5-18 이 정예 방 전체 `[t 시작, to)` 에 걸친 구간을 봄(정예 방 가운데서 구간이 커지는 고장 스테이지 → 경고), 13.5-23 ⑤ 고장 픽스처(정예 방 `miniboss` 이벤트 적 ≠ `rooms[].miniboss` → 오류, `miniboss` 이벤트 둘 → 오류, 서로 바꾼 뒤 행진 시작 문 = 목표 문 → 오류, 풀의 맵 하나에만 있는 기준점을 `toward` 로 → 오류, 방 맵 둘인 액트의 점 빛 `[tx,ty]` → 오류), 감독이 `toward_entry` 를 `RemapEntry` 로 바꿈(들어온 문 `gate_se` 인 방의 6:30 행진이 `gate_nw` → `gate_se` 로 가로지름) | WP4 |
+| `Director` | 누적기(무리 1~3, `spawn_group`, 최대 수에서 3 고정), 생성 위치가 생성 띠 안·걸을 수 있음·여유 거리(v0.5 의 "보이지 않음" 조건은 v0.5.1 에서 뺌 — 6.12), 12번 실패 → 먼 입구, **마름모 모서리 주인공에서 입구 대체 비율 기록**(R23), 상한 300/360 과 출처별 막는 순서·지우는 순서(`Culled` 는 보상·시체 없음), 포위 고리 반경 줄이기·생략(마름모 밖 자리, v0.6: 벽 너머 방 안 자리 — 길 거리 > 직선 × 1.5), 정예 종류 뽑기에서 `elite_eligible: false` 제외, `--start-at` 이 지난 이벤트 건너뜀·**지난 `light_change` 는 차례로 적용**(12:00 시작 스테이지 2 의 `World.Lighting` = 처음부터 돈 판의 12:00 값 — v0.7: `--room 2:11` 의 보스 방 = 처음부터 돈 판의 그 방)·보스 시각 이후면 보스 바로(v0.7: 방 시계 판, 9절), **생성 수**: 상한 무한·처치 없음 월드에서 구간마다 `floor(초당 × 구간 길이)` ± 3, **중간 보스 이벤트(v0.5.3)**: 앞 중간 보스가 살아 있어도 다음 `miniboss` 가 제 시각에 나옴, 13.5-18 검사기가 고장 난 작은 스테이지 셋(간격 1:30, 중간 보스 구간이 앞보다 큼, 같은 묶음 중간 보스 둘)에서 경고 하나씩·실제 두 스테이지에서 경고 0. **v0.7 방**: 감독이 `World.DifficultyMinutes` 로 구간·배율을 고름(방 시계 0:30·t 시작 3:30 → 4:00 구간), `SpawningOpen` 이 거짓이면 누적기·이벤트가 멈춤(유예·정리·정예 방 2:30), 생존 끝에 남은 방 이벤트 버림, 정리 중 분열은 나옴, `max_alive × AreaScale`(0.65 → 200 이 130), 정예 판정 = t 시작 ≥ 2:00 인 일반 방에서 방 시계 0:30 한 번(정예·보스 방에서는 없음), 이벤트 `entry:` 가 들어온 문이면 맞은편 문(행진 목표 문도), 위치 후보가 없는 일반 생성은 들어온 문을 빼고 가장 먼 문, 방 시작 때 지난 `light_change` 다시 적용(액트 2 10번 방 1:30 의 어둠 0.7 이 11번 보스 방에 있음), 방 문구 `대성당 — n` 을 `Banner` 에, 방 없는 월드(`Room == null`)는 v0.6 그대로. 13.5-18 방 판(정예 방 사이 일반 방 0 → 경고)·13.5-23 ⑤(방 밖 이벤트·정예 방 2:30 밖 이벤트 → 오류, 바꾼 문 겹침 → 경고). **v0.7.1**: 정예 방 방 시계 2:00(중간 보스가 1:00 넘게 삶)에도 감독이 그 정예 방 구간(5:00–6:00 줄)을 쓰고 다음 구간의 새 종이 안 나옴, 13.5-18 이 정예 방 전체 `[t 시작, to)` 에 걸친 구간을 봄(정예 방 가운데서 구간이 커지는 고장 스테이지 → 경고), 13.5-23 ⑤ 고장 픽스처(정예 방 `miniboss` 이벤트 적 ≠ `rooms[].miniboss` → 오류, `miniboss` 이벤트 둘 → 오류, 서로 바꾼 뒤 행진 시작 문 = 목표 문 → 오류, 풀의 맵 하나에만 있는 기준점을 `toward` 로 → 오류, 방 맵 둘인 액트의 점 빛 `[tx,ty]` → 오류), 감독이 `toward_entry` 를 `RemapEntry` 로 바꿈(들어온 문 `gate_se` 인 방의 6:30 행진이 `gate_nw` → `gate_se` 로 가로지름). **v0.8.1**: 행진은 `RemapMarch`, 13.5-23 ⑤ 고장 픽스처에 "바꾼 뒤 시작 문 = 들어온 문"(맞은편 문이 없는 합성 맵) → 오류, 실제 두 액트(원판·거울판, 들어올 수 있는 문마다) 오류 0 | WP4 |
 | `Audio` | `SoundMixer`: 전체 24·같은 소리 3·최소 간격 0.05·몬스터 맞음 0.08s 한 번·죽음 4·같은 종 0.1s·보석 0.06s, 자리가 없으면 새 소리를 버리고 높은 우선순위가 먼저 자리를 얻음, **자리는 길이 색인의 끝 틱에 빔(높낮이 배율 반영)**, 화면 밖 버림(분류별), 좌우 값, 같은 입력 같은 결과, **같은 신호 열 → 무음과 소리 켬의 `AUDIO` 수가 같음**. 연결 표 검사기(없는 대상·없는 소리·없는 분류 → 오류, 소리 없는 그림 묶음 → 경고). **`Sim/` 소스 파일이 `Core.Audio` 를 참조하지 않음**(저장소 소스 문자열 검사) | WP8 |
 | `Art` | 아틀라스 메타·PNG 대조 검사기(자원 있을 때만), PNG IHDR 읽기 | WP5 |
 | `Dev`·`Save` | `DevOptions` 파싱(값 형식, 여러 캡처 시각, 오류 메시지, 개발 옵션이면 저장 안 읽음·기본 무음 판정 — **`--reveal`·`--god`·`--level`·`--weapons`·`--passives` 하나만 줘도 개발 옵션**(v0.5.1), `--sound`/`--mute`, `--preview fog`), `StateHasher` 가 같은 상태에 같은 값·가 본 칸 집합만 다르면 다른 값, 저장 직렬화·버전(음량 셋 포함). **v0.6**: `--hero`(개발 옵션 판정, 없는 ID·꺼진 직업), `--autoplay-visit rooms`(`--autoplay` 없으면 오류), 저장 기록 스테이지 × 직업·`last_hero`. **v0.6.1 저장 왕복**: 합성 직업 둘(`a`·`b`)로 같은 스테이지 `RecordResult` → 다시 읽어 `BestRecord(stage, a)`·`(stage, b)` 가 따로 남음, `SetLastHero` → `LastHero` 왕복. **v0.7**: `--room 1:9`·`--room` 범위 밖(64)·`--room` 과 `--stage` 같이(64)·`--map` 이 미리보기 밖(64)·`--start-at` 이 방 생존 이상(64), `--room`·`--map` 이 개발 옵션, 기록 비교(더 깊음 → 새 기록, 같은 깊이 승리 둘 → 짧은 시간, 얕은 승리 없음·같은 깊이 패배 → 그대로), `RunDepth` 사전순, `StateHasher` 가 판 흐름·방 상태만 다르면 다른 값. **v0.7.1**(합성 액트): `--room 1:9 --start-at 03:10`(보스 방) 통과·`--room 1:5 --start-at 02:40`(정예 방 2:30 넘음) 오류(64)·일반 방 생존 길이와 같은 시각 오류, `slice` 판의 없는 번호 `--room 1:5` 오류, 기록 비교 키 **(깊이, 승리, −시간)**(같은 깊이 패배 → 승리 = 새 기록, 같은 깊이 승리 → 패배 = 그대로, 둘 다 승리 → 짧은 시간), **저장 읽기**(v0.6 모양 픽스처 — `unlocked`·`best_depth` 없음 → 예외 없음·금화·설정 유지·기록 없음, 기록 한 줄 깨짐 → 그 줄만 버림, 더 높은 `version` → 읽기 전용(저장해도 파일 바이트 그대로), 방 수가 줄어든 데이터(`rooms_hash` 다름)로 옛 기록 읽기 → 예외 없음·깊이만 비움·새 승리가 기록됨), `StateHasher.Room` 은 `RunStats`·판 흐름만 다르면 같은 값·`Run` 은 다른 값 | WP7 |
@@ -3277,9 +3564,10 @@ $p.ExitCode
 | `Pipeline` | 시험이 만든 작은 MPQ(War3Net 으로 생성)로 전체 실행: 두 번 = manifest 같음, **`--jobs 1` = `--jobs 8`**, 캐시 적중 결과 = 새로 만든 결과, `--force`, **표에 있는데 원본에 없는 항목 → 종료 코드 3·manifest 없음·없는 목록 전부 보고**, 원본에 표 밖 파일이 많아도 성공, `d1/` 밖 파일 안 건드림, 원본 MPQ 파일 바이트·시각 그대로, **다른 현재 폴더에서 실행해도 저장소 뿌리 기준 `--out`**, 저장소 안 무시되지 않는 `--out` 거절.
   **묶음(v0.6)**: 시험 표에 `bundle` 항목을 넣고 ① 묶음 MPQ 없음 → 그 항목 없음·`skipped_bundles` 기록·종료 코드 0 ② `--skip-bundles hellfire` → 같은 결과 ③ (v0.6.1) 묶음 MPQ 는 있는데 파일 없음 → 그 묶음 전체 건너뜀(`판 다름: <목록>`)·기본 항목 그대로·종료 코드 0·끝 보고 `경고:` 줄, 같은 MPQ 를 `--hellfire` 로 직접 주면 3 ④ 같은 이름이 diabdat·묶음 MPQ 에 있으면 diabdat 바이트 ⑤ `prefer` 묶음이 있으면 그 바이트, 없으면 다음 순서 ⑥ 묶음을 켰다 끈 두 실행에서 기본 항목 출력 바이트 같음 ⑦ `--hellfire` 기본 = `--diabdat` 폴더(대문자 파일 이름도 찾음)
   ⑧ (v0.6.1) 깨진 묶음 MPQ(머리를 망친 파일) → `열 수 없음` 건너뜀·종료 코드 0, `--hellfire` 직접 지정이면 2 ⑨ (v0.6.1) 합성 `l5` 타일셋 항목 `bundle: hellfire` + 그것을 쓰는 합성 맵 → 묶음 건너뜀이면 그 맵 그림 없음·기본 맵 그림 그대로, 그 manifest 로 시작 검사 시험(WP7)이 꺼짐 1·오류 0
-  ⑩ (v0.6.1) 파일 줄 `sources`: diabdat TRN + 묶음 CL2 출력 → 두 이름 정렬. **`audit` DUN 대조**: 시험 인코더로 만든 합성 DUN(우리 배열을 4×4 그대로 담은 것 → 4, 바닥만·벽 모서리 하나만 같은 것 → 0). **실제 표 전체 경우**: 실제 `Table/*.json` 이 펼치는 모든 원본 경로에 합성 파일(프레임 수는 정의 JSON 값, TRN 256바이트, TIL 은 쓰는 메가타일 번호보다 크게)을 넣은 MPQ + 실제 `Data/maps`·`tilesets` 로 종료 코드 0, 만든 이름 = 13.5-10 이름 목록. 합성 MPQ 는 War3Net 이 쓸 수 있는 범위에서 원본과 같은 플래그(암호화·파일 이름 키 fix key·PKWARE implode)로 만든다 — 못 쓰는 플래그(파형 압축 등)는 "실제 원본 실행에서만 확인"(WP0 완료 기준) | WP0 |
+  ⑩ (v0.6.1) 파일 줄 `sources`: diabdat TRN + 묶음 CL2 출력 → 두 이름 정렬. **`audit` DUN 대조**: 시험 인코더로 만든 합성 DUN(우리 배열을 4×4 그대로 담은 것 → 4, 바닥만·벽 모서리 하나만 같은 것 → 0). **실제 표 전체 경우**: 실제 `Table/*.json` 이 펼치는 모든 원본 경로에 합성 파일(프레임 수는 정의 JSON 값, TRN 256바이트, TIL 은 쓰는 메가타일 번호보다 크게)을 넣은 MPQ + 실제 `Data/maps`·`tilesets` 로 종료 코드 0, 만든 이름 = 13.5-10 이름 목록. 합성 MPQ 는 War3Net 이 쓸 수 있는 범위에서 원본과 같은 플래그(암호화·파일 이름 키 fix key·PKWARE implode)로 만든다 — 못 쓰는 플래그(파형 압축 등)는 "실제 원본 실행에서만 확인"(WP0 완료 기준).<br>**AI 확대(v0.8 — v0.8.1 에 나눔, 1.4 "AI 확대 — 시험")**: 가짜 실행 파일 `tests/FakeUpscaler`(시험이 빌드)로 `Process` 경로 전체(인자·`-m`·종료 코드·진행 없음·`-t 128` 다시·결과 파일 없음·크기 틀림·0xC0000135 → `Vulkan 런타임 없음`·묶음 나누기, 시험이 허용 해시를 주입), `IUpscaler` 가짜로 처리 ①~⑦·세 단계·`--jobs 1` = `--jobs 8`·일부 중간 캐시 적중 + 실패 → 전부 원본·다음 실행이 남은 판만·맵 알파 점 확대·몬스터 알파 프레임마다 한 번(변종 사각형 같음), Vulkan 런타임이 없다고 꾸민 실행 → 띄우지 않고 6 | WP0 |
 | `RealMpq`(선택) | 환경 변수 `DDR_DIABDAT` 가 있을 때만 돈다(없으면 건너뜀 표시): 표의 원본 항목이 모두 열리고 머리(CL2 그룹 수·WAV RIFF·SOL 크기)가 맞음, 출력은 임시 폴더. 원본 바이트는 시험 출력에 남기지 않는다. **v0.6.1**: `DDR_HELLFIRE_DIR`(묶음 MPQ 폴더)가 있으면 묶음마다 대표 항목(`plrgfx\monk\mlt\mltas.cl2`, `sfx\monk\monk69.wav` — hfmonk·hfvoice 둘 다, `nlevels\l5data\l5.sol`, `music\dlvle.wav`, `monsters\nkr\nkrn.cl2` 등)이 War3Net 으로 열리고 머리가 맞음 — MVP 표에 묶음 항목이 없어 WP9·WP10 전까지 아무도 실제 묶음 항목을 읽지 않는 빈틈을 메움 | WP0 |
 
+- **v0.8 시험**(WP1f — 거울판·(맵, 방향) 뽑기·출구 둘·덤 보상·보상 자리·층·짐 왕복·계단 저장 왕복과 판 해시·`--start-at` 상한·입장 이벤트·방 이벤트 자리·짝 표·새 보상 정의·AI 확대 메타 모양)는 11.1 WP1f 완료 기준에 적었다. 각 폴더(`Run`·`Map`·`Data`·`Assets`·`Save`)에 들어간다.
 - 도구 시험의 바이트 픽스처는 **시험 코드의 인코더**(CL2·CEL·MIN·TIL·SOL·WAV 를 쓰는 작은 함수)가 만든다. 원본에서 잘라 낸 바이트를 저장소에 넣지 않는다(R24).
 
 - 부품·시스템 테스트는 `TestWorldBuilder`(WP1 제공, WP1b 갱신: 코드로 만든 작은 타일셋·맵·정의, 전수 공간 질의, 직선 내비)로 만든다. 실제 데이터에 기대는 테스트와 분리한다.
@@ -3326,12 +3614,15 @@ $p.ExitCode
 | 전투·손맛 | `--room 1:4 --start-at 00:30 --level 15 --weapons …` | 투사체(원작 마법 그림·16방향)·폭발·피해 숫자·번쩍임이 보임 |
 | 레벨업 창 | `--capture-on levelup` | 카드 3장 문구가 `피해 14 → 18` 꼴, 기획 12.2 배치, 무기 아이콘이 원작 마법 프레임 |
 | 보스 | 기획 15절 예 | 패턴 예고·보스 막대·페이즈 |
-| 정예 방 (v0.7 — v0.5.3 의 "중간 보스 겹침" 을 바꿈: 정예 방이 따로라 겹침이 없다, WP6·단계 2·3) | `--room 1:5 --autoplay --god --level 12 --capture-at 20,170`(170 ≈ 방 시계 2:30 뒤 — 생성 멈춤) + 단계 3 `--room 2:9`. `--preview enemies` | 중간 보스 막대 한 줄, 2:30 뒤 일반 생성 없음(`--log-ticks` 의 적 수가 줄기만 함), 처치 뒤 정리 → 보상 = 정예 상자만 → 출구 문 하나에 다음 방 표시. 슬러지 남작 `bsm`·데스스핏 `bfds`·블랙애시 `bashtb` 가 같은 묶음 일반 적과 색으로 구별됨(기획 열린 질문 16) |
-| 방 흐름 (v0.7, WP6) | `--autoplay --god --seed 3 --capture-on doors --capture-on reward --log <로그>` 와 `--room 1:2 --capture-at 3,70` | 들어올 때 주인공이 앞 문 진입점·방 문구, 생존 중 HUD 남은 시간·방 줄, 정리 중 `남은 적 n`·남은 적 ≤ 10 이면 미니맵 붉은 점, 보상 물체가 `center` 에, 마법서 창 제목·카드가 무기만, 문 봉인이 걷히고 문 위 아이콘·이름, 다른 문 틈은 붉은 막. 로그 `ROOM` 줄이 방마다 하나·`DOOR_SKIP` 0, 방 이동 프레임에 `slow_frames` 가 기준 안(R33). v0.7.1: 방 이동 뒤 첫 캡처에 옛 방의 시체·피해 숫자·이펙트가 없음(`IWorldBound`, 7.11), 결과 화면 걸린 시간 = `ROOM` 줄 방 시간 합(마지막 방 포함 — `Conclude`) |
+| 정예 방 (v0.7 — v0.5.3 의 "중간 보스 겹침" 을 바꿈: 정예 방이 따로라 겹침이 없다, WP6·단계 2·3) | `--room 1:5 --autoplay --god --level 12 --capture-at 20,170`(170 ≈ 방 시계 2:30 뒤 — 생성 멈춤) + 단계 3 `--room 2:9`. `--preview enemies` | 중간 보스 막대 한 줄, 2:30 뒤 일반 생성 없음(`--log-ticks` 의 적 수가 줄기만 함), 처치 뒤 정리 → 보상 = 정예 상자 + 덤 보상(v0.8 — v0.7 은 상자만) → 출구 문 둘(셋)에 다음 방 표시와 덤 아이콘(v0.8 — v0.7 은 하나). 슬러지 남작 `bsm`·데스스핏 `bfds`·블랙애시 `bashtb` 가 같은 묶음 일반 적과 색으로 구별됨(기획 열린 질문 16) |
+| 방 흐름 (v0.7, WP6) | `--autoplay --god --seed 3 --capture-on doors --capture-on reward --log <로그>` 와 `--room 1:2 --capture-at 3,70` | 들어올 때 주인공이 앞 문 진입점·방 문구, 생존 중 HUD 남은 시간·방 줄, 정리 중 `남은 적 n`·미니맵 붉은 점(v0.8: 정리 시작부터 모두), 보상 물체가 주인공 앞에(v0.8 — v0.7 은 `center`), 층이 바뀌는 문에 `▼ n층`(v0.8), 마법서 창 제목·카드가 무기만, 문 봉인이 걷히고 문 위 아이콘·이름, 다른 문 틈은 붉은 막. 로그 `ROOM` 줄이 방마다 하나·`DOOR_SKIP` 0, 방 이동 프레임에 `slow_frames` 가 기준 안(R33). v0.7.1: 방 이동 뒤 첫 캡처에 옛 방의 시체·피해 숫자·이펙트가 없음(`IWorldBound`, 7.11), 결과 화면 걸린 시간 = `ROOM` 줄 방 시간 합(마지막 방 포함 — `Conclude`) |
 | 결과 | `--capture-on result --exit-on-result` | 무기별 피해 표, v0.7: 도달한 곳·걸린 시간·방 줄, `RESULT` 로그 줄(`depth=`·`run_time=`) |
 | 소리 고르기 | `--sound --autoplay --god --room 1:6 --start-at 01:00 --quit-after 60 --seed 3` (null 장치 — 스피커로 나지 않음, 동의 필요 없음) | 오류 없이 끝남, `AUDIO device="No Output"`, `AUDIO` 줄의 `played` 가 초당 기준 안(전체 24 동시), 같은 씨앗의 `--mute` 실행과 `requested`·`played`·`dropped_*` 가 같음 |
 | 재현 | 같은 명령 두 번(한 번은 `--time-scale 8`). 그리고 같은 명령을 `--mute` 와 null 장치 `--sound` 로 한 번씩 | 두 `--log-hash` CSV 같음, 같은 `--capture-at` PNG 바이트 같음(안개 0.15s 바뀜도 스테이지 틱이라 같음), `--mute` 와 `--sound` 의 `--log-hash` CSV 같음 |
 | 실제 스피커 | `--sound-device default …`(**사용자 동의를 받고만**) | 판정 못 함(귀로 들은 확인은 사용자 몫) |
+| 거울판 (v0.8, WP5·WP6) | `--preview tiles --map cathedral_room_a` 와 `--map cathedral_room_a@m`(단계 2), `--autoplay --god --seed 3 --log <로그>` | 거울판 그림이 원판의 좌우 뒤집힌 배치로 맞물림(벽·벽 끝·창살·닫힌 문 짝 조각), 성질 겹침이 그림과 맞음. `ROOM` 줄에 `mirror=1` 이 나오고 바로 앞 방과 같은 (맵, 방향) 이 없음 |
+| AI 확대 (v0.8, WP0·WP5) | 도구 `import --upscale realesrgan-x4plus --out <저장소 밖 임시 폴더>` 로 만든 자원으로(위 "헬파이어 없음" 과 같은 방법), `--preview tiles --map cathedral_arena`·`--preview enemies`·`--room 1:9 --autoplay --god --capture-at 5,20` + 같은 씨앗 원본 자원 실행 | 종료 코드 0(또는 되돌아가면 6 과 경고 줄), `ASSETS … upscale=done art_scale=2`, 기획 19.6 확인 항목 ①~⑦ 판정(못 하면 "판정 못 함"): ① 바닥·벽 질감·색, ② 바닥 조각·벽 기둥 이음매, ③ 투명 가장자리(계단·검은 테·후광), ④ 그림자가 몸과 붙고 확대 안 한 그림과 진하기가 같음, **⑤ 걷기 프레임 떨림**(`--preview enemies` 의 반복 재생 캡처 여러 장 — 정지 칸에서 몸 윤곽이 프레임마다 흔들리는지), ⑥ 확대 배경 위 원본 캐릭터가 떠 보이는지, ⑦ 빛·안개·벽 가림과 겹친 모습. 두 실행의 `--log-hash` CSV 같음(시뮬레이션은 그림 배율을 모름). ⑧ 되돌아감은 WP0 완료 기준 |
+| 계단 저장 (v0.8, WP6·WP7·단계 3) | `--save-dir <임시 폴더> --room 1:9 --autoplay --god --seed 3 --capture-on doors`, 캡처 뒤 일시정지 화면 캡처 | 보스 방 문 단계의 일시정지 메뉴에만 `저장하고 끝내기` 가 있음(다른 방 문 단계·생존 단계에는 없음). 저장·이어 하기 왕복과 "끊지 않은 판과 판 해시 같음" 은 자원 없는 시험(10.1 `Run`·`Save`)이 보고, 사람이 메뉴로 끊고 잇는 확인은 "동작 확인 못 함" 으로 따로 적는다 |
 | 단계 끝 | `--autoplay --god --seed 1..5 --exit-on-result`(v0.7 — `--stage` 없이 판 처음부터) | 단계 1: 다섯 번 모두 `RESULT outcome=victory depth=1:8`(v0.7.1 — 방 번호가 기획 번호라 기획 14.1 "8번 방 정리 = 결과" 와 같은 값. 일반 방 여섯 — `slice` 판의 마지막 방 정리), `ROOM` 여섯 줄(`room=1,2,3,4,6,8`)·`DOOR_SKIP`·`REWARD_STALL` 0·`collapsed=1` 은 적어 둠. 단계 2: `outcome=victory depth=1:9`, `run_time ≤ 20:00`(기획 2.5 약 15분). 단계 3: `depth=2:11`, `run_time ≤ 45:00`(약 35분), 계단 앞뒤 `ROOM` 줄의 `level=` 이 이어짐(빌드 넘기기) |
 
 ### 10.3 성능 측정
@@ -3352,7 +3643,7 @@ $p.ExitCode
 
 ## 11. 구현 작업 묶음 (Work Package)
 
-- 순서: **WP1(끝남, 커밋 `ec851d6`) → WP1b(계약 갱신, 끝남, 커밋 `02c3b8b`) → WP1c(시야 계약 갱신, 끝남, 커밋 `ceddc36` — v0.5) → WP1d-형(계약 보탬의 모양·빈 본문 — v0.5.3 중간 보스 + v0.6 헬파이어 묶음·직업·안쪽 방 + v0.6.3 방 바닥·방 보급, 짧게 — **형·구현 끝남**, 커밋은 `git log --grep WP1d`) → WP0a(최소 실제 데이터, 짧게 — **끝남**, 커밋 `d2b15c1`) → **WP1e-형**(v0.7 방 구조 계약, 혼자, 짧게 — v0.7.2: 형·구현-1·구현-2 **끝남**, 커밋은 `git log --grep WP1e`) → WP0·WP2~WP8 이 서로 파일이 겹치지 않고 동시에**. v0.6.1: **WP1d-구현**(순수 로직)은 WP1d-형 뒤 WP0a·WP2~WP8 과 동시에 간다 — 그것을 기다리는 완료 기준만 11.1 에 적었다. 통합(실제 데이터 엄격 시험, `PlayScene` 완성, 단계 끝 실행)은 WP6 이 맡는다.
+- 순서: **WP1(끝남, 커밋 `ec851d6`) → WP1b(계약 갱신, 끝남, 커밋 `02c3b8b`) → WP1c(시야 계약 갱신, 끝남, 커밋 `ceddc36` — v0.5) → WP1d-형(계약 보탬의 모양·빈 본문 — v0.5.3 중간 보스 + v0.6 헬파이어 묶음·직업·안쪽 방 + v0.6.3 방 바닥·방 보급, 짧게 — **형·구현 끝남**, 커밋은 `git log --grep WP1d`) → WP0a(최소 실제 데이터, 짧게 — **끝남**, 커밋 `d2b15c1`) → **WP1e-형**(v0.7 방 구조 계약, 혼자, 짧게 — v0.7.2: 형·구현-1·구현-2 **끝남**, 커밋은 `git log --grep WP1e`) → **WP1f**(v0.8 — 기획 v0.8.1 29절과 사용자 결정 U 의 계약, 혼자, 형과 순수 로직 구현까지 한 번에 — v0.8.2: **끝남**, 커밋은 `git log --grep WP1f`, 다르게 정한 것 13.22) → WP0·WP2~WP8 이 서로 파일이 겹치지 않고 동시에**. v0.6.1: **WP1d-구현**(순수 로직)은 WP1d-형 뒤 WP0a·WP2~WP8 과 동시에 간다 — 그것을 기다리는 완료 기준만 11.1 에 적었다. 통합(실제 데이터 엄격 시험, `PlayScene` 완성, 단계 끝 실행)은 WP6 이 맡는다.
   v0.7: 사용자 결정 R 이 이미 커밋된 형(`StageDef.Map`·`Unlock`·`Victory`, `RunResult`·`StageRecord`·`IsUnlocked`, `SimPhase` 순서)을 바꾸므로 WP2~WP8 이 시작하기 **전에** WP1e-형을 낸다(기획 28절 권고 — 11.3 의 "모아서 다음 갱신" 을 기다리지 않음, WP1c·WP1d 와 같은 이유).
   **WP1e-구현**(판 흐름·방 흐름·방 이벤트·문 틈·넓이·`RunSession` 의 순수 로직)은 WP1e-형 뒤 WP0·WP2~WP8 과 동시에 간다(WP1d 와 같은 나눔).
   MVP 다음에 **WP9(직업 고르기)**·**WP10(헬파이어 스테이지)** 이 온다(v0.6 — 기획 14.2 이후 확장 1·2). 둘 다 계약을 고치지 않고 데이터·씬·패턴만 더하는 것이 WP1d 의 목표다.
@@ -3365,17 +3656,16 @@ $p.ExitCode
 - 맡는 파일은 "맡는 것" 이 전부다. 다른 묶음의 파일을 고쳐야 하면 그 묶음 담당에게 요청한다. 계약(WP1·WP1b 파일) 변경은 11.3.
 
 ```
-WP1 (끝남) ── WP1b (끝남) ── WP1c (끝남) ── WP1d (끝남) ── WP0a (끝남) ── WP1e-형 ──┬── WP0 가져오기 도구·가져오기 표·타일셋 ────────┐   (자원: 게임 화면 확인에 필요)
-                                                                                     ├─ WP1e-구현(WP1e-형 뒤, 나란히 — RunPlanner·RoomEvents·RoomFlow·GateZones·MapArea·13.5-23 맵 쪽·RunSession)
-                                                                      │
-                                                                      ├── WP2 내비·충돌(타일 충돌 포함)·공간·시야 ─────┤
-                                                                      ├── WP3 주인공·전투·무기·성장 ───────────────────┤
-                                                                      ├── WP4 적·감독·자동 조작 ────────────────────────┼── 통합(WP6) ── 검증
-                                                                      ├── WP5 렌더(아틀라스·타일 아레나·안개)·미리보기 ┤
-                                                                      ├── WP6 화면·UI·입력 ─────────────────────────────┤
-                                                                      ├── WP7 앱 셸·데이터 로더·개발 도구·자원 검사 ────┤
-                                                                      └── WP8 소리 ─────────────────────────────────────┘
-                                                                                                    MVP 뒤 ── WP9 직업 고르기 ── WP10 헬파이어 스테이지
+WP1 (끝남) ── WP1b (끝남) ── WP1c (끝남) ── WP1d (끝남) ── WP0a (끝남) ── WP1e (끝남)
+  ── WP1f(v0.8 계약, 끝남) ──────────────┬── WP0 가져오기 도구·가져오기 표·타일셋(+ v0.8 AI 확대) ┐   (자원: 게임 화면 확인에 필요)
+                                 ├── WP2 내비·충돌(타일 충돌 포함)·공간·시야 ─────┤
+                                 ├── WP3 주인공·전투·무기·성장 ───────────────────┤
+                                 ├── WP4 적·감독·자동 조작 ────────────────────────┼── 통합(WP6) ── 검증
+                                 ├── WP5 렌더(아틀라스·타일 아레나·안개)·미리보기 ┤
+                                 ├── WP6 화면·UI·입력 ─────────────────────────────┤
+                                 ├── WP7 앱 셸·데이터 로더·개발 도구·자원 검사 ────┤
+                                 └── WP8 소리 ─────────────────────────────────────┘
+                                                                MVP 뒤 ── WP9 직업 고르기 ── WP10 헬파이어 스테이지
 ```
 
 ### 11.1 묶음별 맡는 것·계약·완료 기준
@@ -3587,8 +3877,63 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 - **완료 기준 — WP1e-구현-1**: `dotnet test` 통과. 새 시험: 10.1 `Run` 행 중 `[구현-2]` 표시가 없는 것 전부, 10.1 `Map` 의 `GateZones` 시험. `RunSession` 은 등록된 `IHeroCarry` 가 없을 때도 돈다(짐 건너뜀).
 - **완료 기준 — WP1e-구현-2**(단계 2 시작 전): 10.1 `Run` 행의 `[구현-2]` 전부, 10.1 `Map` 의 나머지 v0.7 시험(`MapArea`·13.5-23 맵 쪽 — 실제 `cathedral_arena` 를 `room_kinds` 를 단 사본으로 읽어 통과).
 
+#### WP1f — 계약 갱신: 기획 v0.8.1 29절 + 사용자 결정 U (v0.8) — WP1e 뒤·WP0·WP2~WP8 앞, 혼자, **형과 순수 로직 구현까지 한 번에** — v0.8.2: **끝남**(커밋은 `git log --grep WP1f`, 다르게 정한 것 13.22)
+
+기획 v0.8.1 29절 "설계에 넘기는 것" 1~19 와 사용자 결정 U(AI 확대)가 바꾸는 **계약**을 한 묶음에 모은다. 11.3 의 "WP1f 에서 바뀌는 멤버" ①~⑧(+ ⑨ 층, ⑩ AI 확대 자원 모양)이 이 표로 닫힌다 — WP1f 뒤에는 WP0·WP2~WP8 이 이 멤버의 모양·값에 기대도 된다.
+WP2~WP8 이 아직 시작 전이라 지금이 가장 싸다(WP1e 와 같은 까닭). WP1e 처럼 형과 구현을 한 작업에서 낸다 — 바뀌는 순수 로직(`Sim/Run/**`·`Map/`)이 모두 WP1e 가 쓴 파일이고 다른 묶음이 아직 그 위에 코드를 쓰지 않았다.
+나누는 기준은 **"형만"**(모양·시그니처·JSON 읽기 — 본문은 그 묶음)과 **"구현과 시험까지"**(자원·그래픽과 무관하고 여러 묶음이 같이 읽는 순수 로직 — WP1f 가 본문과 시험을 낸다)이고, 표의 "구현" 열에 적었다.
+
+| # | 파일·형 | 바꾸는 것 | 구현 | 기획 29 # · 11.3 | 영향 |
+|---|---|---|---|---|---|
+| 1 | `Defs/RewardDefs.cs` | `RewardKind` = `WeaponCards`·`WeaponBundle`·`BeltPotions`·`Shrine`(`BlessingCards`·`LevelUp`·`FullHeal` 삭제), `RewardDef`: `Gold`·`SkipWhenHpAtLeast` 삭제, `Bundle`(`RewardBundleDef`)·`BeltPotions`·`Shrine`(`ShrineDef`) 더함, `RewardSkipDef.Gold` 삭제(6.18) | 형 + 읽기 시험(본문 WP3) | 4 · ③ | WP3·WP5·WP7·WP8 |
+| 2 | `Defs/StatKeys.cs`, `Defs/RulesDefs.cs`(hero) | `StatKey.MaxHpPct`(`max_hp_pct`), `HeroRulesDef.Belt`(`BeltRulesDef` — `slots`·`threshold`·`cooldown`), `LevelUpRulesDef.Temper`(string), `FillerCardDef.Stats` 더함·`FillerCardDef.Gold` 삭제(6.10) | 형 + 읽기 시험 | 4·9 · ③④ | WP3·WP6·WP7 |
+| 3 | `Defs/RulesDefs.cs`(rooms) | `RoomRulesDef`: `RemainingMarker`·`RewardAnchor`·`ChestRing` 삭제, `RewardSpot`(`RewardSpotDef` — `Distance`·`Spacing`·`Clearance`)·`Stairs`(`StairsRulesDef` — `WeaponSlots`·`PassiveSlots`)·`TransitionFloor` 더함, `CleanupLimit` 주석 25(6.10) | 형 + 읽기 시험 | 6·8 · ⑤ | WP4·WP6·WP7 |
+| 4 | `Defs/RoomDefs.cs` | `RoomDef.Floor`(int, JSON `floor`, 0 = 안 적음 — 6.12) | 형 | 19(층) · ⑨ | WP4·WP6·WP7 |
+| 5 | `Defs/MapDefs.cs` | `TilesetDef.Mirror`(`TilesetMirrorDef(Pairs, Self)`), `MapDef.Mirror`(bool, JSON `mirror`), `MapDef.Mirrored`(`MapDef?`)·`IsMirror`·`MirrorOf`(`string?`) — 셋은 `JsonIgnore`, 읽기가 채움(6.11 "거울판") | 형 | 13 · ⑦ | WP0·WP5·WP7 |
+| 6 | 새 `Map/MapMirror.cs`, `Map/MapDataReader.cs`, `Map/ArenaLayout.cs`(`ValidateTileset`·`ValidateRooms`), `Map/GateZones.cs` | `MapMirror.Of(MapDef, TilesetDef)`(배치 뒤집기·짝 이름·문 변/ID·**`entries` 의 ID 도 짝으로**(v0.8.1)·좌표·사각형·방위 — 기준점 ID 는 그대로), 읽기가 `mirror: true` 맵의 거울판을 만들어 원판 `Mirrored` 에, 짝 표 검사(13.5-12 — 최종 성질 전치, v0.8.1 둘레·문 **자리 짝** 검사), 13.5-19·23 ③ 을 거울판에도, v0.8.1 ③ 에 "입구가 같은 ID 문 앞"(`ValidateRooms`), `GateZones.MirrorGate(id)`·`MirrorSide` | **구현과 시험까지** | 11·13 · ⑦⑧ | WP0·WP2·WP5 |
+| 7 | `Sim/Run/RunPlanner.cs` | ① (맵, 방향) 쌍 뽑기·바로 앞 쌍 빼기, ③ 출구는 계단만 하나(정예·보스 앞도 둘·셋), 거울판이면 ②③ 결과를 짝 이름으로(3.6 결정 2). 단계마다 난수 수는 그대로 | **구현과 시험까지** | 5·13 · ① | WP4·WP6 |
+| 8 | `Sim/Contracts/RoomState.cs`, `Sim/World.cs` | `RoomExit.NextFloor`(끝 인자, 기본 0), `RoomState.BossClockTicks`·`TimedEffectsRun`·`RewardSpot`, `RemapEntry` 가 거울판 짝 이름 먼저, **v0.8.1: `RemapEntry` 를 시작 문 기준 바꾸기로(서로 바꾸기 없앰)·`RemapMarch` 더함**(3.6 결정 5 — `RoomEventsTests` 의 `fromSw.RemapEntry("gate_ne") == "gate_sw"` 를 `"gate_ne"` 로), `World.TimedEffectsRun`(3.6), `World` 생성자의 주인공 시작 방향이 `rules.RewardAnchor` 대신 기준점 `center`(v0.8.1 — 키를 없애므로) | **구현과 시험까지** | 6·7·13 · ②⑦ | WP3·WP4·WP5·WP6 |
+| 9 | `Sim/Run/RoomFlow.cs`, 새 `Sim/Run/RewardSpot.cs` | 보상 자리 `RewardSpot.Find`·`Row`(주인공 앞 100px, 줄 40px — v0.8.1: 어느 방향도 못 가면 clearance 문턱을 주인공 반경으로 한 번 더) — `reward_anchor`·`chest_ring` 자리 대신, `DoorsOpened` 신호 자리도 `rules.RewardAnchor` 대신 `RoomState.RewardSpot`(v0.8.1), 정예·보스 방 앞 문도 보상(= 덤) 채우기, `NextFloor`, `BossClockTicks` 기록(3.6 결정 3) | **구현과 시험까지** | 5·6 · ② | WP3·WP4·WP5 |
+| 10 | `Sim/Run/RunState.cs` | `HeroCarry` → init 속성 record + `WeaponSlotsOpen`·`PassiveSlotsOpen`·`Belt`·`Mods`·`Shrines`·`Effects`, `CarriedStat`·`CarriedEffect`, `RoomRecord` 끝에 `Mirrored`·`BossClockTicks`·`PicksLeft`(기본값 있음), `IHeroCarry` 주석(넘기는 것 v0.8)·**v0.8.1 `IHeroCarry.Validate`**(이어 하기 전 WP3 뜻 확인 — `FakeHeroCarry` 는 null) | 형(+ JSON 왕복 시험). `Capture`·`Restore` 본문은 WP3 | 4·7·8·14 · ④⑥ | WP3·WP6·WP7 |
+| 11 | `Sim/Run/RunSession.cs`, 새 `Sim/Run/RunSnapshot.cs`·`RoomStartLimits.cs` | 계단 보상(칸 +1, 상한 6 — v0.8.1: 새 `Sim/Run/RunSlots.cs` `OpenAt(액트 번호)` 하나로), `--room` 시작 방의 보상 = 앞 방 `RewardOrder[0]`(종류 무관), `RoomStartLimits.MaxStartClockTicks` + 생성자 검사, `CanSuspend`·`Suspend()`(v0.8.1: Doors 면 계단 문 `Exit` 한 틱, Exit 면 그 자리 — 3.6 ⓐⓑ)·이어 하기 생성자(v0.8.1: 짐 ID·`Format`·`Carry` null·`Validate` 대조를 `Restore` 전에), `RunSnapshot`(v0.8.1: `Carry` nullable, `CurrentFormat`)·`RunSnapshotMismatchException`, `AreaScaleOf` 가 거울판을 원판 값으로, `CloseRoom` 이 `Mirrored`·`BossClockTicks`·`PicksLeft` 를 채움(3.6 결정 4) | **구현과 시험까지** | 8·14·15 · ⑥ | WP4·WP6·WP7 |
+| 12 | `Sim/Run/RoomEvents.cs` | `startClockTicks` 전의 `miniboss`·`boss` 는 그 시각으로 옮김, `CheckPlacement(act, rules)`·`StrongKinds`·`ClimaxKinds`·`StrongEarliest`(0:20)·`ClimaxWindow`(0:45) 상수(3.6 결정 5) | **구현과 시험까지**(검사기 등록은 WP4) | 11·15 · ⑥⑧ | WP4·WP7 |
+| 13 | `Sim/Entities/Hero.cs` | `WeaponSlots`·`PassiveSlots.SlotCount` 4 → 6, `Hero.WeaponSlotsOpen`·`PassiveSlotsOpen`(int — v0.8.1: `Reset()` 은 규칙을 받지 않으므로 0 으로 두고, 주인공 만들기(WP3)가 `RunSlots.OpenAt(World.Room?.Plan.Act ?? 1, …)` 로 정함, 짐 `Restore` 가 덮음)·`Hero.Belt`(int) — 공통 조각(11.2) | 형 | 4·8 · ④ | WP3·WP5·WP6·WP7 |
+| 14 | `Sim/Contracts/Progression.cs`·`RunStats`·`FairnessCounters` | `IProgression.PicksLeft`, `ChestItemKind.Gold` → `Temper`, `OfferSource.Shrine` 주석(매혹의 성소 창), `RewardAvailable` 주석(v0.8 거르기). `RunStats`·`FairnessCounters` 는 **모든 공개 멤버가 읽기·쓰기 가능·값 형식(배열)**(규칙 — 3.6 "계단 저장"). **v0.8.1**: `RunStats.WeaponSlotCount = 4` 없앰, `DamageByWeapon` = `{ get; set; } = new float[WeaponSlots.SlotCount]`(6 — v0.8 표에 빠져 5번째 칸 무기 피해가 범위 밖 예외, get 만 있어 저장 왕복에서 0) | 형 + 반사 왕복 시험·모양 지문 시험 | 4·14·16 · ③⑥ | WP3·WP4·WP6 |
+| 15 | 게임 `App/Contracts/AppServices.cs` | `ISaveService` 에 `PeekRun()`·`TakeRun()`·`SaveRun(RunSnapshot)`·`DiscardRun()`, `RunSnapshotInfo`(8.3) | 형(본문 WP7) | 8 · ⑥ | WP6·WP7 |
+| 16 | `Assets/ImportTable.cs` | `upscale.json` → `UpscaleTable`(`Models` — 이름 → `scale`·`files`, `OutputScale`, `Apply`(`Maps`·`MonstersMinWidth`), `Include`·`Exclude`), `FileNames` 9개, 표 해시가 9개를 이음(1.4). v0.8.1: `output_scale` 은 2 만 받음(다른 값 표 오류) | 형 + 읽기 시험(적용 범위 판정 함수 `UpscaleTable.Applies(ImportUnitEntry)`(칸 폭 = 동작 최대 폭)·`Applies(string tilesetId)` 까지 — 순수, v0.8.1 에 둘로 나눔) | U · ⑩ | WP0·WP7 |
+| 17 | `Assets/AssetManifest.cs` | `AssetManifest.Upscale`(`ManifestUpscale` — `Status`(off·done·fallback)·`Model`·`Tool`·`Files`·`OutputScale`·`Gpu`·`Reason`), `ManifestFile.Scale`(기본 1, 1 이면 안 씀) | 형 + 읽기 시험 | U · ⑩ | WP0·WP7 |
+| 18 | `Assets/SpriteMeta.cs`·`ArenaArt.cs`·`AssetFormat.cs` | `SpriteMeta.Scale`(1·2), 메타 형식 2 → 3, `ArenaArt.Scale`·형식 1 → 2, `AssetFormat.Version` 2 → 3, `Validate` 가 칸·사각형을 그림 픽셀로 보고 `scale` ∈ {1, 2} 확인(7.1·7.5·7.6) | 형 + 검사 시험 | U · ⑩ | WP0·WP5·WP7 |
+| 19 | `Sim/Contracts/Presentation.cs` | `CueKind.BeltPotion`(허리띠 저절로 마심 — 소리·HUD 깜빡임) | 형 | 4 | WP3·WP6·WP8 |
+| 20 | `TestKit/`(#23-형·#23-구현 소유는 11.3) | `FakeHeroCarry` 새 짐 필드(+ `Validate` 는 null), `TestDefs` 합성 보상 = 마법서·보물 상자·물약 + 성소 하나(새 모양), `RoomRules` 새 키, `RoomActs` 에 짝 표가 있는 합성 타일셋·`mirror: true` 작은 맵·층을 단 합성 액트(v0.8.1: `RoomActs` 는 WP4 로 넘어갔지만 WP1f 가 끝날 때까지 WP1f 가 맡는다 — 11.3) | 구현 | 모두 | 모두 |
+
+- **하지 않는 것**(본문은 그 묶음 — 각 묶음 v0.8 줄): 보상 효과·허리띠·`단련`·성소·시간 효과 멈춤·짐 담기/풀기·`PicksLeft`(WP3), 사냥 모드·`CheckPlacement` 등록·포위 고리·광폭화 시계·정책 상태 비우기·문 우선순위(WP4), 그림 배율·거울판 미리보기·문 위 `▼`(WP5),
+  일시정지 `저장하고 끝내기`·타이틀 `이어 하기`·`transition_floor`·HUD 허리띠·칸 5(WP6), 로더 새 키·`run.json`·`--map …@m`·`StateHasher`(WP7), AI 확대 도구·거울판 굽기·`audit` 거울판·L1 짝 조각 번호(WP0), 성소·물약 소리(WP8). 실제 `Data/` 는 고치지 않는다(WP0·WP3·WP4·WP5 소유).
+- **완료 기준 — 형**: `dotnet build -p:SkipAssetCheck=true`·`dotnet test` 통과. 읽기 시험(`DefJson`/`TestJson`): 6.18 새 보상 넷(옛 `level_up`·`full_heal`·`blessing_cards` → 모르는 값 오류, `skip.gold`·`gold`·`skip_when_hp_at_least` → 모르는 속성 오류), 6.10 `rules.rooms` 새 모양(옛 `remaining_marker`·`reward_anchor`·`chest_ring` → 오류, `reward_spot`·`stairs`·`transition_floor` 하나 빠지면 오류),
+  `rules.hero.belt`·`level_up.temper`·필러 `stats`·`max_hp_pct`, `RoomDef.floor`, 타일셋 `mirror`·맵 `mirror`, `Table/upscale.json`(9개 표 해시, v0.8.1: `output_scale` 4 → 표 오류, `Applies(ImportUnitEntry)` 가 동작마다 폭이 다른 항목을 최대 폭으로 판정, `Applies("l1")`·`exclude: ["tileset:l1"]`), manifest `upscale`·파일 `scale`, `SpriteMeta` 형식 3(`scale`, 형식 2 → 오류)·`ArenaArt` 형식 2.
+  `HeroCarry`(모든 필드)·`RunSnapshot` JSON 왕복 같음 — v0.8.1: 비교는 **다시 직렬화한 JSON 바이트가 같음** + 목록 원소별 비교(record 의 `==` 는 목록·클래스 멤버를 참조로 견줘 늘 거짓이다),
+  `RunStats`·`FairnessCounters` 의 **공개 필드 + 공개 속성 전부**를 반사로 0 아닌 값으로 채워 왕복 → 바이트 같음, get 만 있는 공개 속성·허용 밖 형(값 형식·그 배열 밖)이 있으면 실패(조각 멤버가 늘어도 이 시험이 지킴 — v0.8 은 "필드" 만 봐 get 만 있는 `DamageByWeapon` 의 손실을 놓쳤다),
+  **모양 지문**(v0.8.1): `RunSnapshot` 에서 닿는 형의 공개 멤버 (이름, 형) 해시 = `CurrentFormat` 옆 기대 값(3.6 "계단 저장"), `RunStats.DamageByWeapon.Length` = 6. 이 문서(3.6·6.10·6.11·6.12·6.18·8.3·1.4)의 시그니처·모양이 계약 파일에 빠짐없이 있다. `git diff` 에 실제 `Data/` 변경 없음.
+- **완료 기준 — 구현과 시험까지**(10.1 `Map`·`Run`):
+  거울판 — 합성 짝 표 타일셋으로 `MapMirror.Of` 의 하위 칸 성질이 원판의 전치와 칸마다 같음, `Of(Of(m))` 의 배치 = `m`(조각·좌표·문), 문 ID·변·`entries`·`anchors`·`open_center`·`room_areas` 뒤집힘, `GateZones`(거울판) = 원판 칸의 전치, `RoomFloors` 바닥 수·문 수 같음, 거울판이 13.5-19·23 ③ 통과,
+  **v0.8.1**: 거울판 `entries[id].inside` 에서 가장 가까운 문 틈 칸이 `GateZones[id]` 의 칸(원판·거울판 모두 — 입구 ID 를 그대로 둔 고장 `MapMirror` 흉내 → ③ 오류), 기준점 ID 는 그대로,
+  짝 표 오류 넷(성질이 전치와 다름·없는 이름·이름 두 번·`mirror: true` 인데 짝 없는 조각 — 실제 `cathedral_arena` 를 `mirror: true` 로 바꾼 사본의 오류 목록에 `grate_h`·`door_closed` 짝 없음이 **들어 있음**(포함 — 실제 `l1.json` 에는 아직 짝 표가 없어 다른 조각 오류도 함께 나오고 순서는 보지 않는다)),
+  자리 짝 오류(합성 타일셋의 `edge_ne` 성질을 `edge_nw` 의 전치와 다르게 → 오류, 문 `end_b` 도 같음), 짝 조각에 원본과 다른 "보정" 을 요구하지 않음(최종 성질만 봄).
+  `RunPlanner` — 풀 1장 + 거울판이면 원판·거울판 번갈이, 풀 2장 + 거울판이면 씨앗 1000개에서 바로 앞과 같은 쌍 0, 정예·보스 앞 방 출구 둘(40% 셋), 출구 하나는 계단뿐, 판의 마지막 방 출구 없음, 거울판 방의 `GateIn`·`ExitGates` 가 짝 이름, ②~④ 가 `Flow(n)` 만의 함수(v0.7.2 시험 그대로), 고정 값 시험 셋을 새 값으로.
+  `RoomFlow`·`RewardSpot` — 정예·보스 방 덤 보상 + 정예 상자가 한 줄로(40px)·모두 `GatesExit`, 보상 자리: 앞이 트이면 바라보는 쪽 100px, 앞이 벽이면 다음 후보 방향, 사방이 막히면 주인공 발, 자리가 주인공에서 직선으로 이어짐(clearance ≥ 30), v0.8.1: 좁은 통로(clearance 20 인 합성 복도)에서는 두 번째 차례(문턱 = 주인공 반경)로 발 밖 자리, `DoorsOpened` 신호 자리 = `RewardSpot`, `NextFloor`(층 바뀜·계단), `BossClockTicks`, `TimedEffectsRun` 이 단계마다 맞음, `cleanup_limit` 을 rules 에서 읽음.
+  `RunSession` — 계단에서 칸 +1(상한 6), v0.8.1 `RunSlots.OpenAt`(액트 1 = 4, 액트 2 = 5, 상한 6)·`RunStart` 를 액트 2 1번 방으로 준 판의 짐 칸 수 = 보통 판의 액트 2(합성 `FakeHeroCarry`), `--room` 정예 방 시작의 덤, `--start-at` 상한(일반 = 생존 길이, 정예 = 2:30, 보스 = 없음 — 넘으면 예외), `CanSuspend` 가 보스 방 문 단계에서만 참,
+  **끊고 잇기**(v0.8.1 — 비교 기준을 정함): 합성 두 액트 판을 (가) 끊지 않고 **(나) 가 `Suspend` 한 틱에 `CommandButtons.Exit`(계단 문)로 나가게** 하고, (나) 보스 방 문 단계 첫 틱에 `Suspend`(ⓐ — 한 틱 돌림) → JSON → 이어 하기 생성자로 돌려
+  `RoomRecord` 목록(보스 방 `Ticks` 포함)·`ElapsedTicks`·`RunStats`·방 상태 열(주인공·방 시계·단계·난수 상태 — WP7 `StateHasher` 전의 대리, 13.19)이 같음. (다) 계단 문 틈을 밟아 `Phase == Exit` 가 된 틱에 `Advance` 대신 `Suspend`(ⓑ)도 같은 비교.
+  불일치 — `rooms_hash` 를 바꾼 정의, 짐에 없는 무기 ID, `Format` 다름, `IHeroCarry` 를 등록한 판에 `Carry: null` 스냅숏, `Validate` 가 이유를 돌려주는 가짜 → 모두 `RunSnapshotMismatchException` 이고 `Restore` 는 불리지 않음.
+  `RoomEvents` — `--start-at` 이 입장 이벤트 시각을 넘으면 그 이벤트가 시작 시각에 있음(정예 방 생존이 끝남), `CheckPlacement` 오류(0:20 전 `ring`)·경고(2번 방 끝 0:45 안 절정 없음)·예외(`miniboss` 0:03 은 통과).
+  `RemapEntry`·`RemapMarch`(v0.8.1 — 3.6 결정 5): `gate_sw` 로 들어온 방에서 `gate_ne` 는 그대로(옛 시험 `== "gate_sw"` 를 뒤집음), 들어온 문 `gate_sw` 는 `gate_ne`, 6:30 행진은 `gate_se` 로 들어오면 `gate_nw` → `gate_se`·`gate_sw` 로 들어오면 그대로, 시작 문이 다른 행진의 목표가 들어온 문이어도 그대로,
+  거울판 보스 방(`gate_se` 로 들어옴)의 보스 `gate_ne` → `gate_nw`, 맞은편 문이 없는 합성 맵에서 들어온 문인 시작 문은 그대로(13.5-23 ⑤ 가 오류로 잡음).
+- **옛 모양 점검**: `rg -n "RemainingMarker|remaining_marker|RewardAnchor|reward_anchor|ChestRing|chest_ring|BlessingCards|blessing_cards|RewardKind\.LevelUp|level_up\"|FullHeal|full_heal|SkipWhenHpAtLeast|skip_when_hp|filler_gold|ChestItemKind\.Gold|SlotCount = 4|WeaponSlotCount|HeroCarry\(" src tests tools` 결과를 줄마다 새 모양으로 확인해 완료 보고에 적는다
+  (`level_up` 은 `rules.level_up` 키라 남는다 — 보상 종류 쓰임만 없어야 함).
+
 #### WP0 — 가져오기 도구 (WP0a 뒤, 다른 묶음과 동시)
 
+- **시작 전**(v0.8.2, WP1f 검증 반영): 기획 담당이 13.21 끝 "기획서에 넘기는 것" 2~6(`upscaler-check` 는 작은 무늬 그림 한 장 변환, 되돌아감 이유 `Vulkan 런타임 없음`·"진행 없음 2분", 맵 그림 알파 = 원본 2배 점 확대·이음매 대처 = 벽 줄째 확대·기둥 빼기, 액트 2 시작 칸 5·`--weapons` 초과 옵션 오류, 끊는 틱 두 길)을 기획서 19.6·2.5·15절에 넣은 뒤 시작한다.
+  그 전에 두 문서가 다르면 **설계서(1.4·3.6·9절) 문장대로** 구현한다(WP7 의 `--weapons` 검사도 같음). 넣고 나면 머리말의 "기준 기획서" 판을 올린다.
 - **맡는 것**: `tools/DiabloAssetImporter/**`(`Table/` 포함), `tools/import-all.ps1`, `tests/DiabloAssetImporter.Tests/**`, 테스트 `Assets/ImportNamesTests.cs`(13.5-10 — ① 기본, ② `Integration`),
   `Data/tilesets/*.json`(번호·성질 표 — 원본으로 확인하는 묶음이라), `src/DiabloDefenceRemastered/Assets/README.md`, `README.md` 의 자원 절·제3자 고지. `tools/import-assets.ps1` 은 고치지 않는다.
 - **계약**: 1.4 의 명령·종료 코드·출력 폴더·manifest·메타·소리 색인(Core `Assets/` 형), 13.5-10 을 만족하는 표, 타일셋 성질 표 = 원본 SOL(+ 알려진 차이) — **v0.5: bit0·bit1·bit2 세 비트**(1.4 성질 대조), 단계 3 의 L2 협로 벽 시야 비트 포함. 맵 정의는 Core `MapDataReader` 로 읽고
@@ -3612,6 +3957,14 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   13.5-10 귀속(v0.7): 맵 그림 → 그 맵을 `room_maps` 에 둔 스테이지들(맵 하나를 두 액트가 쓰면 두 스테이지 모두 — 묶음 조건은 둘 다 만족해야 함).
   완료 기준 더함: 단계 2·3 의 작은 방 맵이 `layout_hash` 대조를 통과하고 `audit` 의 DUN 배열 대조 0, 물체 그림을 풀었다면 `contact` 견본에 상자·성소·책·물약을 넣어 눈으로 봄.
 - **v0.7.1**(13.18): 13.5-22 의 맵 주석 `// 본뜬 원작 방:` ↔ 타일셋 항목 `audit_dun` 대조를 `SourceCommentTests` 에 더함(자원 없이 늘 돎 — 6.11 "원작 방 본뜨기").
+- **v0.8**(13.20, WP1f 뒤): ① **AI 확대**(사용자 결정 U, 1.4 "AI 확대"): `--upscale`·`--upscale-bin`·`--upscale-gpu`·`upscaler-check`, `Table/upscale.json`(허용 해시는 공식 릴리스 파일에서), 처리 ①~⑦·되돌아감·종료 코드 6·manifest `upscale`·파일 `scale`·메타 `scale`(형식 판 3)·그림자 굽기(⑥), v0.8.1: 세 단계 처리·묶음 실행·진행 감시·확대 중간 캐시·맵 알파 점 확대·몬스터 알파 변종 공통·Vulkan 런타임 확인·오류 창 막기·`-m`·`확대 진척 n/m`, 도구 시험(10.1 `Pipeline` — 가짜 실행 파일 `tests/FakeUpscaler` + `IUpscaler` 가짜), `import-all.ps1` 의 `-Upscale`·`-UpscaleBin`·`-UpscaleGpu`(0·6 = 성공), README 자원 절(받는 곳·풀 곳·제3자 고지).
+  ② **거울판 굽기**: `mirror: true` 맵의 거울판(`MapDataReader` 결과의 `Mirrored`)도 굽는 목록에 — 출력 `<art>@m`, `layout_hash` 따로. `audit` 의 DUN 배열 대조도 거울판 배치로 한 번 더(기획 v0.8.1 13.5-22).
+  ③ **L1 짝 조각**(`Data/tilesets/l1.json`): 세로 창살(`grate_v` — 35 후보)·세로 닫힌 문(`door_closed_v` — 25 후보)의 번호·성질을 `probe tiles` 로 원본에서 확인해 `pieces`·`props` 에 더하고 `mirror` 짝 표를 적는다(6.11 예). 짝 검사(13.5-12 — 최종 성질 전치·자리 짝)가 통과해야 한다.
+  v0.8.1(기획 v0.8.3 10.1 "세로 창살"): 35 의 기둥 칸 성질은 원본 SOL 과 DevilutionX 보정 여부로 셋 중 하나 — 보정이 있으면 `sol_known_diffs`(출처: DevilutionX 참고), 보정이 없으면 `design_diffs`(이유 "창살 기둥 칸은 방향과 상관없이 막음, 거울판 짝"),
+  35 의 원본 모양이 36 의 전치가 아니면(기둥 칸 자리·걷기 칸이 다름) 짝 표에 넣지 않는다 — 그러면 창살을 쓴 `cathedral_arena` 는 거울판을 달지 않는다. 짝 조각에 원작 수정판에 없는 "보정" 을 지어내지 않는다(R24). 그 뒤 WP5 가 `cathedral_arena` 에 `mirror: true`.
+  완료 기준 더함: 이 PC 에서 `--upscale realesrgan-x4plus` 실제 실행 한 번(저장소 밖 `--out`) — 종료 코드 0, manifest `status: done`, 확대 작업 수·걸린 시간·첫 실행과 캐시 실행 시간을 1.4 에 적음, `contact` 견본(L1 바닥·벽, 칸 160 이상 몬스터 하나, 같은 몬스터 걷기 8프레임 줄)을 스크래치에 만들어 **눈으로 봄**(이음매·가장자리·떨림)을 기록.
+  `--upscale-bin` 을 빈 폴더로 준 실행이 종료 코드 6·`status: fallback`·출력이 원본 픽셀 실행과 같은 해시. 확대를 끈 실행은 지금 기준(두 번 → manifest 같음) 그대로.
+  v0.8.1: 실제 실행의 묶음 수·묶음별 시간·전체 시간으로 1.4 의 `UpscaleBatchPixels`·`UpscaleNoProgress` 첫 값과 기획 19.6 의 "첫 실행 수 분" 을 고친다(값이 바뀌면 기획 담당에 넘김). 오류 모드를 물려받아 `vulkan-1.dll` 없는 실행에서 창이 뜨지 않는지(이 PC 에서 꾸밀 수 없으면 "확인 못 함"), `upscaler-check` 의 장치 줄을 완료 보고에 적는다.
 
 #### WP2 — 길찾기·충돌·공간
 
@@ -3630,6 +3983,7 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   작은 방 문 넷 진입점 150px 은 WP1e 의 하위 칸 근사(13.5-23 ③) 위에 실제 충돌 도형 거리로 한 번 더(정밀 검사 — 13.5-6 의 60px 와 같은 함수에 거리만 바꿈), `InvariantChecker` 열을 방마다 → `RunState.Fairness` 합(WP1e `AddTo`).
   완료 기준 더함: 작은 합성 방 맵에서 10.1 `Nav` 전수 시험(a)~(d), 방 이동 `Perf` 두 맵 기준 안, R23 입구 대체 비율을 작은 방(32)에서도 잼(기획 열린 질문 35 — 30% 넘으면 적어 넘김).
 - **v0.7.1**(13.18): 13.5-23 ③ **문 틈 닿음** 검사(Nav/Validation — 13.5-5 의 닿는 내비 칸 집합으로 문마다 나가는 자리 칸 하나 이상, 10.1 `Nav`). 방 맵 풀의 맵마다 돈다.
+- **v0.8**(13.20): 13.5-4~6·문 틈 닿음·작은 방 150px 정밀 검사를 **거울판에도**(`MapDef.Mirrored` 가 있는 맵마다 한 번 더 — 6.11 "거울판"). 내비·충돌은 거울판 `MapDef` 를 그대로 받으므로 코드 변경은 검사 목록뿐이다. `RewardSpot`(WP1f)이 쓰는 `INavWorld.IsInsideMap`·`Clearance` 의 뜻을 바꾸지 않는다.
 
 #### WP3 — 주인공·전투·무기·성장
 
@@ -3646,13 +4000,19 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   v0.6.1: 특성 = `trait` 패시브(`passives.json` 의 `trait_arcane_affinity`, 아이콘 없음 — 6.16), 주인공 만들기가 `HeroClass.Traits` 를 1레벨로 붙이고 슬롯을 쓰지 않음, 레벨업·상자·`--passives` 후보에서 `trait` 를 뺌, 패시브·진화 `classes` 거르기.
   v0.6.3(방 보급): `ICombatSpawner.SpawnPickup` 구현(드롭도 같은 길, `PickupDropped` 신호), `Pickup.SupplyRoom` 채우기, 보급은 수명·상한 정리에서 뺌, 주우면 틱 이벤트 `SupplyCollected`(6.12).
   **v0.7(방 구조, 6.9·6.18·3.6)**: `IHeroCarry` 구현과 `ModuleContext.SetHeroCarry` 등록(레벨·경험치·재추첨 남은 수·체력·무기·패시브·축복 칸 — 무기 내부 시간 상태·버프·마력 폭주·피격 무적은 넘기지 않음), 문 보상 — 획득물 `kind: reward`(몸에 닿아야, 끌어당김·수명·상한 정리 밖, `Pickup.Reward`·`GatesExit` 채우기),
-  줍기 효과(마법서·성소 → `PendingRewards`, 보물 상자 → `XpToNext` 만큼 경험치 + 금화 × `gold_scale`, 물약 → 전부 회복), `IProgression` 의 `RewardOffer`(무기 카드만 — `cards` 가중 / 축복 카드만)·`ChooseReward`·`RerollReward`·`SkipReward`(`skip`)·`RewardAvailable`, 재추첨 수 공유,
+  줍기 효과(v0.8 에 바뀜 — 아래 v0.8 줄. v0.7: 마법서·성소 → `PendingRewards`, 보물 상자 → `XpToNext` 만큼 경험치 + 금화 × `gold_scale`, 물약 → 전부 회복), `IProgression` 의 `RewardOffer`(무기 카드만 — `cards` 가중 / 축복 카드만)·`ChooseReward`·`RerollReward`·`SkipReward`(`skip`)·`RewardAvailable`, 재추첨 수 공유,
   **축복**(`blessing` 패시브 — `Hero.Blessings`, 능력치 더하기, 레벨업·상자·`--passives` 후보에서 빠짐. `--passives` 로 축복을 주면 축복 칸에), `RoomCleared` 다음 틱 보석·금화 끌어당김(끌어당김 룬 함수)·보스 `RoomCleared` 면 체력 전부, 신호 `RewardCollected`.
   Data: `rewards.json`(6.18), `passives.json` 에 축복 여섯(기획 6절 값), `pickups.json` 에 보상 물체 넷(단계 1 은 대체 그림 — 기획 11.4: `GoldIcon`·`HealingPotion`·`MagicMissileICon`·코드 그림). 단계 1 = 마법서·보물 상자, 단계 2 = 성소·물약·축복.
 - **완료 기준**: 테스트 통과. 그래픽 없는 시나리오(`Scenario`): 해골 50 마리 + 매직 미사일 Lv8 로 60초 → 처치·경험치·레벨업 대기가 생김(`TestKit` 공간 질의로 먼저, WP2 가 들어오면 실제 해시로도).
   `on_end` 시험(맞음·사거리 끝·장애물 세 경우 모두 장판 하나), 신호 시험(무기 발동 한 번에 `WeaponFired` 하나, 피격 무적 중 `HeroHurt` 없음). v0.6: 10.1 `Progression` 의 직업 시험, 실제 `heroes/sorcerer.json` 으로 만든 주인공의 쿨다운 감소 0.05.
   v0.7: 10.1 `Progression` 의 "문 보상·축복·짐" 시험, 합성 `RoomState`(TestKit #23)로 `RoomCleared` 끌어당김, `RunSession`(WP1e-구현 뒤)으로 방 둘을 지나 빌드가 같은지.
 - **v0.7.1**(13.18): `IHeroCarry` 는 칸 번호 그대로(`Restore` 가 같은 칸), 대기가 남은 월드의 `Capture` 는 예외, `SpawnPickup` 이 `PickupSpawn.Reward != null` 이면 `GatesExit = true`, 끌어당김 표시는 공통 조각 `Pickup.Magnetized` 에, 보상 물체는 상태와 상관없이 늘 집힘(물약 포함)·줍는 순간 줄 카드가 0장이면 그 보상의 `skip`, `ResetCombat`·주인공 만들기는 `RunStats` 를 건드리지 않음(10.1 `Progression`).
+- **v0.8**(13.20, WP1f 뒤 — 기획 v0.8.1 4.3·4.4·11.1·11.4·2.5): 문 보상 효과 넷(6.18 "받는 길" — 무기 강화 꾸러미·허리띠 물약·성소 셋, 0장·올릴 무기 없음·정예 상자 빈 강화(`ChestItemKind.Temper`) = `단련`), `RewardAvailable` 의 v0.8 거르기, 매혹의 성소 창(`OfferSource.Shrine`),
+  **허리띠**(`Hero.Belt`, 30% 아래 저절로·1초 간격), **열린 칸 수**(`Hero.WeaponSlotsOpen`·`PassiveSlotsOpen` — 레벨업·상자·`--weapons` 가 이 수만큼만 채움), `Mods`(`단련`·성소 대가 — 능력치 더하기, `max_hp_pct`), **시간 효과**를 남은 틱으로 세고 `World.TimedEffectsRun` 일 때만 줄임,
+  `IHeroCarry` 가 새 짐 필드 전부(`Effects` 포함 — 무기 쿨다운·피격 무적은 넣지 않음), `IProgression.PicksLeft`. Data: `rewards.json` 새 모양(6.18), `rules/hero.json` 의 `belt`·`temper`·`filler_temper`·경험치 곡선(6.10), 축복 패시브 여섯은 MVP 데이터에서 뺌(E).
+  완료 기준 더함(10.1 `Progression`): 보상 넷의 받는 길, 0장 → `단련`, 허리띠 저절로(문턱·간격·찼을 때 물약 = 바로 마심), 성소 한 판에 한 번, 시간 효과가 보상·문·들어옴 단계에서 안 줄고 짐으로 다음 방에 이어짐, 칸 5 에서 무기 다섯.
+  **v0.8.1**: 주인공 만들기가 열린 칸을 `RunSlots.OpenAt(World.Room?.Plan.Act ?? 1, …)` 로 정함(`Hero.Reset` 은 0), 5번째 칸 무기의 피해가 `RunStats.DamageByWeapon[4]` 에 쌓임, `IHeroCarry.Validate`(모르는 시간 효과 ID·진화 짝 어긋남 → 이유), **판 수명 상태를 모듈 인스턴스·정적 필드에 두지 않음**(11.2 — 짐에 필드가 더 필요하면 WP1g 요청).
+  완료 기준 더함: **실제 모듈로** 합성 두 액트 판을 계단에서 끊고(`Suspend` → JSON → 새 `ModuleContext` 로 이어 하기) 끊지 않은 판(같은 틱 계단 문 `Exit`)과 `RoomRecord` 목록·`RunStats`·짐(다시 쓴 JSON 바이트)이 같음 — WP1f 의 `FakeHeroCarry` 시험이 못 덮는 "짐 밖에 숨은 판 상태" 를 잡는다(WP7 `StateHasher` 가 생기면 판 해시로도).
 
 #### WP4 — 적·감독·자동 조작
 
@@ -3692,7 +4052,14 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   v0.6: 단계 1 의 `stage_cathedral` 10분 `Scenario` 를 방 들르기 모드로도 한 번(공정성 세 열 0·`stuck` 기준 — 방 문·벽 모서리, v0.6.1: 모든 `room_*` 2번 이상·`occluded` > 0 — 빈 통과 막기, 10.1), 창살 너머 궁수 시나리오(10.1 공정성 열), 10.1 `Director` 의 포위 고리 길 거리 시험.
   **v0.7**: 위의 "`stage_cathedral` 10분"·"12분" `Scenario` 는 모두 **`RunSession` 액트 실행**으로 바꾼다(단계 1 = 일반 방 여섯, 단계 2 = 액트 1 아홉 방, 단계 3 = 액트 2 열한 방 — `--room 2:1` 시작 + `--level`·`--weapons` 로 액트 1 끝 빌드 흉내). 기준은 같고 더해서 `DOOR_SKIP` 0·`collapsed` 수를 보고(0 이 아니면 그 방 이름을 적음).
   10.1 `Director` 의 v0.7 "방" 시험, 13.5-18·23 ⑤ 시험, 실제 액트들이 13.5-3·18·23 을 통과. 방 들르기 `Scenario` 는 판 전체·맵마다 셈(10.1 공정성 v0.7).
-- **v0.7.1**(13.18): `RemapEntry` 를 시작 문·목표 문 둘 다에(서로 바꾸기), 정예 방의 구간·배율은 `DifficultyMinutes`(`to` − 1틱에서 멈춤) 그대로 쓰면 됨, 방 안에서 시각이 된 `light_change` 는 `LightingState.Apply`(방 시작 때 지난 것의 `Replay` 는 `World` 생성자가 함 — 감독은 하지 않음), `light_change` 부품은 매개변수 형 `LightChangeParams` 로 등록, 13.5-18 정예 방 전체 구간·13.5-23 ⑤ 새 규칙(중간 보스·보스 이벤트 정확히 하나·같은 적, 기준점은 풀의 모든 맵, 점 빛, 서로 바꾼 뒤 시작 = 목표 오류). 자동 조작: `CommandButtons.Exit`·`ExitIndex`, 문 동률 둘째 기준(화면 y → `Exits` 순서), 정예 방 `SpawningOpen` 거짓 뒤 중간 보스 쪽 길 방향 0.8, `RewardStalls`. 시나리오 방 틱 상한과 단계 3 의 "판 전체"(10.1 `Sim`).
+- **v0.7.1**(13.18): `RemapEntry` 를 시작 문·목표 문 둘 다에(서로 바꾸기 — **v0.8.1 에 바뀜**: 시작 문이 들어온 문일 때만, 행진은 `RemapMarch`, 3.6 결정 5), 정예 방의 구간·배율은 `DifficultyMinutes`(`to` − 1틱에서 멈춤) 그대로 쓰면 됨, 방 안에서 시각이 된 `light_change` 는 `LightingState.Apply`(방 시작 때 지난 것의 `Replay` 는 `World` 생성자가 함 — 감독은 하지 않음), `light_change` 부품은 매개변수 형 `LightChangeParams` 로 등록, 13.5-18 정예 방 전체 구간·13.5-23 ⑤ 새 규칙(중간 보스·보스 이벤트 정확히 하나·같은 적, 기준점은 풀의 모든 맵, 점 빛, 서로 바꾼 뒤 시작 = 목표 오류). 자동 조작: `CommandButtons.Exit`·`ExitIndex`, 문 동률 둘째 기준(화면 y → `Exits` 순서), 정예 방 `SpawningOpen` 거짓 뒤 중간 보스 쪽 길 방향 0.8, `RewardStalls`. 시나리오 방 틱 상한과 단계 3 의 "판 전체"(10.1 `Sim`).
+- **v0.8**(13.20, WP1f 뒤 — 기획 v0.8.1 2.5·10.3·15): **사냥 모드**(`Room.Phase == Cleanup` 이면 `kite`·도망 부품 끔, 길 따라 주인공에게 — 중간 보스·보스 본체는 해당 없음), `RoomEvents.CheckPlacement` 를 13.5-23 ⑥ 검사기로 등록,
+  포위 고리 반경 하한 300·못 놓은 마리 남은 호에 다시 나눔(기획 10.3 — 감독 시험: 작은 방 진입점의 주인공에게 좀비 24·420 고리, 최소 거리 ≥ 300·생략 ≤ 25% 를 로그로), `--start-at` 보스 방의 광폭화 시계를 그만큼 흐른 것으로,
+  방 문구에 층(`대성당 2층 — 3` — `RoomDef.Floor`), 자동 조작 문 우선순위 v0.8(9절 — 허리띠·성소 셋·덤), 정책의 방마다 판단 상태를 월드가 바뀔 때 비움(3.6 "계단 저장" — 끊고 이은 판이 같게).
+  Data: `rules/rooms.json` 새 모양(6.10), 두 액트의 `floor`·이벤트 시각(기획 10.3·10.4 v0.8.1 표)·블랙애시 호위 이벤트·로트피스트 1800·블랙애시 2500·해골왕 10000, 보상 가중(6.12 예 — 단계마다 있는 ID 만).
+  완료 기준 더함: 단계 3 "판 전체" 에 **계단 저장으로 끊었다 이은 판의 판 해시 = 끊지 않은 판**(씨앗 2개 — `RunSession.Suspend`/이어 하기 생성자를 Core 로 바로), 실제 액트들이 13.5-23 ⑥ 오류 0.
+  v0.8.1 **끊는 틱**: 자동 조작에는 메뉴가 없으므로 봇이 계단 문 틈을 밟아 `Phase == Exit`(계단 문)가 된 틱에 `Advance` 대신 `Suspend`(3.6 ⓑ) → JSON → 이어 하기. 끊지 않은 판은 같은 틱에 그대로 `Advance` 한다 — 두 판이 같은 틱에 보스 방을 닫으므로 `ROOM` 줄 목록(보스 방 줄 포함)·판 해시가 같아야 한다(기획 v0.8.3 15절).
+  13.5-23 ⑤ 의 v0.8.1 검사(바꾼 뒤 시작 문 = 들어온 문 → 오류, 원판·거울판·들어올 수 있는 문마다)가 실제 두 액트에서 오류 0, 감독의 행진은 `RemapMarch`.
 
 #### WP5 — 렌더·그림·미리보기
 
@@ -3717,6 +4084,10 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   렌더 기준은 `--stress 300 --freeze-ai` 를 `--reveal` 과 안개 켬으로 두 번 재 최악 추정으로(10.3). `rules/sight.json` 의 시뮬레이션 값 줄을 바꾸면 WP4 `Scenario`·13.5-15 를 다시 돌린다(6.10).
   v0.7: 10.2 "방 흐름" 행의 봉인·아이콘 부분, 액트 시작 로그 `ASSETS … vram_mb=` 가 풀의 맵을 다 읽은 값(R7 에 적음), 단계 2 의 `--room 1:2 --stress 300` 렌더 측정(10.3).
 - **v0.7.1**(13.18): `IWorldBound` 구현 — `WorldRenderer`(맵 그림 묶음·`FogRenderer` 텍스처·칸 바뀜 값)가 새 월드를 받으면 다시 만듦(7.11). 원작 방을 본뜬 작은 방 맵은 첫머리 주석 `// 본뜬 원작 방:` 과 WP0 에 `audit_dun` 줄 요청(13.5-22), 점 빛은 기준점 ID 로(6.12).
+- **v0.8**(13.20, WP1f 뒤): ① **그림 배율 s**(7.1 — `WorldRT` (960·s)×(540·s), 그리는 배율 = s ÷ 메타 `scale`, `PointClamp`, 빛·안개 타깃은 월드 해상도 그대로), 메타 형식 3·`arena.json` 형식 2 읽기, 렌더 측정을 s = 2 로도 한 번(10.3 — `draw_ms`·`vram_mb` 를 R7·R38 에).
+  ② **거울판**: 작은 방 맵에 `mirror: true`(짝 표가 덮으면), `cathedral_arena` 는 WP0 의 L1 짝 조각 뒤에, `--preview tiles --map <id>@m` 으로 맞물림 확인. ③ 문 위 덤 아이콘·`▼ n층`(7.11), 보상 물체 그림 정의(성소 셋 — 음산한 성소는 색조 0.6).
+  완료 기준 더함: 10.2 "거울판"·"AI 확대" 행(확대 자원은 WP0 의 실제 실행 출력으로 — 없으면 "판정 못 함").
+  v0.8.1: s = 확대가 `done` 이면 manifest `output_scale`(첫 판 2), 메타 `scale` 이 {1, s} 밖이거나 s 를 나누지 않으면 시작 검사가 막음(7.1 — 검사는 WP7). `TextureStore` 는 액트 풀의 `mirror: true` 맵의 거울판 그림 `<art>@m` 도 액트 시작 때 읽고, `vram_mb` 측정에 거울판을 넣는다(7.1·7.5).
 
 #### WP6 — 화면·UI·입력, 통합
 
@@ -3737,6 +4108,9 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   단계 2: 10.2 "미니맵 기억" 행(v0.5.1 — WP5 의 단계 1 안개 행에서 옮김).
   통합 뒤: 실제 데이터 엄격 시험 통과, 10.2 "단계 끝" 행 통과. 키보드로 한 판(사람)·소리를 귀로 듣기는 "동작 확인 못 함" 으로 따로 적는다.
 - **v0.7.1**(13.18): `Advance` 앞뒤의 표시 이벤트 소비·`IWorldBound.Attach` 순서(7.11 — `FxSystem`·`Hud`·미니맵 쪽 구현), `StageStep.Finished` 첫 앱 틱에 `RunSession.Conclude()` 한 번 → 결과 화면·`RESULT`·`RecordResult`(`ReachedActId`), HUD 분모 = 그 액트 마지막 방 번호, 로그 `REWARD_STALL`·`INNER_ROOMS`(9절). 완료 기준에 10.2 "방 흐름" 의 v0.7.1 줄.
+- **v0.8**(13.20, WP1f 뒤 — 기획 v0.8.1 2.5·12): 일시정지 메뉴 `저장하고 끝내기`(`RunSession.CanSuspend` 일 때만) → `Suspend` → `Save.SaveRun` → 타이틀, 타이틀 `이어 하기 (<다음 액트 이름>)`(`PeekRun`) → `TakeRun` → 이어 하기 생성자(불일치면 한 줄 안내), 새 게임에서 남은 저장을 지운다고 한 번 묻기(`DiscardRun`),
+  넘김 어둠 `transition_floor`(고른 출구 `NextFloor` ≠ 0), HUD 허리띠 칸 둘·무기·패시브 칸 = 열린 칸 수(4 → 5), 남은 적 미니맵 점은 정리 시작부터 모두, 로그 `ROOM` 의 `mirror`·`boss_s`·`picks_left`(9절). 완료 기준 더함: 10.2 "계단 저장" 행.
+  v0.8.2(WP1f 검증 반영): `Suspend` 가 `InvalidOperationException` 을 내면(ⓐ 의 한 틱 뒤 `Exit` 가 아님 — `CanSuspend` 조건이면 사실상 없지만, 그 틱 안에서 획득물이 끌려오기 시작하는 경우는 못 막음. 그 틱은 이미 돌았고 되돌리지 않는다) 메뉴는 `저장 못 함` 한 줄을 보이고 판을 그대로 이어 간다(타이틀로 가지 않음, `SaveRun` 안 함).
 
 #### WP7 — 앱 셸·데이터 로더·개발 도구·자원 검사
 
@@ -3765,6 +4139,9 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   10.1 `Dev`·`Save` 의 저장 왕복(합성 직업 둘의 기록이 따로 남음). v0.7: 10.1 `Dev`·`Save` 의 v0.7 줄, 고장 난 작은 JSON 으로 13.5-23 ①②④ 의 오류가 하나씩(일반 방 다섯·보스 방이 가운데·빈틈·`miniboss` 없음·풀에 종류 없음·`room_kinds` 불일치·가중 보상 하나·`first_room` 없음·`blessing`+`trait`), `slice: true` 면 빈틈·보스 방 없음이 통과.
   최소화·숨긴 창에서도 `--capture-at` PNG 가 생기는지 확인해 결과를 R8 에 적는다.
 - **v0.7.1**(13.18): 로더 — `RoomDef.Number`(없으면 배열 자리 + 1)와 13.5-23 ① 번호 규칙, 13.5-1 의 이벤트·점 빛 기준점 검사를 13.5-23 ⑤ 의 풀 전체 규칙으로. 옵션 — `--room` 은 방 번호로, `--start-at` 상한은 방 종류마다(9절). `StateHasher.Room`·`Run` 과 `--log-hash` 열(3.4). 저장 — 깊이 모양(`act`·`act_number`·`room`·`kind`·`rooms_hash`)·비교 키(깊이, 승리, −시간)·읽기 규칙(8.3, 10.1 `Save`).
+- **v0.8**(13.20, WP1f 뒤): 로더 — `rewards` 새 모양·`rules.rooms`·`rules.hero` 새 키(6.10·6.18), 13.5-23 ① `floor` 규칙·④ 칸 수 상한·`temper` 참조, 맵 `mirror` 와 거울판(읽기는 `MapDataReader` 결과 그대로 — 거울판은 정의 표에 넣지 않음), 13.5-10·시작 검사 ③ 의 맵 그림 이름에 거울판 `art`.
+  저장 — `run.json`(8.3 "계단 저장": `PeekRun`·`TakeRun` 읽는 순간 지움·`SaveRun`·`DiscardRun`, 깨진 파일 `.bad`, 개발 옵션 실행은 읽지도 쓰지도 않음). 옵션 — `--map <id>@m`, `--start-at` 상한은 `RoomStartLimits`(WP1f) 로. v0.8.1: `--weapons`·`--passives` 수 > 시작 액트의 `RunSlots.OpenAt` 이면 64, 시작 검사가 메타 `scale` ∈ {1, s}·s 를 나눔을 봄(7.1), `run.json` 의 `Format` ≠ `RunSnapshot.CurrentFormat` 은 불일치(버림 — `required` 빠짐은 `.bad`, 8.3).
+  자원 검사 — 형식 판 3, `ASSETS … upscale= art_scale=`(1.4 끝), 맵 그림 대조에 메타 `scale`. 완료 기준 더함: 10.1 `Save` 의 `run.json` 왕복(읽으면 지워짐·깨진 파일·높은 판), 10.1 `Dev` 의 `--map …@m`·`--start-at` 상한 셋.
 
 #### WP8 — 소리 (단계 2)
 
@@ -3778,6 +4155,7 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 - **완료 기준**: `Audio` 시험 통과(10.1). 게임 실행(개발 옵션, null 장치): `--sound` 를 준 자동 조작 실행이 오류 없이 끝나고 `AUDIO` 로그 줄의 수가 기준 안(맞음 소리 0.08s 제한 → 초당 ≤ 12.5 등) —
   **기준은 `--mute` 와 `--sound` 어느 쪽이든 같은 수**(같은 씨앗이면 두 실행의 `AUDIO` 수가 같다, 7.9), 로그에 `AUDIO device="No Output"`, 두 실행의 `--log-hash` CSV 같음(10.2 "재현").
   장면 바뀜 프레임에 `slow_frames` 가 늘지 않음(음악 읽기, 7.9). 소리를 귀로 확인하는 것은 사용자 몫(`--sound-device default`, 동의를 받고 — "동작 확인 못 함" 으로 적음).
+- **v0.8**(13.20): 연결 표 `rewards.<id>` 를 새 보상 ID(성소 셋 — 원작 성소 소리 `sfx\items\magic.wav`, 물약 `invpot.wav`, 기획 v0.8.1 11.4)로, 허리띠 저절로 마심은 새 신호 `CueKind.BeltPotion`(WP1f #19, WP3 가 냄) → 연결 `ui.belt_potion`(물약 소리). 소리 표 줄은 WP0 에 요청.
 - **v0.7.1**(13.18): `IAudioServices : IWorldBound` — 새 월드를 받으면 개체 ID 를 키로 쓰는 반복 소리를 멈추고 쿨다운을 비운다(곡은 액트가 같으면 이어 틂, 7.11).
 
 #### WP9 — 직업 고르기 (v0.6, MVP 다음 — 기획 14.2 이후 확장 1, 사용자 결정 K)
@@ -3822,7 +4200,8 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 | `Hero` | `Pos`, `PrevPos`, `Vel`, `Radius` | WP2(이동), WP3(시작 위치) | 모두 | `Sim/Entities/Hero.cs` (WP1) |
 | | `Facing`, `Anim`, `Hp`, `MaxHp`, `Dead`, `InvulnTime`, `HitFlashTime`, `Intent`, `MoveSpeed` | WP3 | 모두 | 〃 |
 | | `KnockbackVel`, `KnockbackTime` | WP3(`DamageResolve`) | WP2(`Locomotion` 적분) | 〃 |
-| | `Stats`(`StatBlock`), `Weapons`(`WeaponSlots` 4), `Passives`(`PassiveSlots` 4) | WP3 | WP4(자동 조작), WP6(HUD) | 〃 |
+| | `Stats`(`StatBlock`), `Weapons`(`WeaponSlots` 4 — v0.8: 그릇 6), `Passives`(`PassiveSlots` 4 — v0.8: 그릇 6) | WP3 | WP4(자동 조작), WP6(HUD) | 〃 |
+| | `WeaponSlotsOpen`·`PassiveSlotsOpen`(열린 칸 수)·`Belt`(허리띠 물약 수) (v0.8 — 짐으로 넘김, 3.6) | WP3(주인공 만들기·`Restore`·허리띠) | WP4(자동 조작 문 우선순위), WP6(HUD 칸·허리띠), WP7(해시) | 〃 (WP1f) |
 | | `TouchingCount` | WP2 | WP3 | 〃 |
 | | `Blessings`(`BlessingSlots` 8, v0.7 — 축복 패시브, 슬롯 밖) | WP3 | WP6(일시정지 빌드 목록), WP7(해시) | 〃 (WP1e) |
 | | 재생·무기 내부 상태 | WP3 | — | `Sim/Hero/Hero.Combat.cs` |
@@ -3846,18 +4225,24 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 | | `Run`(`RunState?`, v0.7 — 판 수명, `RunSession` 이 넣음), `RunStats` 는 `Run.Stats` 를 가리킴. **v0.7.1: `RunStats` 를 지우는 곳은 없다** — `RunSession` 이 판 시작 때 새로 만들고, 월드 설치·주인공 만들기·`ResetCombat` 은 건드리지 않는다(`Reset()` 없앰). `DamageByWeapon` 은 칸 번호로 세므로 `IHeroCarry.Restore` 는 같은 칸에 놓는다 | `RunSession`(방 사이에서만) | WP3(`RunStats`), WP6(방 줄·결과), WP7(로그·해시) | 〃 |
 | | `Gates`(`GateZones`, v0.7 — 문 틈 칸, 생성자에서 한 번), `DifficultyMinutes`(v0.7 — `Room?.T ?? StageMinutes`) | 생성자 / 계산 속성 | `RoomFlow`, WP4(구간·배율), WP5(봉인 자리), WP6(미니맵 문 점) | 〃 |
 | | `Fairness`(`FairnessCounters`, v0.5.1 — 10.1 공정성 열) | WP3(`UnseenShots`·`HiddenHits`), WP4(`UnseenCharges`·`KiteSwitches`) | WP2(`InvariantChecker` 가 열로 냄), WP7(로그) | 〃 (WP1c) |
+| | `TimedEffectsRun`(v0.8 — `Room is null \|\| Room.TimedEffectsRun`, 계산 속성) | — | WP3(시간 효과 줄이기) | 〃 (WP1f) |
 | | `Presentation.Cues`(`CueEvent`, 7.9) | WP3, WP4(신호를 내는 단계) | WP8 | `Sim/Contracts/Presentation.cs` (WP1b) |
 | | 감독 상태(누적기·다음 무리·정예 판정·이벤트 위치) | WP4 | — | `Sim/Director/World.Director.cs` |
 | | 무기·성장 내부 상태 | WP3 | — | `Sim/Weapons/World.Combat.cs` |
 
 - **"방" 의 두 뜻**(v0.7.1): **안쪽 방** = 맵 안의 벽으로 둘린 구역(피 방·창살 방, 데이터 `room_areas`·`room_*` 기준점·`room_supply`·`room_pressure`, 코드 `World.InnerRooms`·`World.InnerRoomPresence`·형 `RoomFloors`·`RoomPresence`, 로그 `INNER_ROOMS`).
   **방** = 판 단위 방 하나(`World` 하나, 코드 `World.Room`·`RoomState`·`RoomPlan`·`RoomDef`·`RunState.Rooms`, 로그 `ROOM`). 데이터 키는 이미 커밋된 맵·기획 문장이 쓰므로 그대로 두고, 코드에서 같은 함수에 함께 나오는 `World` 속성만 이름을 갈랐다(WP1e #24).
+- (v0.8 → v0.8.1) `RunStats`·`FairnessCounters` 의 상태는 **공개 읽기·쓰기 멤버**(공개 필드 또는 공개 get·set 속성)이고 형은 **값 형식·그 배열**뿐이다 — 계단 저장(`RunSnapshot`, 3.6)이 STJ 로 그대로 왕복하고, 반사 왕복 시험(WP1f — 공개 필드 + 공개 속성 전부)이 새 멤버를 저절로 덮는다.
+  get 만 있는 속성(배열·컬렉션 포함)은 STJ 가 역직렬화 때 건너뛰어 조용히 0 이 되므로 금지(시험이 실패시킴). 사전·참조 형 멤버를 더하려면 계약 변경(11.3). 멤버를 더하면 모양 지문 시험이 깨진다 — `RunSnapshot.CurrentFormat` 과 기대 값을 함께 올린다(3.6 "계단 저장").
+  `FairnessCounters` 는 partial 이 아니다(조각 없음) — 이 규칙은 모든 공개 멤버에 건다. `RunStats.DamageByWeapon` 은 `float[WeaponSlots.SlotCount]`(6, v0.8.1 — v0.8 은 4 로 남아 있었다).
+- (v0.8.1) **판 수명 상태는 `HeroCarry`·`RunState`(+ 그 안의 `RunStats`·`FairnessCounters`)에만 둔다.** 모듈 인스턴스(`ModuleContext` 에 등록한 객체의 필드)·정적 필드에 판 수명 상태를 두지 않는다 — 계단 저장의 이어 하기는 새 `ModuleContext` 라 거기 둔 것은 사라지고 "이어 한 판 = 끊지 않은 판" 이 깨진다.
+  방 수명 상태는 `World` 조각(위 표), 판 수명 상태가 더 필요하면 `HeroCarry`(sealed 계약 record — WP3 가 조각으로 더할 수 없음)에 넣는 계약 변경으로 **WP1g** 에 모은다. WP3 완료 기준의 "실제 모듈로 끊고 잇기" 시험이 지킨다.
 
 ### 11.3 묶음 사이 순서·충돌 방지
 
 - WP1b 가 끝나기 전에는 다른 묶음이 코드를 쓰지 않는다. WP1b 는 계약을 이 문서 그대로 적는다. 이 문서에 없는 한 묶음 상태는 그 묶음이 자기 조각에 둔다.
 - 계약(WP1·WP1b 파일) 형을 바꿔야 하면 메인 세션이 바꾸고 알린다. 다른 묶음은 계약 파일을 직접 고치지 않는다. 자기 조각 파일에 필드를 더하는 것은 자유다.
-  WP2~WP8 진행 중에 생기는 계약 변경은 모아서 다음 갱신 묶음(WP1f — WP1d 는 v0.5.3 중간 보스·v0.6 헬파이어·직업·안쪽 방, WP1e 는 v0.7 방 구조 계약으로 썼다)으로 낸다 — 한 번에 하나씩 흩어 고치지 않는다.
+  WP2~WP8 진행 중에 생기는 계약 변경은 모아서 다음 갱신 묶음(**WP1g** — WP1d 는 v0.5.3 중간 보스·v0.6 헬파이어·직업·안쪽 방, WP1e 는 v0.7 방 구조, WP1f 는 v0.8 기획 v0.8.1 29절·AI 확대 계약으로 썼다)으로 낸다 — 한 번에 하나씩 흩어 고치지 않는다.
   (v0.5 의 WP1c 는 기획 v0.6 의 시야 계약을 WP2~WP8 시작 전에 넣는 묶음이다. WP1b 와 같은 규칙으로 혼자 하고, 끝나기 전에는 다른 묶음이 코드를 쓰지 않는다.)
 - 한 묶음만 구현·사용하는 형은 그 묶음 소유다(`IFirePattern`·`ITargeting`·`WeaponStats` → WP3, 부품 계약·`PartSlot`·`ActionState`·`MoveOrder` → WP4, `Navigator`·`NavAgentState` → WP2,
   `SoundMixer` → WP8). WP1 은 레지스트리 등록 지점만 가진다.
@@ -3876,8 +4261,13 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
 - `SimPhase` 순서표(3.5)는 WP1 소유. 단계를 더하려면 요청. (v0.7: WP1e 가 `RoomFlow` 를 16번에 더했다 — `EndTick` 은 17번.)
 - (v0.6) WP1d 가 구현한 순수 로직의 소유: `Assets/ContentAvailability.cs` → WP7(시작 검사가 주 사용처), `Map/ArenaLayout.cs` 의 `grid`·`over_border`·`ValidateRooms` → 그대로 계약(바꾸면 WP0 굽기·WP2 충돌이 같이 바뀜 — 메인 세션).
   (v0.6.1) `Data/Registry/StageReach.cs` → WP4(부품이 참조하는 적을 아는 쪽), `Assets/DefAssetNames.cs` → WP7(본문). WP1d-구현이 끝나기 전에는 그 파일을 WP1d-구현 담당만 고친다.
-  직업·묶음 데이터를 더하는 WP9·WP10 은 계약 파일을 고치지 않는다. 고쳐야 하면 11.3 의 다음 갱신 묶음으로 모은다(v0.7: WP1e 는 방 구조 계약으로 썼다 — 그다음은 WP1f).
-- (v0.7.2) **WP1f 에서 바뀌는 멤버**(기획 v0.8.1 29절 — 설계 v0.8 이 받은 뒤, 13.19 끝): WP2~WP8 은 아래 멤버의 **지금 모양·값에 기대는 코드·시험을 쓰지 않는다**(읽어 지나가는 것은 되지만 값을 굳히거나 분기를 걸지 않는다).
+  직업·묶음 데이터를 더하는 WP9·WP10 은 계약 파일을 고치지 않는다. 고쳐야 하면 11.3 의 다음 갱신 묶음으로 모은다(v0.7: WP1e 는 방 구조, v0.8: WP1f 는 29절·AI 확대 계약으로 썼다 — 그다음은 WP1g).
+- (v0.8) **WP1f 목록은 닫혔다**: 아래 v0.7.2 의 ①~⑧ 은 모두 11.1 WP1f 표에 들어갔다(① → #7, ② → #8·#9, ③ → #1·#2·#14, ④ → #10·#13, ⑤ → #3, ⑥ → #10·#11·#12·#15, ⑦ → #5·#6·#8, ⑧ → #6·#12). 29절에서 v0.7.2 목록에 없던 것도 함께 넣었다 —
+  ⑨ 층(`RoomDef.Floor`·`RoomExit.NextFloor`·`transition_floor` — 29 #25·#19), ⑩ AI 확대 자원 모양(`UpscaleTable`·`ManifestUpscale`·메타 `scale`·형식 판 3 — 사용자 결정 U), 허리띠 신호 `CueKind.BeltPotion`.
+  **WP1f 가 끝나면** WP0·WP2~WP8 은 이 멤버의 모양·값에 기대도 된다(아래 v0.7.2 의 "기대지 않는다" 는 WP1f 커밋으로 풀린다). 그 뒤 새 계약 변경은 WP1g 로 모은다. 29절 중 계약을 바꾸지 않는 것은 13.20 표에 처리 자리를 적었다.
+  (v0.8.1) v0.8 리뷰가 찾은 계약 구멍도 **같은 WP1f 에 넣었다**(새 묶음을 만들지 않음 — 13.21): `RoomState.RemapEntry` 규칙·`RemapMarch`(#8), 거울판 `entries` ID·입구-문 검사·자리 짝 검사(#6), `RunSlots.OpenAt`·`Suspend` 의 틱·이어 하기 대조·`RunSnapshot.Carry` nullable·`CurrentFormat`(#11), `IHeroCarry.Validate`(#10),
+  `RunStats.DamageByWeapon` 6칸·`WeaponSlotCount` 없앰·저장 멤버 규칙(#14), `Hero.Reset` 의 칸 수 0(#13), `DoorsOpened` 자리·`RewardSpot` 두 번째 문턱(#9), `UpscaleTable.Applies` 둘·`output_scale` 2 고정(#16). 그래서 WP1f 뒤 WP2~WP8 이 기대는 목록은 위 ①~⑩ 과 이 줄이 전부다.
+- (v0.7.2 — v0.8 에 닫음) **WP1f 에서 바뀌는 멤버**(기획 v0.8.1 29절 — 설계 v0.8 이 받은 뒤, 13.19 끝): WP2~WP8 은 아래 멤버의 **지금 모양·값에 기대는 코드·시험을 쓰지 않는다**(읽어 지나가는 것은 되지만 값을 굳히거나 분기를 걸지 않는다).
   ① `RunPlanner.PlanAct` ③ 출구 수(정예·보스 앞 방도 둘·셋 — 고정 값 시험이 바뀜)와 ①의 맵 뽑기(거울판 쌍), ② `RoomFlow.BeginReward`·`OpenDoors` 의 보상 자리(`reward_anchor`/`center` → 주인공 앞 100px)·정예·보스 앞 문의 보상(정예 상자 + 덤),
   ③ `RewardKind`·`RewardDef` 효과 필드(무기 강화 꾸러미·허리띠 물약·성소 효과, 0장 대체 `단련` — 지금 `Skip.Gold`), ④ `HeroCarry` 필드(허리띠·`단련`·성소 대가·시간 효과 남은 틱),
   ⑤ `RoomRulesDef` 키의 뜻(`cleanup_limit` 값, `reward_anchor`, `remaining_marker` 문턱 — 정리 시작부터),
@@ -3885,10 +4275,13 @@ WP2 의 실제 맵 길 검사와 WP4 의 단계 1 시나리오가 처음부터 �
   ⑦ `RoomPlan`(거울판 방향)·`MapDef`(거울판 쓰기 여부)·타일셋 짝 표, 거울판의 문 이름 짝 바꾸기 — `RoomState.RemapEntry`·`GateZones`·이벤트 `entry:`,
   ⑧ 13.5-23 검사(`ArenaLayout.ValidateRooms`·`RoomMapRules` — 거울판에도 돌림, 방 이벤트 자리 0:20·끝 0:45 검사).
   기획 29절 번호로: ① = 5·13, ② = 6, ③ = 4, ④ = 4·7·8, ⑤ = 6, ⑥ = 8·14·15, ⑦ = 13, ⑧ = 11·13. 나머지(1 은 받음, 2 는 v0.7.1 에 받은 기록 비교 키(본문 WP7 저장), 3 은 아직 없는 `StateHasher`(WP7), 9·19 는 데이터 값, 10·17 은 끝남, 12·14 의 봇·감독은 WP4 본문, 16 은 시험, 18 은 가져오기 도구)는 계약 멤버를 바꾸지 않는다.
-  WP1f 를 WP2~WP8 시작 전에 낼지(설계 v0.8 먼저), 이 목록만 두고 나란히 갈지는 사용자·메인 세션이 정한다.
+  WP1f 를 WP2~WP8 시작 전에 낼지(설계 v0.8 먼저), 이 목록만 두고 나란히 갈지는 사용자·메인 세션이 정한다. — v0.8: WP2~WP8 시작 전에 낸다(11 머리 순서, 사용자 진행 순서 "WP1f → WP0·WP2~WP8").
+- (v0.8) WP1f 가 구현한 순수 로직의 소유: `Sim/Run/**` 에 더한 것(`RewardSpot`·`RunSnapshot`·`RoomStartLimits`·`RoomEvents.CheckPlacement`) → WP4(아래 v0.7 과 같음 — 단 `RewardSpot` 규칙·`RunSnapshot` 모양·`RoomStartLimits` 는 계약: 바꾸면 판 결과·저장 파일·옵션 오류가 바뀐다),
+  `Map/MapMirror.cs`·짝 표 검사 → 계약(메인 세션 — 바꾸면 WP0 굽기·WP2 검사·WP5 그림이 같이 바뀜). 데이터: L1 짝 표 = WP0(`tilesets/`), 맵 `mirror` = WP5, `Table/upscale.json` = WP0.
+  (v0.8.1) `Sim/Run/RunSlots.cs` → 계약(칸 수 = 판 결과·옵션 오류), `RoomState.RemapEntry`/`RemapMarch` → 계약(이벤트 문 — 판 결과). **TestKit `RoomActs.cs`**(v0.7.1 의 #23-구현 — WP1e 가 끝나 WP4 소유)는 WP1f 가 짝 표 타일셋·거울판 맵·층을 더하므로 **WP1f 가 끝날 때까지 WP1f 가 맡고**, 끝나면 다시 WP4 로 넘긴다(그 사이 WP4 는 시작 전이라 겹치지 않음).
 - (v0.7) WP1e 가 구현한 순수 로직의 소유: `Sim/Run/**`(`RunPlanner`·`RoomEvents`·`RoomFlow`·`RunSession`) → **WP4**(감독·`Scenario`·자동 조작이 주 사용처). 단 `RunSeeds` 의 섞기·`RunPlanner` 의 뽑기 순서·`RoomFlow` 의 단계 전이는 판 결과를 바꾸므로 계약이다 — 바꾸려면 메인 세션(같은 씨앗의 기록·`--room` 같음이 깨진다).
   `Map/GateZones.cs`·`MapArea.cs`·`RoomMapRules.cs`·`ArenaLayout.ValidateRooms` 의 13.5-23 부분 → 계약(메인 세션 — 바꾸면 WP0 굽기와 무관하지만 WP2·WP5·WP6 이 같이 바뀜).
-  데이터 파일 소유: `rules/rooms.json`·`stages/` = WP4, `rewards.json` = WP3, 작은 방 `maps/` = WP5, `rules.rooms` 의 `transition`·`remaining_marker`(그림·HUD 값)는 WP6 이 WP4 에 요청해 바꾼다.
+  데이터 파일 소유: `rules/rooms.json`·`stages/` = WP4, `rewards.json` = WP3, 작은 방 `maps/` = WP5, `rules.rooms` 의 `transition`·`transition_floor`(그림 값 — v0.8: `remaining_marker` 는 없앰)는 WP6 이 WP4 에 요청해 바꾼다.
   (v0.7.1) `TestKit` 의 경계: **#23-형**(`TestDefs.Stage`·`WithRoom`·`FakeHeroCarry`·`FakeSpawner`·합성 `rules.rooms`·합성 보상)은 형과 같이 나오는 공용 도우미라 형 뒤에는 계약처럼 다룬다 — 다른 묶음이 비슷한 도우미를 따로 만들지 않고, 바꿀 것은 메인 세션에 요청한다.
   **#23-구현**(`TestKit/RoomActs.cs` — 합성 액트·작은 합성 맵)은 WP1e-구현이 끝날 때까지 그 담당만 고치고, 끝나면 WP4 로 넘긴다.
 - 개발 옵션은 WP7 이 파싱만 하고, 적용은 `IRunSetup` 을 등록한 묶음이 한다(WP3: 주인공 쪽, WP4: 시각·부하·AI 멈춤). 소리 옵션(`--mute`·`--sound`)은 `AppOptions.Muted` 로 WP8 이 읽는다.
@@ -3929,6 +4322,7 @@ public interface IProgression
 }
 // LevelUpCard(CardKind, Id, Name, IconDef?, FromLevel, ToLevel, Lines), LevelUpOffer(Level, Cards, RerollsLeft), ChestItem/ChestReward
 public sealed partial class RunStats { Kills, EliteKills, Gold, XpCollected, DamageTaken, float[4] DamageByWeapon; Reset(); partial void ResetCombat(); }
+//   (v0.7.1: Reset()·ResetCombat 없앰. v0.8.1 WP1f: WeaponSlotCount 상수 없앰, DamageByWeapon { get; set; } = new float[WeaponSlots.SlotCount](6) — 3.6 "계단 저장" 저장 멤버 규칙)
 
 // 개발 옵션 (Sim/Contracts/RunSetup.cs)
 public sealed record RunOptions { God, int? Level, Weapons/Passives(LoadoutEntry(Id, Level) 목록), ClockTime? StartAt, int? StressEnemies, int? StressProjectiles, FreezeAi, Check }
@@ -3987,9 +4381,13 @@ AppServices.Render (RenderContext?)    // GameApp 이 그래픽 장치 뒤에 �
 | R31 | (v0.6) 직업을 더할 때 계약을 다시 고침(결정 K 의 반대) | WP2~WP8 끝난 뒤 계약 변경 묶음 | 형·월드 인자·소리 키·저장 모양을 WP1d 에서 직업 단위로 정함. MVP 도 `sorcerer` 정의 하나로 돌려 경로를 매일 씀. 남는 위험: `melee_arc` 의 맞음 판정·근접 시전 클립 재생 — WP9 에서 처음 쓰임(패턴 등록·무기 정의는 데이터라 계약 밖). v0.6.1: 저장 계약에 직업(`RunResult.HeroClassId`·`LastHero`·`BestRecord`), 특성 = 패시브(`Traits`, 6.16) — 능력치 키로 안 되는 특성 효과는 패시브 일반의 확장(효과 부품)이라 직업 계약 밖이지만 그때 `PassiveDef` 를 고친다 |
 | R32 | (v0.6) 안쪽 방 배치의 갇힌 바닥 띠·좁은 틈 | 그림은 바닥인데 아무도 못 감, 큰 적이 방에 못 들어가 주인공이 숨음 | `over_border` 로 둘레에 겹쳐 놓기(6.11), 13.5-5 갇힌 바닥 칸 오류(자동 막힘 처리 안 함)·26·34 → 방 기준점, 13.5-4 의 80px 규칙, 합성 띠 시험(WP1d 맵 → WP2). v0.6.1: 벽 맞물림 규칙(꺾이는 자리 = 모서리 조각, 6.11)·`over_border` 막힘 줄어듦 오류·13.5-19 하위 칸 검사(갇힌 바닥·하위 1칸 틈 — 자원·격자 없이 WP0a 에서 바로)·6.11 예 배치를 그대로 쓴 합성 맵 시험, 그 위에 WP2 가 실제 격자로 확인. 시제품 길 검사는 저장소 배치를 읽지 않으므로 확인 수단에서 뺐다 |
 | R33 | (v0.7) 방마다 `World` 를 새로 만드는 비용(배치 풀기·충돌 도형·clearance·첫 필드·저장소 풀) | 방 이동 프레임이 길어 멈칫함 | 0.5s 어두워짐 가운데(덮개 1)에서 한 번만, 텍스처는 액트 시작 때 미리 읽음(7.5). `Perf` 로 ≤ 150ms(10.3), 게임은 `slow_frames` 하나만 허용. 넘으면 ① 맵별 펼친 격자·충돌 도형·clearance 를 판 수명 캐시(`RoomMapCatalog` — 맵은 바뀌지 않으므로 공유해도 상태가 새지 않음) ② 저장소 풀을 `RunSession` 이 다음 월드에 넘겨 재사용(지운 상태 확인 시험 필요) 순으로 줄인다 |
-| R34 | (v0.7) 방 흐름이 멈춤(구석에 박힌 적, 안 열리는 문, 집을 수 없는 보상) | 판이 끝나지 않음 | 정리 안전장치 45s(무너짐), 보상 자리 = `center`(13.5-5 길 검사가 문 진입점 → `center` 를 봄), 정예 상자 옮김은 `TryPlace`, 나가는 자리 = 문 틈 칸(v0.7.1: 주인공이 닿는지는 13.5-23 ③ 문 틈 닿음 검사 — 13.5-5 는 진입점까지만 봄), 자동 조작은 20s `DOOR_SKIP`·`REWARD_STALL`(로그로 드러남 — 시험 기준 0), 정예 방 2:30 뒤 중간 보스 쫓기, 0장 보상은 줍는 순간 `skip`, 보상 물체는 늘 집힘(v0.7.1), 시나리오 방 틱 상한(넘으면 방·단계를 적고 실패). `ROOM` 줄의 `collapsed`·`cleanup_s` 로 첫 플레이에서 본다 |
+| R34 | (v0.7) 방 흐름이 멈춤(구석에 박힌 적, 안 열리는 문, 집을 수 없는 보상) | 판이 끝나지 않음 | 정리 안전장치 25s(v0.8 — v0.7 45s, 무너짐) + 사냥 모드, 보상 자리 = 주인공 앞(v0.8 `RewardSpot` — 주인공에서 직선으로 이어진 clearance ≥ 30 자리라 늘 닿음. v0.7 의 `center` 는 13.5-5 길 검사가 봤다), 정예 상자·덤도 같은 줄에, 나가는 자리 = 문 틈 칸(v0.7.1: 주인공이 닿는지는 13.5-23 ③ 문 틈 닿음 검사 — 13.5-5 는 진입점까지만 봄), 자동 조작은 20s `DOOR_SKIP`·`REWARD_STALL`(로그로 드러남 — 시험 기준 0), 정예 방 2:30 뒤 중간 보스 쫓기, 0장 보상은 줍는 순간 `단련`(v0.8 — v0.7.1 `skip`), 보상 물체는 늘 집힘(v0.7.1), 시나리오 방 틱 상한(넘으면 방·단계를 적고 실패). `ROOM` 줄의 `collapsed`·`cleanup_s` 로 첫 플레이에서 본다 |
 | R35 | (v0.7) 방을 넘기며 결정성이 깨짐(넘기지 않은 상태가 남거나, 넘긴 상태가 빠짐, 뽑기 순서가 바뀜) | 같은 씨앗이 다른 판, `--room` 재현 실패 | 넘기는 것을 `HeroCarry`·`RunState` 두 형으로 한정(3.6 표), 판 흐름은 `RunPlanner` 순수 함수·뽑기 순서 고정 시험, 방 씨앗 분리, 해시에 판 흐름·방 상태, 액트 실행 두 번 같은 해시·`--room` 같음 시험(10.1 `Run`·`Sim`). v0.7.1: 방 해시 / 판 해시를 나눠 `--room` 비교가 판 누적에 걸리지 않게, 게임 쪽 월드 수명 상태는 `IWorldBound` 한 곳(7.11), 판 전체 시나리오(단계 3) |
-| R36 | (v0.7) 한 판 약 35분 + 판 중간 저장 없음 | 사람이 판을 끝까지 못 함, 검증 실행이 길어짐 | 기획 열린 질문 33. 설계는 `HeroCarry`·`RunState` 를 기록 형으로 둬 액트 사이 저장을 직렬화만으로 넣을 수 있게 했다. 검증은 `--room`·`--start-at` 으로 방 단위(10.2), 전체 판은 단계 끝 실행에만 |
+| R36 | (v0.7) 한 판 약 35분 + 판 중간 저장 없음 | 사람이 판을 끝까지 못 함, 검증 실행이 길어짐 | 기획 열린 질문 33. v0.8: **계단 저장**(3.6·8.3 — `RunSnapshot`, 불러오면 지움)으로 액트 사이에서 끊고 잇는다. 이어 한 판 = 끊지 않은 판(판 해시 시험). 검증은 `--room`·`--start-at` 으로 방 단위(10.2), 전체 판은 단계 끝 실행·Core "판 전체" 에만 |
+| R38 | (v0.8, 사용자 결정 U) AI 확대 자원으로 그리기 비용·그림 메모리가 늘고, 확대한 그림과 원본 그림(주인공·마법)이 한 화면에 섞임 | `WorldRT` 4배 픽셀(채움), 확대 묶음 4배 바이트·페이지 수 증가(그리기 호출), 벽 기둥 이음매·걷기 프레임 떨림, 작은 캐릭터만 거친 픽셀로 보임 | 기본 끔(선택 기능). 범위 첫 값을 맵 그림 + 칸 160 이상 몬스터로 좁힘, 렌더 측정을 s = 2 로도(WP5 — `draw_ms`·`vram_mb` 를 R7 에), 이음매·떨림은 10.2 "AI 확대" 행에서 사람이 판정. 나쁘면 범위를 표에서 고쳐 다시 가져온다(코드 변경 없음 — v0.8.1: `output_scale` 은 첫 판 2 고정이라 바꾸려면 WP1g, 기둥 이음매는 여백이 아니라 벽 줄째 확대·기둥 빼기 — 7.6). v0.8.1: 맵 그림 메모리에 거울판 `<art>@m` 이 원판만큼 더해짐(7.1·7.5). 작은 캐릭터 확대·화면 배율은 열린 질문(13.20) |
+| R39 | (v0.8) 가져오기가 사용자 PC 의 외부 실행 파일을 띄움 | 모르는 실행 파일이 돌거나, 같은 입력에 GPU 마다 다른 결과 | 표의 허용 SHA-256(실행 파일·DLL·모델 모두)과 다르면 띄우지 않고 원본 픽셀로(종료 코드 6), 셸 없이 인자 목록으로·창 없이·`-m` 으로 확인한 모델만·진행 기준 시간 제한(v0.8.1 — 전체 10분 대신 묶음마다 "출력이 2분 동안 안 늚"), `vulkan-1.dll` 이 없으면 띄우지 않고 오류 창이 뜨지 않게 오류 모드를 정함(v0.8.1). 결과 바이트는 결정론 대상에서 빼고(1.4) manifest 에 도구·모델 해시만 — 시뮬레이션·해시는 그림 배율과 무관(7.1). 가짜 실행 파일로 `Process` 경로를 시험(10.1 `Pipeline`) |
+| R40 | (v0.8) 거울판의 짝 조각이 그림·성질에서 원판과 어긋남(원작 타일은 빛 방향이 있어 뒤집지 않고 짝으로 바꿈) | 거울판 방만 충돌·시야가 그림과 다르거나 벽이 맞물리지 않음 | 짝 표 검사(성질 전치 같음 — 13.5-12), 거울판에도 13.5-4~6·19·23 과 `audit`, 맞물림은 `--preview tiles --map <id>@m`(10.2). 짝이 없는 조각을 쓴 맵은 `mirror` 를 못 단다(오류) |
+| R41 | (v0.8) 계단 저장이 다른 판의 데이터·다른 판 코드로 읽힘(게임을 고친 뒤 이어 하기) | 이어 한 판이 다른 방 표·없는 직업으로 시작하거나 예외 | `RunSnapshot.Format`·다음 액트 `rooms_hash`·직업 존재, v0.8.1: 짐의 정의 ID(무기·패시브·축복·성소)·`IHeroCarry.Validate`·`Carry` null 여부를 생성자가 `Restore` 전에 확인해 `RunSnapshotMismatchException` → 저장은 이미 지웠고 한 줄 안내(8.3). **필드를 더할 때의 규칙은 하나**(v0.8.1 — v0.8 의 "필드가 늘어도 옛 저장을 읽는다(없는 값 = 기본)" 는 `required` 멤버(없으면 STJ 예외)·`WeaponSlotsOpen` 처럼 기본 0 이 틀린 값인 필드와 맞지 않아 지웠다): 짐·`RunStats`·`FairnessCounters`·`RunSnapshot` 모양이 바뀌면 `CurrentFormat` 을 올리고 옛 저장은 버린다 — 모양 지문 시험이 올리기를 잊지 않게 한다(3.6) |
 | R37 | (v0.7) 작은 방(32×32)에서 생성 띠의 큰 부분이 맵 밖 → 입구(문) 대체가 잦음 | 무리가 문에서만 쏟아져 흐름이 바뀜 | R23 측정을 작은 방에서도(WP2·WP4), 30% 넘으면 기획 열린 질문 35 의 다음 수(N 36). 들어온 문은 대체 입구에서 뺌(기획 2.4) |
 | R19 | 타일 성질 표가 원본 SOL 과 어긋남 | 충돌과 그림이 어긋남(요구 3) | 가져오기가 대조해 실패(1.4), 의도한 차이는 `sol_known_diffs` 에 이유와 함께. `--preview tiles` 겹침 캡처 |
 | R20 | 등각 y 정렬 규칙 오류(벽이 유닛을 잘못 가림, 아치 아래 유닛, 길게 이어진 벽) | 화면이 이상해 보임 | 둘레 벽은 정렬 밖 단계(0b·5층), 안쪽 기둥만 y 정렬, 아치 덧그림 칸 안 유닛 키 당김(7.4), `--preview tiles` 와 기둥·뒷벽 둘레를 도는 자동 캡처(10.2). 협로 벽이 틀리면 줄 단위 무리로 뺌 |
@@ -4056,18 +4454,23 @@ AppServices.Render (RenderContext?)    // GameApp 이 그래픽 장치 뒤에 �
 | 19.4 음악 대체 (v0.6) | 음악에 `requires`·대체 곡 | `MusicDef.Requires`·`Fallback`, 스테이지 `requires` 에는 `hfmusic` 을 넣지 않음 | 음악은 없어도 스테이지를 끄지 않는다(기획 표 "대체 곡으로 돈다") — 꺼짐 단위(스테이지·직업)와 섞지 않게 |
 | 10.1 방 기준점 (v0.6) | 맵에 방 기준점 `room_<이름>` | `anchors` 의 키 이름 규칙(`room_` 접두) — 새 칸 없음 | 기준점은 이미 `anchors` 이고 다른 묶음(행진 목표·빛)도 같은 표를 읽는다 |
 | 2.5·28 방을 바꿀 때 월드 (v0.7) | `World` 를 방마다 새로 만들지 맵만 갈지 설계가 정함 | 방마다 새 `World` + `RunState`·`HeroCarry` 로 넘김, 조명은 넘기지 않고 지난 `light_change` 를 다시 적용 | 월드 수명 = 맵 수명 가정을 지킴(3.6 결정 1). `--room` 시작과 같은 함수로 조명이 맞는다 `[해석]` |
-| 2.5 시간 효과 (v0.7) | 액트 사이에 "레벨·무기·패시브·축복·금화·재추첨" 이 이어짐(시간 효과는 정하지 않음) | 마력 폭주·버프·피격 무적은 방이 바뀌면 끝남 | 방 이동은 0.5s 어두워짐 뒤 들어옴·유예 3초라 남은 몇 초를 넘길 이득이 작고, 넘기면 짐 형이 버프 표까지 커진다 `[해석]` — v0.7.1: 기획 v0.8.1 이 2.5 "방 사이" 표로 정하는 중(리뷰 지적), 정해지면 이 줄을 닫는다(13.18 열린 질문 1) |
+| 2.5 시간 효과 (v0.7) | 액트 사이에 "레벨·무기·패시브·축복·금화·재추첨" 이 이어짐(시간 효과는 정하지 않음) | 마력 폭주·버프·피격 무적은 방이 바뀌면 끝남 | 방 이동은 0.5s 어두워짐 뒤 들어옴·유예 3초라 남은 몇 초를 넘길 이득이 작고, 넘기면 짐 형이 버프 표까지 커진다 `[해석]` — v0.7.1: 기획 v0.8.1 이 2.5 "방 사이" 표로 정하는 중(리뷰 지적), 정해지면 이 줄을 닫는다(13.18 열린 질문 1). **v0.8 닫음**: 기획 v0.8.1 2.5 대로 시간 효과의 남은 틱을 짐(`HeroCarry.Effects`)으로 넘기고 생존·정리 단계에서만 흐르게 했다(3.6 결정 1 "시간 효과 시계") — 이제 두 문서가 같다. 피격 무적·무기 쿨다운은 방마다 새로(기획도 같음) |
 | 10.8 나가는 자리 (v0.7) | "문 틈 하위 4칸 × 벽 안쪽 면에서 하위 2칸" | 그 문의 열린 메가타일 둘의 걷기 칸(`GateZones`) — 뒷벽 문·앞 턱 문 모두 메가 두께라 4 × 2 | 데이터 없이 배치에서 바로 나오고 문 틈 그 자체다. 주인공이 닿는지는 v0.7.1 의 13.5-23 ③ 문 틈 닿음 검사가 본다(13.5-5 는 진입점까지만) `[해석]` |
 | 14.1 단계 1 의 방 순번 (v0.7 → v0.7.1) | 순번 1·2·3·4·6·8 만 돌고 t 범위는 표 그대로 | 스테이지 `slice: true` 로 순번 표 여섯 줄(원래 t 범위), 13.5-23 의 빈틈·방 수·보스 방 규칙만 끔. v0.7.1: 각 줄에 `number`(기획 번호) — HUD `6 / 8`·로그·`--room`·씨앗·깊이가 기획 번호 | v0.7 은 번호 칸을 두지 않고 배열 순서로 보였으나, 같은 `--room 1:6` 이 단계마다 다른 방이 되고 씨앗이 단계 2 에서 밀려 리뷰 지적으로 바꿨다(13.18). 이제 `[해석]` 아님 |
 | 2.5 정예 방의 t (v0.7.1) | "정예 방의 t 범위는 이름뿐인 1:00, 오래 못 잡으면 t 는 끝에서 멈춘다" | t 는 `to` − 1틱에서 멈춤 | 구간을 `[from, to)` 로 찾으므로 `to` 에서 멈추면 다음 방 구간(센 생성·새 종)이 정예 방에 나온다. 기획 v0.8.1 이 같은 뜻으로 고침 — v0.7.2: 기획 v0.8.1 2.5 대로 일반 방(정리 단계)도 같게 |
 | 15 자동 조작 문 동률 (v0.7.1) | 같으면 화면 왼쪽 문 | 그다음 화면 y 가 작은 문, 그다음 `Exits` 순서 | 출구 셋일 때 `gate_nw`·`gate_sw` 는 마름모 대칭이라 화면 x 가 같다 — 구현마다 봇 판이 달라지지 않게. 기획 v0.8.1 15절도 같게 |
-| 11.4 0장 보상 (v0.7.1) | 보상 거르기는 문을 열 때 | 줍는 순간 카드 0장이면 그 보상의 `skip` 으로 처리, 보상 물체는 상태와 상관없이 늘 집힘 | 문을 열고 집기까지 한 방이 지나 상태가 바뀐다. 0장 창·"가득이면 안 집힘" 은 문이 영영 안 열리는 길이다. 기획 v0.8.1 11.4 도 같게 |
+| 11.4 0장 보상 (v0.7.1) | 보상 거르기는 문을 열 때 | 줍는 순간 카드 0장이면 그 보상의 `skip` 으로 처리, 보상 물체는 상태와 상관없이 늘 집힘 | 문을 열고 집기까지 한 방이 지나 상태가 바뀐다. 0장 창·"가득이면 안 집힘" 은 문이 영영 안 열리는 길이다. 기획 v0.8.1 11.4 도 같게. v0.8: 대체는 `skip` 이 아니라 `단련`(기획 v0.8.1 11.4·26) — 두 문서가 같다 |
 | 15 `--room` 시작 방의 보상 (v0.7) | 앞 방은 건너뛰고 보상도 없음 | 시작 방의 보상 = 앞 순번 보상 후보 순서의 첫 칸(상태 거르기 없음) | 방 흐름이 늘 보상 단계를 지나야 문이 열려(3.6) "보상 없음" 이 별도 경로가 된다. 정해진 값이라 재현된다 `[해석]` |
 | 15 `DOOR_SKIP` (v0.7) | 문 단계가 20초 안에 안 끝나면 "그 문으로 옮긴다" | 정책이 `CommandButtons.Exit` + `ExitIndex` 명령(v0.7.1 — 기본값이 "안 나감" 인 깃발)을 내고 `RoomFlow` 가 받아 나감 | 정책이 시뮬레이션 상태를 직접 바꾸지 않는다(명령 패턴, 2.1) — 사람과 봇이 같은 길, 결정적 |
 | 10.8·13.5-23 작은 방 검사 상수 (v0.7) | 작은 방 N ≤ 36, 문 진입점 150px 안 막힌 칸 없음 | Core `RoomMapRules` 상수(데이터 아님), 150px 는 **둘레가 아닌** 막힌 칸(13.5-6 의 60px 와 같은 대상) | 맵 검사는 `rules` 를 모른다(6.2 — 도구도 같은 검사). 둘레 벽은 진입점에서 약 100px 라 넣으면 모든 맵이 실패한다 `[해석]` |
 | 13.4 이벤트 시각 자리 (v0.7) | 이벤트는 시각 + 종류 + 매개변수 | 로더가 `at` 을 꺼내 `PartDef.At` 에 | 방 이벤트 옮기기·검사가 매개변수 형(WP4 소유)을 몰라도 시각을 읽는다 |
-| 11.4 정예 상자 보상 (v0.7) | `reward_elite` 를 문 보상 표의 한 줄로 | 정의 없음 — 정예·보스 방은 보상 없음 + 떨군 정예 상자를 `GatesExit` 로 묶음 | 상자는 이미 드롭 표가 낸다. 같은 일을 보상 정의와 드롭 두 곳에서 정하지 않게 `[해석]` |
+| 11.4 정예 상자 보상 (v0.7) | `reward_elite` 를 문 보상 표의 한 줄로 | 정의 없음 — 정예·보스 방은 보상 없음 + 떨군 정예 상자를 `GatesExit` 로 묶음 | 상자는 이미 드롭 표가 낸다. 같은 일을 보상 정의와 드롭 두 곳에서 정하지 않게 `[해석]`. v0.8: 정예·보스 방에도 덤 보상(`RoomState.Reward` — 들어온 문의 보상)이 더해진다. 상자는 여전히 정의 없음 |
 | 8.1·10.7 "또렷이 보일 때만 쏜다" (v0.5.3) | 쏘는 조건(시점은 적지 않음) | 시작 조건 + **발사 프레임에 다시 봄**, 그때 안 보이면 그 발사만 버림(클립은 끝까지, 쿨은 씀). `shoot_projectile`·`clear_sight` 패턴 둘 다 | 시작에서 발사까지(약 0.5s) 주인공이 움직여 안 보이게 되면 공정성 `unseen_shots`(투사체가 생기는 순간을 셈)가 0 이 안 된다(6.6·10.1) `[해석]` |
+| 11.4 보상 자리 (v0.8) | 주인공이 바라보는 쪽 100px 에서 가장 가까운 걸을 수 있는 칸(주인공과 길로 이어진 칸 — 경계·장애물에서 30px 이상), 여럿이면 40px 간격 | 방향 후보 8개(바라보는 쪽 → ±45° … 180°)마다 주인공 발에서 직선으로 8px 씩 걸어 clearance ≥ 30 인 동안만, 100px 까지 간 첫 방향의 끝(3.6 "보상 자리"). 여럿은 바라보는 방향의 수직 줄 | "길로 이어진 가장 가까운 칸" 을 찾으려면 길찾기(WP2)가 필요한데 그것을 기다리지 않고, 직선이 끊기지 않으면 이어짐이 보장된다. 결과는 같은 자리·같은 방향이면 같다(난수 없음) `[해석]` |
+| 10.8 거울판의 맵 이름·바닥 (v0.8) | 맵마다 거울판을 쓸 수 있음, 고르기는 (맵, 방향) | 거울판 = 따로 만든 `MapDef`(`<id>@m`, 정의 표 밖), 로그는 `map=<원판> mirror=1`, 바닥 섞기는 거울판 ID 로(무늬가 원판과 다름 — 성질은 같음) | ID 로 정의를 찾는 코드가 원판을 조용히 받지 않게. 바닥 무늬까지 뒤집으려면 배치 풀기에 거울판 분기가 생긴다 `[해석]` |
+| 19.6 확대한 묶음의 그림자 (v0.8, 사용자 결정 U) | 그림자는 AI 에 넣지 않고 원본 모양을 매끈하게 늘린 판을 몸 아래에 따로 — 도구가 미리 굽을지 게임이 그릴지는 설계 | 가져오기 도구가 마스크를 매끈하게 2배(결정적) 해 몸 아래에 같은 시트로 굽는다(1.4 ⑥) — 게임은 그림자를 따로 그리지 않음 | 게임 쪽 그리기 경로·그리기 호출·텍스처가 늘지 않고, 확대 안 한 묶음과 같은 길로 그린다. 도구 쪽은 결정적이라 GPU 와 무관 |
+| 13.5-23 방 이벤트 자리의 종류 (v0.8) | 강적(정예 무리·해골 대장)·포위 고리, 절정 = 이벤트 하나 | 강적 = `elite_pack`·`escort`·`ring`, 절정 = `march`·`ring`·`elite_pack`·`escort`(`banner`·`light_change`·`room_supply`·입장 이벤트는 아님) | 검사가 이벤트 종류 이름만으로 판정해야 한다(매개변수 형은 WP4) `[해석]` |
+| 2.5 버린 계단 저장 (v0.8) | 새 게임을 시작하면 남은 저장을 지운다고 묻는다(기록은 정하지 않음) | 버린 판은 기록하지 않는다 | 판이 끝나지 않았으므로 결과(깊이·승리·시간)가 없다. 기획이 "버린 판도 깊이를 기록" 으로 정하면 `DiscardRun` 이 `RecordResult` 를 부르게 바꾼다(13.20 열린 질문) `[해석]` |
 
 ---
 
@@ -4077,7 +4480,7 @@ AppServices.Render (RenderContext?)    // GameApp 이 그래픽 장치 뒤에 �
 13.4 는 v0.3 변경(기획서 v0.4·WP1 구현)의 처리다. 13.5 는 v0.3 리뷰(구현·검증·기획 담당 합본)의 처리다.
 13.6 은 기획서 v0.5 와 맞춘 것, 13.7 은 WP1b 구현 리뷰, 13.8 은 기획서 v0.6(전장의 안개)과 사용자 결정의 처리다. 13.9 는 그 안개 설계의 리뷰 처리다.
 13.10 은 WP1c 구현, 13.11 은 기획서 v0.6.2(중간 보스), 13.12 는 기획서 v0.7(헬파이어·직업·안쪽 방)의 처리다.
-13.13~13.16 은 v0.6 리뷰·WP1d 구현·검증·WP0a 구현, 13.17 은 기획서 v0.8(사용자 결정 R — 방 구조)의 처리, 13.18 은 그 방 구조 설계(v0.7)의 리뷰 처리다. 13.x 의 옛 판 기록은 당시 이름(`StageSelect`·`unlock`·`victory`·"10분" 등) 그대로 둔다.
+13.13~13.16 은 v0.6 리뷰·WP1d 구현·검증·WP0a 구현, 13.17 은 기획서 v0.8(사용자 결정 R — 방 구조)의 처리, 13.18 은 그 방 구조 설계(v0.7)의 리뷰 처리다. 13.19 는 WP1e 구현, 13.20 은 기획서 v0.8.1(29절)과 사용자 결정 U(AI 확대)의 처리, 13.21 은 그 설계(v0.8)의 리뷰 처리다. 13.x 의 옛 판 기록은 당시 이름(`StageSelect`·`unlock`·`victory`·"10분" 등) 그대로 둔다.
 
 ### 13.1 기획 담당 (`docs/reviews/architecture-planner.md`)
 
@@ -4689,7 +5092,194 @@ WP1e(형·구현-1·구현-2 를 한 번에, 커밋 전) 코드가 문서와 다
 | 11.1 형 완료 기준 "옛 모양 점검" | `rg` 결과를 줄마다 | 남은 것은 모두 새 모양: `.Rooms` = `StageDef.Rooms`·`ActPlan.Rooms`·`RunState.Rooms`·`RulesDef.Rooms`·`RoomFloors.Rooms`, `StageMinutes`(그대로, 규칙 쪽은 `DifficultyMinutes`), `EliteChance`(새 `At`), `RoomPresence`(형 이름 그대로, 속성은 `InnerRoomPresence`), `.Victory` = `RunOutcome.Victory`, `(SimPhase)15` = `RoomFlow`(0부터 — 문서 1부터 16), `PhaseCount` = 17, `StageSelect`·`StageRecord` 는 바뀐 것을 설명하는 주석뿐 | — |
 
 **기획 v0.8.1 과 아직 안 맞는 것**(설계가 먼저 받아야 함 — 기획 29절 "설계에 넘기는 것" 1~19): 이 구현은 설계 v0.7.1 대로다. 기획 v0.8.1 이 바꾼 것 — 문 보상 효과 종류(보물 상자 = 무기 +1Lv·허리띠 물약·금화, 성소 = 대가 있는 원작 성소, 물약 = 허리띠 물약 둘), 모든 방 출구 둘(정예·보스 앞도), 보상 자리 = 주인공 앞(`center` 아님), 정리 단계 "사냥 모드", `cleanup_limit` 25, 시간 효과가 방 사이에 이어짐, 짐에 허리띠·`단련`·성소 대가, 계단 보상·계단 저장, 거울판 짝 표 — 은 계약(`RewardKind`·`RoomRulesDef`·`RunPlanner` ③·`RoomFlow` 보상 자리·`HeroCarry`)을 다시 바꾼다. 설계 v0.8 이 받은 뒤 다음 계약 갱신 묶음(WP1f)으로 낸다. 지금 코드의 값(45s 등)은 시험 합성 값뿐이고 실제 `Data/` 는 바꾸지 않았다.
-WP1f 에서 바뀌는 멤버 목록과 다른 묶음이 기대지 않을 것은 11.3. (기획 29절 1 "방 안의 t" 는 이 판에서 받았다 — 위 `T` 줄.)
+WP1f 에서 바뀌는 멤버 목록과 다른 묶음이 기대지 않을 것은 11.3. (기획 29절 1 "방 안의 t" 는 이 판에서 받았다 — 위 `T` 줄.) — v0.8 에서 받았다(13.20).
+
+### 13.20 v0.8 — 기획서 v0.8.1(29절) 받기·사용자 결정 U(AI 확대)
+
+근거 둘. ① 기획 v0.8.1 29절 "설계에 넘기는 것" 1~19(v0.8 리뷰 반영 — 근거는 여전히 사용자 결정 R "하데스처럼 방 구조로", 섞기: 방 = 짧은 생존). ② **사용자 결정 U**(2026-11-03): 원작 그림 일부를 Real-ESRGAN 두 모델로 4배 확대해 비교했고("AI 확대 비교" — 옛 스크래치 `aiup\out-*`, 저장소 밖), 사용자가 "AI 일반이 나은듯" → `realesrgan-x4plus`.
+계약은 한 묶음 **WP1f**(11.1)로 모았고 11.3 의 ①~⑧ 목록을 닫았다. 실제 `Data/` 는 이 판에서 고치지 않는다(소유 묶음 v0.8 줄).
+
+**기획 29절 "설계에 넘기는 것"**
+
+| # | 넘긴 것 | 처리 | 자리 |
+|---|---|---|---|
+| 1 | 방 안의 t(끝 − 1틱), 13.5-18 정예 방 전체 | v0.7.2 에 받음(`RoomState.T`, 13.19), 13.5-18 은 v0.7.1 | 3.6, 6.12 |
+| 2 | 기록 비교 깊이 → 승리 → 시간 | v0.7.1 에 받음 | 8.3 |
+| 3 | 방 해시 / 판 해시 | v0.7.1 에 받음(본문 `StateHasher` 는 WP7) | 3.4, 9절 |
+| 4 | 문 보상 계약(효과 종류·거르기·0장 `단련`·허리띠·채움 카드·마법서 건너뛰기 체력 10) | `RewardKind` = 마법서·무기 강화 꾸러미·허리띠 물약·성소(`RewardBundleDef`·`ShrineDef`), `BlessingCards`·`LevelUp`·`FullHeal`·`SkipWhenHpAtLeast`·`Skip.Gold` 없앰, 축복 패시브는 E(형은 남김), 거르기 v0.8, 0장·올릴 무기 없음·정예 상자 빈 강화 = `단련`(`level_up.temper`·`FillerCardDef.Stats`·`ChestItemKind.Temper`), 허리띠(`rules.hero.belt`·`Hero.Belt`·짐·`CueKind.BeltPotion`), `StatKey.MaxHpPct` | 6.18, 6.10, 6.9, 3.6, WP1f #1·#2·#13·#14·#19 |
+| 5 | 문 갈래 — 정예·보스 앞도 출구 둘, 덤 보상 | `RunPlanner` ③ 의 "다음이 정예·보스면 하나" 를 지움(하나는 계단만), 정예·보스 방 `RoomState.Reward` = 덤, `--room` 시작 방도 같음, 고정 값 시험 갱신 | 3.6 결정 2·3, WP1f #7·#9·#11 |
+| 6 | 방 흐름 — 끌려오는 것 조건·사냥 모드·`cleanup_limit` 25·남은 적 점·보상 자리 = 주인공 앞 | 끌려오는 것은 v0.7.1 에 받음. 사냥 모드 = WP4 본문(계약 없음), `cleanup_limit` 25, `remaining_marker`·`reward_anchor`·`chest_ring` 없앰, `reward_spot`·`RewardSpot.Find`/`Row`(직선 걷기 규칙 — 12.1), 13.5-23 ④ 의 `center` 조건 뺌(`center` 는 ③ 이 그대로 요구 — 큰 적 길 목적지) | 3.6, 6.10, 7.11, 12.1, WP1f #3·#8·#9 |
+| 7 | 방 사이에 이어지는 것 — 시간 효과 이어짐·멈춤, 쿨다운 새로 | `HeroCarry.Effects`(남은 틱)·`World.TimedEffectsRun`(생존·정리에서만 흐름), 성소 대가·`단련`(`Mods`)·받은 성소·허리띠·칸 수도 짐, 12.1 `[해석]` "방마다 새로" 닫음 | 3.6 결정 1, 12.1, WP1f #8·#10 |
+| 8 | 계단 보상·저장 | 계단에서 칸 +1(`rules.rooms.stairs`, 그릇 4 → 6), **계단 저장** = `RunSession.CanSuspend`·`Suspend`·이어 하기 생성자·`RunSnapshot`(STJ 왕복, `RunStats`·`FairnessCounters` 공개 필드 규칙), `run.json` 한 칸·읽으면 지움·불일치 예외, `ISaveService` 넷, 이어 한 판 = 끊지 않은 판(시험) | 3.6 결정 4, 8.3, 11.2, WP1f #10·#11·#13·#14·#15 |
+| 9 | 경험치 곡선 L ≥ 20 계수 30, L ≥ 40 은 785 + 40 | 데이터 값(6.10 예 고침 — WP3 데이터). 곡선 형(`XpCurveSegment`)은 그대로 | 6.10 |
+| 10 | 순번 = 표 번호 | v0.7.1 에 받음(`RoomDef.Number`) | 3.6, 6.12 |
+| 11 | 13.5-23 보탬 — 이벤트 하나·150px 둘레 아님·방 이벤트 자리·거울판도 | 앞 둘은 v0.7·v0.7.1 에 받음. **⑥ 방 이벤트 자리** `RoomEvents.CheckPlacement`(0:20 강적·포위 오류, 끝 0:45 절정 경고 — 종류 목록 12.1), ③ 을 거울판에도 | 6.14, 3.6 결정 5, WP1f #6·#12 |
+| 12 | 포위 고리 반경 하한 300·다시 나눔·감독 시험 | WP4 본문(계약 없음) | 11.1 WP4 v0.8 |
+| 13 | 거울판 | 타일셋 짝 표(`TilesetDef.Mirror`, 성질 전치 검사)·`MapDef.Mirror`·`MapMirror.Of`(거울판 `MapDef` `<id>@m`)·(맵, 방향) 뽑기·바로 앞 쌍 빼기·문 이름 짝 바꾸기(`RoomPlan` 의 문·`RemapEntry`)·검사·`audit`·굽기 `<art>@m`·`ROOM mirror` | 6.11 "거울판", 3.6, 1.4, WP1f #5~#8 |
+| 14 | 자동 조작 보탬, `ROOM` 로그 보탬 | 봇 규칙은 v0.7.1 에 받음 + 문 우선순위 v0.8(허리띠·성소 셋·덤). `ROOM` 의 `mirror`·`boss_s`·`picks_left` = `RoomRecord`·`RoomState.BossClockTicks`·`IProgression.PicksLeft` | 9절, 6.18, WP1f #10·#14 |
+| 15 | `--start-at` 상한·입장 이벤트 바로 | 상한은 v0.7.1 9절 규칙을 Core `RoomStartLimits` 로(옵션 파싱·`RunSession` 생성자 둘 다), 입장 이벤트는 `RoomEvents.Schedule` 이 시작 시각으로 옮김, 광폭화 시계는 WP4 | 3.6 결정 5, 9절, WP1f #11·#12 |
+| 16 | 판 전체 실행 | v0.7.1 에 받음 + "계단 저장으로 끊고 이은 판 = 끊지 않은 판"(Core 로 바로) | 11.1 WP4 v0.8, 10.1 |
+| 17 | WP1e 구현 나누기 | v0.7.1 에 나눴고 v0.7.2 구현이 한 번에 끝냄(13.19) | 11.1 WP1e |
+| 18 | 가져오기 — `audit_dun` ⊂, 물체 그림 대체, 계단 소리 후보 | `audit_dun` 은 v0.7.1. v0.8: 거울판 배치도 `audit` 대조, 거울판 굽기. 물체 그림은 검증 전까지 exe PNG·코드 그림(지금 설계 그대로), 계단 소리·조각은 기획 열린 질문 32 | 1.4, 11.1 WP0 v0.8 |
+| 19 | 데이터 | `l1.json` 짝 표·세로 창살·세로 닫힌 문 = WP0, 이벤트 시각·HP·호위·`floor`·보상 정의·`rules/rooms.json` = WP3·WP4, 맵 `mirror` = WP5 | 11.1 각 묶음 v0.8 |
+| (표 #25) | 층 — 방 문구·계단 문·넘김 1.0s | `RoomDef.Floor`(`floor`)·`RoomExit.NextFloor`·`rules.rooms.transition_floor`, 13.5-23 ① 층 규칙 | 6.12, 3.6, 7.11, WP1f #3·#4·#8 |
+
+**사용자 결정 U — AI 확대**
+
+| 항목 | 정한 것 | 자리 |
+|---|---|---|
+| 기능의 자리 | 가져오기 도구의 선택 기능 `--upscale realesrgan-x4plus`, 기본 끔(= 원본 픽셀). 게임 실행 옵션은 없다 — 확대는 가져올 때 한 번 | 1.4 "AI 확대" |
+| 저장소 | 확대 결과도 넣지 않는다(사용자 PC 의 `Assets/d1/` 에만, 캐시). 실행 파일·모델도 넣지 않고 배포하지 않는다 | 1.4, R24 |
+| 도구 받기·확인 | 사용자가 Real-ESRGAN ncnn-vulkan v0.2.5.0 을 따로 받음(`--upscale-bin`, 기본 `%LOCALAPPDATA%` 아래), `Table/upscale.json` 의 허용 SHA-256(실행 파일·DLL·모델)과 맞아야 띄움, `upscaler-check` 명령, 라이선스 BSD-3 확인·README 고지(WP0) | 1.4, R39 |
+| 실패 | 없음·해시 다름·띄울 수 없음·시간 초과·결과 크기 틀림 → **확대를 모두 버리고** 원본 픽셀(기획 19.6 — 일부만 확대 안 함), 종료 코드 6, manifest `status` = `fallback`(일부만 확대된 채로 두지 않음), `reason`, 끝 보고 `경고:` 줄. 모르는 모델 이름은 2 | 1.4 |
+| 적용 범위 첫 값 | 맵 그림(바닥 조각·벽 기둥·아치 덧그림) + 칸 폭 160 이상 몬스터(그 항목 전체), 표 `apply`·`include`·`exclude`(몬스터 `out`, 맵은 `tileset:<id>`)로 고침. 주인공·작은 몬스터·마법·아이콘·exe PNG 는 안 함 | 1.4, `upscale.json` |
+| 그림자 | AI 에 넣지 않는다 — 그림자 마스크를 도구 코드로 매끈하게 2배(쌍삼차 → 상자 평균 → 1px 흐림, 결정적) 해 몸 아래에 같은 시트로 굽는다(기획 19.6 이 맡긴 "도구가 굽기 / 게임이 그리기" 중 도구). 게임 그리기는 그대로 | 1.4 ①⑥, 12.1 |
+| 투명 가장자리 | 색은 가장 가까운 불투명 색으로 채우기(검은 테 막기), 알파는 같은 모델에 흑백 그림으로 따로 4배 → 2배 상자 평균 → 0.5 에서 잘라 있음·없음(기획 19.6 첫 값, 열린 질문 42) | 1.4 ②④⑤ |
+| 이음매 | 프레임마다 16px 여백, 바닥 조각은 이웃을 32px 더 구워 가운데만 | 1.4 ③, 7.6 |
+| 화면 배율 첫 값 | 4배 결과를 2배로 줄여 씀, `WorldRT` (960·s)×(540·s) = 1920×1080, 그리는 배율 = s ÷ 메타 `scale`(정수), 빛·안개는 월드 해상도 | 7.1 |
+| 떨림 | 확인 항목: WP0 `contact` 견본(걷기 8프레임 줄)·10.2 "AI 확대" 행 | 11.1 WP0·WP5, 10.2 |
+| GPU | `--upscale-gpu <n>` → `-g n`(없으면 실행 파일이 고름), manifest `gpu` | 1.4 |
+| 결정론·캐시 | 확대 출력은 같은 바이트를 요구하지 않는다(GPU 마다 다를 수 있음) — manifest 에 도구·모델 해시만. 캐시 키 = 쓸 확대 방식(모델·해시·배율·처리 판), GPU 는 키 밖(바꾸려면 `--force`). 시뮬레이션·해시는 그림 배율과 무관 | 1.4 결정론·캐시, 7.1 |
+| 계약 | `UpscaleTable`·`ManifestUpscale`·`ManifestFile.Scale`·`SpriteMeta.Scale`·`ArenaArt.Scale`, `AssetFormat.Version` 3 | WP1f #16~#18 |
+
+**더 정한 것**: 거울판 `MapDef` 의 ID 규칙 `<id>@m`·`MirrorOf`, (맵, 방향) 후보 순서(풀 → 원판 → 거울판), 거울판 방의 들어온 문·출구·이벤트 문이 모두 짝 이름(계획 전체가 거울 모양), `HeroCarry` 를 init 속성 record 로, `RunSnapshot` 의 정의 확인(`Format`·`rooms_hash`·직업),
+`RunStats`·`FairnessCounters` 공개 필드 규칙, `run.json` 을 `save.json` 과 따로, `--map <id>@m`, `CueKind.BeltPotion`, `upscaler-check`, 종료 코드 6, 위험 R38~R41, 해석 다섯 줄(12.1).
+**없앤 것**(폐기 용어로 찾아 고침 — 13.x 판 기록은 그대로): `remaining_marker`·`reward_anchor`·`chest_ring`, `RewardKind` 의 `blessing_cards`·`level_up`·`full_heal`, `skip_when_hp_at_least`, `skip.gold`, `filler_gold`, `reward_shrine`, "정예·보스 앞 출구 하나", "정예·보스 방 `Reward = null`", "시간 효과는 방마다 끝남", "판 중간 저장 없음", "45s 안전장치".
+
+**기획서에 넘기는 것**(기획 담당 — 이 판에서 설계가 정한 뜻으로 기획서 문장을 맞춘다)
+1. 19.6(AI 확대 — 기획 v0.8.2 가 같은 때 쓰는 중, 설계가 고른 것을 맞춤): 폴더 옵션 `--upscale-bin` 의 기본 자리 `%LOCALAPPDATA%\DiabloDefenceRemastered\realesrgan-ncnn-vulkan\`, "경고와 함께 성공" 종료 코드 = **6**, 그림자 판은 **도구가 굽는다**(게임은 따로 그리지 않음),
+   이음매는 프레임 16px 여백·바닥 조각 이웃 32px, 항목마다 끄기는 `Table/upscale.json` 의 `exclude`(몬스터 `out`·`tileset:<id>`) — 가져오기 표 항목 줄이 아니라 이 표 한 줄, 확인 명령 `upscaler-check`. 19.1 "저장소에 들어가는 것" 표에 `Table/upscale.json`(허용 해시·범위 — 원작 바이트 없음).
+2. 12절(화면) — 확대 자원이면 월드를 2배 해상도(1920×1080)로 그린다는 것, 13.5-7·12.1 의 960×540 문장은 "월드 px" 로 읽는다는 것.
+3. 11.4 보상 자리 — "가장 가까운 걸을 수 있는 칸" 을 설계 규칙(바라보는 쪽부터 방향 여덟을 차례로, 주인공에서 직선으로 이어진 clearance 30 자리)으로 맞춤. 6절·13.1 — 성소 정의 칸 이름(`all_weapons`·`random_weapon`·`pick_weapon`·`pick_max_level`·`stats`), 보물 상자 `bundle`, 새 능력치 키 `max_hp_pct`.
+4. 10.8 거울판 — 짝 조각에 세로 창살·세로 닫힌 문이 필요(L1 35·25 후보, WP0 확인). 둘레·문 끝 조각(앞 턱 18 ↔ 19, 턱 모서리 23 ↔ 24, 뒷벽 1 ↔ 2 의 둘레 쓰임)은 자리(`borders`·`gates`)로 고르므로 짝 표에 넣지 않는다 — 기획 v0.8.2 10.8 의 짝 후보 목록에서 그 둘을 "자리로 바뀜" 으로. 그 전에는 `cathedral_arena` 거울판 없음(단계 1 은 들어오는 문만 바뀜). `--map <id>@m`, `ROOM map=` 은 원판 ID.
+5. 13.5-23 방 이벤트 자리의 종류: 강적 = 정예 무리·해골 대장(호위)·포위 고리, 절정 = 행진·포위·정예 무리·호위.
+6. 2.5 계단 저장 — 버린 저장(새 게임으로 지움)의 판은 기록하지 않음(설계 첫 값), 저장은 `save.json` 과 다른 파일.
+7. **WP0a 에서 바뀐 값**(13.16 "남은 것" 의 기획 몫 — 기획 v0.8.2 30절이 같은 때 맞추는 중, 아래 목록과 같은지만 확인): 닫힌 문 98 → **26**(98 은 피 튄 아치 가로 벽 — 10.1·10.3 의 "닫힌 문 98"), 창살 36 의 원본 SOL 은 `ww..`(기둥 칸 `X` 는 DevilutionX 참고 보정 — 10.1·10.3 의 "원본 확인" 문구),
+   문 끝 조각은 틈 **뒤** `end_b` 하나(nw 6·ne 7·se 23·sw 24, `end_a` 는 둘레 조각 그대로 — 10.1 "틈 양 끝은 벽 끝 조각"), 피 방 번호(세로 166·모서리 **168**·가로 **169**·바닥 **172**), 10.1 표 ┘ 행이 이제 피 방 `[5,5]` 의 작은 모서리 기둥 3(`wall_post`)에 쓰임(10.3 피 방 그림),
+   주인공 프레임 시간(4.0 "주인공 모두 50ms" → 원작 값 서기 0.2s·죽기 0.1s, 걷기·시전 0.05s — 출처: DevilutionX 참고).
+
+**남은 열린 질문**
+1. **작은 캐릭터 확대**(기획 열린 질문 40): 주인공·작은 몬스터를 확대하지 않으면 한 화면에 확대 그림과 2배 점 확대 그림이 섞인다. 견본에서 얼굴·손이 뭉개졌다 — 보이는 차이가 크면 범위를 넓히거나 다른 모델·배율을 다시 비교한다(표만 고침).
+2. **화면 배율**(기획 열린 질문 41): 첫 값 "4배 → 2배, 1920×1080". 창이 1920×1080 보다 크면 2배 그림을 다시 늘린다(k). 4배 그대로(3840×2160 타깃)는 메모리·채움 비용 때문에 첫 값에서 뺐다 — 렌더 측정(R38) 뒤 정한다. (v0.8.1) 4배로 가면 표 읽기의 `output_scale` 2 고정·메타 `scale` ∈ {1, 2} 를 푸는 **계약 변경(WP1g)** 이다(7.1).
+3. **투명 가장자리·그림자**(기획 열린 질문 42·11): 알파 0.5 자르기(첫 값)가 계단처럼 보이면 부드러운 알파(도구 코드 쌍삼차)로, 굽은 그림자 판이 몸과 따로 놀면 흐림 폭을 — 둘 다 도구 안(`AssetFormat.Version` 을 올림).
+4. **이음매·떨림**이 보이면: 떨림은 동작 단위로 한 판에 확대 → 그 항목을 범위에서 빼기 순(표·도구 안). (v0.8.1) 기둥 이음매는 여백을 늘려도 이어지지 않는다(번진 색은 이웃 기둥 질감을 모름) — **벽 줄을 배치째 확대한 뒤 기둥으로 자르기**(같은 그림 한 프레임 규칙 포기) 또는 **맵 범위에서 기둥 빼기**(표에 칸이 없어 WP1g), 7.6. 바닥·기둥 경계 모양은 알파 점 확대라 흔들리지 않는다.
+5. **버린 계단 저장의 기록**(12.1 `[해석]`): 기획이 정하면 `DiscardRun` 이 `RecordResult` 를 부르게.
+6. **L1 짝 조각**: 세로 창살(35 후보)·세로 닫힌 문(25 후보)의 원본 성질이 36·26 의 전치와 맞는지(WP0). 안 맞으면 `cathedral_arena` 는 거울판을 못 단다.
+7. **칸 그릇 6**: 액트 셋 이상(헬파이어 액트 잇기 — 기획 열린 질문 38)이면 그릇을 늘린다(계약 변경, WP1g).
+8. 13.17 의 2·5~7, 13.18 의 2 는 그대로다(13.17 의 1·4 와 13.18 의 1 은 이 판에서 닫힘 — 시간 효과 이어짐, 계단 저장).
+
+### 13.21 v0.8.1 — v0.8 리뷰 반영 (`docs/reviews/architecture-v08-review.md`)
+
+근거는 13.20 과 같다(사용자 결정 R "하데스처럼 방 구조로" — 섞기: 방 = 짧은 생존, 사용자 결정 U "AI 확대" — `realesrgan-x4plus`). 이 판은 결정을 바꾸지 않고 v0.8 이 그것을 계약·처리로 옮긴 방식의 구멍을 메운다.
+지적 25개(높음 3·중간 14·낮음 8). 같은 문제를 본 지적은 합쳤다(#2·#17, #3·#16, #4·#18, #5·#20, #10·#22, #12·#24, #11·#23 일부). 반영하지 않은 지적은 없다. 바뀐 계약은 모두 **WP1f 에 넣었다**(11.1 표 #6·#8·#9·#10·#11·#13·#14·#16·#20 — 새 묶음 없음, 11.3).
+기획서 쪽 문장은 같은 때 기획 담당이 v0.8.3 으로 고치고 있다(`docs/reviews/gdd-v082-review.md`) — 이 판은 그 v0.8.3 의 들어온 문 바꾸기 규칙(2.4)·끊는 틱(2.5·15절)·세로 창살 셋 중 하나(10.1)·그림자 굽기(19.6)에 맞췄다.
+
+| # | 등급 | 문서 | 지적 | 처리 | 자리 |
+|---|---|---|---|---|---|
+| 1 | 높음 | 설계 | 거울판 `entries` 가 "ID 그대로" 라 입구 `gate_nw` 가 문 `gate_ne` 앞에 놓이고 검사가 못 잡음 | 반영 — `entries` ID 도 `MirrorGate` 로(기준점 ID 만 그대로), 13.5-23 ③ "입구가 같은 ID 문 앞"(가장 가까운 문 틈 칸), 시험 | 6.11 "방 맵"·"거울판", 6.14, 11.1 #6·완료 기준 |
+| 2·17 | 높음 | 설계 | 칸 그릇 6 인데 `RunStats.WeaponSlotCount = 4`·`DamageByWeapon` get-only `float[4]` — 5번째 칸 범위 밖 예외, 저장 왕복에서 0 | 반영 — 상수 없앰, `{ get; set; } = new float[6]`, 저장 멤버 규칙 "공개 읽기·쓰기 멤버", 반사 시험이 필드 + 속성·get-only 면 실패 | 3.6 "계단 저장", 11.2, 11.4, 11.1 #14·완료 기준 |
+| 3·16 | 중간 | 둘 다 | `Suspend` 가 틱 없이 정산해 끊지 않은 판과 보스 방 `Ticks`·재생이 다름, 자동 조작 판의 끊는 틱 없음 | 반영 — `Suspend` ⓐ Doors 면 계단 문 `Exit` 한 틱 ⓑ Exit 면 `Advance` 자리, 비교 기준 = 같은 틱 계단 문으로 나간 판, 자동 조작은 ⓑ | 3.6 결정 4, 8.3, 11.1 #11·완료 기준, WP4 v0.8 |
+| 4·18 | 중간 | 설계 | 불일치 검사가 짐 ID 를 안 봄, `Carry` null, R41 "없는 값 = 기본" 이 `required`·기본 0 필드와 모순 | 반영 — 짐 정의 ID·`IHeroCarry.Validate`·`Carry` null 여부·`DamageByWeapon` 길이를 `Restore` 전에, `RunSnapshot.Carry` nullable, `CurrentFormat` + 모양 지문 시험, R41 을 "모양이 바뀌면 Format 올려 버림" 하나로 | 3.6 결정 4, 8.3, R41, 11.1 #10·#11 |
+| 5·20 | 중간 | 설계 | 전체 10분 제한이면 첫 실행이 늘 되돌아갈 수 있고 진척이 안 쌓임 | 반영 — 묶음 실행(16MP)·진행 감시(2분 무진척)·확대 중간 캐시(되돌아가도 성공 묶음은 남김)·`확대 진척 n/m`·같은 판 한 번·몬스터 알파 프레임마다 한 번, WP0 실측 뒤 값 고침 | 1.4 "AI 확대"·"캐시", 11.1 WP0 v0.8 |
+| 6 | 중간 | 설계 | 맵 그림 알파를 AI 로 확대해 0.5 로 자르면 바닥·기둥 경계가 흔들려 틈·겹침, 채우기 8px < 여백 16px, 이음매 대처가 "여백 늘리기" | 반영 — 맵 그림 알파 = 원본 2배 점 확대(AI 는 색만), 몬스터만 AI 알파, 채우기 ≥ 여백, 이음매 대처 = 벽 줄째 확대·기둥 빼기 | 1.4 ②④, 7.6, 13.20 열린 질문 4 |
+| 7 | 중간 | 설계 | 작업 하나 = 한 스레드인 파이프라인과 "한 번에 확대" 를 잇는 구조가 없음 | 반영 — 세 단계(병렬 해독·확대 전 판·캐시 조회 → 주 스레드 GPU → 병렬 줄이기·묶기·PNG), 실패면 확대 대상 전부 (3) 을 원본으로, `--jobs 1` = `--jobs 8`·일부 적중 + 실패 시험 | 1.4 "결정론"·"AI 확대", 10.1 `Pipeline` |
+| 8 | 중간 | 설계 | `--room 2:n` 시작은 4칸, `--weapons` 다섯이 조용히 넷으로 | 반영 — `RunSlots.OpenAt(액트 번호)` 하나(판 시작·계단 둘 다), 초과 `--weapons` 는 64 | 3.6 결정 4, 9절, 11.1 #11·#13, WP3·WP7 v0.8 |
+| 9 | 중간 | 설계 | 판 수명 상태가 모듈 인스턴스에 숨으면 이어 하기 같음이 깨지고 `FakeHeroCarry` 시험이 못 잡음 | 반영 — 규칙(11.2·3.6), WP3 완료 기준 "실제 모듈로 끊고 잇기", 짐 필드는 WP1g | 11.2, 3.6, WP3 v0.8 |
+| 10·22 | 중간 | 둘 다 | 그림자를 누가 그리는지 기획·brief 는 "게임이 따로", 설계는 "도구가 굽기" | 설계는 이미 "도구가 굽는다". 기획 v0.8.3 이 19.6·30절·Q42·머리말·brief 요구 16 을 맞춤(아래 "기획서에 넘기는 것" 1 은 확인만) | 1.4 ⑥, 7.5 |
+| 11 | 낮음 | 설계 | 둘레·문은 짝 검사 밖이라 다음 타일셋에서 조용히 어긋남, "보정이 있으면 짝도 보정" 이 없는 보정을 지어내게 함 | 반영 — 자리 짝 검사(둘레 여덟 자리·문 변 짝의 `open`·`end_a`·`end_b`), 짝 비교는 최종 성질만 | 6.11 "거울판", 6.14 13.5-12, 11.1 #6 |
+| 12·24 | 낮음 | 설계 | `output_scale` 이 바꿀 수 있어 보이나 Core 는 {1,2}·s = 2 고정 | 반영 — s = manifest `output_scale`(done 일 때), 표 읽기는 2 만, 시작 검사는 `scale` ∈ {1, s}·s 를 나눔, 4배는 WP1g | 1.4 표, 7.1, 13.20 열린 질문 2, 11.1 #16 |
+| 13 | 낮음 | 설계 | WP1f 표 세부 일곱(`Hero.Reset` 인자, `DoorsOpened` 자리, `FairnessCounters` 조각, `Applies`, record `==`, 좁은 통로 보상 자리, `RoomActs` 소유) | 반영 — ① 0 + WP3 가 `OpenAt` ② `RewardSpot` ③ "모든 공개 멤버" ④ `Applies(ImportUnitEntry)`(최대 폭)·`Applies(tilesetId)` ⑤ 바이트 비교 ⑥ 두 번째 차례 문턱 = 주인공 반경 ⑦ WP1f 끝까지 WP1f | 3.6, 1.4, 11.1 #9·#13·#14·#16·#20, 11.3 |
+| 14 | 낮음 | 설계 | `upscaler-check` 가 GPU 목록만 낼 수 없음, manifest `gpu` 가 캐시 적중에도 이번 값, 거울판 그림 메모리 미산입 | 반영 — 작은 무늬 그림 한 장 변환으로 장치 줄, `gpu` = 만든 때 값(`mixed`), 거울판 ×2 어림·`TextureStore` 가 `@m` 도 읽음 | 1.4, 7.1, 7.5, WP5 v0.8 |
+| 15 | 높음 | 둘 다 | 서로 바꾸기가 맞은편 문의 보스·대장·행진을 들어온 문으로 옮김(해골왕이 늘 등 뒤 문), "늘 맞은편" 이 문제를 덮음, 검사가 못 잡음 | 반영 — **시작 문 기준 바꾸기**(기획 v0.8.3 2.4 — 시작 문이 들어온 문일 때만, 행진 목표는 들어온 문 ↔ 맞은편만), `RemapMarch`, 13.5-23 ⑤ "바꾼 뒤 시작 문 = 들어온 문 → 오류"(원판·거울판·들어올 수 있는 문마다), 시험 뒤집음 | 3.6 결정 2·3·5, 6.12, 6.14, 10.1, 11.1 #8·완료 기준, WP4 v0.8 |
+| 19 | 중간 | 설계 | 실행 파일이 `vulkan-1.dll` 을 정적으로 가져와 런타임 없는 PC 에서 오류 창 + 10분 대기 | 반영 — 띄우기 전 `vulkan-1.dll` 확인(없으면 바로 되돌아감), 오류 모드(`SEM_FAILCRITICALERRORS`) 물려주기(WP0 확인), 0xC0000135 → 이유, 시험 | 1.4, R39, 10.1 `Pipeline`, WP0 v0.8 |
+| 21 | 중간 | 둘 다 | `IUpscaler` 가짜만으로는 `Process` 경로가 CI 에서 시험되지 않음, 허용 해시를 못 바꿔 가짜가 늘 "해시 다름" | 반영 — 가짜 실행 파일 `tests/FakeUpscaler`(Process 경로 전체) + `IUpscaler` 가짜(처리 단위), 시험이 표를 주입, "결과 파일 없음 = 실패", `-m` 절대 경로 | 1.4 "시험"·"띄우는 법", 10.1 `Pipeline` |
+| 23 | 낮음 | 둘 다 | 세로 창살 35 의 기둥 칸 보정이 원작에 없으면 기획 "의도 차이 MVP 없음" 과 충돌 | 반영(설계 쪽) — WP0 v0.8 ③ 셋 중 하나(보정 있음 = `sol_known_diffs`, 없음 = `design_diffs` "거울판 짝", 전치 아님 = 짝 표 밖·거울판 없음). 기획 v0.8.3 10.1 이 예외를 적음 | 6.11, 11.1 WP0 v0.8 |
+| 25 | 낮음 | 설계 | 왕복 "같음" 을 record `==` 로 쓰면 늘 거짓, `grate_h` 오류 기대가 실제 데이터와 안 맞음 | 반영 — 직렬화 바이트 + 원소별 비교, 오류 목록 "포함" | 11.1 WP1f 완료 기준 |
+
+**제안과 다르게 반영한 것**
+- **#15**: 리뷰의 안 1·안 2 대신 기획 v0.8.3 2.4 가 같은 때 정한 규칙(시작 문이 들어온 문일 때만, 그 이벤트 안에서 들어온 문 ↔ 맞은편만 맞바꿈)을 따랐다 — 안 1 과 뜻이 같고, 게임 규칙은 기획서가 정한다. 행진에 함수 하나(`RemapMarch`)를 더해 "시작 문을 바꿨는지" 를 목표 문 판단에 넘긴다.
+- **#3·#16**: 두 안을 다 썼다 — 메뉴(문 단계)는 ⓐ `Suspend` 가 계단 문 `Exit` 한 틱을 Core 안에서 돌리고, 자동 조작은 ⓑ `Phase == Exit` 자리에서 부른다. 앱이 멈춤 중에 틱을 따로 돌리지 않아도 된다.
+- **#4**: `Carry` 는 `CanSuspend` 거짓 대신 nullable 로 — WP3 없는 Core 시험도 끊고 잇기를 돌려야 한다. 대신 `IHeroCarry` 등록 여부와 null 여부가 다르면 불일치다. WP3 만 아는 뜻(시간 효과 ID·진화 짝)은 `IHeroCarry.Validate` 로 넘겼다(Core 가 효과 ID 목록을 모름).
+- **#5·#20**: 시간 제한은 "입력 픽셀 비례" 대신 "진행 없음"(출력 파일 수가 2분 동안 안 늚)으로 — GPU 속도를 몰라도 서고, 큰 묶음이 정상적으로 오래 걸리는 것과 멈춘 것을 가른다. 묶음 크기(16MP)·2분은 첫 값이고 WP0 이 이 PC 에서 잰다.
+- **#12·#24**: 표에서 `output_scale` 을 빼지 않고 "2 만 받음" 으로 남겼다 — 기획 19.6·열린 질문 41 이 값을 표의 한 줄로 말하고 있어, 4배로 갈 때 바뀌는 곳(표 읽기 허용 값·메타 검사)을 한 곳에 모은다.
+- **#2·#17**: "공개 필드만" 규칙을 "공개 읽기·쓰기 멤버" 로 넓혔다 — 지금 `RunStats`·`FairnessCounters` 의 멤버가 모두 get·set 속성이라 필드로 바꾸면 커밋된 코드 전부를 고쳐야 하고, 손실의 원인은 속성이 아니라 get-only 였다.
+
+**확인한 것**(커밋 `ead8e15`, 읽기만)
+- `RoomState.RemapEntry`(RoomState.cs 118~124)가 들어온 문 → 맞은편, 맞은편 → 들어온 문을 하고, `RoomEventsTests` 66줄이 `fromSw.RemapEntry("gate_ne") == "gate_sw"` 를 확인한다(#15).
+- `RunStats.WeaponSlotCount = 4`·`public float[] DamageByWeapon { get; } = new float[WeaponSlotCount]`(Progression.cs 75·83), `RunStats` 의 다른 멤버는 get·set 속성(#2). `FairnessCounters` 는 `sealed`(partial 아님)이고 멤버가 get·set 속성(WorldState.cs 203~, #13 ③).
+- `Hero.Reset()` 은 인자가 없다(Hero.cs 124, #13 ①). `RoomFlow.cs` 114·193 과 `World.cs` 87 이 `rules.RewardAnchor` 를 읽는다 — 114 는 v0.8 이 이미 `RewardSpot` 으로 바꿨고 193(`DoorsOpened` 자리)·87(주인공 시작 방향)은 v0.8.1 에 정함(#13 ②).
+- 확대 프로그램(옛 스크래치 `aiup\dl\resr.zip`, SHA-256 `abc02804…` = 1.4 의 값)을 새 스크래치에 풀어 **실행하지 않고** 읽음: PE 가져오기 = `vulkan-1.dll`·`ole32.dll`·`KERNEL32.dll`·`OLEAUT32.dll`·`VCOMP140.DLL`(지연 가져오기 없음 — #19), 도움말 문자열에 GPU 목록 옵션 없음(`-g gpu-id`·`-t tile-size`·`-m model-path`(기본 `models`)·`-j` — #14·#21).
+- 빌드·시험은 하지 않았다(문서만). 게임 창·원본 폴더를 쓰지 않았다.
+
+**기획서에 넘기는 것**(기획 담당 — v0.8.3 이 대부분 이미 받음. 아래는 이 판에서 설계가 더 정한 것)
+1. (확인만 — 기획 v0.8.3 이 이미 받음) brief 요구 16·기획 19.6·30절·Q42 의 그림자 = "가져오기가 AI 없이 매끈하게 2배로 늘려 시트에 굽는다(게임 그리기는 그대로)"(#10·#22).
+2. 19.6 `upscaler-check` 문장(기획 v0.8.3 "그림을 만들지 않고 … GPU 목록만") → "확대 프로그램에 GPU 목록 옵션이 없어 임시 폴더에서 작은 무늬 그림 한 장을 변환해 장치 이름을 보인다(Assets 는 안 만듦)"(#14).
+3. 19.6 되돌아감 이유에 `Vulkan 런타임 없음`(`vulkan-1.dll`), 실행 실패의 "시간 초과" → "진행 없음(출력이 2분 동안 안 늚 — 첫 값)", 첫 실행 시간은 WP0 실측 뒤(#5·#19·#20). 확대 결과는 묶음마다 중간 캐시에 남아 되돌아간 다음 실행이 이어서 끝낼 수 있다는 것.
+4. 19.6 "투명 가장자리": 맵 그림(바닥·벽)의 알파는 AI 에 넣지 않고 원본을 2배 점 확대(경계 모양이 원본 그대로 — 틈 없음), 0.5 자르기는 몬스터만. 이음매 대처는 "여백 늘리기" 가 아니라 벽 줄째 확대·기둥 빼기(#6).
+5. 2.5 계단 보상 — 액트 2 에서 시작한 개발 판(`--room 2:n`·`--stage stage_catacombs`)도 칸 5(열린 칸 = 액트 번호의 함수), `--weapons` 가 칸보다 많으면 옵션 오류(15절 문장, #8).
+6. 15절·2.5 끊는 틱 — 설계는 두 길을 다 받았다: 메뉴는 그 틱에 계단 문 `Exit` 명령 한 틱(Core 안), 자동 조작은 문 틈을 밟은 틱(기획 v0.8.3 15절의 "설계가 고른다" 의 답).
+
+**남은 열린 질문**
+1. 오류 모드를 자식 프로세스가 물려받아 `vulkan-1.dll` 없는 실행에서 창이 정말 안 뜨는지(WP0 이 이 PC 에서 확인 — 꾸밀 수 없으면 "확인 못 함" 으로 남김).
+2. `UpscaleBatchPixels`(16MP)·`UpscaleNoProgress`(2분) 첫 값 — WP0 실측 뒤 1.4·기획 19.6.
+3. 13.20 의 남은 열린 질문은 그대로다(2·4 는 이 판에서 WP1g 조건만 더함).
+
+### 13.22 v0.8.2 — WP1f 구현이 정한 것
+
+WP1f(형과 순수 로직을 한 번에 — 11.1 WP1f 표 #1~#20) 코드가 문서와 다르게 또는 더 정한 것. 코드가 정본이다(11.4 와 같은 규칙). 실제 `Data/` 는 고치지 않았다.
+"구현과 시험까지" 인 #6~#9·#11·#12·#20 은 본문과 xunit 시험까지, 나머지는 형·읽기 시험(본문은 표의 그 묶음)이다. 13.5-23 ⑤ 의 "바꾼 뒤 시작 문 = 들어온 문" 검사기는 WP4 몫이라 하지 않았다(11.1 WP4 v0.8.1 — `RemapEntry`/`RemapMarch` 만 냈다).
+
+| 자리 | 문서 | 코드 | 이유 |
+|---|---|---|---|
+| 3.6 `RunSlots.OpenAt` | `(int actNumber, HeroRulesDef hero, RoomRulesDef rooms)` | `(int actNumber, LevelUpRulesDef? levelUp, RoomRulesDef rooms)` + `(int actNumber, RulesDef rules)`. `levelUp` 이 null 이면 `LevelUpRulesDef` 기본값(4·4), 액트 번호 1 미만은 1 | 시작 칸 수 `weapon_slots`·`passive_slots` 는 `rules.hero` 가 아니라 `rules.level_up`(`RulesDef.LevelUp`)에 있다(6.10 JSON) |
+| 3.6 `RoomStartLimits` | `MaxStartClockTicks` 하나 | 더함: `Allows(room, rules, startClockTicks)`(0 이상이고 상한 미만). `RunSession` 생성자·WP7 옵션 파싱이 같은 판정을 쓴다 | "그 미만만" 을 한 곳에 |
+| 3.6 "보상 자리" `RewardSpot` | `Find(World, RewardSpotDef)`, `Row(spot, facing, count, spacing)` | `Find(World, def)` = `Find(INavWorld?, feet, facing, heroRadius, def)`, `Row(INavWorld?, spot, facing, count, RewardSpotDef, float? threshold = null)`. 검증 반영: `Find(…, out float threshold)` 가 자리를 찾은 문턱(첫 차례 `clearance`, 두 번째 차례·주인공 발은 주인공 반경)을 돌려주고 `RoomFlow` 가 그 문턱으로 `Row` 를 당긴다(없으면 `clearance`). 상수 `Step` 8·`TurnDegrees`. 내비가 없으면(모듈 없는 월드) 벽이 없다고 본다. 바라보는 방향이 0 이면 남(+y). 마지막 걸음은 `distance` 에 맞춤(8 의 배수가 아님 — 100) | 순수 함수를 내비만으로 시험(좁은 복도·막힌 곳)하려고. `Row` 는 당길 때 `clearance` 문턱이 필요해 정의 전체를 받는다. 좁은 통로(clearance 30 미만)에서 줄을 30 으로 당기면 모든 자리가 `spot` 으로 돌아와 덤 보상과 정예 상자가 한 점에 겹쳤다 |
+| 3.6 `RoomState.RewardSpot` | "그 전엔 주인공 시작 자리" | `World` 생성자가 주인공을 들어온 문 진입점에 세운 뒤 넣는다(internal setter) | `RoomState` 생성자는 맵을 펼치기 전이라 진입점을 모른다 |
+| 3.6 결정 3 보상 단계 | 놓을 것 = 보상 + 상자 | 줄의 수 = 보상(있으면 1) + 살아 있는 정예 상자 수, 보상이 줄의 첫 자리. `RoomCleared` 신호 자리도 `RewardSpot` | 문서 순서 그대로, 신호 자리를 `DoorsOpened` 와 맞춤 |
+| 3.6 `BossClockTicks` | 잡은 방 시계 | 그 틱에 1 늘린 뒤의 방 시계(정예 = `miniboss` `Damage` 처치 틱, 보스 = `BossDefeated` 틱) | `RoomFlow` 가 시계를 먼저 늘리고 전이를 본다(13.19) |
+| 3.6 결정 2 ③ | "하나는 계단만" | 출구 하나 = 액트의 마지막 방일 때뿐(v0.7 의 `def.Kind == Boss` 조건도 뺌) | 보스 방이 액트 가운데 오는 데이터가 생겨도 "출구 하나 = 계단" 이 깨지지 않게 |
+| 3.6 결정 2 ① | 거울판 후보 | `mirror: true` 인데 `MapDef.Mirrored` 가 null 이면 `ArgumentException`(읽기·`MapMirror.WithMirror` 를 거치지 않은 정의). `RoomPlan.MapId`(= `Map.MirrorOf ?? Map.Id`)를 더함 | 조용히 원판만 뽑지 않게. 로그 `map=`·`RoomRecord.MapId`·넓이 배율이 같은 식을 씀 |
+| 3.6 결정 4 이어 하기 대조 | 문서 목록 | 더함: 다음 액트의 지금 번호 ≠ `NextActNumber`, `Stats`·`Fairness`·`Rooms` 가 null(STJ 는 null 을 막지 않음). 짐 칸의 빈 ID("")는 정의 대조에서 뺌. 검증 반영: 지금 번호는 뿌리가 아니라 **시작 액트에서 센다** — `RunPlanner.ActNumber(시작 액트)` + 시작 액트에서 `next_act` 를 따라 다음 액트까지 간 걸음 수(생성자·`Advance`·`Suspend` 의 "시작 번호에 계단마다 + 1" 과 같은 식). 다음 액트가 시작 액트 뒤 사슬에 없으면 불일치 | 사슬이 바뀌면 같은 `rooms_hash` 여도 씨앗(`RunSeeds` 의 액트 번호)이 달라 "이어 한 판 = 끊지 않은 판" 이 깨진다. `ActNumber` 는 뿌리 사슬 밖 액트(헬파이어 곁가지)에 1 을 돌려주므로, 뿌리에서 세면 곁가지 액트끼리 이어진 판(H1 → H2, WP10)은 늘 불일치로 저장을 잃는다 |
+| 3.6 `CanSuspend` ⓐ | 대기 0·`AwaitingChoice None`·살아 있음 | + 끌려오는 획득물 0(`RoomFlow.ExitBlocked` 를 internal 로 같이 씀). `Suspend` 는 그 한 틱 뒤 `Phase == Exit`·계단 문이 아니면 `InvalidOperationException`. `RunSession.Suspended` 를 더함 | `CanSuspend` 가 참이면 ⓐ 의 한 틱이 늘 `Exit` 로 가게 — 문 단계의 나가는 조건과 한 함수 |
+| 3.6 `RunSnapshot` | record·`CurrentFormat` | 더함: `JsonOptions`(공용 `DefJson` 규칙 + 필드 포함), `ToJson`/`FromJson`, `RoomsHash(StageDef)`(8.3 의 식 — 원소마다 (종류, 번호, from, to) 를 `rooms/1\|` 뒤에 이은 `StableHash` 16진 8자리, WP7 깊이 기록도 이 함수), 모양 지문 `ShapeFingerprint` 상수·`ShapeTypes`·`ComputeShapeFingerprint()`(공개 인스턴스 필드·속성 (형, 이름, 멤버 형) 서수 정렬, `JsonIgnore` 속성 뺌 — 검증 반영: 멤버 형에서 닿는 열거형(`StatKey` 등)의 값 JSON 이름 목록도 넣음) | "기대 값" 을 시험 파일이 아니라 `CurrentFormat` 바로 옆 Core 상수로 — 올리는 사람이 두 값을 한 곳에서 본다. 열거형 값을 없애거나 이름을 바꾸면 옛 `run.json` 이 `FromJson` 에서 깨지므로 지문도 바뀌어야 한다. 첫 값 `CurrentFormat` 1 · 지문 `7c149bd4`(검증 반영 전 `3d03c6b8` — 저장된 판이 아직 없어 판은 올리지 않음) |
+| 3.6 `RunState` | — | internal 생성자에 `stats`·`fairness` 선택 인자, internal `AddRooms` | 이어 하기가 저장 값을 그대로 쓰게 |
+| 3.6 `FirstRoomReward` | 액트 첫 방 = `first_room` | 첫 방 종류를 보지 않는다(v0.7 은 일반 방만) | v0.8 "덤 보상" — 정예·보스 방도 보상을 받는다 |
+| 3.6 결정 5 `RoomEvents` | 상수 이름 | `StrongEarliest`·`ClimaxWindow` 는 `static readonly ClockTime`(C# `const` 불가), 입장 이벤트 목록 `EntranceKinds`(`miniboss`·`boss`). `CheckPlacement` 오류의 파일은 비움·경로 `$.events[k]`(강적)·`$.rooms[i]`(절정 경고), 절정 창 = 방 시계 [생존 끝 − 0:45, 생존 끝) | 검사기 등록(WP4)이 액트 파일 이름을 채운다 |
+| 6.11 `MapMirror` | `Of(MapDef, TilesetDef)` | 더함: `TryOf`(오류 목록, 쓴 조각마다 "짝 표에 없다" — 짝 표가 없는 타일셋이면 모든 조각), `WithMirror(map)`(= `map with { Mirror = true, Mirrored = Of(…) }` — 읽기·시험 정의가 같은 함수), `TransposeProps`(T), `MirrorFacing`, `PieceMap`, `Suffix` `@m`. `grid` 전치는 줄 끝 `.` 를 줄인다. 거울판의 `Mirror` 는 거짓 | 실제 `cathedral_arena` 사본의 오류 목록에 `grate_h`·`door_closed` 가 따로 들어가야 한다(11.1 완료 기준). 짝 표가 없을 때 "표 없음" 한 줄만 내면 그 둘이 안 보인다 |
+| 6.11 `MapDef.IsMirror` | `JsonIgnore` 셋 | `IsMirror` 는 계산 속성(`MirrorOf != null`). `JsonIgnore` 멤버 이름(`mirror_of` 등)이 파일에 있으면 STJ 엄격 읽기가 오류 없이 무시한다(채워지지는 않음 — 시험) | STJ 동작. 데이터 쪽 오탈자를 막으려면 WP7 로더가 따로 본다 |
+| 6.11 `MapDataReader` | 거울판을 만들어 `Mirrored` 에 | 원판 줄 오류(짝 없음)는 그대로, 거울판 배치·방 검사 오류는 문구 앞에 `거울판 @m — `. 결과 목록에는 원판만(`def with { Mirrored }` 로 바꿔 넣음) | 오류 위치(파일·경로)는 원판 원소다 |
+| 6.11 짝·자리 짝 검사 | 문서 규칙 | 더함: 짝 원소가 이름 둘이 아니면 오류, 변 짝의 한쪽에만 문(또는 `end_a`·`end_b`)이 있으면 오류. 성질 표에 없는 번호는 건너뜀(다른 검사가 냄) | 거울판에서 그 문이 없는 변으로 간다 |
+| 6.11 입구-문 검사 | `ValidateRooms` | `ValidateRoomMap`(`room_kinds` 가 있는 맵)에서 — 13.5-23 ③ 의 줄이므로. 같은 거리면 `layout.gates` 순서 앞 문 | 문서 "13.5-23 ③" 그대로 |
+| 6.10 `RoomRulesDef` | 새 키 셋 | `RewardSpotDef`·`StairsRulesDef` 의 필드도 모두 `required`. `RoomGatesDef.SingleExit` 주석을 "계단만" 으로 | `rules.rooms` 는 기본값을 코드에 두지 않는다(6.10) |
+| 6.18 `RewardSkipDef` | `gold` 없앰 | `Heal` 만 남김. `ChestItem` 의 `Gold` 칸(record 인자)은 그대로 — 표에 없어서 | 계약 줄이기는 WP1g |
+| 1.4 `UpscaleTable` | 모양·`Applies` 둘 | 더함: `SupportedOutputScale` 2·`TilesetPrefix`, `UpscaleModelDef`(`Scale`·`Files`)·`UpscaleApplyDef`(`Maps`·`MonstersMinWidth` — null 이면 몬스터 없음), 표 검사(모델 배율 2·4 이고 `output_scale` 로 나뉨, 허용 해시 하나 이상·소문자 16진 64자·경로 규칙, `include`·`exclude` 는 `d1/…` 또는 `tileset:<id>`·중복 없음). `ImportTable.Upscale` 은 `required` | 표 오류를 가져오기 전에 잡는다(해시가 틀린 표로 실행 파일을 띄우지 않음) |
+| 1.4 manifest `upscale`·파일 `scale` | 모양 | `UpscaleStatus`(off·done·fallback) 열거형, `ManifestUpscale.ArtScale`(= done 이면 `output_scale`, 아니면 1 — 7.1 s), `ManifestFile.Scale` 은 JSON `scale`(`ScaleJson`, `int?` — 1 이면 안 씀) 뒤의 `int` | "1 이면 안 씀" 을 STJ 조건 무시(null)로 |
+| 7.1 시작 검사 | "scale ∈ {1, s}·s 를 나눔" | Core `AssetScale.IsSupported`(1·2)·`FitsArtScale(scale, s)` — 메타·`arena.json` 의 `Validate` 와 WP7 시작 검사가 같은 함수 | 규칙 한 곳 |
+| 11.2 `Hero` | 열린 칸·허리띠 | 공개 필드 `WeaponSlotsOpen`·`PassiveSlotsOpen`·`Belt`(같은 클래스의 다른 상태와 같은 꼴), `Reset()` 이 셋 다 0 | — |
+| 7.9 `CueKind.BeltPotion` | — | 열거형 끝에 더함(기존 값 번호 그대로) | 소리 연결 표가 이름으로 읽어도 순서를 지킴 |
+| 11.1 #20 TestKit | 합성 보상 넷 | `TestDefs.Rewards()` 는 넷(+ 성소 `test_reward_shrine`)이지만 `Basic`·`RoomActs` 의 가중표는 앞의 셋 — 기존 순열·문 열기 시험을 지킴, 성소는 정의 표·짐 `Shrines` 대조에만. `TestWorldBuilder.WithRoom` 의 보상 후보 순서 = 액트 가중표 순서(없으면 정의 표). `FakeHeroCarry` 에 `Extra`(Mods·Shrines·Effects 를 짐에 실어 나름 — 인스턴스에 판 상태를 두지 않음)·`ValidateReason`·`LastRestored`. `RoomActs.Defs(twoNormalMaps, mirror, floors)`·`MirrorTileset()`(`wall_v` ↔ `wall_h`, self `pillar`)·`MirrorWall(M)`(원판과 전치가 다른 가로 벽 한 줄 — 기둥 넷은 대각 대칭) | 거울판·층을 기본으로 켜면 v0.7 의 판 계획 시험이 모두 바뀐다 — 켜는 시험만 켬 |
+| 10.1 끊고 잇기 시험 | (가)(나)(다) | 시험 모듈의 월드 설치가 주인공 만들기(WP3)를 흉내 내 열린 칸 = `RunSlots.OpenAt(World.Room?.Plan.Act ?? 1)` 를 넣는다. 비교 = `RoomRecord` 원소별·`ElapsedTicks`·깊이·`RunStats`/`Fairness`/짐의 직렬화 바이트·액트 2 방마다 생존 첫 4초의 방 상태 열 | `FakeHeroCarry` 만으로는 판 시작의 칸 수를 정할 곳이 없다 |
+
+**옛 모양 점검**(11.1 WP1f — `rg` 가 이 PC 에 없어 같은 식을 `grep -rnE` 로 `src tests tools` 의 `.cs`·`.json`·`.csproj`·`.ps1` 에): 남은 줄은 모두 새 모양이다 —
+없앤 키를 설명하는 주석(`RewardDefs.cs`·`RulesDefs.cs`·`RoomFlow.cs`·`World.cs`), 옛 키가 오류인지 보는 시험 입력(`RoomDefsTests` 의 `level_up`·`full_heal`·`blessing_cards`·`skip_when_hp_at_least`·`remaining_marker`·`reward_anchor`·`chest_ring`, `ContractV08Tests` 의 `filler_gold`), `rules.level_up` 키(`DefsTests`·`ContractV08Tests`), 소리 연결 키 `ui.level_up`(`AppServices.cs`),
+`HeroCarry(` 에 걸린 `SetHeroCarry(`·`FakeHeroCarry(`·`WorksWithoutHeroCarry(`, `WeaponSlotCount` 가 없음을 보는 시험 한 줄. `SlotCount = 4` 는 없다.
+
+**남은 것**
+1. 13.5-23 ⑤ v0.8.1 검사기(바꾼 뒤 시작 문 = 들어온 문, 원판·거울판·들어올 수 있는 문마다)·`CheckPlacement` 등록 — WP4. 13.5-23 ④ 칸 수 상한(시작 칸 + `stairs` × (사슬 액트 수 − 1) ≤ 6)·`temper` 참조 — WP7 로더.
+2. `RunSnapshot.ShapeFingerprint` 는 WP3·WP4 가 `RunStats` 조각에 멤버를 더하는 순간 시험이 깨진다 — 그때 `CurrentFormat` 을 2 로 올리고 지문을 새 계산 값으로(11.2 저장 멤버 규칙).
+3. 실제 `l1.json` 짝 표·`cathedral_arena` 의 `mirror`·`Table/upscale.json`(허용 해시)·`rules/rooms.json`·`rewards.json` 은 소유 묶음(WP0·WP5·WP4·WP3)이 낸다 — 지금 실제 데이터에 거울판이 없다.
+
+**검증 반영**(WP1f 검증 지적 — 위 표의 해당 줄은 이미 고친 뒤의 모양)
+
+| 수준 | 지적 | 처리 |
+|---|---|---|
+| 중간 | 이어 하기 대조가 다음 액트 번호를 뿌리 사슬 번호(`RunPlanner.ActNumber`)와 견줘, 곁가지 액트끼리 이어진 판(H1 → H2 — WP10)은 늘 불일치로 저장을 잃음 | 시작 액트에서 셈(`RunSession.ActNumberAfter` — 시작 액트 번호 + `next_act` 걸음 수, 사슬에 없으면 불일치). 시험 `SuspendOnSideChain_ActNumberCountedFromStartAct_Resumes`(곁가지 두 액트 판을 끊고 이음·번호 다름·사슬 밖) |
+| 중간 | 기획서 v0.8.3 이 13.21 넘긴 것 2~6 을 아직 안 받아 19.6·2.5·15절이 설계와 다름, 머리말의 기준 판 | 기획서는 기획 담당 몫이라 고치지 않음. 11.1 WP0 에 "시작 전" 조건(받은 뒤 시작, 그 전엔 설계서 문장 우선)을 적고 머리말에 아직 안 받았음을 적음. 받으면 기준 판을 올림 |
+| 낮음 | 본문 일곱 곳이 `rules.hero.level_up.*`·`OpenAt(actNumber, HeroRulesDef hero, …)` | `rules.level_up.*` 로, 3.6 코드 블록과 "계단 보상" 의 `OpenAt` 을 위 표의 두 시그니처로 |
+| 낮음 | 좁은 통로에서 `Row` 가 늘 `clearance` 30 으로 당겨 덤 보상·정예 상자가 한 점에 겹침 | `Find(…, out threshold)`·`Row(…, threshold)`, `RoomFlow.BeginReward` 가 넘김. 시험 `NarrowCorridor_EliteRoom_RowUsesFindThreshold_NoOverlap_V082` |
+| 낮음 | 모양 지문이 열거형 값 이름을 안 봐 `StatKey` 값을 없애거나 바꿔도 지문 그대로 | 닿는 열거형의 값 JSON 이름을 지문에 넣음. 지문 `3d03c6b8` → `7c149bd4`, `CurrentFormat` 1 그대로(저장된 판이 아직 없음) |
+| 낮음 | `Suspend` ⓐ 의 한 틱 뒤 예외면 월드가 이미 한 틱 진행됨 | 코드는 그대로. 11.1 WP6 v0.8.2 에 메뉴가 예외를 받아 `저장 못 함` 한 줄로 판을 이어 가게 적음 |
+| 낮음 | 커밋 준비(`git log --grep WP1f` 참조·설계 v0.8/v0.8.1 본문·리뷰 문서 2개·기획서·brief 변경) | 문서 변경 없음 — 커밋 제목·본문에 `WP1f` 를 넣고, 함께 넣을 파일은 메인 세션·사용자가 정함 |
 
 ---
 

@@ -55,6 +55,8 @@ public enum CueKind : byte
     DoorsOpened,
     /// <summary>v0.7 WP3 Pickups — 문 보상 물체를 주움. Subject = RewardDef.</summary>
     RewardCollected,
+    /// <summary>v0.8 WP3 — 허리띠 물약을 저절로 마심(체력 &lt; 최대 × <c>rules.hero.belt.threshold</c>). Subject 없음, Pos = 주인공. 소리 <c>ui.belt_potion</c>(WP8)·HUD 허리띠 깜빡임(WP6).</summary>
+    BeltPotion,
 }
 
 /// <summary>

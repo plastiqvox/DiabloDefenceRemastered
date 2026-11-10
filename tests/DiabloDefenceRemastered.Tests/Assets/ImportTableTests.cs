@@ -4,7 +4,7 @@ namespace DiabloDefenceRemastered.Tests.Assets;
 
 public class ImportTableTests
 {
-    /// <summary>설계서 1.4 의 표 8개 예 그대로(주석 포함).</summary>
+    /// <summary>설계서 1.4 의 표 9개 예 그대로(주석 포함 — v0.8 upscale.json 은 해시만 시험 값).</summary>
     internal static Dictionary<string, string> DocTables() => new()
     {
         ["monsters.json"] = """
@@ -61,6 +61,19 @@ public class ImportTableTests
                   "overlay": { "cel": "l1s.cel",                       // 출처: DevilutionX 참고(아치 덧그림 번호표, 부록 A.5)
                                "frames": { "1": [11, 70, 320, 210, 340, 417], "2": [10, 248, 324, 343, 330, 420],
                                            "3": [252], "4": [254], "5": [258], "6": [266] } } } ] }
+            """,
+        // v0.8(WP1f) — 9번째 표. 해시는 시험용 값(실제 값은 WP0 이 공식 릴리스 파일로)
+        ["upscale.json"] = """
+            // Table/upscale.json (v0.8, 사용자 결정 U) — AI 확대의 모델·허용 해시·적용 범위
+            { "models": {
+                "realesrgan-x4plus": { "scale": 4,
+                  "files": { "realesrgan-ncnn-vulkan.exe": "0000000000000000000000000000000000000000000000000000000000000001",
+                             "vcomp140.dll": "0000000000000000000000000000000000000000000000000000000000000002",
+                             "models/realesrgan-x4plus.param": "0000000000000000000000000000000000000000000000000000000000000003",
+                             "models/realesrgan-x4plus.bin": "0000000000000000000000000000000000000000000000000000000000000004" } } },
+              "output_scale": 2,
+              "apply": { "maps": true, "monsters_min_width": 160 },
+              "include": [], "exclude": [] }
             """,
     };
 

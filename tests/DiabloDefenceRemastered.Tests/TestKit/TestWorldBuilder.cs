@@ -35,7 +35,7 @@ public sealed class TestWorldBuilder
 
     /// <summary>
     /// 방 월드(v0.7.1 #23-형 — <c>World(defs, RoomStart)</c>): 정의의 첫 액트로 합성 <c>RunState</c>·<c>ActPlan</c>(이 방 + 있으면 다음 방)을 만들고 단계·방 시계를 손으로 정한다.
-    /// 기본 방 = 첫 액트의 첫 방(일반 0:00~1:00), 들어온 문 <c>gate_se</c>, 출구 = <c>rules.rooms.gates.exits</c>(판의 마지막 방이면 없음), 보상 후보 순서 = 정의의 보상 표 순서.
+    /// 기본 방 = 첫 액트의 첫 방(일반 0:00~1:00), 들어온 문 <c>gate_se</c>, 출구 = <c>rules.rooms.gates.exits</c>(판의 마지막 방이면 없음), 보상 후보 순서 = 액트 가중표 순서(없으면 정의의 보상 표 순서).
     /// <paramref name="fakeSpawner"/> 면 <see cref="FakeSpawner"/>(WP3 없이 보상 물체 놓기)를 넣는다. 형 단계의 <c>RoomFlowSystem</c> 은 단계를 바꾸지 않았다 — 구현 뒤에는 돈다.
     /// </summary>
     public TestWorldBuilder WithRoom(RoomPhase phase = RoomPhase.Enter, int clockTicks = 0, RoomDef? room = null, RoomDef? next = null,
@@ -116,7 +116,8 @@ public sealed class TestWorldBuilder
         var rules = defs.Rules.Rooms ?? throw new InvalidOperationException("WithRoom 은 rules.rooms 가 있는 정의에만");
         var map = stage.RoomMaps.Boss?.Def ?? stage.RoomMaps.Normal[0].Def;
         var def = spec.Room ?? stage.Rooms[0];
-        var order = defs.Rewards.All;
+        // 보상 후보 순서 = 액트 가중표 순서(v0.8 — 합성 성소는 정의 표에만 있고 가중표에는 없다), 가중표가 없으면 정의의 보상 표 순서
+        IReadOnlyList<RewardDef> order = stage.Rewards.Weights.Count > 0 ? [.. stage.Rewards.Weights.Select(w => w.Ref.Def)] : defs.Rewards.All;
         var exits = spec.Exits ?? (spec.IsLastInRun ? [] : rules.Gates.Exits);
         var plans = new List<RoomPlan> { new(1, 0, def, map, spec.GateIn, exits, order, _seed) };
         if (spec.Next is { } next) plans.Add(new RoomPlan(1, 1, next, map, rules.Gates.Entry[0], [], order, _seed + 1));

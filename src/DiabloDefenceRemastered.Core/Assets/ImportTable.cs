@@ -6,7 +6,7 @@ using DiabloDefenceRemastered.Core.Data.Json;
 namespace DiabloDefenceRemastered.Core.Assets;
 
 /// <summary>
-/// 가져오기 표 <c>tools/DiabloAssetImporter/Table/*.json</c> 8개의 모양과 "만들 이름 목록" (설계서 1.4, 계약 WP1b, 표 파일은 WP0 소유).
+/// 가져오기 표 <c>tools/DiabloAssetImporter/Table/*.json</c> 9개(v0.8: + <c>upscale.json</c>)의 모양과 "만들 이름 목록" (설계서 1.4, 계약 WP1b, 표 파일은 WP0 소유).
 /// Core 가 표 전체를 <b>엄격하게</b>(모르는 속성 오류, <see cref="DefJson"/>) 읽고 도구는 이 record 를 그대로 쓴다(도구가 따로 파싱하지 않는다).
 /// 13.5-10 ① 시험은 같은 record 로 이름 목록을 만든다. 표에는 원작 바이트·프레임 수·높이가 없다(도구가 파일에서 읽는다).
 /// <list type="bullet">
@@ -20,9 +20,9 @@ namespace DiabloDefenceRemastered.Core.Assets;
 /// </summary>
 public sealed record ImportTable
 {
-    /// <summary>표 파일 8개(이름 순은 <see cref="ComputeHash(string)"/> 가 정한다).</summary>
+    /// <summary>표 파일 9개(v0.8: + <c>upscale.json</c> — 이름 순은 <see cref="ComputeHash(string)"/> 가 정한다).</summary>
     public static readonly IReadOnlyList<string> FileNames =
-        ["monsters.json", "hero.json", "missiles.json", "icons.json", "sounds.json", "music.json", "exe.json", "tilesets.json"];
+        ["monsters.json", "hero.json", "missiles.json", "icons.json", "sounds.json", "music.json", "exe.json", "tilesets.json", "upscale.json"];
 
     public required MonstersTable Monsters { get; init; }
     public required HeroTable Hero { get; init; }
@@ -32,10 +32,12 @@ public sealed record ImportTable
     public required MusicTable Music { get; init; }
     public required ExeTable Exe { get; init; }
     public required TilesetsTable Tilesets { get; init; }
+    /// <summary>AI 확대 표(v0.8, 사용자 결정 U — 1.4 "AI 확대"). <c>--upscale</c> 을 주지 않으면 읽기만 하고 쓰지 않는다.</summary>
+    public required UpscaleTable Upscale { get; init; }
 
     // ── 읽기 ──────────────────────────────────────────────────────────
 
-    /// <summary>폴더의 표 8개를 읽고 검사한다. 오류의 <c>File</c> 은 표 파일 이름.</summary>
+    /// <summary>폴더의 표 9개를 읽고 검사한다. 오류의 <c>File</c> 은 표 파일 이름.</summary>
     public static ImportTableResult Load(string tableDir)
     {
         var files = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -71,20 +73,22 @@ public sealed record ImportTable
         var music = Parse<MusicTable>("music.json");
         var exe = Parse<ExeTable>("exe.json");
         var tilesets = Parse<TilesetsTable>("tilesets.json");
-        if (monsters is null || hero is null || missiles is null || icons is null || sounds is null || music is null || exe is null || tilesets is null)
+        var upscale = Parse<UpscaleTable>("upscale.json");
+        if (monsters is null || hero is null || missiles is null || icons is null || sounds is null || music is null || exe is null || tilesets is null
+            || upscale is null)
             return new ImportTableResult(null, errors);
 
         var table = new ImportTable
         {
             Monsters = monsters, Hero = hero, Missiles = missiles, Icons = icons,
-            Sounds = sounds, Music = music, Exe = exe, Tilesets = tilesets,
+            Sounds = sounds, Music = music, Exe = exe, Tilesets = tilesets, Upscale = upscale,
         };
         errors.AddRange(table.Validate());
         return new ImportTableResult(table, errors);
     }
 
     /// <summary>
-    /// 표 해시: <see cref="FileNames"/> 8개를 파일 이름 서수 순으로 이은 바이트의 SHA-256(소문자 16진). 도구는 <c>Table/</c>, 게임은 출력 <c>ImportTable\</c> 에 같은 함수를 쓴다.
+    /// 표 해시: <see cref="FileNames"/> 9개(v0.8)를 파일 이름 서수 순으로 이은 바이트의 SHA-256(소문자 16진). 도구는 <c>Table/</c>, 게임은 출력 <c>ImportTable\</c> 에 같은 함수를 쓴다.
     /// 폴더의 다른 <c>*.json</c> 은 보지 않는다 — 게임 출력은 PreserveNewest 복사라 지우거나 이름을 바꾼 옛 파일이 남는다. 없는 파일은 빈 바이트.
     /// </summary>
     public static string ComputeHash(string tableDir)
@@ -212,6 +216,8 @@ public sealed record ImportTable
                     if (list.Count == 0) v.Add(tf, $"{p}.overlay.frames.{key}", "번호 목록이 비었다");
             }
         }
+
+        Upscale.Validate(v.Errors);
 
         // 출력 이름이 겹치면 두 항목이 같은 파일을 덮는다
         var owners = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -488,7 +494,7 @@ public sealed record ImportTableResult(ImportTable? Table, IReadOnlyList<DataErr
     public bool HasErrors => Errors.Count > 0;
 }
 
-// ── 표 파일 8개 ───────────────────────────────────────────────────────
+// ── 표 파일 9개(v0.8 — upscale.json 은 아래) ───────────────────────────────────────────────────────
 
 /// <summary><c>monsters.json</c> — 표 머리 값은 항목 기본값, 항목·동작이 덮어쓴다.</summary>
 public sealed record MonstersTable
@@ -742,4 +748,115 @@ public sealed record ImportOverlayDef
 {
     public required string Cel { get; init; }
     public IReadOnlyDictionary<int, IReadOnlyList<int>> Frames { get; init; } = new Dictionary<int, IReadOnlyList<int>>();
+}
+
+// ── AI 확대 표(v0.8, 사용자 결정 U — 1.4 "AI 확대") ────────────────────────
+
+/// <summary>
+/// <c>upscale.json</c> (v0.8 → v0.8.1, 설계서 1.4 "AI 확대" — 계약 WP1f, 표 파일·도구 본문 WP0). 모델·허용 해시·적용 범위.
+/// <c>--upscale</c> 을 주지 않으면 읽기만 하고 쓰지 않는다. 표 해시(9개)에 들어가므로 고치면 게임이 다시 가져오기를 알린다.
+/// </summary>
+public sealed record UpscaleTable
+{
+    /// <summary>첫 판이 받는 <see cref="OutputScale"/>(v0.8.1 — 다른 값은 표 오류. 4 로 가려면 WP1g 계약 변경, 7.1 s).</summary>
+    public const int SupportedOutputScale = 2;
+    /// <summary>맵 그림 <c>include</c>·<c>exclude</c> 의 앞머리(<c>tileset:l1</c>).</summary>
+    public const string TilesetPrefix = "tileset:";
+
+    /// <summary>모델 이름(<c>--upscale</c> 값) → 배율·허용 해시.</summary>
+    public required IReadOnlyDictionary<string, UpscaleModelDef> Models { get; init; }
+    /// <summary>모델 결과를 이 배율로 줄여 씀(첫 판 2 만).</summary>
+    public required int OutputScale { get; init; }
+    /// <summary>적용 범위 첫 값(맵 그림·칸 폭 문턱).</summary>
+    public required UpscaleApplyDef Apply { get; init; }
+    /// <summary>더함: 몬스터 표 항목 <c>out</c> 또는 <c>tileset:&lt;id&gt;</c>.</summary>
+    public IReadOnlyList<string> Include { get; init; } = [];
+    /// <summary>뺌(<see cref="Include"/> 를 이김): 몬스터 표 항목 <c>out</c> 또는 <c>tileset:&lt;id&gt;</c>.</summary>
+    public IReadOnlyList<string> Exclude { get; init; } = [];
+
+    /// <summary>
+    /// 몬스터 표 항목에 확대를 쓰는가(v0.8.1): (<c>include</c> 에 <c>out</c> 이 있거나 칸 폭 ≥ <c>monsters_min_width</c>) 이고 <c>exclude</c> 에 없음.
+    /// <b>칸 폭 = 그 항목 동작들의 가장 넓은 칸 폭</b>(동작 <c>width</c> → 항목 <c>width</c>) — 한 그림 묶음 안에서 배율이 섞이지 않게 항목 단위로 정한다.
+    /// 주인공·마법·아이콘 표에는 부르지 않는다(범위 밖 — 기획 19.6).
+    /// </summary>
+    public bool Applies(ImportUnitEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        if (Contains(Exclude, entry.Out)) return false;
+        if (Contains(Include, entry.Out)) return true;
+        var width = entry.Width;
+        foreach (var a in entry.Actions.Values)
+            if (a.Width is { } w && w > width) width = w;
+        return Apply.MonstersMinWidth is { } min && width >= min;
+    }
+
+    /// <summary>
+    /// 그 타일셋을 쓰는 맵 그림에 확대를 쓰는가(v0.8.1): (<c>apply.maps</c> 이거나 <c>include</c> 에 <c>tileset:&lt;id&gt;</c>) 이고 <c>exclude</c> 에 없음.
+    /// 맵 그림은 표 항목이 아니라 배치에서 나오므로 타일셋 ID 로 판정한다 — 거울판 <c>&lt;art&gt;@m</c> 도 같은 타일셋.
+    /// </summary>
+    public bool Applies(string tilesetId)
+    {
+        ArgumentNullException.ThrowIfNull(tilesetId);
+        var key = TilesetPrefix + tilesetId;
+        if (Contains(Exclude, key)) return false;
+        return Apply.Maps || Contains(Include, key);
+    }
+
+    internal void Validate(List<DataError> errors)
+    {
+        const string f = "upscale.json";
+        if (Models.Count == 0) errors.Add(new DataError(f, "$.models", "모델이 하나도 없다"));
+        foreach (var (name, m) in Models.OrderBy(p => p.Key, StringComparer.Ordinal))
+        {
+            var p = $"$.models.{name}";
+            if (string.IsNullOrWhiteSpace(name)) errors.Add(new DataError(f, p, "모델 이름이 비었다"));
+            if (m.Scale is not (2 or 4)) errors.Add(new DataError(f, $"{p}.scale", $"모델 배율 {m.Scale} 는 2 또는 4"));
+            else if (m.Scale % OutputScale != 0) errors.Add(new DataError(f, $"{p}.scale", $"모델 배율 {m.Scale} 를 output_scale {OutputScale} 로 나눌 수 없다"));
+            if (m.Files.Count == 0) errors.Add(new DataError(f, $"{p}.files", "허용 해시가 하나도 없다 — 확인하지 않은 실행 파일을 띄우지 않는다"));
+            foreach (var (file, sha) in m.Files.OrderBy(x => x.Key, StringComparer.Ordinal))
+            {
+                if (!AssetFormat.IsValidRelativePath(file)) errors.Add(new DataError(f, $"{p}.files", $"'{file}' 는 --upscale-bin 기준 '/' 상대 경로다"));
+                if (sha.Length != 64 || !sha.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f'))
+                    errors.Add(new DataError(f, $"{p}.files.{file}", $"SHA-256 '{sha}' 는 소문자 16진 64자다"));
+            }
+        }
+        if (OutputScale != SupportedOutputScale)
+            errors.Add(new DataError(f, "$.output_scale", $"output_scale {OutputScale} — 첫 판은 {SupportedOutputScale} 만 받는다(4배는 계약 변경 WP1g, 설계서 7.1)"));
+        if (Apply.MonstersMinWidth is <= 0) errors.Add(new DataError(f, "$.apply.monsters_min_width", $"칸 폭 문턱 {Apply.MonstersMinWidth} 는 1 이상"));
+        CheckKeys(Include, "$.include");
+        CheckKeys(Exclude, "$.exclude");
+
+        void CheckKeys(IReadOnlyList<string> keys, string path)
+        {
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            for (var i = 0; i < keys.Count; i++)
+            {
+                var k = keys[i];
+                var ok = k.StartsWith(TilesetPrefix, StringComparison.Ordinal) ? k.Length > TilesetPrefix.Length : k.StartsWith("d1/", StringComparison.Ordinal);
+                if (!ok) errors.Add(new DataError(f, $"{path}[{i}]", $"'{k}' 는 몬스터 표 항목 out(d1/…) 또는 {TilesetPrefix}<id>"));
+                if (!seen.Add(k)) errors.Add(new DataError(f, $"{path}[{i}]", $"'{k}' 가 두 번 있다"));
+            }
+        }
+    }
+
+    private static bool Contains(IReadOnlyList<string> list, string key)
+    {
+        foreach (var s in list)
+            if (string.Equals(s, key, StringComparison.Ordinal)) return true;
+        return false;
+    }
+}
+
+/// <summary>확대 모델 하나: 배율(실행 파일 <c>-s</c>)과 <c>--upscale-bin</c> 기준 상대 경로 → 허용 SHA-256(실행 파일·DLL·모델 두 파일).</summary>
+public sealed record UpscaleModelDef
+{
+    public required int Scale { get; init; }
+    public required IReadOnlyDictionary<string, string> Files { get; init; }
+}
+
+/// <summary>적용 범위 첫 값(<c>apply</c>): 맵 그림(바닥 조각·벽 기둥·아치 덧그림 — 미니맵 빼고), 칸 폭 문턱 이상 몬스터(null 이면 몬스터 없음).</summary>
+public sealed record UpscaleApplyDef
+{
+    public bool Maps { get; init; }
+    public int? MonstersMinWidth { get; init; }
 }

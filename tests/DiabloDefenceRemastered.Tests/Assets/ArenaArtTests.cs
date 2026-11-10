@@ -45,7 +45,7 @@ public class ArenaArtTests
         var floor = string.Join(", ", ArenaArt.FloorChunks(grid).Select(c =>
             $$"""{ "file": "{{ArenaArt.FloorChunkFile(c)}}", "pos": [{{c.X * 512}}, {{c.Y * 512}}] }"""));
         return $$"""
-            { "format": 1, "map": "test_map", "layout_hash": "{{hash ?? grid.LayoutHash}}", "box": [1280, 768],
+            { "format": 2, "map": "test_map", "layout_hash": "{{hash ?? grid.LayoutHash}}", "box": [1280, 768],
               "floor": [ {{floor}} ], "columns": "columns", "cells": [ {{cells}} ] }
             """;
     }

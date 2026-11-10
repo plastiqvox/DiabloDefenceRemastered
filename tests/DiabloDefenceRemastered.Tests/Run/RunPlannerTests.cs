@@ -67,7 +67,7 @@ public class RunPlannerTests
             Assert.Equal(a.RewardOrder.Select(r => r.Id), b.RewardOrder.Select(r => r.Id));
             Assert.Equal(a.RoomSeed, b.RoomSeed);
         }
-        // 출구 수는 다음 방 종류에 따라 다르므로(데이터) 다음 방이 같은 번호 2 에서만 견준다
+        // 출구 수는 액트의 마지막 방(계단)인지에 따라 다르므로(v0.8 — 다음 방 종류와는 무관) 두 계획 모두 마지막이 아닌 번호 2 에서만 견준다
         Assert.Equal(full.Rooms[1].ExitGates, part.Rooms[0].ExitGates);
     }
 
@@ -94,7 +94,7 @@ public class RunPlannerTests
     }
 
     [Fact]
-    public void BossRoom_UsesBossMapAndEntry_ExitsFollowNextRoom()
+    public void BossRoom_UsesBossMapAndEntry_OnlyStairsHasOneExit()
     {
         for (ulong s = 0; s < 50; s++)
         {
@@ -104,8 +104,9 @@ public class RunPlannerTests
             Assert.Equal(RoomActs.BossRoom, boss.Map.Id);
             Assert.Equal("gate_sw", boss.GateIn);
             Assert.Equal(["gate_ne"], boss.ExitGates);              // 액트 보스 방 = 계단 하나
-            Assert.Equal(["gate_ne"], rooms[2].ExitGates);          // 다음이 정예 방
-            Assert.Equal(["gate_ne"], rooms[4].ExitGates);          // 다음이 보스 방
+            Assert.Contains(rooms[2].ExitGates.Count, new[] { 2, 3 }); // 다음이 정예 방이어도 둘·셋(v0.8 — v0.7 은 하나)
+            Assert.Contains(rooms[4].ExitGates.Count, new[] { 2, 3 }); // 다음이 보스 방이어도
+            Assert.Equal(["gate_nw", "gate_ne"], rooms[4].ExitGates.Take(2));
             Assert.Contains(rooms[0].ExitGates.Count, new[] { 2, 3 });
             Assert.Contains(rooms[0].GateIn, new[] { "gate_sw", "gate_se" });
 
@@ -178,10 +179,28 @@ public class RunPlannerTests
         [
             "1:test_room_a:gate_sw:gate_nw,gate_ne,gate_se:test_reward_tome,test_reward_chest,test_reward_potion",
             "2:test_room_b:gate_sw:gate_nw,gate_ne,gate_se:test_reward_potion,test_reward_tome,test_reward_chest",
-            "3:test_room_a:gate_sw:gate_ne:test_reward_tome,test_reward_chest,test_reward_potion",
+            "3:test_room_a:gate_sw:gate_nw,gate_ne:test_reward_tome,test_reward_chest,test_reward_potion",       // v0.8: 다음이 정예여도 출구 둘
             "4:test_room_b:gate_se:gate_nw,gate_ne:test_reward_chest,test_reward_tome,test_reward_potion",
-            "5:test_room_a:gate_sw:gate_ne:test_reward_potion,test_reward_tome,test_reward_chest",
+            "5:test_room_a:gate_sw:gate_nw,gate_ne,gate_se:test_reward_potion,test_reward_tome,test_reward_chest",   // v0.8: 다음이 보스여도 둘·셋
             "6:test_boss_room:gate_sw:gate_ne:test_reward_potion,test_reward_chest,test_reward_tome",
+        ], keys);
+    }
+
+    [Fact]
+    public void FixedPlan_Golden_Mirror()
+    {
+        // 고정 값(v0.8) — (맵, 방향) 후보 순서(풀 → 원판 → 거울판)·짝 이름 바꾸기를 바꾸면 깨진다(계약, 11.3)
+        var defs = RoomActs.Defs(mirror: true);
+        var keys = RunPlanner.PlanAct(defs.Stages.Get(RoomActs.Act1Id), 1, 2024, defs.Rules.Rooms!).Rooms
+            .Select(r => $"{r.Number}:{r.Map.Id}:{r.GateIn}:{string.Join(",", r.ExitGates)}");
+        Assert.Equal(
+        [
+            "1:test_room_a:gate_sw:gate_nw,gate_ne,gate_se",
+            "2:test_room_a@m:gate_se:gate_ne,gate_nw,gate_sw",      // 거울판: 들어온 문·출구가 짝 이름(같은 씨앗 거울판 없는 계획의 방 2 = gate_sw · nw,ne,se)
+            "3:test_room_b:gate_sw:gate_nw,gate_ne",
+            "4:test_room_a:gate_se:gate_nw,gate_ne",
+            "5:test_room_a@m:gate_se:gate_ne,gate_nw,gate_sw",
+            "6:test_boss_room:gate_sw:gate_ne",
         ], keys);
     }
 
@@ -230,5 +249,97 @@ public class RunPlannerTests
         Assert.Equal([1, 2, 3, 4, 6, 8], plan.Rooms.Select(r => r.Number));
         Assert.Equal(RunSeeds.Room(77, 1, 6), plan.Rooms[4].RoomSeed);
         Assert.Empty(plan.Rooms[^1].ExitGates);                     // 8번 정리 = 판의 끝
+    }
+
+    // ── v0.8(WP1f #7) 거울판·출구 ───────────────────────────────────────
+
+    [Fact]
+    public void Mirror_OneMapPool_AlternatesOriginalAndMirror()
+    {
+        // 풀 1장 + 거울판: (맵, 방향) 후보 둘 → 바로 앞 쌍을 빼므로 원판·거울판이 번갈아(보스 방은 보스 맵 원판·거울판)
+        var one = RoomActs.Defs(twoNormalMaps: false, mirror: true);
+        for (ulong s = 0; s < 200; s++)
+        {
+            var rooms = RunPlanner.PlanAct(one.Stages.Get(RoomActs.Act1Id), 1, s, one.Rules.Rooms!).Rooms;
+            for (var i = 1; i < 5; i++)
+            {
+                Assert.Equal(RoomActs.RoomA, rooms[i].MapId);
+                Assert.NotEqual(rooms[i - 1].Mirrored, rooms[i].Mirrored);
+            }
+            Assert.Equal(RoomActs.BossRoom, rooms[5].MapId);
+        }
+    }
+
+    [Fact]
+    public void Mirror_TwoMapPool_NeverSamePairTwiceInARow_AllPairsAppear()
+    {
+        var defs = RoomActs.Defs(mirror: true);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (ulong s = 0; s < 1000; s++)
+        {
+            var rooms = RunPlanner.PlanAct(defs.Stages.Get(RoomActs.Act1Id), 1, s, defs.Rules.Rooms!).Rooms;
+            for (var i = 1; i < rooms.Count; i++) Assert.NotEqual(rooms[i - 1].Map.Id, rooms[i].Map.Id);   // 같은 맵·같은 방향 0
+            foreach (var r in rooms) seen.Add(r.Map.Id);
+        }
+        Assert.Equal(["test_boss_room", "test_boss_room@m", "test_room_a", "test_room_a@m", "test_room_b", "test_room_b@m"], seen.Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void Mirror_GatesArePairNames_DrawsSameAsOriginalPlan()
+    {
+        // ②~④ 는 Flow(n) 만의 함수 → 같은 씨앗의 거울판 없는 계획과 문은 짝 이름만 다르고 보상 순서·방 씨앗은 같다
+        var mirror = RoomActs.Defs(mirror: true);
+        var plain = RoomActs.Defs();
+        var mirrored = 0;
+        for (ulong s = 0; s < 100; s++)
+        {
+            var a = RunPlanner.PlanAct(mirror.Stages.Get(RoomActs.Act1Id), 1, s, mirror.Rules.Rooms!).Rooms;
+            var b = RunPlanner.PlanAct(plain.Stages.Get(RoomActs.Act1Id), 1, s, plain.Rules.Rooms!).Rooms;
+            for (var i = 0; i < a.Count; i++)
+            {
+                Assert.Equal(b[i].RewardOrder.Select(r => r.Id), a[i].RewardOrder.Select(r => r.Id));
+                Assert.Equal(b[i].RoomSeed, a[i].RoomSeed);
+                Assert.Equal(a[i].Mirrored, a[i].Map.IsMirror);
+                Func<string, string> name = a[i].Mirrored ? GateZones.MirrorGate : g => g;
+                Assert.Equal(name(b[i].GateIn), a[i].GateIn);
+                Assert.Equal(b[i].ExitGates.Select(name), a[i].ExitGates);
+                if (!a[i].Mirrored) continue;
+                mirrored++;
+                Assert.Contains(a[i].GateIn, new[] { "gate_sw", "gate_se" });   // 들어오는 문 {sw, se} 는 짝 바꾸기에 닫혀 있다
+                if (a[i].Kind == RoomKind.Boss) Assert.Equal("gate_se", a[i].GateIn);
+                if (a[i].ExitGates.Count >= 2) Assert.Equal(["gate_ne", "gate_nw"], a[i].ExitGates.Take(2));
+            }
+        }
+        Assert.True(mirrored > 100);
+    }
+
+    [Fact]
+    public void Exits_EliteAndBossFrontRoomsTwoOrThree_SingleIsOnlyStairs()
+    {
+        var two = 0;
+        var three = 0;
+        for (ulong s = 0; s < 2000; s++)
+        {
+            var rooms = Plan(s).Rooms;
+            foreach (var i in new[] { 2, 4 })                          // 다음이 정예 4·보스 6
+            {
+                if (rooms[i].ExitGates.Count == 3) three++;
+                else { Assert.Equal(2, rooms[i].ExitGates.Count); two++; }
+            }
+            foreach (var r in rooms)
+                if (r.ExitGates.Count == 1) Assert.Equal(5, r.Index);   // 계단(액트의 마지막 방)
+            Assert.Empty(RunPlanner.PlanAct(Act2, 2, s, Rules).Rooms[^1].ExitGates);
+        }
+        Assert.InRange(three / (double)(two + three), 0.37, 0.43);
+    }
+
+    [Fact]
+    public void MirrorTrueWithoutMirroredDef_Throws()
+    {
+        var defs = RoomActs.Defs();
+        var act = defs.Stages.Get(RoomActs.Act1Id);
+        var map = defs.Maps.Get(RoomActs.RoomA) with { Mirror = true };   // 읽기를 거치지 않은 정의
+        var bad = act with { RoomMaps = act.RoomMaps with { Normal = [DefRef<MapDef>.To(map)] } };
+        Assert.Throws<ArgumentException>(() => RunPlanner.PlanAct(bad, 1, 1, Rules));
     }
 }

@@ -88,25 +88,28 @@ public class RoomFlowTests
         Assert.False(room.Collapsed);
         Assert.Equal(1, t.World.Events.Current.RoomCleared.Count);
         Assert.Equal(new RoomCleared(RoomKind.Normal, false), t.World.Events.Current.RoomCleared[0]);
-        // 보상 물체 하나가 center 에, 문을 막음
+        // 보상 물체 하나가 보상 자리(v0.8 — 주인공 앞 100px, 3.6 "보상 자리")에, 문을 막음
         var obj = Assert.Single(t.World.Pickups.Items.ToArray(), p => !p.Removed);
         Assert.Equal(TestDefs.RewardTomeId, obj.Reward!.Id);
         Assert.True(obj.GatesExit);
-        Assert.Equal(t.World.Resolved!.Anchor("center"), obj.Pos);
+        var spot = t.Hero.Pos + Vector2.Normalize(t.Hero.Facing) * 100f;
+        Assert.Equal(spot.X, room.RewardSpot.X, 3);
+        Assert.Equal(spot.Y, room.RewardSpot.Y, 3);
+        Assert.Equal(room.RewardSpot, obj.Pos);
     }
 
     [Fact]
-    public void Cleanup_45s_CollapsesAndSetsCollapsed()
+    public void Cleanup_25s_CollapsesAndSetsCollapsed()
     {
         var t = Room(RoomPhase.Cleanup, clock: 3600);
         var room = t.World.Room!;
         var e = t.AddEnemy(new Vector2(300, 300));
-        t.Step(45 * 60 - 1);
+        t.Step(25 * 60 - 1);                                       // v0.8: cleanup_limit 25(v0.7 은 45)
         Assert.Equal(RoomPhase.Cleanup, room.Phase);
         t.Step();
         Assert.Equal(RoomPhase.Reward, room.Phase);
         Assert.True(room.Collapsed);
-        Assert.Equal(45 * 60, room.CleanupTicks);
+        Assert.Equal(25 * 60, room.CleanupTicks);
         Assert.True(e.Dead);
         Assert.Equal(KillCause.Collapse, e.KillCause);
         Assert.True(t.World.Events.Current.RoomCleared[0].Collapsed);
@@ -210,14 +213,17 @@ public class RoomFlowTests
         var mb = TestDefs.Enemy(set, "mb");
         var elite = Room(RoomPhase.Reward, next: TestDefs.Room(RoomKind.Elite, 60f, 120f, 2, miniboss: mb));
         elite.Step();
+        Assert.Equal(2, elite.World.Room!.Exits.Count);           // v0.8: 정예·보스 앞도 출구 둘(계획이 정함)
         var e = elite.World.Room!.Exits[0];
         Assert.Equal(RoomKind.Elite, e.NextKind);
-        Assert.Null(e.Reward);
+        Assert.Equal(TestDefs.RewardTomeId, e.Reward!.Id);         // v0.8: 덤 보상(v0.7 은 null)
         Assert.Equal("mb", e.NextBoss!.Id);
 
         var stairs = new TestWorldBuilder().WithRoom(RoomPhase.Reward, exits: ["gate_ne"]).Build();
         stairs.Step();
-        Assert.True(Assert.Single(stairs.World.Room!.Exits).Stairs);
+        var st = Assert.Single(stairs.World.Room!.Exits);
+        Assert.True(st.Stairs);
+        Assert.Null(st.Reward);                                    // 계단은 보상 없음
     }
 
     [Fact]
@@ -443,7 +449,8 @@ public class RoomFlowTests
         Assert.Equal(new RoomCleared(RoomKind.Boss, false), t.World.Events.Current.RoomCleared[0]);
         var chest = t.World.Pickups[0];
         Assert.True(chest.GatesExit);
-        Assert.InRange(Vector2.Distance(chest.Pos, t.World.Resolved!.Anchor("center")), 0f, 48.5f);
+        Assert.Equal(room.RewardSpot, chest.Pos);                  // v0.8: 보상 자리 줄(상자 하나면 가운데), center 둘레 아님
+        Assert.Equal(600 + 60 + 1, room.BossClockTicks);           // v0.8: 보스를 잡은 방 시계(boss_s)
         t.Step(30);
         Assert.Equal(RoomPhase.Reward, room.Phase);                // 열기 전에는 Doors 아님
         t.World.Pickups.Remove(chest.Id);

@@ -35,6 +35,8 @@ internal sealed class FakeProgression(World world) : IProgression
     public void RerollReward() { }
     public void SkipReward() => ChooseReward(-1);
     public bool RewardAvailable(RewardDef reward) => !Unavailable.Contains(reward.Id);
+    /// <summary>v0.8 — 시험이 정함(ROOM picks_left).</summary>
+    public int PicksLeft { get; set; }
 }
 
 public class StageStepperTests

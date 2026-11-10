@@ -321,11 +321,11 @@ public class RunSessionTests
     }
 
     [Fact]
-    public void EliteRoomReward_IsNull_BossRoomNotLast_HasStairsExit()
+    public void EliteRoomStart_BonusIsPreviousOrderFirst_ThenChosenDoorReward()
     {
         var defs = RoomActs.Defs();
         var s = Session(defs, startIndex: 3);                       // 정예 4
-        Assert.Null(s.World.Room!.Reward);
+        Assert.Same(s.Run.Act.Rooms[2].RewardOrder[0], s.World.Room!.Reward);   // v0.8: --room 시작 정예 방도 앞 방 RewardOrder[0](덤 — v0.7 은 null)
         Assert.Equal(RoomKind.Elite, s.World.Room.Plan.Kind);
         PlayToExit(s);
         Assert.Equal(RoomPhase.Exit, s.World.Room!.Phase);

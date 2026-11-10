@@ -84,7 +84,9 @@ public sealed partial class World
             {
                 var start = r.Entry(room.Plan.GateIn).Inside;
                 Hero.Pos = Hero.PrevPos = start;
-                var toCenter = r.Anchor(defs.Rules.Rooms!.RewardAnchor) - start;
+                Room!.RewardSpot = start;   // 보상 단계 전의 값(3.6) — RoomFlow 가 보상 단계에 들어갈 때 정한다
+                // 시작 방향 = 기준점 center 쪽(v0.8.1 — v0.7 의 rules.rooms.reward_anchor 를 없앰. center 는 13.5-23 ③ 이 늘 요구)
+                var toCenter = r.Anchor(RoomMapRules.CenterAnchor) - start;
                 Hero.Facing = toCenter.LengthSquared() > 1e-6f
                     ? FacingMath.FromColumn(FacingMath.ToColumn(Vector2.Normalize(toCenter), 8), 8)
                     : FacingMath.ToVector(r.HeroFacing);
@@ -151,6 +153,12 @@ public sealed partial class World
     /// <see cref="StageMinutes"/> 는 그 방 안의 경과 시간일 뿐이다.
     /// </summary>
     public float DifficultyMinutes => Room?.T ?? StageMinutes;
+
+    /// <summary>
+    /// 주인공 시간 효과(버프·마력 폭주 — WP3)가 이번 틱에 흐르는가(v0.8, 3.6 결정 1 "시간 효과 시계") = <c>Room is null || Room.TimedEffectsRun</c>.
+    /// WP3 가 시간 효과의 남은 틱을 줄이는 자리에서 읽는다 — 보상·문 단계와 다음 방의 들어옴 동안 멈춘다.
+    /// </summary>
+    public bool TimedEffectsRun => Room is null || Room.TimedEffectsRun;
 
     /// <summary>이 월드를 돌리는 시뮬레이션(<see cref="SimulationBuilder.Build"/> 가 넣는다). <see cref="StageStepper"/> 가 쓴다.</summary>
     public Simulation? Simulation { get; internal set; }

@@ -136,7 +136,7 @@ public class BundleTests
     // ── manifest(형식 판 2) ───────────────────────────────────────
 
     private const string ManifestJson = """
-        { "format": 2, "tool": "abc", "runtime": "9.0.10",
+        { "format": 3, "tool": "abc", "runtime": "9.0.10",
           "sources": [ { "name": "diabdat.mpq", "size": 517000000, "sha256": "00" },
                        { "name": "hellfire.mpq", "size": 1000, "sha256": "01", "bundle": "hellfire" } ],
           "skipped_bundles": [ { "bundle": "hfmonk", "mpq": "hfmonk.mpq", "reason": "없음" },

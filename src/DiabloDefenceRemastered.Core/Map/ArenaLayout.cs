@@ -270,6 +270,82 @@ public static class ArenaLayout
                 if (!named.Contains(tiles[k]))
                     errors.Add(new($"$.marks.{MarkName(mark)}[{k}]", $"메가타일 {tiles[k]} 은 이 타일셋이 이름 붙인 번호(floor·borders·gates·pieces)가 아니다"));
         }
+
+        if (tileset.Mirror is { } mirror) ValidateMirror(tileset, mirror, errors);
+    }
+
+    /// <summary>
+    /// 거울판 짝 표 검사(v0.8 → v0.8.1, 13.5-12 — 6.11 "거울판"). 비교는 <b>최종 성질</b>(<c>props</c>)만 본다 — 원본 SOL·보정 목록과 무관.
+    /// <list type="bullet">
+    /// <item>짝: 이름이 <c>pieces</c> 에 있음, 한 이름은 한 번만, 짝은 이름 둘, (a, b) 마다 <c>props[b]</c> = T(<c>props[a]</c>), self 는 <c>props[a]</c> = T(<c>props[a]</c>).</item>
+    /// <item>자리 짝(v0.8.1): 테두리마다 <c>edge_nw</c> ↔ <c>edge_ne</c>·<c>edge_sw</c> ↔ <c>edge_se</c>·<c>corner_w</c> ↔ <c>corner_e</c> 는 전치, <c>corner_n</c>·<c>corner_s</c> 는 자기 전치.
+    /// 문은 변 짝 nw ↔ ne·sw ↔ se 의 <c>open</c>·<c>end_a</c>·<c>end_b</c> 끼리 같은 비교(한쪽만 있으면 오류).</item>
+    /// </list>
+    /// </summary>
+    private static void ValidateMirror(TilesetDef ts, TilesetMirrorDef mirror, ICollection<LayoutError> errors)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        bool Known(string name, string path)
+        {
+            if (!seen.Add(name)) errors.Add(new(path, $"짝 표에 조각 {name} 이 두 번 있다"));
+            if (ts.Pieces.ContainsKey(name)) return true;
+            errors.Add(new(path, $"짝 표의 조각 {name} 이 pieces 에 없다"));
+            return false;
+        }
+
+        for (var i = 0; i < mirror.Pairs.Count; i++)
+        {
+            var pair = mirror.Pairs[i];
+            var path = $"$.mirror.pairs[{i}]";
+            if (pair.Count != 2) { errors.Add(new(path, $"짝은 조각 이름 둘이다({pair.Count}개)")); continue; }
+            var okA = Known(pair[0], path);
+            var okB = Known(pair[1], path);
+            if (okA && okB) CompareTransposed(ts, ts.Pieces[pair[0]], ts.Pieces[pair[1]], $"짝 {pair[0]} ↔ {pair[1]}", path, errors);
+        }
+        for (var i = 0; i < mirror.Self.Count; i++)
+        {
+            var name = mirror.Self[i];
+            var path = $"$.mirror.self[{i}]";
+            if (Known(name, path)) CompareTransposed(ts, ts.Pieces[name], ts.Pieces[name], $"자기 짝 {name}", path, errors);
+        }
+
+        foreach (var (name, b) in ts.Borders.OrderBy(p => p.Key, StringComparer.Ordinal))
+        {
+            var path = $"$.borders.{name}";
+            CompareTransposed(ts, b.EdgeNw, b.EdgeNe, "자리 짝 edge_nw ↔ edge_ne", path, errors);
+            CompareTransposed(ts, b.EdgeSw, b.EdgeSe, "자리 짝 edge_sw ↔ edge_se", path, errors);
+            CompareTransposed(ts, b.CornerW, b.CornerE, "자리 짝 corner_w ↔ corner_e", path, errors);
+            CompareTransposed(ts, b.CornerN, b.CornerN, "자리 짝 corner_n(자기)", path, errors);
+            CompareTransposed(ts, b.CornerS, b.CornerS, "자리 짝 corner_s(자기)", path, errors);
+        }
+        foreach (var (name, gs) in ts.Gates.OrderBy(p => p.Key, StringComparer.Ordinal))
+            foreach (var (a, b) in new[] { (GateSide.Nw, GateSide.Ne), (GateSide.Sw, GateSide.Se) })
+            {
+                var path = $"$.gates.{name}";
+                var (ga, gb) = (gs.Get(a), gs.Get(b));
+                var label = $"자리 짝 문 {SideName(a)} ↔ {SideName(b)}";
+                if (ga is null && gb is null) continue;
+                if (ga is null || gb is null) { errors.Add(new(path, $"{label}: 한쪽 변에만 문이 있다 — 거울판에서 그 문이 없는 변으로 간다")); continue; }
+                CompareTransposed(ts, ga.Open, gb.Open, label + " open", path, errors);
+                CompareEnd(ga.EndA, gb.EndA, "end_a");
+                CompareEnd(ga.EndB, gb.EndB, "end_b");
+
+                void CompareEnd(int? x, int? y, string end)
+                {
+                    if (x is null && y is null) return;
+                    if (x is null || y is null) { errors.Add(new(path, $"{label} {end}: 한쪽 변에만 끝 조각이 있다")); return; }
+                    CompareTransposed(ts, x.Value, y.Value, $"{label} {end}", path, errors);
+                }
+            }
+    }
+
+    /// <summary><c>props[b]</c> = T(<c>props[a]</c>) 인지. 성질 표에 없거나 형식이 틀린 번호는 다른 검사가 낸다(건너뜀).</summary>
+    private static void CompareTransposed(TilesetDef ts, int a, int b, string what, string path, ICollection<LayoutError> errors)
+    {
+        if (!ts.Props.TryGetValue(a, out var pa) || !ts.Props.TryGetValue(b, out var pb) || pa.Length != 4 || pb.Length != 4) return;
+        var want = MapMirror.TransposeProps(pa);
+        if (!string.Equals(pb, want, StringComparison.Ordinal))
+            errors.Add(new(path, $"{what}: 메가타일 {b} 성질 '{pb}' 가 {a} '{pa}' 의 전치 '{want}' 와 다르다 — 거울판의 충돌·시야가 원판의 전치와 달라진다"));
     }
 
     /// <summary>
@@ -283,8 +359,10 @@ public static class ArenaLayout
     /// <item>(v0.6.1) ① 갇힌 바닥 — 걷기 막힘 없는 칸을 주인공 시작 칸에서 4이웃으로 채워 못 닿는 칸. ② 하위 1칸 틈 — 걷기 막힘 없는 칸인데 좌우 둘 다 또는 위아래 둘 다 걷기 막힘(격자 밖 포함).
     /// 둘 다 칸 목록을 메가타일로 묶어 한 줄씩(오류).</item>
     /// <item>(v0.7, 13.5-23 ③ 맵 쪽) <c>room_kinds</c> 가 빈 목록이 아닌 방 맵: 문이 정확히 <c>gate_nw</c>(nw)·<c>gate_ne</c>(ne)·<c>gate_se</c>(se)·<c>gate_sw</c>(sw) 넷, 입구도 그 넷, 기준점 <c>center</c>.
-    /// 작은 방(N ≤ <see cref="RoomMapRules.SmallRoomMaxN"/>)은 문 하나인 방 바닥 없음, 문 넷 진입점에서 <see cref="RoomMapRules.DoorClearance"/> 안에 둘레가 아닌 걷기 막힘 칸 없음(오류).</item>
+    /// 작은 방(N ≤ <see cref="RoomMapRules.SmallRoomMaxN"/>)은 문 하나인 방 바닥 없음, 문 넷 진입점에서 <see cref="RoomMapRules.DoorClearance"/> 안에 둘레가 아닌 걷기 막힘 칸 없음(오류).
+    /// (v0.8.1) 입구마다 진입점에서 가장 가까운 문 틈 칸이 같은 ID 문의 칸(오류 — 거울판에서 입구 ID 를 그대로 두면 다른 문 앞에 놓인다).</item>
     /// </list>
+    /// 거울판(v0.8)도 원판과 같은 검사를 돈다 — <c>MapDataReader</c> 가 <c>MapMirror.Of</c> 결과로 다시 부른다.
     /// <c>over_border</c> 의 막힘 줄어듦은 <see cref="TryExpand"/> 가 낸다. WP2 의 13.5-4(80px)·13.5-5(반경 14 격자)는 이 위의 정밀 검사로 남는다.
     /// </summary>
     public static void ValidateRooms(MapDef map, ArenaGrid grid, ICollection<LayoutError> errors)
@@ -437,7 +515,28 @@ public static class ArenaLayout
         if (!entriesOk)
             errors.Add(new("$.entries", $"방 맵(room_kinds)의 입구는 문 넷과 같은 ID 넷이어야 한다 — 지금 {string.Join(", ", map.Entries.Select(e => e.Id))}"));
         if (!map.AnchorsTile.ContainsKey(RoomMapRules.CenterAnchor))
-            errors.Add(new("$.anchors", $"방 맵(room_kinds)에 기준점 {RoomMapRules.CenterAnchor} 가 없다 — 보상 자리(기획 10.8·11.4)"));
+            errors.Add(new("$.anchors", $"방 맵(room_kinds)에 기준점 {RoomMapRules.CenterAnchor} 가 없다 — 큰 적 길 검사(13.5-5)의 목적지(v0.8 — 보상 자리는 주인공 앞)"));
+
+        // (v0.8.1) 입구와 문이 같은 자리: 진입점에서 가장 가까운 문 틈 칸(칸 마름모 중심 거리, 같으면 문 순서 앞)이 같은 ID 문의 칸
+        var zones = GateZones.Compute(map, grid);
+        for (var e = 0; e < map.Entries.Count; e++)
+        {
+            var entry = map.Entries[e];
+            var at = grid.Iso.ToWorld(entry.InsideTile);
+            string? nearest = null;
+            var best = float.MaxValue;
+            foreach (var g in gates)
+            {
+                if (!zones.TryGetValue(g.Id, out var zone)) continue;
+                foreach (var c in zone.Cells)
+                {
+                    var d = Vector2.DistanceSquared(grid.Iso.CellCenter(c.X, c.Y), at);
+                    if (d < best) { best = d; nearest = g.Id; }
+                }
+            }
+            if (nearest is not null && !string.Equals(nearest, entry.Id, StringComparison.Ordinal))
+                errors.Add(new($"$.entries[{e}]", $"입구 {entry.Id} 가 문 {nearest} 앞에 있음(진입점 {entry.InsideTile} 에서 가장 가까운 문 틈 칸) — 입구 ID 는 그 앞 문의 ID 여야 한다"));
+        }
 
         if (grid.Size > RoomMapRules.SmallRoomMaxN) return;
         foreach (var floor in roomFloors.Rooms)

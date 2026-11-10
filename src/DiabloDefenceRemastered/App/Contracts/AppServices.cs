@@ -63,7 +63,25 @@ public interface ISaveService
     void SetLastHero(string heroClassId);
     /// <summary>타이틀 한 줄(WP6)의 시작 액트 × 직업 최고 기록. 없으면 null.</summary>
     RunRecord? BestRecord(string startActId, string heroClassId);
+
+    // ── 계단 저장(v0.8, 8.3 — 계약 WP1f, 구현 WP7·화면 WP6) ─────────────────────────
+    // 칸 하나, 파일 run.json(save.json 과 따로 — 깨져도 기록·설정과 무관). 개발 옵션 실행은 --save-dir 가 없으면 읽지도 쓰지도 않는다.
+
+    /// <summary>타이틀 <c>이어 하기 (지하묘지)</c> 한 줄. 저장이 없거나 읽을 수 없으면 null(파일은 건드리지 않음).</summary>
+    RunSnapshotInfo? PeekRun();
+    /// <summary>
+    /// 이어 하기를 고른 순간 — <b>읽는 순간 파일을 지운다</b>(다시 끄면 그 판은 끝, 판 중간 저장으로 죽음을 되돌리지 못하게). 없으면 null.
+    /// JSON 이 깨졌으면 <c>run.json.bad</c> 로 옮기고 null. 정의 불일치(<see cref="RunSnapshotMismatchException"/>)는 <c>RunSession</c> 생성자가 낸다.
+    /// </summary>
+    RunSnapshot? TakeRun();
+    /// <summary>계단 저장 쓰기(<c>RunSession.Suspend()</c> 의 결과, 임시 파일 → 바꿔치기). 있던 저장은 덮는다.</summary>
+    void SaveRun(RunSnapshot snapshot);
+    /// <summary>새 게임으로 이어 할 판을 버린다(묻는 것은 화면 WP6). 버린 판은 기록하지 않는다(첫 값 — 8.3).</summary>
+    void DiscardRun();
 }
+
+/// <summary>타이틀 이어 하기 한 줄(v0.8, 8.3 — <see cref="ISaveService.PeekRun"/>): 다음 액트 ID·번호, 직업(null = <c>rules.hero.class</c>).</summary>
+public sealed record RunSnapshotInfo(string NextActId, int NextActNumber, string? HeroClassId);
 
 /// <summary>
 /// 그림 하나를 그릴 때 필요한 것(<see cref="IArtServices.Sprite"/>): 페이지 텍스처(변종 적용) + 메타 + 동작.

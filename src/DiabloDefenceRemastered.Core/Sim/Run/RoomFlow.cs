@@ -45,7 +45,7 @@ public static class RoomFlow
                 StepCleanup(world, room, rules);
                 break;
             case RoomPhase.Reward:
-                if (world.Hero.Dead || Blocked(world) || HasGatingPickup(world)) break;
+                if (world.Hero.Dead || ExitBlocked(world) || HasGatingPickup(world)) break;
                 OpenDoors(world, room, rules);
                 break;
             case RoomPhase.Doors:
@@ -68,12 +68,14 @@ public static class RoomFlow
                 foreach (ref readonly var k in world.Events.Current.EnemyKilled.AsSpan())
                     if (k.DefIndex == index && k.Cause == KillCause.Damage)
                     {
+                        room.BossClockTicks = room.ClockTicks;
                         EndSurvive(world, room);
                         break;
                     }
                 break;
             case RoomKind.Boss:
                 if (world.Events.Current.BossDefeated.Count == 0) break;
+                room.BossClockTicks = room.ClockTicks;
                 room.ClearTick = world.Tick;
                 if (room.IsLastInRun) world.BeginVictory();
                 else
@@ -105,57 +107,41 @@ public static class RoomFlow
     }
 
     /// <summary>
-    /// 보상 단계 시작: 보상 물체를 <c>reward_anchor</c> 에 놓고(<c>SpawnPickup</c> 이 <c>GatesExit</c> 를 단다 — WP3), 살아 있는 정예 상자(이번 틱에 생긴 것 포함)를
-    /// <c>GatesExit</c> 로 묶어 그 둘레(<c>chest_ring</c>)로 옮긴다. 틱 이벤트·신호 <c>RoomCleared</c>.
+    /// 보상 단계 시작(v0.8 — 3.6 "보상 자리"): 보상 자리 = <c>RewardSpot.Find</c>(정리가 끝난 순간 주인공 앞). 놓을 것 = 방 보상(덤 보상 포함) 하나 + 살아 있는 정예 상자 전부
+    /// (이번 틱에 생긴 것 포함 — 저장소 순서). 순서 = 보상 → 상자, 자리 = <c>RewardSpot.Row</c>(바라보는 방향의 수직 한 줄, <c>spacing</c> 간격).
+    /// 보상은 <c>SpawnPickup</c>(<c>Reward != null</c> 이면 <c>GatesExit</c> — WP3), 상자는 여기서 <c>GatesExit</c> 를 달고 그 자리로 옮긴다. 틱 이벤트·신호 <c>RoomCleared</c>.
+    /// v0.7 의 <c>reward_anchor</c>(<c>center</c>)·<c>chest_ring</c> 은 없앴다.
     /// </summary>
     private static void BeginReward(World world, RoomState room, RoomRulesDef rules)
     {
         room.EnterPhase(RoomPhase.Reward, world.Tick);
-        var center = world.Resolved!.Anchor(rules.RewardAnchor);
+        var spot = RewardSpot.Find(world, rules.RewardSpot, out var threshold);
+        room.RewardSpot = spot;
 
         var pickups = world.Pickups;
-        var chests = 0;
+        var count = room.Reward is null ? 0 : 1;
         for (var i = 0; i < pickups.Count; i++)
-            if (!pickups[i].Removed && pickups[i].Def.Kind == PickupKind.Chest) chests++;
+            if (!pickups[i].Removed && pickups[i].Def.Kind == PickupKind.Chest) count++;
+        var row = RewardSpot.Row(world.Nav, spot, world.Hero.Facing, count, rules.RewardSpot, threshold);   // 자리를 찾은 문턱으로 당김(v0.8.2)
+
         var k = 0;
-        for (var i = 0; i < pickups.Count && chests > 0; i++)
+        if (room.Reward is { } reward) world.Spawner.SpawnPickup(new PickupSpawn(reward.Object.Def, row[k++], Reward: reward));
+        for (var i = 0; i < pickups.Count && k < row.Length; i++)
         {
             var p = pickups[i];
             if (p.Removed || p.Def.Kind != PickupKind.Chest) continue;
             p.GatesExit = true;
-            var angle = MathF.Tau * k / chests;
-            var wish = center + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * rules.ChestRing;
-            p.Pos = p.PrevPos = Place(world, center, wish, p.Radius);
-            k++;
+            p.Pos = p.PrevPos = row[k++];
         }
-
-        if (room.Reward is { } reward) world.Spawner.SpawnPickup(new PickupSpawn(reward.Object.Def, center, Reward: reward));
 
         world.Events.Current.RoomCleared.Add(new RoomCleared(room.Plan.Kind, room.Collapsed));
-        world.Presentation.Cue(new CueEvent(world.Tick, CueKind.RoomCleared, center, null));
+        world.Presentation.Cue(new CueEvent(world.Tick, CueKind.RoomCleared, spot, null));
     }
 
     /// <summary>
-    /// 상자 옮길 자리(4.10 <c>PlacementResolver.TryPlace</c> 와 같은 규칙: 맵 안이고 clearance ≥ 반경 + 4 면 그대로, 아니면 기준점 쪽으로 20px 씩 당김,
-    /// 절반까지 없으면 기준점). TryPlace 본문(WP2)을 기다리지 않으려고 <c>INavWorld</c> 질의 둘로 직접 한다. <c>[해석]</c>
-    /// </summary>
-    private static Vector2 Place(World world, Vector2 center, Vector2 wish, float radius)
-    {
-        if (world.Nav is not { } nav) return wish;
-        var toCenter = center - wish;
-        var dist = toCenter.Length();
-        var dir = dist > 1e-4f ? toCenter / dist : Vector2.Zero;
-        for (var pulled = 0f; pulled <= dist * 0.5f; pulled += 20f)
-        {
-            var p = wish + dir * pulled;
-            if (nav.IsInsideMap(p) && nav.Clearance(p) >= radius + 4f) return p;
-        }
-        return center;
-    }
-
-    /// <summary>
-    /// 문 열기(3.6 "문 열기", 기획 11.4): 다음 방이 일반 방이면 <c>Plan.RewardOrder</c> 를 앞에서부터 보며 <c>IProgression.RewardAvailable</c> 인 것을 출구 수만큼,
-    /// 모자라면 <c>fallback_reward</c>. 정예·보스 방이면 보상 없이 <c>NextKind</c>·<c>NextBoss</c>, 액트의 마지막 방이면 계단.
+    /// 문 열기(3.6 "문 열기", 기획 11.4 — v0.8): 다음 방이 액트 안에 있으면 <b>종류와 상관없이</b> <c>Plan.RewardOrder</c> 를 앞에서부터 보며 <c>IProgression.RewardAvailable</c> 인 것을 출구 수만큼,
+    /// 모자라면 <c>fallback_reward</c>. 다음 방이 정예·보스 방이면 보상(= 덤)에 <c>NextKind</c>·<c>NextBoss</c> 를 더하고, 액트의 마지막 방이면 보상 없이 계단.
+    /// 다음 방 층이 이 방과 다르면 <c>NextFloor</c>(계단 문도 — 다음 액트 첫 방의 층). 신호 <c>DoorsOpened</c> 의 자리 = <c>RoomState.RewardSpot</c>(v0.8.1).
     /// </summary>
     private static void OpenDoors(World world, RoomState room, RoomRulesDef rules)
     {
@@ -167,13 +153,8 @@ public static class RoomFlow
         if (next is null)
         {
             var nextAct = act is null ? null : RunPlanner.Next(world.Defs, act.Act);
-            for (var i = 0; i < gates.Count; i++) exits[i] = new RoomExit(gates[i], null, RoomKind.Normal, null, true, nextAct?.Name);
-        }
-        else if (next.Kind != RoomKind.Normal)
-        {
-            var who = next.Kind == RoomKind.Boss ? next.Def.Boss : next.Def.Miniboss;
-            var boss = who is { IsBound: true } ? who.Def : who is not null && world.Defs.Enemies.TryGet(who.Id, out var d) ? d : null;
-            for (var i = 0; i < gates.Count; i++) exits[i] = new RoomExit(gates[i], null, next.Kind, boss, false, null);
+            var floor = NextFloor(plan.Def, nextAct is { Rooms.Count: > 0 } ? nextAct.Rooms[0] : null);
+            for (var i = 0; i < gates.Count; i++) exits[i] = new RoomExit(gates[i], null, RoomKind.Normal, null, true, nextAct?.Name, floor);
         }
         else
         {
@@ -184,20 +165,32 @@ public static class RoomFlow
                 if (world.Progression?.RewardAvailable(r) ?? true) picks.Add(r);
             }
             while (picks.Count < gates.Count) picks.Add(rules.FallbackReward.Def);
-            for (var i = 0; i < gates.Count; i++) exits[i] = new RoomExit(gates[i], picks[i], RoomKind.Normal, null, false, null);
+
+            EnemyDef? boss = null;
+            if (next.Kind != RoomKind.Normal)
+            {
+                var who = next.Kind == RoomKind.Boss ? next.Def.Boss : next.Def.Miniboss;
+                boss = who is { IsBound: true } ? who.Def : who is not null && world.Defs.Enemies.TryGet(who.Id, out var d) ? d : null;
+            }
+            var floor = NextFloor(plan.Def, next.Def);
+            for (var i = 0; i < gates.Count; i++) exits[i] = new RoomExit(gates[i], picks[i], next.Kind, boss, false, null, floor);
         }
 
         room.Exits = exits;
         room.EnterPhase(RoomPhase.Doors, world.Tick);
         room.ExitArmed = HeroExitGate(world, room) is null;
-        world.Presentation.Cue(new CueEvent(world.Tick, CueKind.DoorsOpened, world.Resolved!.Anchor(rules.RewardAnchor), null));
+        world.Presentation.Cue(new CueEvent(world.Tick, CueKind.DoorsOpened, room.RewardSpot, null));
     }
+
+    /// <summary>다음 방 층이 이 방과 다르면 그 층, 같거나 다음 방이 층을 안 적었으면(0) 0.</summary>
+    private static int NextFloor(RoomDef current, RoomDef? next) =>
+        next is { Floor: > 0 } n && n.Floor != current.Floor ? n.Floor : 0;
 
     private static void StepDoors(World world, RoomState room)
     {
         var standing = HeroExitGate(world, room);
         if (standing is null) room.ExitArmed = true;
-        if (Blocked(world)) return;
+        if (ExitBlocked(world)) return;
 
         string? chosen = null;
         if (standing is not null && room.ExitArmed) chosen = standing;
@@ -220,7 +213,7 @@ public static class RoomFlow
     }
 
     /// <summary>나가지 못하는 상태: 선택 창·대기(레벨업·상자·보상)·끌려오는 획득물.</summary>
-    private static bool Blocked(World world)
+    internal static bool ExitBlocked(World world)
     {
         if (world.AwaitingChoice != ChoiceKind.None) return true;
         if (world.Progression is { } p && (p.PendingLevelUps > 0 || p.PendingChests > 0 || p.PendingRewards > 0)) return true;
