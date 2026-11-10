@@ -56,8 +56,8 @@ internal static class UpscaleMath
         return r;
     }
 
-    /// <summary>색 판: 여백을 두고 ② 로 채운 불투명 판.</summary>
-    public static RgbaImage ColorPlane(RgbaImage src) => FillTransparent(Expand(src, Pad), Pad * 2);
+    /// <summary>색 판: 여백을 두고 ② 로 채운 불투명 판. 반경을 두지 않는다 — 불투명 칸에서 먼 여백 귀퉁이(4방향 거리 32 넘음)에도 검정이 남지 않게.</summary>
+    public static RgbaImage ColorPlane(RgbaImage src) => FillTransparent(Expand(src, Pad), int.MaxValue);
 
     /// <summary>알파 판(몬스터): 몸 알파를 회색으로(여백 0).</summary>
     public static RgbaImage AlphaPlane(RgbaImage src)

@@ -97,7 +97,7 @@ internal static class Importer
         }
         MpqSource diabdat;
         try { diabdat = MpqSource.Open(req.Diabdat); }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             Say($"diabdat.mpq 를 열 수 없다: {req.Diabdat} ({ex.Message})");
             return new ImportResult(ExitCodes.Input, null, report);
@@ -122,7 +122,7 @@ internal static class Importer
                     opened.Add(m);
                     bundles[b] = m;
                 }
-                catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException or NotSupportedException or EndOfStreamException)
+                catch (Exception ex) when (ex is not OutOfMemoryException)   // War3Net 은 머리가 깨지면 MpqParserException 등을 던진다
                 {
                     if (req.HellfireExplicit)
                     {
