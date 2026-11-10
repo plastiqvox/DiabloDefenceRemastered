@@ -9,7 +9,8 @@ namespace DiabloDefenceRemastered.Tests.Sim;
 /// <summary>
 /// 첫 플레이(2026-11-11) 관찰 "방 2 의 1:12 에 적이 하나도 없는 틈" — 실제 데이터 판에서 생존 단계(유예 뒤) 틱마다 살아 있는 적 수(시야 밖 포함)를 세어
 /// 0 이 이어지는 가장 긴 구간을 본다. 방 첫머리(유예 3초 뒤 누적기가 0 에서 차오르는 동안 — 기획 2.4·2.5 대로)는 따로 적고,
-/// 그 방에 첫 적이 나온 뒤의 틈만 단언한다. 관찰된 "방 2 의 1:12"(남은 시간 — 방 2 는 75초라 방 시계 0:03 = 유예 끝)는 이 첫머리다.
+/// 그 방에 첫 적이 나온 뒤의 틈도 단언한다. 관찰된 "방 2 의 1:12"(남은 시간 — 방 2 는 75초라 방 시계 0:03 = 유예 끝)는 이 첫머리였다(최대 2.5초) —
+/// 방의 첫 무리를 생성이 열린 틱에 바로 내게 고친 뒤로는 첫머리도 0.5초 안이어야 한다.
 /// </summary>
 public sealed class RealSpawnGapTests(ITestOutputHelper output)
 {
@@ -65,6 +66,7 @@ public sealed class RealSpawnGapTests(ITestOutputHelper output)
             else streak = startStreak = 0;
             if (w.Room is { Phase: RoomPhase.Exit }) session.Advance();
         }
+        Assert.True(startWorst * World.Dt <= 0.5f, $"유예 뒤 첫 적까지 {startWorst * World.Dt:0.00}s — 방의 첫 무리는 생성이 열린 틱에 나와야 한다");
         output.WriteLine($"seed={seed} 방 첫머리(유예 뒤 첫 적까지) 가장 김 = {startWorst * World.Dt:0.00}s, 첫 적 뒤 가장 긴 적 0 = {worst * World.Dt:0.00}s ({worstAt})");
         Assert.True(worst * World.Dt <= MaxEmptySeconds, $"생존 단계에서 적 0 이 {worst * World.Dt:0.00}s 이어졌다: {worstAt}");
     }

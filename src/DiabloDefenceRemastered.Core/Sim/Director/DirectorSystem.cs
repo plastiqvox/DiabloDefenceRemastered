@@ -149,6 +149,13 @@ public sealed class DirectorSystem : ISimSystem
             st.Accumulator = MathF.Min(st.Accumulator, rules.AccumulatorHold > 0f ? rules.AccumulatorHold : 3f);
             return;
         }
+        // 방의 첫 무리는 생성이 열린 틱(시작 유예 끝)에 바로 낸다. 누적기가 0 에서 무리 크기까지 차오르는 1~3초 동안 방이 비어 보였다
+        // (첫 플레이 관찰 "방 2 의 1:12 에 적이 없음" — RealSpawnGapTests 가 그 틈이 유예 뒤 첫머리뿐임을 보였다). 그 뒤는 누적기대로.
+        if (world.Room is not null && st.Groups == 0)
+        {
+            if (st.NextDef is null) PickGroup(world, st, interval);
+            if (st.NextDef is not null) st.Accumulator = MathF.Max(st.Accumulator, st.NextSize);
+        }
         for (var guard = 0; guard < 64; guard++)
         {
             if (st.NextDef is null) PickGroup(world, st, interval);
