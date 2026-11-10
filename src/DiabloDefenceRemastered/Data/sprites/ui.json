@@ -1,0 +1,17 @@
+// 아이콘·획득물 그림 (설계서 6.3·6.9, 기획 11.1·19.3 — 소유 WP5). 원작 DiabloDefence exe PNG 를 그대로 쓴다(이름 = exe 그림 이름, 13.5-10 은 Table/exe.json 과 대조).
+// 합칠 때(검증 담당) 패시브·획득물·보상·레벨업 채움 카드(WP3)가 가리키는 ID 가 없어 넣은 첫 판. 크기는 그 PNG 의 실제 크기(가로 = 방향 1 × 칸, 세로 = 프레임 × 칸), 색 키는 검정(grid 기본).
+{
+  "sprites": [
+    { "id": "IncHealth",             "source": "grid", "file": "IncHealth.png",             "sheet": [48, 48],    "frame": [48, 48],   "origin": [24, 24] },
+    { "id": "IncMana",               "source": "grid", "file": "IncMana.png",               "sheet": [48, 48],    "frame": [48, 48],   "origin": [24, 24] },
+    { "id": "FieldRunner",           "source": "grid", "file": "FieldRunner.png",           "sheet": [48, 48],    "frame": [48, 48],   "origin": [24, 24] },
+    { "id": "MagicMissileICon",      "source": "grid", "file": "MagicMissileICon.png",      "sheet": [48, 48],    "frame": [48, 48],   "origin": [24, 44] },
+    { "id": "GoldIcon",              "source": "grid", "file": "GoldIcon.png",              "sheet": [28, 28],    "frame": [28, 28],   "origin": [14, 24] },
+    // 떨어진 금화·물약 반복 그림(칸 96×160, 발 = 칸 아래쪽 가운데)
+    { "id": "Gold",                  "source": "grid", "file": "Gold.png",                  "sheet": [96, 1600],  "frame": [96, 160],  "frames": 10, "origin": [48, 150] },
+    { "id": "HealingPotion",         "source": "grid", "file": "HealingPotion.png",         "sheet": [96, 2560],  "frame": [96, 160],  "frames": 16, "origin": [48, 150] },
+    { "id": "ManaPotion",            "source": "grid", "file": "ManaPotion.png",            "sheet": [96, 2560],  "frame": [96, 160],  "frames": 16, "origin": [48, 150] },
+    // 끌어당김 룬(기획 11.1 — 1프레임만 씀)
+    { "id": "MagicMissileExplosion", "source": "grid", "file": "MagicMissileExplosion.png", "sheet": [126, 882],  "frame": [126, 126], "frames": 7,  "origin": [63, 63] }
+  ]
+}
