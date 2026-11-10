@@ -92,6 +92,14 @@ public class BakeTests
         Assert.Equal(48, bigIcon.Width);
     }
 
+    [Theory]
+    [InlineData("d1/monsters/zombie_p2.png", true)]
+    [InlineData("d1/monsters/zombie_p3@bluered.png", true)]
+    [InlineData("d1/monsters/zombie.png", false)]
+    [InlineData("d1/inv/breast_plate.png", false)]   // 이름에 "_p" 가 들어도 첫 페이지(v0.9 — 끝 보고가 "2페이지 이상" 으로 잘못 셌다)
+    [InlineData("d1/inv/potion_healing.json", false)]
+    public void ExtraPage_ByPageSuffixOnly(string path, bool extra) => Assert.Equal(extra, SheetPacker.IsExtraPage(path));
+
     [Fact]
     public void Icon_Cel_DecodesSignedRuns_AndKeepsOpaqueColors()
     {
@@ -134,7 +142,7 @@ public class BakeTests
         var outs = ArenaBaker.Bake(grid, ts, Palette.Read(Encoders.Pal()), null);
         var art = ArenaArt.Parse(System.Text.Encoding.UTF8.GetString(outs.First(o => o.Path.EndsWith("arena.json", StringComparison.Ordinal)).Bytes));
         Assert.Empty(art.Validate(grid));
-        Assert.Equal(ArenaArt.OutputNames(grid), outs.Select(o => o.Path).Where(p => !p.Contains("_p", StringComparison.Ordinal)).Order(StringComparer.Ordinal));
+        Assert.Equal(ArenaArt.OutputNames(grid), outs.Select(o => o.Path).Where(p => !SheetPacker.IsExtraPage(p)).Order(StringComparer.Ordinal));
         var meta = SpriteMeta.Parse(System.Text.Encoding.UTF8.GetString(outs.First(o => o.Path.EndsWith("columns.json", StringComparison.Ordinal)).Bytes));
         Assert.Empty(meta.Validate());
         // 같은 그림은 한 프레임 — 합성 타일셋은 기둥 그림 종류가 적다

@@ -494,7 +494,7 @@ internal static class Importer
             }
             foreach (var j in jobs)
             {
-                var pages = newCache[j.Name].Files.Count(f => f.Path.Contains("_p", StringComparison.Ordinal) && f.Path.EndsWith(".png", StringComparison.Ordinal));
+                var pages = newCache[j.Name].Files.Count(f => SheetPacker.IsExtraPage(f.Path));
                 if (pages > 0) Say($"  2페이지 이상: {j.Name} (+{pages})");
             }
             foreach (var s in sources) Say($"  원본 {s.Name} {s.Size} 바이트 SHA-256 {s.Sha256}");

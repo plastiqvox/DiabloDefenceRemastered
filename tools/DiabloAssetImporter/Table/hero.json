@@ -1,14 +1,56 @@
-// 주인공 가져오기 표 (설계서 1.4, 소유 WP0). MVP = 마법사 slt 한 벌(기획 4.0) — 서기·걷기 96, 시전 셋 128, 죽기는 맨손 벌 sln\slndt 128.
-// 칸 폭은 이 PC 의 diabdat 를 probe 로 읽어 확인한 값(표 값은 대조용 — 도구는 파일에서 추정한 폭을 쓰고 다르면 종료 코드 4).
+// 주인공 가져오기 표 (설계서 1.4·6.19, 소유 WP0). 마법사 한 벌 = 갑옷 글자(l 경·m 중·h 판금) + 든 것 글자(n 없음·u 방패만·t 지팡이) 아홉 벌(기획 4.0 v0.9.1 V10).
+// 동작은 벌마다 같다: 서기 as·걷기 aw 96, 시전 fm·lm·qm 128(12프레임). 죽기는 그 갑옷의 맨손 벌에만 있다 — sln\slndt·smn\smndt·shn\shndt(20프레임 128).
+// 출처: 원본 확인(이 PC 의 diabdat 를 probe files·probe cl2 로 — 아홉 벌 × 다섯 동작 모두 있음, 폭·프레임이 벌마다 같음. 맨손 벌 아닌 벌의 dt 는 없음).
+// 칸 폭은 대조용 — 도구는 파일에서 추정한 폭을 쓰고 다르면 종료 코드 4.
 {
   "palette": "levels\\l1data\\l1.pal",
   "shadow_alpha": 0.5,
   "hero": [
+    { "out": "d1/hero/sln", "cl2": "plrgfx\\sorceror\\sln\\sln{a}.cl2", "width": 96,
+      "actions": { "idle": "as", "walk": "aw",
+                   "cast_fire": { "file": "fm", "width": 128 }, "cast_lightning": { "file": "lm", "width": 128 },
+                   "cast_magic": { "file": "qm", "width": 128 },
+                   "die": { "cl2": "plrgfx\\sorceror\\sln\\slndt.cl2", "width": 128 } } },
+    { "out": "d1/hero/slu", "cl2": "plrgfx\\sorceror\\slu\\slu{a}.cl2", "width": 96,
+      "actions": { "idle": "as", "walk": "aw",
+                   "cast_fire": { "file": "fm", "width": 128 }, "cast_lightning": { "file": "lm", "width": 128 },
+                   "cast_magic": { "file": "qm", "width": 128 },
+                   "die": { "cl2": "plrgfx\\sorceror\\sln\\slndt.cl2", "width": 128 } } },
     { "out": "d1/hero/slt", "cl2": "plrgfx\\sorceror\\slt\\slt{a}.cl2", "width": 96,
       "actions": { "idle": "as", "walk": "aw",
                    "cast_fire": { "file": "fm", "width": 128 }, "cast_lightning": { "file": "lm", "width": 128 },
                    "cast_magic": { "file": "qm", "width": 128 },
                    "die": { "cl2": "plrgfx\\sorceror\\sln\\slndt.cl2", "width": 128 } },
-      "variants": { "": null } }
+      "variants": { "": null } },
+    { "out": "d1/hero/smn", "cl2": "plrgfx\\sorceror\\smn\\smn{a}.cl2", "width": 96,
+      "actions": { "idle": "as", "walk": "aw",
+                   "cast_fire": { "file": "fm", "width": 128 }, "cast_lightning": { "file": "lm", "width": 128 },
+                   "cast_magic": { "file": "qm", "width": 128 },
+                   "die": { "cl2": "plrgfx\\sorceror\\smn\\smndt.cl2", "width": 128 } } },
+    { "out": "d1/hero/smu", "cl2": "plrgfx\\sorceror\\smu\\smu{a}.cl2", "width": 96,
+      "actions": { "idle": "as", "walk": "aw",
+                   "cast_fire": { "file": "fm", "width": 128 }, "cast_lightning": { "file": "lm", "width": 128 },
+                   "cast_magic": { "file": "qm", "width": 128 },
+                   "die": { "cl2": "plrgfx\\sorceror\\smn\\smndt.cl2", "width": 128 } } },
+    { "out": "d1/hero/smt", "cl2": "plrgfx\\sorceror\\smt\\smt{a}.cl2", "width": 96,
+      "actions": { "idle": "as", "walk": "aw",
+                   "cast_fire": { "file": "fm", "width": 128 }, "cast_lightning": { "file": "lm", "width": 128 },
+                   "cast_magic": { "file": "qm", "width": 128 },
+                   "die": { "cl2": "plrgfx\\sorceror\\smn\\smndt.cl2", "width": 128 } } },
+    { "out": "d1/hero/shn", "cl2": "plrgfx\\sorceror\\shn\\shn{a}.cl2", "width": 96,
+      "actions": { "idle": "as", "walk": "aw",
+                   "cast_fire": { "file": "fm", "width": 128 }, "cast_lightning": { "file": "lm", "width": 128 },
+                   "cast_magic": { "file": "qm", "width": 128 },
+                   "die": { "cl2": "plrgfx\\sorceror\\shn\\shndt.cl2", "width": 128 } } },
+    { "out": "d1/hero/shu", "cl2": "plrgfx\\sorceror\\shu\\shu{a}.cl2", "width": 96,
+      "actions": { "idle": "as", "walk": "aw",
+                   "cast_fire": { "file": "fm", "width": 128 }, "cast_lightning": { "file": "lm", "width": 128 },
+                   "cast_magic": { "file": "qm", "width": 128 },
+                   "die": { "cl2": "plrgfx\\sorceror\\shn\\shndt.cl2", "width": 128 } } },
+    { "out": "d1/hero/sht", "cl2": "plrgfx\\sorceror\\sht\\sht{a}.cl2", "width": 96,
+      "actions": { "idle": "as", "walk": "aw",
+                   "cast_fire": { "file": "fm", "width": 128 }, "cast_lightning": { "file": "lm", "width": 128 },
+                   "cast_magic": { "file": "qm", "width": 128 },
+                   "die": { "cl2": "plrgfx\\sorceror\\shn\\shndt.cl2", "width": 128 } } }
   ]
 }

@@ -16,6 +16,13 @@ internal static class SheetPacker
 {
     public const int MaxPage = 4096;
     private const int Gap = 1;
+
+    /// <summary>
+    /// 둘째 페이지부터의 파일 이름인지(<c>zombie_p2.png</c>·<c>zombie_p2@bluered.png</c> — <see cref="SpriteMeta.PageFile"/>).
+    /// 이름에 "_p" 가 든 것으로 보면 <c>breast_plate.png</c> 같은 첫 페이지를 잘못 센다(v0.9 인벤토리 그림 이름).
+    /// </summary>
+    public static bool IsExtraPage(string path) =>
+        System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(path), @"_p[0-9]+(@[a-z0-9_]+)?\.png$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
     private static readonly int[] Widths = [64, 128, 256, 512, 1024, 2048, 4096];
 
     public static PackedSheet Pack(IReadOnlyList<PackAction> actionsIn, int scale = 1, int maxPage = MaxPage)

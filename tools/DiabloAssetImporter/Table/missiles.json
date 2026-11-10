@@ -1,10 +1,62 @@
 // 마법 그림 가져오기 표 (설계서 1.4, 소유 WP0). 단계 1 = 무기 3종(기획 5.2): 매직 미사일 miniltng(방향 없음 8프레임, 폭 64),
 // 파이어볼 fireba1..16(16방향 14프레임, 폭 96), 비전 구체 holy1..16(16방향 14프레임, 폭 96). 폭은 이 PC 의 diabdat 를 probe 로 확인.
+//
+// (v0.9, 설계서 6.19) 원본이 .cel 인 항목은 CEL 그림 묶음이다 — 방향 없음, 프레임 머리는 도구가 프레임마다 가린다(items·objects·towners·objcurs 는 있음, ctrlpan 은 없음).
+// 지금 표 모양(missiles 항목)에 싣는 것이라 키 이름이 "cl2" 다(평면 CEL 그림용 표·자를 사각형은 계약 변경 거리 — WP1g 에 넘김).
+// 팔레트: 이 그림들도 색인 0 과 128~255 만 쓴다(probe cel — 1~127 픽셀 0개) → l1.pal 로 풀린다(부록 A.2). 색인 0 은 바닥 그림자라 shadow_alpha 0.5.
+// 출처: 원본 확인(이름·프레임 수·칸 폭·머리 유무 — probe files·probe cel, 프레임은 probe cel --sheet 로 눈 확인)
 {
   "palette": "levels\\l1data\\l1.pal",
   "missiles": [
     { "out": "d1/missiles/fireba",   "cl2": "missiles\\fireba{d}.cl2", "dirs": 16, "width": 96 },
     { "out": "d1/missiles/holy",     "cl2": "missiles\\holy{d}.cl2", "dirs": 16, "width": 96 },
-    { "out": "d1/missiles/miniltng", "cl2": "missiles\\miniltng.cl2", "width": 64 }
+    { "out": "d1/missiles/miniltng", "cl2": "missiles\\miniltng.cl2", "width": 64 },
+
+    // 바닥 아이템(기획 11.1·11.4 V8): 떨어짐 애니 전부(마지막 프레임 = 바닥에 놓임). 책 13·금화 10·물약 16프레임, 칸 96×160.
+    // 물약 색은 이름 끝 글자: fbttlebr 붉은(체력 물약), fbttlebb 파란(마력 폭주). 나머지 fbttle·bl·by·db·dy·or·wh 는 쓰지 않음
+    { "out": "d1/items/fbook",    "cl2": "items\\fbook.cel",    "width": 96, "shadow_alpha": 0.5 },
+    { "out": "d1/items/goldflip", "cl2": "items\\goldflip.cel", "width": 96, "shadow_alpha": 0.5 },
+    { "out": "d1/items/fbttlebr", "cl2": "items\\fbttlebr.cel", "width": 96, "shadow_alpha": 0.5 },
+    { "out": "d1/items/fbttlebb", "cl2": "items\\fbttlebb.cel", "width": 96, "shadow_alpha": 0.5 },
+
+    // 방 안 물체(기획 11.4): 상자 셋·책 받침 둘, 6프레임 96×96 — 1 닫힘, 2 열림(내용 있음), 3 열림(빔), 4~6 은 같은 셋의 반대 방향
+    { "out": "d1/objects/chest1", "cl2": "objects\\chest1.cel", "width": 96, "shadow_alpha": 0.5 },
+    { "out": "d1/objects/chest2", "cl2": "objects\\chest2.cel", "width": 96, "shadow_alpha": 0.5 },
+    { "out": "d1/objects/chest3", "cl2": "objects\\chest3.cel", "width": 96, "shadow_alpha": 0.5 },
+    { "out": "d1/objects/book1",  "cl2": "objects\\book1.cel",  "width": 96, "shadow_alpha": 0.5 },
+    { "out": "d1/objects/book2",  "cl2": "objects\\book2.cel",  "width": 96, "shadow_alpha": 0.5 },
+
+    // 상인(기획 11.7 V5·V11): 서기 반복 한 방향, 96×96 — 그리스월드 smithn 16, 아드리아 witch 19, 페핀 healer 20프레임
+    { "out": "d1/towners/smithn", "cl2": "towners\\smith\\smithn.cel",    "width": 96, "shadow_alpha": 0.5 },
+    { "out": "d1/towners/witch",  "cl2": "towners\\townwmn1\\witch.cel",  "width": 96, "shadow_alpha": 0.5 },
+    { "out": "d1/towners/healer", "cl2": "towners\\healer\\healer.cel",   "width": 96, "shadow_alpha": 0.5 },
+
+    // 조작판(기획 12.1 V12): panel8 = 조작판 전체 640×144 한 장(구슬은 가득 찬 붉은·파란 구슬로 그려져 있음),
+    // p8bulbs = 빈 구슬 88×88 두 장(1 체력, 2 마나 — 원작은 빈 구슬을 위에서 잃은 비율만큼 덮는다).
+    // 자를 자리(panel8 픽셀): 체력 구슬 (96, 0, 88, 88), 마나 구슬 (464, 0, 88, 88), 허리띠 칸 i(0..7) (205 + 29i, 21, 28, 28)
+    { "out": "d1/ui/panel8",  "cl2": "ctrlpan\\panel8.cel",  "width": 640 },
+    { "out": "d1/ui/p8bulbs", "cl2": "ctrlpan\\p8bulbs.cel", "width": 88 },
+
+    // 인벤토리 그림(기획 11.6 V4, 12.8 페핀 창): data\inv\objcurs.cel 179프레임 중 한 장씩. 칸 = 28 × 28·56·84, 56 × 56·84(프레임 번호 순으로 크기별).
+    // 프레임 번호 = DevilutionX 아이템 커서 그림 번호 + 12(커서 그림 11장 + 1부터) — 출처: DevilutionX 참고, 번호마다 probe cel --sheet 로 그림을 눈으로 맞춤
+    { "out": "d1/inv/cap",             "cl2": "data\\inv\\objcurs.cel", "width": 56, "frames": [103, 103] },
+    { "out": "d1/inv/skull_cap",       "cl2": "data\\inv\\objcurs.cel", "width": 56, "frames": [102, 102] },
+    { "out": "d1/inv/helm",            "cl2": "data\\inv\\objcurs.cel", "width": 56, "frames": [94, 94] },
+    { "out": "d1/inv/full_helm",       "cl2": "data\\inv\\objcurs.cel", "width": 56, "frames": [87, 87] },
+    { "out": "d1/inv/quilted_armor",   "cl2": "data\\inv\\objcurs.cel", "width": 56, "frames": [141, 141] },
+    { "out": "d1/inv/leather_armor",   "cl2": "data\\inv\\objcurs.cel", "width": 56, "frames": [147, 147] },
+    { "out": "d1/inv/ring_mail",       "cl2": "data\\inv\\objcurs.cel", "width": 56, "frames": [166, 166] },
+    { "out": "d1/inv/chain_mail",      "cl2": "data\\inv\\objcurs.cel", "width": 56, "frames": [123, 123] },
+    { "out": "d1/inv/breast_plate",    "cl2": "data\\inv\\objcurs.cel", "width": 56, "frames": [165, 165] },
+    { "out": "d1/inv/buckler",         "cl2": "data\\inv\\objcurs.cel", "width": 56, "frames": [95, 95] },
+    { "out": "d1/inv/small_shield",    "cl2": "data\\inv\\objcurs.cel", "width": 56, "frames": [117, 117] },
+    { "out": "d1/inv/large_shield",    "cl2": "data\\inv\\objcurs.cel", "width": 56, "frames": [159, 159] },
+    { "out": "d1/inv/kite_shield",     "cl2": "data\\inv\\objcurs.cel", "width": 56, "frames": [125, 125] },
+    { "out": "d1/inv/short_staff",     "cl2": "data\\inv\\objcurs.cel", "width": 56, "frames": [121, 121] },
+    { "out": "d1/inv/long_staff",      "cl2": "data\\inv\\objcurs.cel", "width": 56, "frames": [135, 135] },
+    { "out": "d1/inv/composite_staff", "cl2": "data\\inv\\objcurs.cel", "width": 56, "frames": [178, 178] },
+    { "out": "d1/inv/war_staff",       "cl2": "data\\inv\\objcurs.cel", "width": 56, "frames": [136, 136] },
+    { "out": "d1/inv/ring",            "cl2": "data\\inv\\objcurs.cel", "width": 28, "frames": [24, 24] },
+    { "out": "d1/inv/potion_healing",  "cl2": "data\\inv\\objcurs.cel", "width": 28, "frames": [44, 44] }
   ]
 }
