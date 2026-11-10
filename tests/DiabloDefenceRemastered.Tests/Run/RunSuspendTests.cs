@@ -111,6 +111,15 @@ public class RunSuspendTests
         w.Hero.MaxHp = 50f;
         w.Hero.Potions = 1;
         w.Hero.Weapons[4] = new WeaponSlot { Def = w.Defs.Weapons[0], Level = 2, MaxedAtTick = -1 };
+        // v0.9(WP1g): 장비·지갑·물약 칸 단계·쓴 금화·만난 상인도 끊고 잇기를 지난다
+        w.Hero.Gold = 120;
+        w.Hero.PotionSlotsLevel = 1;
+        w.Hero.PotionSpeedLevel = 1;
+        w.Hero.Equipment[(int)EquipSlot.Body] = new EquipItem("t_quilted", null, new RolledAffix("t_af_fox", 10f), 150);
+        w.Hero.Equipment[(int)EquipSlot.Ring2] = new EquipItem("t_ring", new RolledAffix("t_af_jagged", 0.04f), null, 150);
+        w.RunStats.GoldSpent += 20;
+        w.RunStats.PotionsDrunk += 1;
+        s.Run.MeetMerchant(TestDefs.WitchId);
     }
 
     // ── 계단 보상·--start-at ────────────────────────────────────────────
@@ -239,6 +248,55 @@ public class RunSuspendTests
 
         AssertSameRun(uncut, resumed);
         Assert.Equal(uncutColumns, resumedColumns);                   // 방 상태 열(StateHasher 전의 대리, 13.19)
+        // v0.9: 장비·지갑·물약 칸·만난 상인
+        Assert.Equal([TestDefs.WitchId], snapshot.MerchantsMet);
+        Assert.Equal(uncut.Run.MerchantsMet, resumed.Run.MerchantsMet);
+        Assert.Equal(2, snapshot.Carry!.Equipment.Count);
+        Assert.Equal((120, 1, 1, 1), (snapshot.Carry.Gold, snapshot.Carry.Potions, snapshot.Carry.PotionSlotsLevel, snapshot.Carry.PotionSpeedLevel));
+        Assert.Equal(uncut.World.Hero.Equipment, resumed.World.Hero.Equipment);
+        Assert.Equal((uncut.World.Hero.Gold, uncut.World.Hero.Potions), (resumed.World.Hero.Gold, resumed.World.Hero.Potions));
+        Assert.Equal((20, 1), (resumed.Run.Stats.GoldSpent, resumed.Run.Stats.PotionsDrunk));
+    }
+
+    /// <summary>
+    /// v0.9.1(6.19 "계단 저장"): 계단 문을 나가는 틱에 마시던 회복을 바로 채운다 — 채운 체력이 스냅숏(짐)에 들고 회복 중 상태는 넣지 않는다.
+    /// 끊지 않은 판도 같은 틱에 채우므로 이어 한 판과 같다. <c>Suspend</c> 는 <c>HealOnEnter</c> 가 거짓임을 단언(계단 문은 보상이 없음).
+    /// </summary>
+    [Fact]
+    public void Suspend_FillsPendingHeal_IntoSnapshot_SameAsUncutStairs()
+    {
+        var defs = RoomActs.Defs();
+        void Drinking(RunSession s)
+        {
+            var hero = s.World.Hero;
+            hero.MaxHp = 100f;
+            hero.Hp = 50f;
+            hero.Heal = HealOverTime.Start(40f, 180);
+        }
+
+        var cut = Session(defs, seed: 52, carry: new FakeHeroCarry());
+        ToBossRoom(cut, RoomPhase.Doors);
+        Drinking(cut);
+        Assert.False(cut.Run.HealOnEnter);
+        var snap = cut.Suspend();
+        Assert.Equal(90f, snap.Carry!.Hp);
+        Assert.False(cut.World.Hero.Heal.Active);
+
+        var uncut = Session(defs, seed: 52, carry: new FakeHeroCarry());
+        ToBossRoom(uncut, RoomPhase.Doors);
+        Drinking(uncut);
+        StageStepper.AppTick(uncut.World, new PlayerCommand(Vector2.Zero, CommandButtons.Exit, 0));
+        uncut.Advance();
+        Assert.Equal(90f, uncut.Run.Carry!.Hp);
+        Assert.Equal(90f, uncut.World.Hero.Hp);
+
+        // 계단이 아닌 문은 채우지 않는다(방 사이 이어지는 회복은 WP3 이 짐 Effects 로 — 6.19)
+        var mid = Session(defs, seed: 52, carry: new FakeHeroCarry());
+        PlayTo(mid, RoomPhase.Doors);
+        Drinking(mid);
+        StageStepper.AppTick(mid.World, new PlayerCommand(Vector2.Zero, CommandButtons.Exit, 0));
+        mid.Advance();
+        Assert.Equal(50f, mid.Run.Carry!.Hp);
     }
 
     [Fact]

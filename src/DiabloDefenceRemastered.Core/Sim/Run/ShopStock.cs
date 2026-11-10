@@ -105,7 +105,7 @@ public static class ShopStock
             {
                 var avoid = new HashSet<string>(StringComparer.Ordinal);
                 for (var o = 0; o < shop.Cards.Count; o++)
-                    if (o != c && settled[o] && shop.Cards[o].Item is { } other)
+                    if (o != c && settled[o] && o < merchant.Kinds.Count && merchant.Kinds[o] == EquipKind.Ring && shop.Cards[o].Item is { } other)
                     {
                         if (other.Prefix is { } p) avoid.Add(p.Id);
                         if (other.Suffix is { } s) avoid.Add(s.Id);
