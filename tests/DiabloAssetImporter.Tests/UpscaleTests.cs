@@ -106,6 +106,27 @@ public class UpscaleTests
         Assert.Equal(before, f.ManifestText());
     }
 
+    /// <summary>1.4 v0.8.1 확대 중간 캐시: 실행 끝에 쓰인 키 목록 밖의 판은 지운다(범위를 바꾸면 옛 판이 남지 않음).</summary>
+    [Fact]
+    public void PlaneCache_UnusedKeysRemovedAtEnd()
+    {
+        using var f = new ImportFixture();
+        var (bin, t) = FakeBin(Path.Combine(f.Tmp, "bin"), maps: false);   // 좀비만
+        Assert.Equal(0, f.Run(q => Up(q, bin, t, new FakeUpscalerInProc())).ExitCode);
+        var planeDir = Path.Combine(f.Out, "d1", ".cache", "upscaled");
+        var first = Directory.GetFiles(planeDir, "*.png").Select(Path.GetFileName).ToHashSet();
+        Assert.NotEmpty(first);
+
+        var mapsOnly = t with { Include = [], Apply = new UpscaleApplyDef { Maps = true, MonstersMinWidth = 100_000 } };
+        var up = new FakeUpscalerInProc();
+        var r = f.Run(q => Up(q, bin, mapsOnly, up));
+        Assert.Equal(0, r.ExitCode);
+        Assert.True(r.Manifest!.TryGetFile("d1/monsters/zombie.png", out var z) && z.Scale == 1);
+        var second = Directory.GetFiles(planeDir, "*.png").Select(Path.GetFileName).ToHashSet();
+        Assert.Equal(up.Planes, second.Count);   // 남은 것 = 이번에 쓴 맵 판뿐
+        Assert.Empty(first.Intersect(second));
+    }
+
     [Fact]
     public void Jobs1_EqualsJobs8_WithUpscale()
     {
