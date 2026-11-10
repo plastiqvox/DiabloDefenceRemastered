@@ -176,4 +176,21 @@ public sealed class DirectorTests(ITestOutputHelper output)
         t.Step(MathX.SecondsToTicks(20f, SimWorld.Dt));
         Assert.Equal(at31, Elites());   // 한 번만
     }
+
+    [Fact]
+    public void Event_entry_equal_to_entered_gate_is_remapped_to_opposite()
+    {
+        // 들어온 문 gate_se 인 방에서 at_entry gate_se 행진(toward center) → 맞은편 문(RemapEntry)에서 들어온다
+        var defs = IntervalDefs([], Unlimited);
+        var t = new TestWorldBuilder().WithDefs(defs).WithRoom(RoomPhase.Survive, gateIn: "gate_se").WithModules(FakeArena.Modules(weapons: false)).Build();
+        var w = t.World;
+        var expected = w.Room!.RemapEntry("gate_se");
+        Assert.NotEqual("gate_se", expected);
+        Assert.True(w.Resolved!.TryGetEntry(expected, out var entry));
+        new MarchEvent(new MarchParams { Enemy = DefRef<EnemyDef>.To(Grunt), Count = 3, AtEntry = "gate_se", Toward = "center" }).Fire(w);
+        var marchers = new List<Enemy>();
+        foreach (var e in w.Enemies.Items) if (e.Source == SpawnSource.March) marchers.Add(e);
+        Assert.Equal(3, marchers.Count);
+        Assert.All(marchers, e => Assert.True(Vector2.Distance(e.EntryTarget, entry.Inside) <= 40f, $"진입점 {expected} 가 아닌 곳으로 들어옴"));
+    }
 }
