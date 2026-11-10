@@ -207,6 +207,8 @@ public sealed class TitleScene(GameFlow flow) : IScene
             var h = logo.Frame.Y * 0.9f;
             c.Sprite(logo.Id, new RectI(0, frame * logo.Frame.Y, logo.Frame.X, (frame + 1) * logo.Frame.Y), new RectF(Theme.Width / 2 - w / 2, 40, Theme.Width / 2 + w / 2, 40 + h), Rgb.White);
         }
+        // 옛 판 LOGO 는 원작 "DIABLO" 글자뿐이라 이 게임 이름의 나머지를 그 아래 글자로 잇는다(그림을 새로 만들지 않음)
+        Ui.Centered(c, "DEFENCE  REMASTERED", Theme.Width / 2, 236, Theme.TitleText * 0.75f, Theme.Gold);
 
         if (_confirming) Ui.Centered(c, "이어 할 판이 지워진다. 새 게임을 시작할까?", Theme.Width / 2, 262, Theme.BodyText, Theme.Text);
         _menu.Draw(c);

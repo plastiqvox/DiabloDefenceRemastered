@@ -55,6 +55,8 @@ public sealed class GameApp : Game
             $"GRAPHICS profile={GraphicsDevice.GraphicsProfile} backbuffer={GraphicsDevice.PresentationParameters.BackBufferWidth}x{GraphicsDevice.PresentationParameters.BackBufferHeight} vsync={(_graphics.SynchronizeWithVerticalRetrace ? 1 : 0)}"));
 
         _app.Art = Try(() => RenderServices.CreateArt(GraphicsDevice, _app), "RenderServices.CreateArt");
+        // 타이틀(TITLE·LOGO)은 액트 미리 읽기 전에 그린다 — 첫 판이 시작되면 PreloadStage 가 그 액트 목록으로 바꾼다
+        if (_screen == StartScreen.Normal && _app.Art is Loading.ArtServices art) art.PreloadAll();
         _render = Try(() => RenderServices.CreateContext(GraphicsDevice, _app), "RenderServices.CreateContext") ?? new ShellRenderContext(GraphicsDevice);
         if (_app.Options.Window is { } w) _render.PresentSize = w;
         _app.Render = _render;

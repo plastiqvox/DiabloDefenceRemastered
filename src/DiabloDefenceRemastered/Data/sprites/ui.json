@@ -2,7 +2,9 @@
 // 합칠 때(검증 담당) 패시브·획득물·보상·레벨업 채움 카드(WP3)가 가리키는 ID 가 없어 넣은 첫 판. 크기는 그 PNG 의 실제 크기(가로 = 방향 1 × 칸, 세로 = 프레임 × 칸), 색 키는 검정(grid 기본).
 {
   "sprites": [
-    { "id": "IncHealth",             "source": "grid", "file": "IncHealth.png",             "sheet": [48, 48],    "frame": [48, 48],   "origin": [24, 24] },
+    { "id": "TITLE",                 "source": "grid", "file": "TITLE.png",                 "sheet": [640, 480],  "frame": [640, 480], "origin": [320, 240] },
+    { "id": "LOGO",                  "source": "grid", "file": "LOGO.png",                  "sheet": [550, 3240], "frame": [550, 216], "frames": 15, "color_key": [0, 255, 0], "origin": [275, 108] },
+    { "id": "IncHealth",            "source": "grid", "file": "IncHealth.png",             "sheet": [48, 48],    "frame": [48, 48],   "origin": [24, 24] },
     { "id": "IncMana",               "source": "grid", "file": "IncMana.png",               "sheet": [48, 48],    "frame": [48, 48],   "origin": [24, 24] },
     { "id": "FieldRunner",           "source": "grid", "file": "FieldRunner.png",           "sheet": [48, 48],    "frame": [48, 48],   "origin": [24, 24] },
     { "id": "MagicMissileICon",      "source": "grid", "file": "MagicMissileICon.png",      "sheet": [48, 48],    "frame": [48, 48],   "origin": [24, 44] },
