@@ -1,5 +1,6 @@
 using DiabloDefenceRemastered.Core.Sim.Heroes;
 using DiabloDefenceRemastered.Core.Sim.Progression;
+using DiabloDefenceRemastered.Core.Sim.Shops;
 
 namespace DiabloDefenceRemastered.Core.Sim.Pickups;
 
@@ -91,8 +92,9 @@ public sealed class DeathRewardsSystem : ISimSystem
 
 /// <summary>
 /// 단계 15 Pickups (WP3, 기획 11.1·11.4, 설계서 6.9·6.18): 앞 틱 <c>RoomCleared</c> → 보석·금화 끌어당김(보스 방이면 체력 전부) →
-/// 획득 반경 안 보석·금화가 날아옴(처음 200px/s, 초당 +600) → 몸에 닿으면 획득(물약·룬·상자·보상 물체는 닿아야). 체력이 가득이면 체력 물약은 남는다(보상 물체는 늘 집힘).
-/// 보상 물체 = <see cref="ProgressionService.CollectReward"/>·신호 <c>RewardCollected</c>, 방 보급 = <c>SupplyCollected</c>.
+/// 획득 반경 안 보석·금화가 날아옴(처음 200px/s, 초당 +600) → 몸에 닿으면 획득(물약·룬·상자·보상 물체는 닿아야). 물약 칸이 가득이면 체력 물약은 남는다(보상 물체는 늘 집힘).
+/// 보상 물체 = <see cref="ProgressionService.CollectReward"/>·신호 <c>RewardCollected</c>(v0.9.1 두 단계 보상은 상자에 닿으면 <see cref="ProgressionService.DropReward"/> — 책에 닿아야 받음),
+/// 방 보급 = <c>SupplyCollected</c>, 금화 = 지갑과 얻은 금화(<see cref="Wallet"/>). 끝에 상인 열기 판정(v0.9 — <see cref="ShopService.TryOpen"/>, 이동이 끝난 자리로).
 /// </summary>
 public sealed class PickupsSystem : ISimSystem
 {
@@ -130,6 +132,7 @@ public sealed class PickupsSystem : ISimSystem
             if (dist > hero.Radius + p.Radius) continue;
             if (Collect(world, p)) store.RemoveAt(i);
         }
+        (world.ShopService as ShopService)?.TryOpen();
     }
 
     private static void Magnetize(Pickup p)
@@ -150,7 +153,7 @@ public sealed class PickupsSystem : ISimSystem
         }
     }
 
-    /// <summary>획득. 집지 않고 남으면 false(물약 칸이 가득일 때의 체력 물약 — v0.9.1).</summary>
+    /// <summary>획득. 집지 않고 남으면 false(물약 칸이 가득일 때의 체력 물약·두 단계 보상의 상자 — v0.9.1).</summary>
     private static bool Collect(World world, Pickup p)
     {
         var hero = world.Hero;
@@ -158,7 +161,13 @@ public sealed class PickupsSystem : ISimSystem
         var progression = world.Progression as ProgressionService;
         if (p.Reward is { } reward)
         {
-            progression?.CollectReward(reward);
+            if (reward.Drop is { } drop && p.Def.Id != drop.Id && progression is not null)
+            {
+                // v0.9.1 V8 두 단계 보상: 닫힌 상자에 닿으면 열려 책이 떨어진다(열린 상자는 그대로 남고 다시 집히지 않음)
+                if (p.RewardStage == RewardPickupStage.Closed) progression.DropReward(p);
+                return false;
+            }
+            progression?.CollectReward(reward, p);
             world.Presentation.Cue(new CueEvent(world.Tick, CueKind.RewardCollected, p.Pos, reward));
             if (p.SupplyRoom is { } room) world.Events.Current.SupplyCollected.Add(new SupplyCollected(room, def, p.Pos));
             return true;
@@ -169,7 +178,7 @@ public sealed class PickupsSystem : ISimSystem
                 progression?.AddXp(p.Value);
                 break;
             case PickupKind.Gold:
-                world.RunStats.Gold += (int)MathF.Round(p.Value * (1f + hero.Stats[StatKey.GoldPct]), MidpointRounding.AwayFromZero);
+                Wallet.Earn(world, (int)MathF.Round(p.Value * (1f + hero.Stats[StatKey.GoldPct]), MidpointRounding.AwayFromZero));
                 break;
             case PickupKind.PotionStack:
                 // v0.9.1 V9: 물약 칸에 하나 쌓임(바로 마시지 않음). 칸이 가득이면 안 집힘(그대로 남음 — 6.19 "물약 칸")

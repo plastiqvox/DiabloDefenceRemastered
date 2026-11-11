@@ -19,8 +19,10 @@ public enum StageStep : byte
 
 /// <summary>
 /// 스테이지 틱을 돌릴지 정하는 규칙 한 곳 (설계서 3.3). PlayScene.FixedTick 은 앱 틱마다 <see cref="AppTick"/> 를 부르기만 한다.
-/// 판정 순서(v0.7.1): 끝난 판 → 선택 대기 → 방 나감 → 히트 스톱 → 슬로모션.
+/// 판정 순서(v0.7.1 → v0.9): 끝난 판 → 선택 대기 → 상인 창 → 방 나감 → 히트 스톱 → 슬로모션.
 /// - 선택 대기면 돌지 않는다(같은 앱 틱에 오버레이가 올라간다). 나감 단계와 선택 대기가 같이 있으면 선택 대기가 먼저다.
+/// - 상인 창(v0.9, 6.19 — <c>Room.Shop.Open</c>)이면 돌지 않고(시간 멈춤) 명령을 상인 창에 넘긴다(<c>ShopInput.AppTick</c> — 입력 잠금·고르기·다시 굴리기·떠나기, WP3).
+///   돌려주는 값은 <see cref="StageStep.AwaitingChoice"/>(<c>World.AwaitingChoice</c> 는 None 그대로 — 앱은 레벨업 오버레이를 올리지 않고 <c>Room.Shop.Open</c> 으로 상인 창을 그린다).
 /// - 방 나감(<c>Room.Phase == Exit</c>)이면 돌지 않고 <see cref="StageStep.RoomExit"/>. <c>Outcome == Running</c> 일 때만 — 끝나 가는 판(<c>…Pending</c>)은 돌아서 끝난다.
 /// - 히트 스톱: <see cref="World.FreezeTicks"/> 동안 돌지 않는다.
 /// - 슬로모션: 틱 길이는 그대로, 앱 틱마다 배율을 쌓아 1 이 될 때만 한 번 돈다 → 고정 Dt·결정성 유지.
@@ -36,6 +38,7 @@ public static class StageStepper
 
         if (world.Outcome is RunOutcome.Victory or RunOutcome.Defeat) return StageStep.Finished;
         if (world.AwaitingChoice != ChoiceKind.None) return StageStep.AwaitingChoice;
+        if (Shops.ShopInput.AppTick(world, command)) return StageStep.AwaitingChoice;   // v0.9 상인 창(WP3 이음새)
         if (world.Room?.Phase == RoomPhase.Exit && world.Outcome == RunOutcome.Running) return StageStep.RoomExit;
 
         if (world.FreezeTicks > 0)

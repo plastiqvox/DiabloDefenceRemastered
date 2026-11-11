@@ -160,7 +160,7 @@ public sealed class ProgressionService(World world) : IProgression
         var levels = pending.Reward.Shrine?.PickWeapon is > 0 and var n ? n : 1;
         var cards = new List<LevelUpCard>(picked.Count);
         foreach (var c in picked) cards.Add(Build.Card(world, c, levels));
-        return new LevelUpOffer(S.Level, cards, S.RerollsLeft, pending.Source);
+        return new LevelUpOffer(S.Level, cards, S.RerollsLeft, pending.Source, pending.Reward);   // v0.9: 창이 건너뛰기 문구·성소 카드 둘째 줄에 씀
     }
 
     /// <summary>보상 창 후보: 마법서 = 무기 카드(<c>cards</c> 가중), 매혹의 성소 = <c>pick_max_level</c> 이하 진화 아닌 가진 무기.</summary>
@@ -245,10 +245,11 @@ public sealed class ProgressionService(World world) : IProgression
     /// <summary>
     /// 문 보상 물체를 주운 순간. 마법서 = 보상 대기(줄 카드가 0장이면 <c>단련</c>), 보물 상자 = 무작위 무기 +n(없으면 <c>단련</c>)·물약 칸(v0.9.1)·금화 × <c>gold_scale</c>,
     /// 성소 = 무기 레벨·<c>Mods</c>·<c>Shrines</c>(매혹은 창 — 후보 0 이면 <c>단련</c>).
+    /// <paramref name="source"/>(v0.9.1 V8): 두 단계 보상(<c>RewardDef.Drop</c>)의 떨어진 물체(책)면 올릴 무기·금화는 상자를 연 틱에 정한 값(<see cref="Pickup.RewardChosen"/>·<see cref="Pickup.Value"/>) —
+    /// 다시 뽑지 않는다. 그 사이 그 칸이 만렙·진화가 되었으면 <c>단련</c>.
     /// </summary>
-    public void CollectReward(RewardDef reward)
+    public void CollectReward(RewardDef reward, Pickup? source = null)
     {
-        var hero = world.Hero;
         switch (reward.Kind)
         {
             case RewardKind.WeaponCards:
@@ -258,18 +259,11 @@ public sealed class ProgressionService(World world) : IProgression
             case RewardKind.WeaponBundle:
             {
                 var bundle = reward.Bundle ?? new RewardBundleDef();
-                Span<int> slots = stackalloc int[WeaponSlots.SlotCount];
-                var n = 0;
-                for (var i = 0; i < WeaponSlots.SlotCount; i++)
-                    if (Build.Upgradable(hero.Weapons[i])) slots[n++] = i;
-                if (n > 0) Build.AddWeaponLevels(world, slots[world.Rng.Drop.Index(n)], bundle.WeaponLevels);
+                var (slot, gold) = source is { RewardStage: RewardPickupStage.Dropped } dropped ? (dropped.RewardChosen, dropped.Value) : RollBundle(reward);
+                if (slot >= 0 && Build.Upgradable(world.Hero.Weapons[slot])) Build.AddWeaponLevels(world, slot, bundle.WeaponLevels);
                 else Build.Temper(world);
                 if (bundle.Potions > 0) HeroPotions.Add(world, bundle.Potions);   // v0.9.1: 물약 칸(가득이면 빠짐)
-                if (bundle.Gold is [var lo, var hi])
-                {
-                    var scale = world.Run?.Act.Act.Rewards.GoldScale ?? world.Stage?.Rewards.GoldScale ?? 1f;
-                    world.RunStats.Gold += (int)MathF.Round(world.Rng.Drop.RangeInclusive(lo, hi) * scale, MidpointRounding.AwayFromZero);
-                }
+                Wallet.Earn(world, gold);                                         // v0.9: 지갑과 얻은 금화 둘 다
                 break;
             }
             case RewardKind.Shrine:
@@ -279,6 +273,74 @@ public sealed class ProgressionService(World world) : IProgression
         S.StatsDirty = true;
         HeroStats.Recompute(world);
         UpdateAwaiting();
+    }
+
+    /// <summary>책이 떨어지는 자리: 상자에서 이 거리(px — 기획 11.4 "상자 바로 앞 30px").</summary>
+    public const float DropDistance = 30f;
+
+    /// <summary>
+    /// 두 단계 보상 물체(v0.9.1 V8 — <c>RewardDef.Drop</c>, 보물 상자 → 책)에 처음 닿은 틱: 상자 <see cref="Pickup.RewardStage"/> = Dropped(열린 상자로 남고 문을 막지 않음),
+    /// 올릴 무기 칸·금화를 <b>이 틱에</b> 방 난수 <c>Drop</c> 으로 정해(한 번에 받던 때와 같은 차례·같은 수 — <see cref="RollBundle"/>) 상자와 책의 <see cref="Pickup.RewardChosen"/>·
+    /// <see cref="Pickup.Value"/>(금화)에 두고, 책을 상자 너머 <see cref="DropDistance"/> 에 <c>SpawnPickup</c>(보상 줄 → <c>GatesExit</c>) + <c>CueKind.ChestDrop</c>(대상 = 그 <c>RewardDef</c>, 자리 = 책).
+    /// 책 자리는 주인공 → 상자 방향(없으면 바라보는 방향)으로 30px, 맵 밖·<c>clearance</c> 미달이면 <c>RewardSpot.Row</c> 의 당김 규칙으로 상자 쪽으로 당긴다.
+    /// </summary>
+    public void DropReward(Pickup chest)
+    {
+        ArgumentNullException.ThrowIfNull(chest);
+        if (chest.Reward is not { Drop: { } drop } reward) throw new ArgumentException("두 단계 보상 물체가 아니다(RewardDef.Drop 없음)", nameof(chest));
+        var (slot, gold) = reward.Kind == RewardKind.WeaponBundle ? RollBundle(reward) : (-1, 0);
+        chest.RewardStage = RewardPickupStage.Dropped;
+        chest.RewardChosen = slot;
+        chest.Value = gold;
+        chest.GatesExit = false;
+
+        var hero = world.Hero;
+        var away = chest.Pos - hero.Pos;
+        var dir = away.LengthSquared() > 1e-6f ? Vector2.Normalize(away)
+            : hero.Facing.LengthSquared() > 1e-6f ? Vector2.Normalize(hero.Facing) : new Vector2(0f, 1f);
+        var pos = DropSpot(world, chest.Pos, dir);
+        var def = drop.IsBound ? drop.Def : world.Defs.Pickups.Get(drop.Id);
+        var id = world.Spawner.SpawnPickup(new PickupSpawn(def, pos, Reward: reward));
+        if (world.Pickups.Get(id) is { } book)
+        {
+            book.RewardStage = RewardPickupStage.Dropped;
+            book.RewardChosen = slot;
+            book.Value = gold;
+        }
+        world.Presentation.Cue(new CueEvent(world.Tick, CueKind.ChestDrop, pos, reward));
+    }
+
+    /// <summary>
+    /// <paramref name="from"/> 에서 <paramref name="dir"/> 로 <see cref="DropDistance"/> 인 자리. <c>RewardSpot.Row</c> 에 두 자리 줄(간격 2 × 30, 옆 방향 = <paramref name="dir"/>)을 세우면
+    /// 둘째 자리가 그 자리이고, 맵 밖·<c>clearance</c> 미달이면 같은 규칙으로 <paramref name="from"/> 쪽으로 당겨진다(보상 자리와 한 규칙 — 6.19). <c>rules.rooms</c> 가 없으면 당기지 않는다.
+    /// </summary>
+    private static Vector2 DropSpot(World world, Vector2 from, Vector2 dir)
+    {
+        if (world.Defs.Rules.Rooms?.RewardSpot is not { } spot) return from + dir * DropDistance;
+        var facing = new Vector2(dir.Y, -dir.X);   // Row 의 옆 방향 = (−facing.Y, facing.X) = dir
+        return RewardSpot.Row(world.Nav, from, facing, 2, spot with { Spacing = 2f * DropDistance })[1];
+    }
+
+    /// <summary>
+    /// 보물 상자 꾸러미의 뽑기(방 난수 <c>Drop</c> — 차례 고정): 올릴 무기 = 만렙·진화 아닌 가진 무기 중 균등(없으면 −1 = <c>단련</c>, 난수 안 씀),
+    /// 금화 = <c>gold</c> [최소, 최대] × 액트 <c>gold_scale</c>(없으면 0, 난수 안 씀). 한 번에 받는 상자는 줍는 틱에, 두 단계 상자는 여는 틱에 부른다.
+    /// </summary>
+    private (int Slot, int Gold) RollBundle(RewardDef reward)
+    {
+        var bundle = reward.Bundle ?? new RewardBundleDef();
+        var hero = world.Hero;
+        Span<int> slots = stackalloc int[WeaponSlots.SlotCount];
+        var n = 0;
+        for (var i = 0; i < WeaponSlots.SlotCount; i++)
+            if (Build.Upgradable(hero.Weapons[i])) slots[n++] = i;
+        var slot = n > 0 ? slots[world.Rng.Drop.Index(n)] : -1;
+        var gold = 0;
+        if (bundle.Gold is [var lo, var hi])
+        {
+            var scale = world.Run?.Act.Act.Rewards.GoldScale ?? world.Stage?.Rewards.GoldScale ?? 1f;
+            gold = (int)MathF.Round(world.Rng.Drop.RangeInclusive(lo, hi) * scale, MidpointRounding.AwayFromZero);
+        }
+        return (slot, gold);
     }
 
     private void CollectShrine(RewardDef reward)

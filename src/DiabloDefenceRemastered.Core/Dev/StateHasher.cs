@@ -5,7 +5,7 @@ namespace DiabloDefenceRemastered.Core.Dev;
 /// <summary>
 /// 상태 해시 (설계서 3.4, WP7) — 결정성 시험과 게임 <c>--log-hash</c> 가 같이 쓴다. 64비트 FNV-1a 를 값의 비트 그대로 섞는다(같은 빌드 구성끼리만 비교).
 /// <list type="bullet">
-/// <item><see cref="Room"/> = 방 해시: 그 <see cref="World"/> 의 상태만 — 직업 ID(첫 값)·틱·난수 흐름 여섯·주인공(위치·속도·HP·칸·허리띠·축복·열린 칸)·성장(레벨·경험치)·
+/// <item><see cref="Room"/> = 방 해시: 그 <see cref="World"/> 의 상태만 — 직업 ID(첫 값)·틱·난수 흐름 여섯·주인공(위치·속도·HP·칸·물약 칸(수·주머니·빠른 물약)·지갑·마시던 회복·장비(v0.9)·축복·열린 칸)·성장(레벨·경험치)·
 /// 개체 저장소 다섯(수·ID·정의·위치·HP·보급 방·보상)·가 본 칸 집합(<see cref="VisibilityField.ExploredHash"/>)·안쪽 방 체류(<c>Current</c>·<c>EnteredTick</c>)·
 /// 방 상태(<c>Phase</c>·<c>PhaseTick</c>·<c>ClockTicks</c>·출구 문·고른 문·무너짐)·결과. <c>RunStats</c>·판 흐름·<c>Room.Reward</c>(앞 방에서 고른 결과)는 넣지 않는다.</item>
 /// <item><see cref="Run"/> = 판 해시: 방 해시 + <c>RunStats</c> + 판 흐름(액트·순번·깊이·들어온 문·지나온 방 기록의 문·보상·다음 방 보상·흐른 틱).</item>
@@ -29,7 +29,15 @@ public static class StateHasher
 
         var hero = world.Hero;
         h.V2(hero.Pos); h.V2(hero.Vel); h.F(hero.Hp); h.F(hero.MaxHp); h.Bool(hero.Dead);
-        h.Int(hero.WeaponSlotsOpen); h.Int(hero.PassiveSlotsOpen); h.Int(hero.Potions);   // v0.9.1: 허리띠 → 물약 칸(장비·지갑·회복 중 열은 WP7)
+        h.Int(hero.WeaponSlotsOpen); h.Int(hero.PassiveSlotsOpen); h.Int(hero.Potions);   // v0.9.1: 허리띠 → 물약 칸
+        // v0.9(WP3 이음새): 물약 칸 단계·지갑·마시던 회복·장비(칸마다 기본 ID·접사 ID·굴린 값)
+        h.Int(hero.PotionSlotsLevel); h.Int(hero.PotionSpeedLevel); h.Int(hero.Gold); h.Int(hero.Heal.TicksLeft); h.F(hero.Heal.Remaining);
+        foreach (var item in hero.Equipment)
+        {
+            h.Str(item?.BaseId);
+            h.Str(item?.Prefix?.Id); h.F(item?.Prefix?.Value ?? 0f);
+            h.Str(item?.Suffix?.Id); h.F(item?.Suffix?.Value ?? 0f);
+        }
         for (var i = 0; i < WeaponSlots.SlotCount; i++)
         {
             var w = hero.Weapons[i];
