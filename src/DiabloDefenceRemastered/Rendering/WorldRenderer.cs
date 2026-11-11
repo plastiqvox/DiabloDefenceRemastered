@@ -388,10 +388,10 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
                     f.Shapes.Add(new ShapeDraw(fh.Pages[page], new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, pos, fogA, false, true, FogShape: true));
                     // 보석 돌: 어두운 회색 돌에 색을 곱하면 탁해서(미리보기) 같은 그림을 등급 색으로 가산 한 겹 더 — 회색조 변종 대신(13장 WP5 단계 2 기록)
                     if (p.Def.Kind == PickupKind.Xp && floor.Tint is { } gemTint) _glows.Add(new GlowDraw(fh.Pages[page], src, dest, gemTint, GemLift * fogA));
+                    floorDrawn = true;
                 }
-                floorDrawn = true;
             }
-            else DrawPickupFallback(batch, f, prim, p, pos, opened ? fogA * 0.45f : fogA);
+            if (!floorDrawn) DrawPickupFallback(batch, f, prim, p, pos, opened ? fogA * 0.45f : fogA);
             GemGlow(p.Def, pos, PickupArt.GlowScale(p.Def, floorDrawn) * fogA);
         }
     }
@@ -545,7 +545,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
     }
 
     /// <summary>창살 기둥 하나(이번 프레임 — <see cref="CollectGrates"/>): 원본 그림·자리(내려간 만큼 잘림)·칸 중심·가림 판정용 사각형.</summary>
-    private readonly record struct GrateDraw(Texture2D Page, Rectangle Src, RectF Dest, RectF FullRect, Vector2 CellCenter);
+    private readonly record struct GrateDraw(Texture2D Page, Rectangle Src, RectF Dest, RectF FullRect, Vector2 CellCenter, bool EnemyPassing);
 
     /// <summary>
     /// 문 봉인 창살(v0.9.4 V13, 7.11)을 4층 정렬 목록에: 문 틈 메가마다 변의 조각(<see cref="GateGrates.PieceName"/>)의 기둥 그림을 그 하위 칸 자리에.
@@ -558,25 +558,32 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         var w = f.World;
         if (_grateArt is null || _arena is null || w.Room is not { } room) return;
         var iso = _arena.Iso;
-        foreach (var (id, gate) in w.Gates) _grateArt.Place(gate, iso, GateGrates.Sink(room, id, f.StageTick), _placed);
-        foreach (var p in _placed)
+        foreach (var (id, gate) in w.Gates)
         {
-            if (!WallFade.Overlaps(p.Full, f.View)) continue;
-            _grateDraws.Add(new GrateDraw(p.Page, p.Src, p.Dest, p.Full, iso.CellCenter(p.Tx, p.Ty)));
-            var sortY = DrawOrder.CellSortY(iso, new ArenaCell(p.Tx, p.Ty, p.Kind, 0));
-            _items.Add(new DrawItem(sortY, DrawOrder.CellTiebreak(iso, p.Tx, p.Ty), DrawKind.Grate, _grateDraws.Count - 1));
+            var from = _placed.Count;
+            if (!_grateArt.Place(gate, iso, GateGrates.Sink(room, id, f.StageTick), _placed) || _placed.Count == from) continue;
+            var passing = GateGrates.EnemyPassing(gate, iso, w.Enemies.Items);   // 적이 드나드는 동안 흐리게(창살을 뚫고 지나가 보이지 않게)
+            for (var i = from; i < _placed.Count; i++)
+            {
+                var p = _placed[i];
+                if (!WallFade.Overlaps(p.Full, f.View)) continue;
+                _grateDraws.Add(new GrateDraw(p.Page, p.Src, p.Dest, p.Full, iso.CellCenter(p.Tx, p.Ty), passing));
+                var sortY = DrawOrder.CellSortY(iso, new ArenaCell(p.Tx, p.Ty, p.Kind, 0));
+                _items.Add(new DrawItem(sortY, DrawOrder.CellTiebreak(iso, p.Tx, p.Ty), DrawKind.Grate, _grateDraws.Count - 1));
+            }
         }
     }
 
     private readonly List<GateGrateArt.Placed> _placed = new(32);
 
-    /// <summary>창살 기둥 하나 — 안쪽 벽과 같은 가림 규칙(주인공을 가리면 반투명, 7.6 <see cref="WallFade"/>).</summary>
+    /// <summary>창살 기둥 하나 — 안쪽 벽과 같은 가림 규칙(주인공을 가리면 반투명, 7.6 <see cref="WallFade"/>), 적이 드나드는 문이면 같은 알파(<see cref="GateGrates.EnemyPassing"/>).</summary>
     private void DrawGrate(SpriteBatch batch, WorldFrame f, in DrawItem it)
     {
         var g = _grateDraws[it.Index];
         var w = f.World;
-        var fade = w.Map is { } map && WallFade.Fades(false, it.SortY, g.FullRect, g.CellCenter, f.HeroDraw, _heroRect,
-                                                     WallFade.Radius(map.WallFade, w.Lighting.HeroLightRadius), map.WallFade.Mode);
+        var fade = g.EnemyPassing
+                   || w.Map is { } map && WallFade.Fades(false, it.SortY, g.FullRect, g.CellCenter, f.HeroDraw, _heroRect,
+                                                        WallFade.Radius(map.WallFade, w.Lighting.HeroLightRadius), map.WallFade.Mode);
         var a = fade ? WallFade.Alpha : 1f;
         BatchX.Blit(batch, g.Page, g.Dest, g.Src, new Color(a, a, a, a));
     }

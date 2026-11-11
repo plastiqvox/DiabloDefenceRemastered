@@ -13,6 +13,7 @@ public sealed record GrateSource(MapDef Map, Int2 Mega, int Tile);
 /// 단계 1 의 코드 그림(붉은 바닥 빛·낮은 창살·룬)으로 돌아간다.</item>
 /// <item>열림: 출구로 열린 문의 창살은 문 단계에 들어간 틱부터 <see cref="OpenSeconds"/> 동안 바닥선에서 잘려 아래로 내려간다(<see cref="Sink"/> 0 → 1, 스테이지 틱 — 3.4).
 /// 들어온 문·고르지 않은 문(<c>Exits</c> 에 없음)은 그대로 남는다. 충돌·시야·방 흐름은 바꾸지 않는다(기획 2.5 "봉인 표시만").</item>
+/// <item>적 드나듦: 입장 중인 적이 문 틈 가까이 있으면 그 문 창살은 흐리게(<see cref="EnemyPassing"/>).</item>
 /// </list>
 /// </summary>
 public static class GateGrates
@@ -36,6 +37,28 @@ public static class GateGrates
         if (room.Phase > RoomPhase.Doors) return 1f;
         var t = (stageTick - room.PhaseTick) / (float)Math.Max(1, OpenTicks);
         return Math.Clamp(t, 0f, 1f);
+    }
+
+    /// <summary>적이 드나드는 문 창살을 흐리게 하는 거리(px, 문 틈 칸 중심에서 적 발까지 — 하위 칸 둘쯤). 첫 값.</summary>
+    public const float PassRadius = 72f;
+
+    /// <summary>
+    /// 입장 중인 적(<see cref="LifeState.Entering"/>)이 이 문 틈 칸 가까이(<see cref="PassRadius"/>) 있나. 기획 2.4 "적은 닫힌 출구 문으로도 들어온다" 는 그대로라,
+    /// 벽 높이 창살을 적이 뚫고 지나가는 장면이 되지 않게 그동안 창살을 흐리게 그린다(<c>WallFade.Alpha</c> — 안쪽 벽 가림과 같은 값). 그림만 바뀐다.
+    /// 문 밖에서 다가오는 동안은 창살 너머(또는 앞)에 보인다.
+    /// </summary>
+    public static bool EnemyPassing(GateZone zone, IsoMath iso, ReadOnlySpan<Enemy> enemies)
+    {
+        ArgumentNullException.ThrowIfNull(zone);
+        ArgumentNullException.ThrowIfNull(iso);
+        const float r2 = PassRadius * PassRadius;
+        foreach (var e in enemies)
+        {
+            if (!e.IsAlive || e.Life != LifeState.Entering) continue;
+            foreach (var c in zone.Cells)
+                if (Vector2.DistanceSquared(iso.CellCenter(c.X, c.Y), e.Pos) <= r2) return true;
+        }
+        return false;
     }
 
     /// <summary>문 틈의 메가타일(문 틈 칸을 메가로 묶은 것, 칸 순).</summary>

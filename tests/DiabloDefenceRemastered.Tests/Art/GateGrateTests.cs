@@ -5,7 +5,7 @@ namespace DiabloDefenceRemastered.Tests.Art;
 
 /// <summary>
 /// 문 봉인 = 원작 L1 창살(v0.9.4 사용자 결정 V13, 기획 10.8 "봉인 표시", 설계서 7.11 — 단계 2 wp5): 닫힌 문은 창살 그대로, 출구로 열린 문은 0.6초 뒤 창살 없음,
-/// 들어온 문·고르지 않은 문은 그대로. 변 → 조각(거울판은 짝 조각), 그림을 빌려 올 맵 찾기(없으면 코드 그림 대체).
+/// 들어온 문·고르지 않은 문은 그대로. 적이 드나드는 동안 흐림. 변 → 조각(거울판은 짝 조각), 그림을 빌려 올 맵 찾기(없으면 코드 그림 대체).
 /// </summary>
 public class GateGrateTests
 {
@@ -34,6 +34,35 @@ public class GateGrateTests
         Assert.Equal(0f, GateGrates.Sink(room, "gate_se", 1001));
 
         Assert.Equal(1f, GateGrates.Sink(null, "gate_se", 0));                           // 방 없는 월드: 봉인 없음
+    }
+
+    /// <summary>
+    /// 닫힌 문으로도 적이 들어온다(기획 2.4) — 입장 중인 적이 문 틈 칸 가까이(72px) 있는 동안만 그 문 창살을 흐리게. 다른 문·먼 적·입장을 마친 적·죽은 적은 상관없음.
+    /// </summary>
+    [Fact]
+    public void EnemyPassing_EnteringNearGateCells_OnlyThatGate()
+    {
+        var t = new TestWorldBuilder().WithDefs(TestDefs.Basic()).WithRoom(RoomPhase.Survive, gateIn: "gate_se").Build();
+        var w = t.World;
+        var iso = w.Arena!.Iso;
+        var gate = w.Gates.Values.First();
+        var other = w.Gates.Values.First(g => g.Side != gate.Side);
+        var cell = iso.CellCenter(gate.Cells[0].X, gate.Cells[0].Y);
+        Assert.False(GateGrates.EnemyPassing(gate, iso, w.Enemies.Items));                       // 적 없음
+
+        var far = t.AddEnemy(cell + new Vector2(GateGrates.PassRadius + 40f, 0f), life: LifeState.Entering);
+        Assert.False(GateGrates.EnemyPassing(gate, iso, w.Enemies.Items));                       // 아직 멀다(창살 너머로 보임)
+
+        var active = t.AddEnemy(cell + new Vector2(10f, 0f));                                    // 입장을 마친 적은 문 앞에 서 있어도 그대로
+        Assert.False(GateGrates.EnemyPassing(gate, iso, w.Enemies.Items));
+
+        far.Pos = cell + new Vector2(20f, 10f);                                                   // 문 틈을 지나는 중
+        Assert.True(GateGrates.EnemyPassing(gate, iso, w.Enemies.Items));
+        Assert.False(GateGrates.EnemyPassing(other, iso, w.Enemies.Items));                      // 다른 문은 그대로
+
+        far.Dead = true;
+        Assert.False(GateGrates.EnemyPassing(gate, iso, w.Enemies.Items));
+        Assert.True(active.IsAlive);
     }
 
     /// <summary>실제 맵 전부(원판·거울판): 변마다 조각, 거울판은 짝 조각(타일셋 짝 표), 문 틈 메가 둘.</summary>
