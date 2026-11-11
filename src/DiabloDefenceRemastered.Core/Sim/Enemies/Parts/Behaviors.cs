@@ -348,13 +348,13 @@ public static class EnemyBuffs
         var index = w.Defs.Buffs.IndexOf(buff.Id);
         if (index < 0) return;
         var def = w.Defs.Buffs[index];
-        Span<int> found = stackalloc int[256];
-        var n = Math.Min(w.Spatial.Query(ctx.Self.Pos, radius, found), found.Length);
+        // 공간 해시를 쓰지 않는다: EnemyThink(5)는 해시를 다시 짓기(Locomotion 6·SpatialRebuild 8) 전이라 해시의 밀집 인덱스가 앞 틱 EndTick 압축 전 것이다(4.8 — 그 틱에만 유효).
+        // 앞 틱에 적이 지워졌으면 범위 밖 인덱스가 된다(단계 2 해골 대장 오라가 실제 판에서 처음 부르며 드러남). 오라·함성은 드물어 저장소를 한 번 훑는다(결정적 — 밀집 순서).
         var end = w.Tick + ticks;
-        for (var i = 0; i < n; i++)
+        var r2 = radius * radius;
+        foreach (var e in w.Enemies.Items)
         {
-            var e = w.Enemies[found[i]];
-            if (!e.IsAlive) continue;
+            if (!e.IsAlive || Vector2.DistanceSquared(e.Pos, ctx.Self.Pos) > r2) continue;
             if (!includeSelf && e.Id == ctx.Self.Id) continue;
             if (!includeBosses && e.Def.Rank != DefRank.Normal) continue;
             if (tag is not null && !HasTag(e.Def, tag)) continue;
