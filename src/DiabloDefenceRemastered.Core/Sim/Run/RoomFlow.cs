@@ -137,7 +137,11 @@ public static class RoomFlow
 
         var k = 0;
         if (room.Reward is { Object: { } obj } reward) world.Spawner.SpawnPickup(new PickupSpawn(obj.Def, row[k++], Reward: reward));
-        else if (room.Shop is not null && count > 0) k++;   // 상인 자리(그리기 WP5 는 RewardSpot)
+        else if (room.Shop is not null && count > 0)
+        {
+            // 상인 자리 = 줄의 첫 자리(wp4 — 정예 상자가 함께 놓이면 줄 가운데가 spot 이 아니다). 그리기(WP5)·열기(WP3)·신호 자리가 RewardSpot 을 읽으므로 그것을 줄 첫 자리로
+            room.RewardSpot = row[k++];
+        }
         for (var i = 0; i < pickups.Count && k < row.Length; i++)
         {
             var p = pickups[i];

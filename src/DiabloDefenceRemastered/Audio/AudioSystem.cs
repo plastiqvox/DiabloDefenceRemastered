@@ -11,9 +11,9 @@ namespace DiabloDefenceRemastered.Audio;
 /// <item><see cref="PreloadStage"/>: 액트를 시작할 때만(v0.7) — 그 액트의 소리(<see cref="AudioReach"/>)와 곡을 미리 읽는다. 무음이면 효과음은 읽지 않는다.</item>
 /// <item>보스 대사를 고른 프레임에 음악을 <c>voice_duck</c>(50%, 2s)로 줄인다.</item>
 /// </list>
-/// 끝낼 때 <see cref="Dispose"/> 가 <c>AUDIO muted=…</c> 요약 줄을 쓴다(GameApp 이 <c>IDisposable</c> 로 부른다 — WP8 구현 기록).
+/// 끝낼 때 <see cref="Dispose"/>(계약 <c>IAudioServices : IDisposable</c> — v0.9 WP1g)가 <c>AUDIO muted=…</c> 요약 줄을 쓴다. GameApp 이 종료 때 부른다.
 /// </summary>
-public sealed class AudioSystem : IAudioServices, IDisposable
+public sealed class AudioSystem : IAudioServices
 {
     private readonly GameDefs _defs;
     private readonly SoundPipeline _pipeline;

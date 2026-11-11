@@ -15,6 +15,8 @@ public sealed class EnemyThinkSystem : ISimSystem
     public const float EntryReach = 8f;
     /// <summary>행진 목표 진입점에서 풀리는 거리(px, 6.6).</summary>
     public const float MarchRelease = 48f;
+    /// <summary>호위가 대형 자리에 닿았다고 보는 거리(px) — 그 안이면 선다(wp4 단계 2).</summary>
+    public const float FollowArrive = 12f;
 
     public void Tick(World world)
     {
@@ -175,7 +177,15 @@ public sealed class EnemyThinkSystem : ISimSystem
             {
                 var leader = w.Enemies.Get(e.Order.Leader);
                 if (leader is null || !leader.IsAlive || ctx.DistToHero <= e.FollowBreak) e.Order = default;
-                else return MoveIntent.SeekPoint(leader.Pos + e.Order.Offset);
+                else
+                {
+                    // 대형 자리가 벽·맵 밖이면(작은 방 — 단계 2) 대장 자리로 모인다: 닿지 못할 자리를 향해 벽에 붙어 멈춰 있지 않게.
+                    // 자리에 닿았으면(FollowArrive 안) 선다 — 대장이 서 있을 때 "쫓는데 안 움직임" 이 아니라 대형을 지키는 것이다
+                    var slot = leader.Pos + e.Order.Offset;
+                    if (w.Nav is { } nav && (!nav.IsInsideMap(slot) || nav.Clearance(slot) < e.Radius)) slot = leader.Pos;
+                    if (Vector2.DistanceSquared(e.Pos, slot) <= FollowArrive * FollowArrive) return MoveIntent.Hold;
+                    return MoveIntent.SeekPoint(slot);
+                }
                 break;
             }
         }

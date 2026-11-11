@@ -173,15 +173,15 @@ public class RunPlannerTests
     [Fact]
     public void FixedPlan_Golden()
     {
-        // 고정 값 — RunSeeds 섞기·뽑기 순서(맵 → 문 → 출구 → 보상)를 바꾸면 깨진다(계약, 11.3)
+        // 고정 값 — RunSeeds 섞기·뽑기 순서(맵 → 문 → 출구 → 보상)를 바꾸면 깨진다(계약, 11.3). v0.9(wp4): 맵은 덱 순서 — 문·출구·보상은 v0.8 값 그대로
         var keys = Plan(2024).Rooms.Select(r => $"{r.Number}:{r.Map.Id}:{r.GateIn}:{string.Join(",", r.ExitGates)}:{string.Join(",", r.RewardOrder.Select(x => x.Id))}");
         Assert.Equal(
         [
-            "1:test_room_a:gate_sw:gate_nw,gate_ne,gate_se:test_reward_tome,test_reward_chest,test_reward_potion",
-            "2:test_room_b:gate_sw:gate_nw,gate_ne,gate_se:test_reward_potion,test_reward_tome,test_reward_chest",
-            "3:test_room_a:gate_sw:gate_nw,gate_ne:test_reward_tome,test_reward_chest,test_reward_potion",       // v0.8: 다음이 정예여도 출구 둘
-            "4:test_room_b:gate_se:gate_nw,gate_ne:test_reward_chest,test_reward_tome,test_reward_potion",
-            "5:test_room_a:gate_sw:gate_nw,gate_ne,gate_se:test_reward_potion,test_reward_tome,test_reward_chest",   // v0.8: 다음이 보스여도 둘·셋
+            "1:test_room_b:gate_sw:gate_nw,gate_ne,gate_se:test_reward_tome,test_reward_chest,test_reward_potion",
+            "2:test_room_a:gate_sw:gate_nw,gate_ne,gate_se:test_reward_potion,test_reward_tome,test_reward_chest",
+            "3:test_room_b:gate_sw:gate_nw,gate_ne:test_reward_tome,test_reward_chest,test_reward_potion",       // v0.8: 다음이 정예여도 출구 둘
+            "4:test_room_a:gate_se:gate_nw,gate_ne:test_reward_chest,test_reward_tome,test_reward_potion",
+            "5:test_room_b:gate_sw:gate_nw,gate_ne,gate_se:test_reward_potion,test_reward_tome,test_reward_chest",   // v0.8: 다음이 보스여도 둘·셋
             "6:test_boss_room:gate_sw:gate_ne:test_reward_potion,test_reward_chest,test_reward_tome",
         ], keys);
     }
@@ -189,17 +189,17 @@ public class RunPlannerTests
     [Fact]
     public void FixedPlan_Golden_Mirror()
     {
-        // 고정 값(v0.8) — (맵, 방향) 후보 순서(풀 → 원판 → 거울판)·짝 이름 바꾸기를 바꾸면 깨진다(계약, 11.3)
+        // 고정 값(v0.8 → v0.9 덱 순서, wp4) — 덱 섞기·방향 뽑기·짝 이름 바꾸기를 바꾸면 깨진다(계약, 11.3)
         var defs = RoomActs.Defs(mirror: true);
         var keys = RunPlanner.PlanAct(defs.Stages.Get(RoomActs.Act1Id), 1, 2024, defs.Rules.Rooms!).Rooms
             .Select(r => $"{r.Number}:{r.Map.Id}:{r.GateIn}:{string.Join(",", r.ExitGates)}");
         Assert.Equal(
         [
-            "1:test_room_a:gate_sw:gate_nw,gate_ne,gate_se",
-            "2:test_room_a@m:gate_se:gate_ne,gate_nw,gate_sw",      // 거울판: 들어온 문·출구가 짝 이름(같은 씨앗 거울판 없는 계획의 방 2 = gate_sw · nw,ne,se)
-            "3:test_room_b:gate_sw:gate_nw,gate_ne",
-            "4:test_room_a:gate_se:gate_nw,gate_ne",
-            "5:test_room_a@m:gate_se:gate_ne,gate_nw,gate_sw",
+            "1:test_room_b:gate_sw:gate_nw,gate_ne,gate_se",
+            "2:test_room_a:gate_sw:gate_nw,gate_ne,gate_se",
+            "3:test_room_b@m:gate_se:gate_ne,gate_nw",              // 거울판: 들어온 문·출구가 짝 이름(같은 씨앗 거울판 없는 계획의 방 3 = gate_sw · nw,ne)
+            "4:test_room_a@m:gate_sw:gate_ne,gate_nw",
+            "5:test_room_b:gate_sw:gate_nw,gate_ne,gate_se",
             "6:test_boss_room:gate_sw:gate_ne",
         ], keys);
     }

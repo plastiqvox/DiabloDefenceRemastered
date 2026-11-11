@@ -31,8 +31,10 @@ public sealed record RoomPlan(int Act, int Index, RoomDef Def, MapDef Map, strin
 /// 판 흐름을 액트 단위로 미리 정하는 순수 함수 (v0.7 → v0.8 WP1f, 설계서 3.6 결정 2 — 그 뒤 WP4). 공개 함수에 <c>World</c> 인자가 없다 — 플레이와 무관하다.
 /// 방마다 <c>RunSeeds.Flow(씨앗, 액트, 방 번호)</c> 로 난수 하나를 만들어 <b>이 순서로</b> 뽑는다(순서를 바꾸면 계약 변경 — 11.3):
 /// <list type="number">
-/// <item><b>방 맵</b>(v0.8 — (맵, 방향) 쌍): 보스 방은 <c>room_maps.boss</c>, 아니면 그 종류 풀. 맵마다 원판, <c>mirror: true</c> 면 바로 뒤에 거울판(풀 순서 → 원판 → 거울판).
-/// 후보가 둘 이상이면 바로 앞 방(배열 바로 앞 원소)과 같은 쌍(같은 맵·같은 방향)을 빼고 균등 — 풀 1장이어도 거울판이 있으면 원판·거울판이 번갈아 나온다.</item>
+/// <item><b>방 맵</b>: 보스 방은 <c>room_maps.boss</c>(v0.8 — (맵, 방향) 쌍 중 바로 앞 방과 같은 쌍을 빼고 균등). 일반·정예 방은 v0.9 <b>덱 순서</b>(기획 10.8 v0.9·설계 13.23 33-6 — WP4):
+/// 액트를 시작할 때 일반·정예 풀의 서로 다른 맵(풀 순서, 일반 먼저)을 덱 흐름 <c>RunSeeds.Flow(씨앗, 액트, 0)</c>(방 번호는 1부터라 0 은 어느 방과도 겹치지 않음)으로 섞고
+/// 장마다 방향(<c>mirror: true</c> 면 원판·거울판 중 하나)을 같은 흐름에서 정한다. 방마다 남은 덱에서 그 방 종류 풀에 든 첫 장을 쓴다 — 풀을 다 쓰기 전에는 같은 맵(어느 방향이든)을 다시 쓰지 않는다.
+/// 쓸 장이 없으면 다시 섞되 바로 앞 방 맵이 맨 앞이면 둘째 장과 바꾼다. 덱이 한 장(풀 1장)이면 바로 앞 방과 반대 방향(원판·거울판이 번갈아). 이 방의 흐름 난수는 v0.8 과 같은 수(하나)를 써서 ②~④ 가 그대로다.</item>
 /// <item><b>들어온 문</b> — 보스 방 <c>gates.boss_entry</c>, 아니면 <c>gates.entry</c> 에서 균등.</item>
 /// <item><b>출구 문</b> — 판의 마지막 방이면 없음. 이 방이 액트의 마지막 방(계단)이면 <c>gates.single_exit</c> 하나.
 /// 아니면 <c>gates.exits</c> 둘, <c>exits.three_chance</c> 면 남은 앞 문을 더해 셋(순서 = exits 뒤에 남은 앞 문). v0.8: 다음이 정예·보스 방이어도 둘(셋) — 문마다 덤 보상이 다르다.
@@ -55,6 +57,7 @@ public static class RunPlanner
             if (w.Weight > 0f) weights.Add(w);
 
         var plans = new List<RoomPlan>(act.Rooms.Count);
+        MapDeck? deck = null;
         var lastNumber = 0;
         for (var i = 0; i < act.Rooms.Count; i++)
         {
@@ -68,24 +71,28 @@ public static class RunPlanner
                 throw new ArgumentException($"액트 '{act.Id}' 의 보스 방 {def.Number} 에 보스(boss)가 없다(13.5-23 ①)");
             var rng = new RandomStream(RunSeeds.Flow(runSeed, actNumber, def.Number));
 
-            // ① 방 맵 — (맵, 방향) 쌍
-            var pairs = new List<MapDef>();
+            // ① 방 맵 — 보스 방은 (맵, 방향) 쌍, 일반·정예 방은 덱(v0.9)
+            MapDef map;
             if (def.Kind == RoomKind.Boss)
-                AddPair(act.RoomMaps.Boss?.Def ?? throw new ArgumentException($"액트 '{act.Id}' 에 보스 방 맵(room_maps.boss)이 없다"));
+            {
+                var pairs = new List<MapDef>();
+                AddPair(pairs, act.RoomMaps.Boss?.Def ?? throw new ArgumentException($"액트 '{act.Id}' 에 보스 방 맵(room_maps.boss)이 없다"));
+                var candidates = pairs;
+                if (pairs.Count >= 2 && i > 0)
+                {
+                    var previous = plans[i - 1].Map.Id;
+                    candidates = pairs.FindAll(m => !string.Equals(m.Id, previous, StringComparison.Ordinal));
+                    if (candidates.Count == 0) candidates = pairs;
+                }
+                map = candidates[Pick(rng, candidates.Count)];
+            }
             else
             {
                 var pool = def.Kind == RoomKind.Elite ? act.RoomMaps.Elite : act.RoomMaps.Normal;
                 if (pool.Count == 0) throw new ArgumentException($"액트 '{act.Id}' 에 {Name(def.Kind)} 방 맵 풀이 없다(room_maps)");
-                foreach (var r in pool) AddPair(r.Def);
+                rng.NextUInt();   // v0.8 의 ① 한 번 — ②~④ 를 Flow(n) 만의 함수로 둔다
+                map = (deck ??= new MapDeck(act, actNumber, runSeed)).Draw(pool, i > 0 ? plans[i - 1].Map : null);
             }
-            var candidates = pairs;
-            if (pairs.Count >= 2 && i > 0)
-            {
-                var previous = plans[i - 1].Map.Id;
-                candidates = pairs.FindAll(m => !string.Equals(m.Id, previous, StringComparison.Ordinal));
-                if (candidates.Count == 0) candidates = pairs;
-            }
-            var map = candidates[Pick(rng, candidates.Count)];
             var mirrored = map.IsMirror;
 
             // ② 들어온 문
@@ -146,16 +153,87 @@ public static class RunPlanner
             draws.Add(rng.NextFloat());
 
             plans.Add(new RoomPlan(actNumber, i, def, map, gateIn, exits, order, RunSeeds.Room(runSeed, actNumber, def.Number), draws));
-
-            void AddPair(MapDef m)
-            {
-                pairs.Add(m);
-                if (!m.Mirror) return;
-                pairs.Add(m.Mirrored ?? throw new ArgumentException(
-                    $"맵 '{m.Id}' 이 mirror: true 인데 거울판이 없다 — 읽기(MapDataReader)·시험 정의는 MapMirror.WithMirror 로 만든다"));
-            }
         }
         return new ActPlan(act, actNumber, plans);
+    }
+
+    private static void AddPair(List<MapDef> pairs, MapDef m)
+    {
+        pairs.Add(m);
+        if (m.Mirror) pairs.Add(MirrorOf(m));
+    }
+
+    private static MapDef MirrorOf(MapDef m) => m.Mirrored ?? throw new ArgumentException(
+        $"맵 '{m.Id}' 이 mirror: true 인데 거울판이 없다 — 읽기(MapDataReader)·시험 정의는 MapMirror.WithMirror 로 만든다");
+
+    /// <summary>
+    /// 일반·정예 방 맵 덱(v0.9, 기획 10.8 "고르기" — 카드 덱처럼). 장 = 서로 다른 원판 맵(일반 풀 순서 → 정예 풀에만 있는 맵), 섞기·방향은 덱 흐름 하나.
+    /// 섞기는 Fisher–Yates(뒤에서부터, 장마다 난수 하나) 뒤 장마다 방향 난수 하나(거울판이 없는 맵도 써서 수가 고정). 같은 씨앗·같은 액트면 같은 순서.
+    /// </summary>
+    private sealed class MapDeck
+    {
+        private readonly List<MapDef> _cards = [];
+        private readonly List<MapDef> _left = [];
+        private readonly RandomStream _rng;
+
+        public MapDeck(StageDef act, int actNumber, ulong runSeed)
+        {
+            foreach (var r in act.RoomMaps.Normal.Concat(act.RoomMaps.Elite))
+                if (!_cards.Exists(m => string.Equals(m.Id, r.Def.Id, StringComparison.Ordinal))) _cards.Add(r.Def);
+            _rng = new RandomStream(RunSeeds.Flow(runSeed, actNumber, 0));
+        }
+
+        /// <summary>남은 덱에서 <paramref name="pool"/> 에 든 첫 장. 없으면 다시 섞는다(바로 앞 방 맵 <paramref name="previous"/> 가 그 풀에서 처음 뽑힐 장이 되지 않게).</summary>
+        public MapDef Draw(IReadOnlyList<DefRef<MapDef>> pool, MapDef? previous)
+        {
+            var k = _left.FindIndex(m => InPool(pool, m));
+            if (k < 0)
+            {
+                Shuffle(pool, previous);
+                k = _left.FindIndex(m => InPool(pool, m));
+                if (k < 0) throw new ArgumentException("방 맵 덱에 그 방 종류 풀의 맵이 없다(room_maps)");
+            }
+            var card = _left[k];
+            _left.RemoveAt(k);
+            // 덱이 한 장이고 바로 앞 방도 그 맵이면 반대 방향(풀 1장 — 원판·거울판이 번갈아, v0.8.1)
+            var id = BaseId(card);
+            if (_cards.Count == 1 && previous is not null && _cards[0].Mirror && string.Equals(BaseId(previous), id, StringComparison.Ordinal))
+                return previous.IsMirror ? _cards[0] : MirrorOf(_cards[0]);
+            return card;
+        }
+
+        private void Shuffle(IReadOnlyList<DefRef<MapDef>> pool, MapDef? previous)
+        {
+            var order = new List<MapDef>(_cards);
+            for (var n = order.Count - 1; n > 0; n--)
+            {
+                var j = (int)((ulong)_rng.NextUInt() * (uint)(n + 1) >> 32);
+                (order[n], order[j]) = (order[j], order[n]);
+            }
+            // 바로 앞 방 맵이 이 방 종류 풀에서 처음 뽑힐 장이면 그 풀의 다음 장과 바꾼다 — order[0] 만 보면 일반·정예 풀이 다를 때
+            // [정예 전용 맵, 바로 앞 방 맵, …] 에서 같은 맵이 연달아 나온다. 두 풀이 같으면(액트 1) order[0]·order[1] 바꾸기와 같다.
+            if (previous is not null)
+            {
+                var first = order.FindIndex(m => InPool(pool, m));
+                if (first >= 0 && string.Equals(order[first].Id, BaseId(previous), StringComparison.Ordinal))
+                {
+                    var next = order.FindIndex(first + 1, m => InPool(pool, m));
+                    if (next >= 0) (order[first], order[next]) = (order[next], order[first]);
+                }
+            }
+            _left.Clear();
+            foreach (var m in order) _left.Add(_rng.NextUInt() >= 0x80000000u && m.Mirror ? MirrorOf(m) : m);   // 위 비트로(아래 비트는 약한 생성기가 있다)
+        }
+
+        private static bool InPool(IReadOnlyList<DefRef<MapDef>> pool, MapDef card)
+        {
+            var id = BaseId(card);
+            foreach (var r in pool)
+                if (string.Equals(r.Def.Id, id, StringComparison.Ordinal)) return true;
+            return false;
+        }
+
+        private static string BaseId(MapDef m) => m.MirrorOf ?? m.Id;
     }
 
     /// <summary>

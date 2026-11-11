@@ -1,3 +1,5 @@
+using DiabloDefenceRemastered.Core.Sim.Heroes;
+
 namespace DiabloDefenceRemastered.Core.Sim.Autoplay;
 
 /// <summary>자동 조작 이동 모드(v0.6.1 — 9절 <c>--autoplay-visit</c>, 게임 <c>AppOptions.AutoplayVisit</c>). Core 에 두어 <c>Scenario</c> 시험도 쓴다.</summary>
@@ -39,6 +41,8 @@ public sealed class AutoplayPolicy(AutoplayVisit visit)
     public const float AvoidRadius = 200f, PickupRadius = 300f, VisitReach = 60f, VisitTimeout = 40f;
     /// <summary>길 다음 칸을 다시 구하는 간격(틱, 0.5s).</summary>
     public const int PathRefreshTicks = 30;
+    /// <summary>상인 문을 보물 상자와 같은 순위로 올리는 지갑(기획 15절 v0.9 첫 값 — 자동 조작 판이 상인 창을 지나가게).</summary>
+    public const int MerchantGold = 150;
 
     private readonly List<RoomVisit> _events = [];
     private readonly Dictionary<(string Map, string Room), (int Visits, int Skips, int Ticks, float Damage)> _stats = [];
@@ -51,6 +55,7 @@ public sealed class AutoplayPolicy(AutoplayVisit visit)
     private int _visitStartTick;
     private bool _stallLogged;
     private bool _skipLogged;
+    private bool _shopBought;
     private Vector2 _pathTarget;
     private Vector2 _pathNext;
     private int _pathTick = int.MinValue;
@@ -78,6 +83,24 @@ public sealed class AutoplayPolicy(AutoplayVisit visit)
     public PlayerCommand Next(World world)
     {
         if (!ReferenceEquals(world, _world)) BeginWorld(world);
+        if (world.Room?.Shop is { Open: true } open) return ShopCommand(world, open);   // 상인 창 앱 틱(v0.9 — 판 틱이 돌지 않음)
+        var command = Decide(world);
+        return ShouldDrink(world) ? command with { Buttons = command.Buttons | CommandButtons.Drink } : command;
+    }
+
+    /// <summary>
+    /// 물약(v0.9.1 V9, 기획 15절·설계 6.19): 체력 &lt; 최대 × <c>rules.hero.potions.bot_threshold</c> ∧ 마시는 중이 아님 ∧ 물약 ≥ 1 이면 그 틱에 <c>Drink</c>.
+    /// 끝난 판·죽은 주인공·물약 칸 규칙이 없는 정의는 마시지 않는다.
+    /// </summary>
+    public static bool ShouldDrink(World world)
+    {
+        var hero = world.Hero;
+        if (world.Defs.Rules.Hero?.Potions is not { } potions || hero.Dead || world.Outcome != RunOutcome.Running) return false;
+        return hero.MaxHp > 0f && hero.Hp < hero.MaxHp * potions.BotThreshold && !hero.Heal.Active && hero.Potions > 0;
+    }
+
+    private PlayerCommand Decide(World world)
+    {
         var hero = world.Hero;
         var room = world.Room;
         var skip = world.Defs.Rules.Rooms?.AutoplayDoorSkip ?? 20f;
@@ -90,6 +113,8 @@ public sealed class AutoplayPolicy(AutoplayVisit visit)
                 _rewardStalls.Add(new RewardStall(room.Plan.Act, room.Plan.Number, room.Phase, world.Tick));
             }
             if (NearestGatingPickup(world) is { } target) return new PlayerCommand(PathDir(world, target));
+            // v0.9 상인 방: 창을 한 번 닫아야 보상을 받은 것 — 상인 자리(보상 자리)로 걸어가 연다(WP3 — 주인공 반경 + 20 안이면 열림)
+            if (room.Shop is { Visited: false }) return new PlayerCommand(PathDir(world, room.RewardSpot));
             return new PlayerCommand(Avoid(world));
         }
         if (room is { Phase: RoomPhase.Doors } && room.Exits.Count > 0)
@@ -168,7 +193,91 @@ public sealed class AutoplayPolicy(AutoplayVisit visit)
         _visitStartTick = world.Tick;
         _stallLogged = false;
         _skipLogged = false;
+        _shopBought = false;
         _pathTick = int.MinValue;
+    }
+
+    /// <summary>
+    /// 상인 창(기획 12.8·15절 v0.9.1, 설계 6.19 — 열린 동안의 앱 틱마다): 입력 잠금(<c>World.Combat.ShopLockTicks</c>)이 남았으면 아무것도 누르지 않는다.
+    /// 반지 바꾸기 중이면 견준 값이 작은 반지 자리(같으면 첫째)로 <c>Choice1/2</c>. 한 번 샀으면(또는 살 것이 없으면) <c>Skip</c> = 떠나기. 다시 굴리기는 하지 않는다.
+    /// 장비 상인 = 살 수 있는 카드(산 것·값 &gt; 지갑 제외) 중 지금 칸 대비 <see cref="EquipValue"/> 차이가 가장 큰 것(같으면 왼쪽).
+    /// 페핀 = 물약 칸이 비었으면 채우기 → 주머니 → 빠른 물약 중 살 수 있는 첫 것.
+    /// </summary>
+    private PlayerCommand ShopCommand(World world, ShopState shop)
+    {
+        if (world.Combat.ShopLockTicks > 0) return PlayerCommand.None;
+        if (shop.RingPending >= 0)
+        {
+            _shopBought = true;
+            return new PlayerCommand(Vector2.Zero, WeakerRing(world) == 0 ? CommandButtons.Choice1 : CommandButtons.Choice2);
+        }
+        if (_shopBought) return new PlayerCommand(Vector2.Zero, CommandButtons.Skip);
+        var pick = PickShopCard(world, shop);
+        if (pick < 0) return new PlayerCommand(Vector2.Zero, CommandButtons.Skip);
+        _shopBought = true;
+        return new PlayerCommand(Vector2.Zero, pick switch { 0 => CommandButtons.Choice1, 1 => CommandButtons.Choice2, _ => CommandButtons.Choice3 });
+    }
+
+    /// <summary>살 카드 번호(0부터, 없으면 −1) — <see cref="ShopCommand"/> 의 규칙. 시험이 합성 <c>ShopState</c> 로 부른다.</summary>
+    public static int PickShopCard(World world, ShopState shop)
+    {
+        var hero = world.Hero;
+        bool Affordable(ShopCard c) => !c.Bought && c.Price <= hero.Gold;
+        if (shop.Cards.Count > 0 && shop.Cards.TrueForAll(c => c.Kind == ShopCardKind.Potion))
+        {
+            PotionUpgrade[] order = hero.Potions == 0 ? [PotionUpgrade.Refill, PotionUpgrade.Slots, PotionUpgrade.Speed] : [PotionUpgrade.Slots, PotionUpgrade.Speed];
+            foreach (var u in order)
+            {
+                var k = shop.Cards.FindIndex(c => c.Upgrade == u && Affordable(c));
+                if (k >= 0) return k;
+            }
+            return -1;
+        }
+        var best = -1;
+        var bestGain = float.NegativeInfinity;
+        for (var i = 0; i < shop.Cards.Count; i++)
+        {
+            var c = shop.Cards[i];
+            if (c.Kind != ShopCardKind.Equip || c.Item is null || !Affordable(c)) continue;
+            var gain = EquipGain(world, c.Item);
+            if (gain > bestGain) { bestGain = gain; best = i; }
+        }
+        return best;
+    }
+
+    /// <summary>
+    /// 견주는 값(기획 15절 v0.9 "최대 체력 + 10 × 방어"): 장비만의 능력치(<c>EquipStats.Sum</c>)의 <c>max_hp</c> + 10 × <c>armor</c>.
+    /// <c>rules.equipment</c> 가 없는 정의는 0.
+    /// </summary>
+    public static float EquipValue(World world, IReadOnlyList<EquipItem?> equipment)
+    {
+        if (world.Defs.Rules.Equipment is not { } rules) return 0f;
+        var s = EquipStats.Sum(equipment, world.Defs, rules);
+        return s[StatKey.MaxHp] + 10f * s[StatKey.Armor];
+    }
+
+    /// <summary>이 장비를 끼웠을 때 견주는 값의 차이 — 그 칸(반지는 빈 칸 먼저, 둘 다 차면 값이 작은 반지 자리)을 바꾼 장비 칸으로 견준다.</summary>
+    public static float EquipGain(World world, EquipItem item)
+    {
+        if (!world.Defs.ItemBases.TryGet(item.BaseId, out var b)) return float.NegativeInfinity;
+        var now = world.Hero.Equipment;
+        var slot = (int)HeroEquipment.SlotOf(b.Kind);
+        if (b.Kind == EquipKind.Ring)
+            slot = now[(int)EquipSlot.Ring1] is null ? (int)EquipSlot.Ring1
+                 : now[(int)EquipSlot.Ring2] is null ? (int)EquipSlot.Ring2
+                 : WeakerRing(world) == 0 ? (int)EquipSlot.Ring1 : (int)EquipSlot.Ring2;
+        var next = (EquipItem?[])now.Clone();
+        next[slot] = item;
+        return EquipValue(world, next) - EquipValue(world, now);
+    }
+
+    /// <summary>두 반지 중 견주는 값이 작은 쪽(0 = 첫째, 1 = 둘째, 같으면 첫째).</summary>
+    public static int WeakerRing(World world)
+    {
+        var now = world.Hero.Equipment;
+        var a = EquipValue(world, [now[(int)EquipSlot.Ring1]]);
+        var b = EquipValue(world, [now[(int)EquipSlot.Ring2]]);
+        return b < a ? 1 : 0;
     }
 
     /// <summary>반경 200 안 적에게서 멀어지는 방향(거리 역수 가중 합, 길이 ≤ 1).</summary>
@@ -262,7 +371,7 @@ public sealed class AutoplayPolicy(AutoplayVisit visit)
     }
 
     /// <summary>
-    /// 문 우선순위(기획 v0.8.1 15절): 체력 &lt; 50% 이고 허리띠가 비었으면 완전 회복 물약 > 마법서(무기 칸이 남았거나 Lv8 아닌 무기) > 보물 상자 > 성소 > 나머지.
+    /// 문 우선순위(기획 15절 v0.9.1): 체력 &lt; 50% 이고 물약 칸이 비었으면 회복 문 > 마법서(무기 칸이 남았거나 Lv8 아닌 무기) > 보물 상자 = 상인(금화 ≥ 150) > 성소 > 나머지.
     /// 같으면 문 틈 가운데의 화면 x 가 작은 문, 그다음 화면 y 가 작은 문, 그다음 <c>Exits</c> 순서.
     /// </summary>
     private static int ChooseDoor(World world, RoomState room)
@@ -285,9 +394,11 @@ public sealed class AutoplayPolicy(AutoplayVisit visit)
         var hero = world.Hero;
         return reward.Kind switch
         {
-            RewardKind.HealNextRoom when hero.MaxHp > 0f && hero.Hp < hero.MaxHp * 0.5f => 0,   // v0.9: 회복 문(우선순위 정리는 WP4 — 6.19)
+            // v0.9.1(기획 15절): 체력 < 50% 이고 물약 칸이 비었으면 회복 문이 맨 앞
+            RewardKind.HealNextRoom when hero.MaxHp > 0f && hero.Hp < hero.MaxHp * 0.5f && hero.Potions == 0 => 0,
             RewardKind.WeaponCards when TomeUseful(hero) => 1,
             RewardKind.WeaponBundle => 2,
+            RewardKind.Merchant when hero.Gold >= MerchantGold => 2,   // v0.9(기획 15절): 금화 ≥ 150 이면 보물 상자와 같은 순위(첫 값)
             RewardKind.Shrine => 3 + ShrineOrder(reward.Id),
             RewardKind.WeaponCards => 6,
             _ => 7,

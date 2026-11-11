@@ -14,10 +14,10 @@ public static class ActRunner
                                 float KiteSeconds, int Spawned, int Fallbacks, int BandSpawns, RunOutcome Outcome);
 
     public static Result Run(GameDefs defs, string actId, ulong seed, RunOptions? options = null, AutoplayVisit visit = AutoplayVisit.None,
-                             int startRoomIndex = 0, Func<ModuleContext>? modules = null, int hashEvery = 60)
+                             int startRoomIndex = 0, Func<ModuleContext>? modules = null, int hashEvery = 60, StageDef? act = null)
     {
         var rules = defs.Rules.Rooms!;
-        var session = new RunSession(defs, (modules ?? (() => FakeArena.Modules()))(), new RunStart(seed, defs.Stages.Get(actId), null,
+        var session = new RunSession(defs, (modules ?? (() => FakeArena.Modules()))(), new RunStart(seed, act ?? defs.Stages.Get(actId), null,
                                      options ?? new RunOptions { God = true }, startRoomIndex));
         var policy = new AutoplayPolicy(visit);
         var hashes = new List<ulong>();
@@ -31,7 +31,10 @@ public static class ActRunner
         {
             var w = session.World;
             var room = w.Room!;
-            var survive = room.SurviveTicks > 0 ? room.SurviveTicks : MathX.SecondsToTicks(rules.EliteSpawnCap.Seconds, World.Dt);
+            // 방 틱 상한(기획 15절 v0.8.1): 일반 = 생존 길이, 정예 = 생성 상한 2:30 + 1:30, 보스 = 6:00 — 그 위에 정리 안전장치 + 60s
+            var survive = room.SurviveTicks > 0 ? room.SurviveTicks
+                : room.Plan.Kind == RoomKind.Boss ? MathX.SecondsToTicks(360f, World.Dt)
+                : MathX.SecondsToTicks(rules.EliteSpawnCap.Seconds + 90f, World.Dt);
             if (room.ClockTicks > survive + cleanupLimit)
                 throw new Xunit.Sdk.XunitException($"방 {room.Plan.Act}:{room.Plan.Number} 방 시계 상한을 넘음(단계 {room.Phase}, 남은 적 {Alive(w)})");
             if (room.Phase is RoomPhase.Reward or RoomPhase.Doors && w.Tick - room.PhaseTick > phaseLimit)

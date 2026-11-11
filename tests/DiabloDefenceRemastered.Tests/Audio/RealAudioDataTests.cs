@@ -61,11 +61,14 @@ public class RealAudioDataTests
         string[] pending =
         [
             "$.sound_bindings.effects.fx_bolt_hit", "$.sound_bindings.effects.fx_fire_explosion",
+            "$.sound_bindings.enemies.skeleton_king",
             "$.sound_bindings.hero.sorcerer",
             "$.sound_bindings.music.stage_cathedral",
-            "$.sound_bindings.pickups.gem_blue", "$.sound_bindings.pickups.gold", "$.sound_bindings.pickups.healing_potion",
-            "$.sound_bindings.projectiles.pj_enemy_arrow",
-            "$.sound_bindings.rewards.reward_chest", "$.sound_bindings.rewards.reward_tome",
+            "$.sound_bindings.pickups.gem_blue", "$.sound_bindings.pickups.gem_green", "$.sound_bindings.pickups.gem_red",
+            "$.sound_bindings.pickups.gold", "$.sound_bindings.pickups.healing_potion",
+            "$.sound_bindings.projectiles.pj_boss_fireball", "$.sound_bindings.projectiles.pj_enemy_arrow", "$.sound_bindings.projectiles.pj_fire_arrow",
+            "$.sound_bindings.rewards.reward_chest", "$.sound_bindings.rewards.reward_healer", "$.sound_bindings.rewards.reward_smith",
+            "$.sound_bindings.rewards.reward_tome", "$.sound_bindings.rewards.reward_witch",
             "$.sound_bindings.weapons.arcane_orbit", "$.sound_bindings.weapons.fireball", "$.sound_bindings.weapons.magic_missile",
         ];
         Assert.All(ctx.Errors, e => Assert.Equal(DataSeverity.Error, e.Severity));
@@ -108,6 +111,28 @@ public class RealAudioDataTests
         // 맞음 소리만 높낮이 흔들림(기획 12.7 "몬스터·무기 맞음 소리는 ±5%")
         foreach (var s in defs.Sounds.All)
             Assert.Equal(s.Category is "monster_hit" or "weapon_hit" ? 0.05f : 0f, s.PitchJitter);
+    }
+
+    [Fact]
+    public void Stage2_Bindings_MatchDesign()
+    {
+        // wp4(단계 2): 해골왕 대사 boss_voice, 상인 인사 셋, 사기 = 금화, 상자 → 책 = flipbook, 장비 끼우기 칸마다, "못 함" 은 무음(sfx\items 에 없음 — 기획 11.7)
+        var defs = RealAudioDefs();
+        var b = defs.SoundBindings;
+        string File(DefRef<SoundDef> r) => Assert.Single(defs.Sounds.Get(r.Id).Files);
+        var voice = defs.Sounds.Get(b.Enemies["skeleton_king"].Voice!.Id);
+        Assert.Equal(("boss_voice", "d1/sound/sfx/monsters/sking01.wav"), (voice.Category, Assert.Single(voice.Files)));
+        Assert.Equal("d1/sound/sfx/towners/bsmith44.wav", File(b.Rewards["reward_smith"].Open!));
+        Assert.StartsWith("d1/sound/sfx/towners/witch", File(b.Rewards["reward_witch"].Open!));
+        Assert.StartsWith("d1/sound/sfx/towners/healer", File(b.Rewards["reward_healer"].Open!));
+        Assert.Equal("d1/sound/sfx/items/gold.wav", File(b.Ui[UiKeys.ShopBuy]));
+        Assert.Equal("d1/sound/sfx/items/flipbook.wav", File(b.Ui[UiKeys.ChestDrop]));
+        Assert.Equal("d1/sound/sfx/items/invring.wav", File(b.Ui[UiKeys.EquipRing]));
+        Assert.Equal("d1/sound/sfx/items/invgrab.wav", File(b.Ui[UiKeys.EquipOther]));
+        Assert.False(b.Ui.ContainsKey(UiKeys.PotionDenied));
+        Assert.False(b.Ui.ContainsKey(UiKeys.ShopDenied));
+        Assert.All(b.Ui.Keys, k => Assert.Contains(k, UiKeys.All));
+        foreach (var set in new[] { "set_zombie", "set_skelbow", "set_skelsd", "set_sking" }) Assert.NotNull(b.SpriteSets[set].Special);
     }
 
     [Fact]

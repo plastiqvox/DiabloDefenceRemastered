@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using DiabloDefenceRemastered.Core.Data.Json;
+using DiabloDefenceRemastered.Core.Data.Loading;
 using DiabloDefenceRemastered.Core.Sim.Enemies;
 using DiabloDefenceRemastered.Tests.Data;
 
@@ -13,7 +14,7 @@ namespace DiabloDefenceRemastered.Tests.Sim;
 /// WP4 실제 데이터 읽기(시험 전용 — WP7 로더 전). 실제 <c>Data/</c> 의 WP4 파일(<c>rules/enemies.json</c>·<c>rules/rooms.json</c>·<c>enemies/</c>·<c>affixes.json</c>·<c>buffs.json</c>·<c>stages/</c>)을
 /// 실제 맵·타일셋·그림 묶음(WP0a)·<c>rules.sight</c> 와 합쳐 <see cref="GameDefs"/> 로 만든다. 부품은 <see cref="EnemyModule.RegisterParts"/> 레지스트리로 만든다(로더 4단계 흉내).
 /// 다른 묶음 소유로 아직 없는 정의(투사체·이펙트·문 보상·획득물)는 <b>시험용 대역</b>을 만들어 연결한다 — 저장소 파일에는 임시 정의를 넣지 않는다(11.3).
-/// <c>extends</c>·<c>*_patch</c>·페이즈 풀기는 하지 않는다(단계 1 데이터는 쓰지 않음).
+/// <c>extends</c>·<c>*_patch</c> 는 하지 않는다(실제 데이터는 쓰지 않음). 페이즈는 로더와 같은 <c>JsonMerge.ResolvePhases</c> 로 푼다(단계 2 — 해골왕). 하위 폴더(<c>enemies/bosses/</c>)와 그 파일의 드롭 표도 읽는다.
 /// </summary>
 public static class Wp4Data
 {
@@ -58,12 +59,18 @@ public static class Wp4Data
 
         var enemies = new List<EnemyDef>();
         var raw = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
-        foreach (var file in Directory.GetFiles(Path.Combine(RealData.Dir, "enemies"), "*.json").Order(StringComparer.Ordinal))
-            foreach (var n in (JsonArray)RealData.Read(Path.GetRelativePath(RealData.Dir, file))["enemies"]!)
+        var dropTables = new List<DropTableDef>();
+        foreach (var file in Directory.GetFiles(Path.Combine(RealData.Dir, "enemies"), "*.json", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
+        {
+            var root = RealData.Read(Path.GetRelativePath(RealData.Dir, file));
+            // 그 적만 쓰는 드롭 표(6.1 — 액트 보스 dt_boss)는 같은 파일에
+            if (root["drop_tables"] is JsonArray dts) dropTables.AddRange(dts.Select(n => n!.Deserialize<DropTableDef>(Options)!));
+            foreach (var n in (JsonArray)root["enemies"]!)
             {
                 raw[(string)n!["id"]!] = (JsonObject)n;
                 enemies.Add(ReadEnemy((JsonObject)n, registry));
             }
+        }
         // 코드 없는 변형 픽스처(6.13 — Fixtures/variants/): extends 를 시험 안에서 최소로 풀어 같은 표에 넣는다
         foreach (var file in Directory.GetFiles(VariantsDir, "*.json").Order(StringComparer.Ordinal))
             foreach (var n in (JsonArray)((JsonObject)DefJson.ParseNode(File.ReadAllText(file))!)["enemies"]!)
@@ -78,9 +85,9 @@ public static class Wp4Data
 
         var maps = RealData.Maps;
         var linker = new Linker();
-        linker.Add(sprites); linker.Add(sets); linker.Add(enemies); linker.Add(affixes); linker.Add(buffs); linker.Add(stages);
+        linker.Add(sprites); linker.Add(sets); linker.Add(enemies); linker.Add(affixes); linker.Add(buffs); linker.Add(stages); linker.Add(dropTables);
         linker.Add(maps.Maps); linker.Add(maps.Tilesets);
-        foreach (var root in new object[] { rules, sprites, sets, enemies, affixes, buffs, stages }) linker.Walk(root);
+        foreach (var root in new object[] { rules, sprites, sets, enemies, affixes, buffs, stages, dropTables }) linker.Walk(root);
 
         var defs = new GameDefs
         {
@@ -153,12 +160,28 @@ public static class Wp4Data
         var copy = (JsonObject)n.DeepClone();
         var behaviors = Take(copy, "behaviors");
         var patterns = Take(copy, "patterns");
-        copy.Remove("phases");
+        var phases = Take(copy, "phases");
         var def = copy.Deserialize<EnemyDef>(Options)!;
+        // 페이즈(단계 2 — 해골왕): 로더(WP7)와 같은 풀기(JsonMerge.ResolvePhases)로 페이즈마다 완성 패턴 목록
+        var phaseDefs = new List<PhaseDef>();
+        if (phases is { Count: > 0 })
+        {
+            var resolved = JsonMerge.ResolvePhases(patterns, phases, ".phases");
+            for (var k = 0; k < phases.Count; k++)
+            {
+                var ph = (JsonObject)phases[k]!.DeepClone();
+                foreach (var key in new[] { "patch", "add", "remove" }) ph.Remove(key);
+                phaseDefs.Add(ph.Deserialize<PhaseDef>(Options)! with
+                {
+                    Patterns = [.. resolved[k].Select(p => ReadPattern((JsonObject)p!, registry))],
+                });
+            }
+        }
         return def with
         {
             Behaviors = behaviors?.Select(b => ReadPart((JsonObject)b!, PartKind.EnemyBehavior, registry)).ToList() ?? [],
             Patterns = patterns?.Select(p => ReadPattern((JsonObject)p!, registry)).ToList() ?? [],
+            Phases = phaseDefs,
         };
     }
 

@@ -25,6 +25,20 @@
     { "id": "snd_zombie_attack",  "files": ["d1/sound/monsters/zombie/zombiea1.wav", "d1/sound/monsters/zombie/zombiea2.wav"], "category": "monster" },
     { "id": "snd_zombie_hit",     "files": ["d1/sound/monsters/zombie/zombieh1.wav", "d1/sound/monsters/zombie/zombieh2.wav"], "category": "monster_hit", "pitch_jitter": 0.05 },
     { "id": "snd_zombie_death",   "files": ["d1/sound/monsters/zombie/zombied1.wav", "d1/sound/monsters/zombie/zombied2.wav"], "category": "monster" },
+    // 단계 2(wp4): 특수 s(로트피스트 시체 부르기·블랙애시 해골 일으키기 — 같은 묶음 소리 그대로, 기획 9.4), 해골 대장 skelsd·해골왕 sking 묶음.
+    // 파일 이름 = 원본 확인(probe files — skelsd 소리 접두는 그림과 같은 sklsr, sking 은 sking)
+    { "id": "snd_skelbow_special", "files": ["d1/sound/monsters/skelbow/sklbws1.wav", "d1/sound/monsters/skelbow/sklbws2.wav"], "category": "monster" },
+    { "id": "snd_zombie_special",  "files": ["d1/sound/monsters/zombie/zombies1.wav", "d1/sound/monsters/zombie/zombies2.wav"], "category": "monster" },
+    { "id": "snd_skelsd_attack",  "files": ["d1/sound/monsters/skelsd/sklsra1.wav", "d1/sound/monsters/skelsd/sklsra2.wav"], "category": "monster" },
+    { "id": "snd_skelsd_hit",     "files": ["d1/sound/monsters/skelsd/sklsrh1.wav", "d1/sound/monsters/skelsd/sklsrh2.wav"], "category": "monster_hit", "pitch_jitter": 0.05 },
+    { "id": "snd_skelsd_death",   "files": ["d1/sound/monsters/skelsd/sklsrd1.wav", "d1/sound/monsters/skelsd/sklsrd2.wav"], "category": "monster" },
+    { "id": "snd_skelsd_special", "files": ["d1/sound/monsters/skelsd/sklsrs1.wav", "d1/sound/monsters/skelsd/sklsrs2.wav"], "category": "monster" },
+    { "id": "snd_sking_attack",   "files": ["d1/sound/monsters/sking/skinga1.wav", "d1/sound/monsters/sking/skinga2.wav"], "category": "monster" },
+    { "id": "snd_sking_hit",      "files": ["d1/sound/monsters/sking/skingh1.wav", "d1/sound/monsters/sking/skingh2.wav"], "category": "monster_hit", "pitch_jitter": 0.05 },
+    { "id": "snd_sking_death",    "files": ["d1/sound/monsters/sking/skingd1.wav", "d1/sound/monsters/sking/skingd2.wav"], "category": "monster" },
+    { "id": "snd_sking_special",  "files": ["d1/sound/monsters/sking/skings1.wav", "d1/sound/monsters/sking/skings2.wav"], "category": "monster" },
+    // 해골왕 등장 대사(기획 12.7 — sfx\monsters\sking01.wav, 원본 확인). 분류 boss_voice = 음악을 줄임(voice_duck)
+    { "id": "snd_sking_voice",    "files": ["d1/sound/sfx/monsters/sking01.wav"], "category": "boss_voice" },
 
     // 주인공(마법사, 기획 4.0·12.7): 맞음 = 신음 둘 중 무작위, 죽음 = mage71(dead.wav 는 전사 소리라 안 씀). 원작 폴더 철자 sorceror
     { "id": "snd_sorcerer_hurt",  "files": ["d1/sound/sfx/sorceror/mage69.wav", "d1/sound/sfx/sorceror/mage69b.wav"], "category": "hero" },
@@ -44,7 +58,23 @@
     { "id": "snd_magic1",    "files": ["d1/sound/sfx/items/magic1.wav"],   "category": "ui", "volume": 0.5 },
     { "id": "snd_chest",     "files": ["d1/sound/sfx/items/chest.wav"],    "category": "ui" },
     { "id": "snd_dooropen",  "files": ["d1/sound/sfx/items/dooropen.wav"], "category": "ui" },
-    { "id": "snd_readbook",  "files": ["d1/sound/sfx/items/readbook.wav"], "category": "ui" }
+    { "id": "snd_readbook",  "files": ["d1/sound/sfx/items/readbook.wav"], "category": "ui" },
+
+    // 단계 2(wp4 — 기획 11.6·11.7·12.7·12.8): 상인에게 삼 = 원작 금화 소리(ui 로 — 줍기 금화와 분류만 다름), 상자 → 책 떨어짐 = flipbook,
+    // 장비 끼우기 = 원작 인벤토리 소리(칸마다 — invhelm·invarmor 는 원본에 없어 invcap·invlarm(경·중)·invharm(판금)), 칸을 모르면 invgrab.
+    // 상인 인사 = 원작 마을 사람 대사 중 가장 짧은 줄 하나씩(bsmith44·witch38·healer37 — 귀로 듣지 못함, 사용자 확인 거리). 파일 이름 = 원본 확인(probe files)
+    { "id": "snd_shop_gold",   "files": ["d1/sound/sfx/items/gold.wav"],     "category": "ui" },
+    { "id": "snd_flipbook",    "files": ["d1/sound/sfx/items/flipbook.wav"], "category": "ui" },
+    { "id": "snd_invgrab",     "files": ["d1/sound/sfx/items/invgrab.wav"],  "category": "ui" },
+    { "id": "snd_invcap",      "files": ["d1/sound/sfx/items/invcap.wav"],   "category": "ui" },
+    { "id": "snd_invlarm",     "files": ["d1/sound/sfx/items/invlarm.wav"],  "category": "ui" },
+    { "id": "snd_invharm",     "files": ["d1/sound/sfx/items/invharm.wav"],  "category": "ui" },
+    { "id": "snd_invshiel",    "files": ["d1/sound/sfx/items/invshiel.wav"], "category": "ui" },
+    { "id": "snd_invstaf",     "files": ["d1/sound/sfx/items/invstaf.wav"],  "category": "ui" },
+    { "id": "snd_invring",     "files": ["d1/sound/sfx/items/invring.wav"],  "category": "ui" },
+    { "id": "snd_smith_greet",  "files": ["d1/sound/sfx/towners/bsmith44.wav"], "category": "ui" },
+    { "id": "snd_witch_greet",  "files": ["d1/sound/sfx/towners/witch38.wav"],  "category": "ui" },
+    { "id": "snd_healer_greet", "files": ["d1/sound/sfx/towners/healer37.wav"], "category": "ui" }
   ],
   "music": [
     // 기획 12.7 곡 목록. 같은 액트 안 방 이동에서는 다시 시작하지 않는다(7.9). 액트 2(dlvlb)는 그 액트 정의와 함께 더한다

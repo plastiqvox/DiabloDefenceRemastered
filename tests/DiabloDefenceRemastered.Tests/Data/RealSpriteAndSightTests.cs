@@ -46,7 +46,9 @@ public class RealSpriteAndSightTests
         }
         foreach (var set in sets)
         {
-            Assert.True(set.BodyHeight is > 50 and < 100, set.Id);
+            // 대략 60~90(6.3). 단계 2 의 해골왕(칸 160)만 큰 몸 — 몸 높이 < 그 묶음 서기 칸 높이
+            var cell = set.Clips.Idle is { } idle && byId.TryGetValue(idle.Sprite.Id, out var idleSprite) ? idleSprite.Frame.Y : 96;
+            Assert.True(set.BodyHeight > 50 && set.BodyHeight < Math.Max(100, cell - 16), set.Id);
             Assert.Contains("", set.Variants);
             foreach (var kind in Enum.GetValues<ClipKind>())
             {
@@ -68,10 +70,17 @@ public class RealSpriteAndSightTests
 
         // 기획 8.2 단계 1: 해골·불타는 해골 = set_skelaxe(white·원색), 해골 궁수 = set_skelbow(white), 좀비·구울 = set_zombie(원색·bluered)
         Assert.Equal(["", "white"], set["set_skelaxe"].Variants);
-        Assert.Equal(["", "white"], set["set_skelbow"].Variants);
-        Assert.Equal(["", "bluered"], set["set_zombie"].Variants);
-        // 블랙애시(bashtb)·특수 클립은 단계 2 에 WP5 가 더한다(11.1 WP0a v0.5.3)
-        Assert.Null(set["set_skelbow"].Clips.Special);
+        // 단계 2(wp4): 블랙애시 bashtb·로트피스트 eth 변종과 소환용 특수 클립(16프레임)
+        Assert.Equal(["", "white", "bashtb"], set["set_skelbow"].Variants);
+        Assert.Equal(["", "bluered", "eth"], set["set_zombie"].Variants);
+        Assert.Equal(16, frames[set["set_skelbow"].Clips.Special!.Sprite.Id]);
+        Assert.Equal(16, frames[set["set_zombie"].Clips.Special!.Sprite.Id]);
+        // 해골 대장 skelsd(white)·해골왕 sking(genrl, 칸 160 — 기획 9.5 공격 16·특수 12)
+        Assert.Contains("white", set["set_skelsd"].Variants);
+        Assert.Contains("genrl", set["set_sking"].Variants);
+        Assert.Equal(30f, set["set_sking"].BaseRadius);
+        Assert.Equal(16, frames["sking_attack"]);
+        Assert.Equal(12, frames["sking_special"]);
         Assert.Equal(12, set["set_skelbow"].Clips.Attack!.EventFrame);
         Assert.Equal(16, frames["skelbow_attack"]);   // 기획 8.2 "원작 활 해골 a(16프레임)"
         Assert.Equal(24, frames["zombie_walk"]);

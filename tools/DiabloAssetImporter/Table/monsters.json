@@ -1,4 +1,7 @@
-// 몬스터 가져오기 표 (설계서 1.4, 소유 WP0). 단계 1 = 해골(skelaxe white)·불타는 해골(skelaxe 원색)·해골 궁수(skelbow white)·좀비(원색)·구울(zombie bluered).
+// 몬스터 가져오기 표 (설계서 1.4, 소유 WP0 — 단계 2 의 이 파일은 wp4). 단계 1 = 해골(skelaxe white)·불타는 해골(skelaxe 원색)·해골 궁수(skelbow white)·좀비(원색)·구울(zombie bluered).
+// 단계 2(wp4) = 해골 대장(skelsd white)·해골왕(sking genrl), 로트피스트(zombie 고유 eth)·블랙애시(skelbow 고유 bashtb), 특수 동작 s(좀비·해골 궁수 — 소환 그림).
+//   출처: 원본 확인(probe files·probe cl2 — skelsd sklsr{n,w,a,d,s} 폭 128·13·8·12·15·16프레임, sking sking{n,w,a,d,s} 폭 160·8·8·16·16·12프레임,
+//   zombies·sklbws 폭 128·16프레임, 고유 TRN monsters/monsters/{eth,bashtb,genrl}.trn 과 skelsd/white.trn 각 256바이트)
 // 경로·칸 폭·TRN 은 이 PC 의 diabdat 를 probe 로 읽어 확인한 사실 값이다(원작 바이트는 없다, R24). 프레임 수·높이는 도구가 파일에서 읽는다.
 {
   "palette": "levels\\l1data\\l1.pal",
@@ -8,10 +11,16 @@
       "actions": { "idle": "n", "walk": "w", "attack": "a", "die": "d" },
       "variants": { "": null, "white": "monsters\\skelaxe\\white.trn" } },
     { "out": "d1/monsters/skelbow", "cl2": "monsters\\skelbow\\sklbw{a}.cl2", "width": 128,
-      "actions": { "idle": "n", "walk": "w", "attack": "a", "die": "d" },
-      "variants": { "": null, "white": "monsters\\skelbow\\white.trn" } },
+      "actions": { "idle": "n", "walk": "w", "attack": "a", "die": "d", "special": "s" },
+      "variants": { "": null, "white": "monsters\\skelbow\\white.trn", "bashtb": "monsters\\monsters\\bashtb.trn" } },
     { "out": "d1/monsters/zombie", "cl2": "monsters\\zombie\\zombie{a}.cl2", "width": 128,
-      "actions": { "idle": "n", "walk": "w", "attack": "a", "die": "d" },
-      "variants": { "": null, "bluered": "monsters\\zombie\\bluered.trn" } }
+      "actions": { "idle": "n", "walk": "w", "attack": "a", "die": "d", "special": "s" },
+      "variants": { "": null, "bluered": "monsters\\zombie\\bluered.trn", "eth": "monsters\\monsters\\eth.trn" } },
+    { "out": "d1/monsters/skelsd", "cl2": "monsters\\skelsd\\sklsr{a}.cl2", "width": 128,
+      "actions": { "idle": "n", "walk": "w", "attack": "a", "die": "d", "special": "s" },
+      "variants": { "": null, "white": "monsters\\skelsd\\white.trn" } },
+    { "out": "d1/monsters/sking", "cl2": "monsters\\sking\\sking{a}.cl2", "width": 160,
+      "actions": { "idle": "n", "walk": "w", "attack": "a", "die": "d", "special": "s" },
+      "variants": { "": null, "genrl": "monsters\\monsters\\genrl.trn" } }
   ]
 }
