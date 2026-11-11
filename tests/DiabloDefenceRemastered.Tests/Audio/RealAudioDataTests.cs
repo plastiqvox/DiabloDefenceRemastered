@@ -93,8 +93,11 @@ public class RealAudioDataTests
         Assert.DoesNotContain(defs.Sounds.All, s => !used.Contains(s.Id));
         Assert.DoesNotContain(defs.Music.All, m => !b.Music.Values.Any(r => r.Id == m.Id));
 
-        // 주인공 그림 묶음(set_sorcerer)은 hero.<직업> 이 맡는다 — 몬스터 묶음은 모두 소리 연결이 있다(소리 없는 적 경고 0)
-        foreach (var set in defs.SpriteSets.All.Where(s => s.Id != "set_sorcerer"))
+        // 주인공 그림 묶음(set_sorcerer)은 hero.<직업> 이 맡는다 — 몬스터 묶음은 모두 소리 연결이 있다(소리 없는 적 경고 0).
+        // 주인공 겉모습 묶음(set_sorcerer_<키> — 그림만 바뀜)·상인 묶음(set_towner_* — 인사 대사는 rewards.<상인 보상>)도 몬스터 묶음이 아니다(단계 2 wp5 이음새).
+        // 이 시험의 정의는 소리·그림만 읽어(직업·상인 정의 없음) 이름으로 거른다
+        static bool NotMonster(string id) => id == "set_sorcerer" || id.StartsWith("set_sorcerer_", StringComparison.Ordinal) || id.StartsWith("set_towner_", StringComparison.Ordinal);
+        foreach (var set in defs.SpriteSets.All.Where(s => !NotMonster(s.Id)))
         {
             Assert.True(b.SpriteSets.TryGetValue(set.Id, out var u), set.Id);
             Assert.NotNull(u.Attack); Assert.NotNull(u.Hit); Assert.NotNull(u.Death);

@@ -1,5 +1,6 @@
 using System.Globalization;
 using DiabloDefenceRemastered.Core.Art;
+using DiabloDefenceRemastered.Core.Assets;
 using DiabloDefenceRemastered.Loading;
 using Microsoft.Xna.Framework.Graphics;
 using Color = Microsoft.Xna.Framework.Color;
@@ -15,8 +16,9 @@ public readonly record struct WorldDrawStats(int DrawCalls, int Lights, int Enem
 /// 월드 그리기 (설계서 7, 소유 WP5): 원작 타일 아레나(바닥 조각·벽 기둥·가림, 7.6)·유닛 y 정렬·빛·안개·표시 이펙트·시체·피해 숫자.
 /// PlayScene(WP6)이 만들고 프레임마다 <see cref="Fx"/>.Consume → <c>Audio.Consume</c>(7.9) → <c>world.Presentation.Clear()</c> → <see cref="Draw"/> 순으로 부른다.
 /// <list type="bullet">
-/// <item>층(7.3): 0 바닥 → 0b 맵 밖 뒤쪽 입장 유닛·뒷둘레 벽 → 1 장판·예고·발밑 원 → 2 시체 → 3 획득물 → 4 y 정렬(유닛·안쪽 벽·바닥 위 조각·덧그림, 주인공 앞 벽 반투명)
-/// → 5 앞둘레 턱·맵 밖 앞쪽 입장 유닛·문 봉인 → 6 빛·안개 곱하기 → 7 발광(투사체·이펙트·발광·번쩍임·예고 테두리) → 8 화면 효과 → (<c>PresentRT</c>) 9 월드 UI.</item>
+/// <item>층(7.3): 0 바닥 → 0b 맵 밖 뒤쪽 입장 유닛·뒷둘레 벽 → 1 장판·예고·발밑 원 → 2 시체 → 3 획득물(원작 바닥 그림·대체) → 4 y 정렬(유닛·안쪽 벽·바닥 위 조각·덧그림·상인·
+/// 문 봉인 창살(단계 2 wp5), 주인공 앞 벽 반투명) → 5 앞둘레 턱·맵 밖 앞쪽 입장 유닛·창살 그림이 없는 문의 코드 봉인 → 6 빛·안개 곱하기
+/// → 7 발광(투사체·이펙트·발광·번쩍임·예고 테두리·보석 빛) → 8 화면 효과 → (<c>PresentRT</c>) 9 월드 UI(보상 물체 둘레 아이콘·문 위 아이콘 포함).</item>
 /// <item>그림 배율 s(7.1): <c>WorldRT</c> = (960·s)×(540·s), 월드 → 타깃 행렬에 s 를 곱하고 모든 월드 그리기는 <c>PointClamp</c>. 빛·안개 타깃은 480×270 그대로.</item>
 /// <item>안개(7.10): <c>--reveal</c>(<see cref="AppOptions.Reveal"/>)이거나 시야가 꺼졌으면 건너뜀. 알파 0 인 대상은 항목을 아예 모으지 않는다.</item>
 /// <item><see cref="Attach"/>(v0.7.1, 7.11): 새 월드 = 맵 그림 묶음·안개 텍스처·칸 바뀜 값을 다시 만든다. 액트가 바뀌면 그림을 다시 미리 읽는다(같은 액트면 그대로).
@@ -45,6 +47,16 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
     private int _scale;
     private RectF _heroRect;
     private int _enemiesDrawn, _enemiesHidden;
+    /// <summary>이번 프레임 주인공 그림 묶음(겉모습 — <see cref="HeroLookArt"/>, v0.9.1 V10). 직업이 없으면 null.</summary>
+    private SpriteSetDef? _heroSet;
+    /// <summary>문 봉인 창살 그림(액트마다 한 번 — <see cref="GateGrateArt.Build"/>). null 이면 모든 문이 코드 그림 봉인.</summary>
+    private GateGrateArt? _grateArt;
+    private StageDef? _grateArtStage;
+    private bool _grateArtBuilt;
+    private readonly List<GrateDraw> _grateDraws = new(32);
+
+    /// <summary>상인 서기 반복 프레임 시간(초 — 원작 값을 원본으로 확인하지 못한 첫 값, 그림 묶음에 frame_time 을 적지 않음: 13장 WP5 단계 2 기록).</summary>
+    public const float MerchantFrameTime = 0.15f;
 
     /// <summary>스테이지(월드) 하나에 하나. 맵 그림(<c>arena.json</c>)은 처음 그리는 월드의 <c>World.Arena</c> 를 보고 연다.</summary>
     public WorldRenderer(AppServices app)
@@ -75,6 +87,13 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         art.PreloadStage(world.Stage, world.HeroClass);
         _arena = world.Arena is { } grid && world.Map is { } map ? new ArenaRenderer(grid, art.LoadMapArt(map)) : null;
         _light?.Fog.Attach(world);
+        // 창살 그림은 액트 맵 풀에서 빌려 오므로 액트마다 한 번(액트 없는 월드는 그 맵만 보고 매번)
+        if (!_grateArtBuilt || world.Stage is null || !ReferenceEquals(_grateArtStage, world.Stage))
+        {
+            _grateArt = GateGrateArt.Build(world, art);
+            _grateArtStage = world.Stage;
+            _grateArtBuilt = true;
+        }
     }
 
     public void Draw(World world, RenderContext rc, float alpha)
@@ -93,6 +112,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         var tick = world.Tick;
         var hero = world.Hero;
         var heroDraw = Vector2.Lerp(hero.PrevPos, hero.Pos, alpha);
+        _heroSet = world.HeroClass is { } heroClass ? HeroLookArt.Pick(heroClass, hero, world.Defs, SetDrawable) : null;
         var view = CameraMath.ViewRect(heroDraw, world.MapSize, world.ViewSize);
         var camBase = ArtScale.FloorToTarget(view.Min, s);
         var shake = _app.Save.Settings.ScreenShake ? ShakeMath.Offset(world.Seed, tick, Fx.ShakePx(tick)) : Int2.Zero;
@@ -116,6 +136,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
 
         var toTarget = Matrix.CreateTranslation(-cam.X, -cam.Y, 0f) * Matrix.CreateScale(s);
         var prim = g.Primitives;
+        _lightTex = prim.Light;
 
         // ── 0~5층 ───────────────────────────────────────────────
         device.SetRenderTarget(_worldRT);
@@ -213,7 +234,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         var w = f.World;
         var hero = w.Hero;
         _heroRect = new RectF(f.HeroDraw.X - 16, f.HeroDraw.Y - 76, f.HeroDraw.X + 16, f.HeroDraw.Y);
-        if (w.HeroClass?.Sprites.Def is not { } set) return;
+        if (_heroSet is not { } set) return;
         if (!UnitFrame(set, hero.Anim.Clip, hero.Anim, hero.Facing, "", 1f, f.HeroDraw, out var h, out var page, out var src, out var dest)) return;
         _heroRect = dest;
         DrawUnit(batch, h.Pages[page], src, dest, Rgb.White, 1f);
@@ -342,6 +363,11 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         }
     }
 
+    /// <summary>
+    /// 3층 획득물(설계서 6.9·6.19, 기획 11.1·11.4): <see cref="PickupDef.Floor"/> 원작 그림이 있으면 그것(<see cref="PickupArt.FloorFrame"/> — 떨어짐 애니 → 마지막 프레임, 보석은 그 프레임 하나,
+    /// 열린 상자는 빈 상자), 못 쓰면 <see cref="PickupDef.Draw"/> 대체(exe PNG·코드 마름모 — 열린 상자는 흐리게). 경험치 보석은 <c>draw.color</c> 가산 빛(7층, 원작 돌이면 0.6배).
+    /// 시야 밖이면 빛까지 그리지 않는다(기획 11.1 시야 규칙).
+    /// </summary>
     private void DrawPickups(SpriteBatch batch, WorldFrame f, Primitives prim)
     {
         var w = f.World;
@@ -351,26 +377,66 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             var pos = Vector2.Lerp(p.PrevPos, p.Pos, _alphaInterp);
             var fogA = f.Fog ? FogMath.PosAlpha(w.Visibility, pos, f.StageTick, f.HeroDraw) : 1f;
             if (fogA <= 0f) continue;
-            var d = p.Def.Draw;
-            var tint = d.Tint ?? d.Color ?? Rgb.White;
-            if (d.Sprite?.Def is { } sprite && Art.TryGetSprite(sprite, "", out var h))
+            var opened = PickupArt.IsOpenedObject(p);
+            var floorDrawn = false;
+            if (p.Def.Floor is { } floor && floor.Sprite.Def is var fs && Art.TryGetSprite(fs, "", out var fh))
             {
-                var frame1 = d.Frame ?? Math.Min(sprite.Frames, 1 + (int)(p.Age / ProjectileFrameTime));
-                if (Art.Source(sprite, h, 0, frame1, out var page, out var src, out var dest, ArtScale.RoundToTarget(pos, _scale), d.Scale))
+                var frame1 = PickupArt.FloorFrame(floor, fs.Frames, p.Age, opened);
+                if (Art.Source(fs, fh, floor.Dir ?? 0, frame1, out var page, out var src, out var dest, ArtScale.RoundToTarget(pos, _scale), floor.Scale ?? 1f))
                 {
-                    DrawUnit(batch, h.Pages[page], src, dest, tint, fogA);
-                    f.Shapes.Add(new ShapeDraw(h.Pages[page], new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, pos, fogA, false, true, FogShape: true));
+                    DrawUnit(batch, fh.Pages[page], src, dest, floor.Tint ?? Rgb.White, fogA);
+                    f.Shapes.Add(new ShapeDraw(fh.Pages[page], new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, pos, fogA, false, true, FogShape: true));
+                    // 보석 돌: 어두운 회색 돌에 색을 곱하면 탁해서(미리보기) 같은 그림을 등급 색으로 가산 한 겹 더 — 회색조 변종 대신(13장 WP5 단계 2 기록)
+                    if (p.Def.Kind == PickupKind.Xp && floor.Tint is { } gemTint) _glows.Add(new GlowDraw(fh.Pages[page], src, dest, gemTint, GemLift * fogA));
+                    floorDrawn = true;
                 }
-                continue;
             }
-            // 코드 그림(보석 "gem" 등): 작은 마름모
-            var size = d.Size is { } sz ? new Vector2(sz.X, sz.Y) : new Vector2(10, 14);
-            size *= d.Scale;
-            var rect = new RectF(pos.X - size.X * 0.5f, pos.Y - size.Y, pos.X + size.X * 0.5f, pos.Y);
-            BatchX.Blit(batch, prim.Diamond, rect, new Rectangle(0, 0, prim.Diamond.Width, prim.Diamond.Height), tint.ToXna(fogA));
-            f.Shapes.Add(new ShapeDraw(prim.Diamond, new Rectangle(0, 0, prim.Diamond.Width, prim.Diamond.Height), rect, pos, fogA, false, true, FogShape: true));
+            if (!floorDrawn) DrawPickupFallback(batch, f, prim, p, pos, opened ? fogA * 0.45f : fogA);
+            GemGlow(p.Def, pos, PickupArt.GlowScale(p.Def, floorDrawn) * fogA);
         }
     }
+
+    /// <summary>대체 그림(<c>draw</c> — exe PNG 반복 그림 또는 코드 마름모). 단계 1 그대로.</summary>
+    private void DrawPickupFallback(SpriteBatch batch, WorldFrame f, Primitives prim, Pickup p, Vector2 pos, float alpha)
+    {
+        var d = p.Def.Draw;
+        var tint = d.Tint ?? d.Color ?? Rgb.White;
+        if (d.Sprite?.Def is { } sprite && Art.TryGetSprite(sprite, "", out var h))
+        {
+            var frame1 = d.Frame ?? Math.Min(sprite.Frames, 1 + (int)(p.Age / ProjectileFrameTime));
+            if (Art.Source(sprite, h, 0, frame1, out var page, out var src, out var dest, ArtScale.RoundToTarget(pos, _scale), d.Scale))
+            {
+                DrawUnit(batch, h.Pages[page], src, dest, tint, alpha);
+                f.Shapes.Add(new ShapeDraw(h.Pages[page], new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, pos, alpha, false, true, FogShape: true));
+            }
+            return;
+        }
+        // 코드 그림(보석 "gem" 등): 작은 마름모
+        var size = d.Size is { } sz ? new Vector2(sz.X, sz.Y) : new Vector2(10, 14);
+        size *= d.Scale;
+        var rect = new RectF(pos.X - size.X * 0.5f, pos.Y - size.Y, pos.X + size.X * 0.5f, pos.Y);
+        BatchX.Blit(batch, prim.Diamond, rect, new Rectangle(0, 0, prim.Diamond.Width, prim.Diamond.Height), tint.ToXna(alpha));
+        f.Shapes.Add(new ShapeDraw(prim.Diamond, new Rectangle(0, 0, prim.Diamond.Width, prim.Diamond.Height), rect, pos, alpha, false, true, FogShape: true));
+    }
+
+    /// <summary>
+    /// 경험치 보석 가산 빛(7층 — 어둠·안개 곱하기 뒤라 어두운 바닥에서도 보인다). 크기 = 마름모 크기의 3.2배 지름, 밝기 0.8 — <paramref name="k"/> 배(원작 돌 0.6 × 안개 알파).
+    /// 첫 값 — <c>--preview sprites</c> 로 맞춤(기획 v0.9.3 "은은하게").
+    /// </summary>
+    private void GemGlow(PickupDef def, Vector2 pos, float k)
+    {
+        if (k <= 0f || _lightTex is null || def.Draw.Color is not { } color) return;
+        var size = def.Draw.Size is { } sz ? MathF.Max(sz.X, sz.Y) : 14f;
+        var half = size * 1.6f * MathF.Sqrt(k);
+        var c = pos - new Vector2(0f, size * 0.5f);
+        _additive.Add(new GlowDraw(_lightTex!, new RectI(0, 0, _lightTex!.Width, _lightTex.Height), new RectF(c.X - half, c.Y - half, c.X + half, c.Y + half), color, 0.8f * k));
+    }
+
+    /// <summary>원작 돌 보석 위에 같은 그림을 등급 색으로 가산하는 세기(첫 값 — 미리보기로 맞춤).</summary>
+    public const float GemLift = 1f;
+
+    /// <summary>빛 텍스처(<see cref="Primitives.Light"/>) — 3층에서 7층 목록에 넣을 때 쓴다.</summary>
+    private Texture2D? _lightTex;
 
     // ── 4층 y 정렬 ────────────────────────────────────────────
 
@@ -392,6 +458,9 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             _items.Add(new DrawItem(sort, (int)e.Id.Key, DrawKind.Enemy, i));
         }
         _arena?.CollectLayer4(f.View, _items);
+        if (MerchantSpot(w) is { } shopSpot)
+            _items.Add(new DrawItem(_arena is null ? shopSpot.Y : DrawOrder.UnitSortY(_arena.Table, _arena.Iso, shopSpot), int.MaxValue, DrawKind.Merchant, 0));
+        CollectGrates(f);
         System.Runtime.InteropServices.CollectionsMarshal.AsSpan(_items).Sort(DrawItem.Comparer.Compare);
 
         // 주인공 사각형을 먼저 알아야 앞 벽 반투명을 판정한다 — 그림 사각형만 미리 계산
@@ -402,6 +471,8 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             {
                 case DrawKind.Hero: DrawHero(batch, f); break;
                 case DrawKind.Enemy: DrawEnemy(batch, f, enemies[it.Index]); break;
+                case DrawKind.Merchant: DrawMerchant(batch, f, prim); break;
+                case DrawKind.Grate: DrawGrate(batch, f, it); break;
                 default:
                     var item = _arena!.Items[it.Index];
                     var fade = WallFade.Fades(false, it.SortY, _arena.ItemRect(item), _arena.Iso.CellCenter(item.Tx, item.Ty), f.HeroDraw, _heroRect,
@@ -416,7 +487,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
     {
         var w = f.World;
         _heroRect = new RectF(f.HeroDraw.X - 16, f.HeroDraw.Y - 76, f.HeroDraw.X + 16, f.HeroDraw.Y);
-        if (w.HeroClass?.Sprites.Def is { } set
+        if (_heroSet is { } set
             && UnitFrame(set, w.Hero.Anim.Clip, w.Hero.Anim, w.Hero.Facing, "", 1f, f.HeroDraw, out _, out _, out _, out var dest))
             _heroRect = dest;
     }
@@ -444,8 +515,88 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         return false;
     }
 
+    // ── 4층 상인·창살(단계 2 wp5) ──────────────────────────────────
+
+    /// <summary>상인이 서는 자리(기획 11.7 "상인이 서는 자리"): 상인 방(<c>Room.Shop</c>)의 보상·문 단계에 <c>Room.RewardSpot</c>. 아니면 null.</summary>
+    private static Vector2? MerchantSpot(World w) =>
+        w.Room is { Shop: not null, Phase: RoomPhase.Reward or RoomPhase.Doors } room ? room.RewardSpot : null;
+
+    /// <summary>상인 서기 반복(충돌 없음 — 그림만). 그림이 없으면 코드 그림(어두운 겉옷 + 머리).</summary>
+    private void DrawMerchant(SpriteBatch batch, WorldFrame f, Primitives prim)
+    {
+        var w = f.World;
+        if (MerchantSpot(w) is not { } spot || w.Room!.Shop is not { } shop) return;
+        var fogA = f.Fog ? FogMath.PosAlpha(w.Visibility, spot, f.StageTick, f.HeroDraw) : 1f;
+        if (fogA <= 0f) return;
+        var set = w.Defs.Merchants.TryGet(shop.MerchantId, out var m) ? m.Sprite?.Def : null;
+        if (set?.Clips.Idle?.Sprite.Def is { } sprite && Art.TryGetSprite(sprite, "", out var h))
+        {
+            var frame1 = 1 + (int)(f.StageTick * World.Dt / MerchantFrameTime) % Math.Max(1, sprite.Frames);
+            if (Art.Source(sprite, h, 0, frame1, out var page, out var src, out var dest, ArtScale.RoundToTarget(spot, _scale), 1f))
+            {
+                DrawUnit(batch, h.Pages[page], src, dest, Rgb.White, fogA);
+                f.Shapes.Add(new ShapeDraw(h.Pages[page], new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, spot, fogA, false, !FrontWallCovers(dest), FogShape: true));
+            }
+            return;
+        }
+        var body = new RectF(spot.X - 10, spot.Y - 44, spot.X + 10, spot.Y);
+        BatchX.Blit(batch, prim.Pixel, body, new Rectangle(0, 0, 1, 1), new Rgb(70, 52, 40).ToXna(fogA));
+        BatchX.Centered(batch, prim.Circle, spot - new Vector2(0f, 52f), new Vector2(16f, 16f), new Rgb(190, 150, 120).ToXna(fogA));
+    }
+
+    /// <summary>창살 기둥 하나(이번 프레임 — <see cref="CollectGrates"/>): 원본 그림·자리(내려간 만큼 잘림)·칸 중심·가림 판정용 사각형.</summary>
+    private readonly record struct GrateDraw(Texture2D Page, Rectangle Src, RectF Dest, RectF FullRect, Vector2 CellCenter, bool EnemyPassing);
+
+    /// <summary>
+    /// 문 봉인 창살(v0.9.4 V13, 7.11)을 4층 정렬 목록에: 문 틈 메가마다 변의 조각(<see cref="GateGrates.PieceName"/>)의 기둥 그림을 그 하위 칸 자리에.
+    /// 출구로 열린 문은 <see cref="GateGrates.Sink"/> 만큼 바닥선(기둥 그림 아래 끝)에서 잘려 아래로 내려간다. 그림이 없는 조각은 <see cref="DrawGateSeals"/> 의 코드 그림.
+    /// </summary>
+    private void CollectGrates(WorldFrame f)
+    {
+        _grateDraws.Clear();
+        _placed.Clear();
+        var w = f.World;
+        if (_grateArt is null || _arena is null || w.Room is not { } room) return;
+        var iso = _arena.Iso;
+        foreach (var (id, gate) in w.Gates)
+        {
+            var from = _placed.Count;
+            if (!_grateArt.Place(gate, iso, GateGrates.Sink(room, id, f.StageTick), _placed) || _placed.Count == from) continue;
+            var passing = GateGrates.EnemyPassing(gate, iso, w.Enemies.Items);   // 적이 드나드는 동안 흐리게(창살을 뚫고 지나가 보이지 않게)
+            for (var i = from; i < _placed.Count; i++)
+            {
+                var p = _placed[i];
+                if (!WallFade.Overlaps(p.Full, f.View)) continue;
+                _grateDraws.Add(new GrateDraw(p.Page, p.Src, p.Dest, p.Full, iso.CellCenter(p.Tx, p.Ty), passing));
+                var sortY = DrawOrder.CellSortY(iso, new ArenaCell(p.Tx, p.Ty, p.Kind, 0));
+                _items.Add(new DrawItem(sortY, DrawOrder.CellTiebreak(iso, p.Tx, p.Ty), DrawKind.Grate, _grateDraws.Count - 1));
+            }
+        }
+    }
+
+    private readonly List<GateGrateArt.Placed> _placed = new(32);
+
+    /// <summary>창살 기둥 하나 — 안쪽 벽과 같은 가림 규칙(주인공을 가리면 반투명, 7.6 <see cref="WallFade"/>), 적이 드나드는 문이면 같은 알파(<see cref="GateGrates.EnemyPassing"/>).</summary>
+    private void DrawGrate(SpriteBatch batch, WorldFrame f, in DrawItem it)
+    {
+        var g = _grateDraws[it.Index];
+        var w = f.World;
+        var fade = g.EnemyPassing
+                   || w.Map is { } map && WallFade.Fades(false, it.SortY, g.FullRect, g.CellCenter, f.HeroDraw, _heroRect,
+                                                        WallFade.Radius(map.WallFade, w.Lighting.HeroLightRadius), map.WallFade.Mode);
+        var a = fade ? WallFade.Alpha : 1f;
+        BatchX.Blit(batch, g.Page, g.Dest, g.Src, new Color(a, a, a, a));
+    }
+
+    /// <summary>그 묶음을 그릴 수 있나(서기·걷기 클립 그림을 미리 읽었고 자원 파일이 있음 — 겉모습 고르기).</summary>
+    private bool SetDrawable(SpriteSetDef set) =>
+        (set.Clips.Idle ?? set.Clips.Walk)?.Sprite.Def is { } s && Art.TryGetSprite(s, "", out _);
+
     // ── 5층 문 봉인(7.11) ───────────────────────────────────────
 
+    /// <summary>
+    /// 단계 1 코드 그림 봉인(붉은 바닥 빛·낮은 창살·룬) — v0.9.4 V13 부터는 원작 창살 그림(<see cref="CollectGrates"/>)을 쓸 수 없는 문만(자원 없음·창살 맵이 없는 액트).
+    /// </summary>
     private void DrawGateSeals(SpriteBatch batch, WorldFrame f, Primitives prim)
     {
         var w = f.World;
@@ -454,6 +605,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         var openFade = room.Phase >= RoomPhase.Doors ? Math.Clamp(1f - (f.StageTick - room.PhaseTick) / 18f, 0f, 1f) : 1f;
         foreach (var (id, gate) in w.Gates)
         {
+            if (_grateArt is not null && _grateArt.TryGet(GateGrates.PieceName(gate.Side), out _)) continue;   // 원작 창살(4층 — CollectGrates)
             var sealedNow = GateSeals.IsSealed(room, id);
             var a = pulse * (sealedNow ? 1f : openFade);
             if (a <= 0.01f) continue;
@@ -684,11 +836,31 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             _ui.Fill(new RectF(p.X, p.Y, p.X + 32, p.Y + 4), Rgb.Black, 0.7f);
             _ui.Fill(new RectF(p.X, p.Y, p.X + 32 * hp, p.Y + 4), new Rgb(200, 30, 30), 0.95f);
         }
+        DrawRewardOsd(f, art);
         DrawGateIcons(f, art);
         _ui.End();
     }
 
-    /// <summary>열린 출구 문 위(벽 높이 위) 보상 아이콘 48px, 주인공이 300px 안이면 그 아래 이름·층(7.11).</summary>
+    /// <summary>
+    /// 보상 물체 둘레 아이콘(v0.9.1 V8, 기획 11.4 — <see cref="RewardOsd"/>): 방 안 보상 물체·정예 상자 위쪽 호, 주인공이 300px 안이면 짧은 글자. 시야 밖이면 그리지 않는다.
+    /// </summary>
+    private void DrawRewardOsd(WorldFrame f, ArtServices art)
+    {
+        var w = f.World;
+        foreach (var p in w.Pickups.Items)
+        {
+            if (p.Removed || (p.Reward is null && p.Def.Kind != PickupKind.Chest)) continue;
+            var pos = Vector2.Lerp(p.PrevPos, p.Pos, _alphaInterp);
+            var fogA = f.Fog ? FogMath.PosAlpha(w.Visibility, pos, f.StageTick, f.HeroDraw) : 1f;
+            if (fogA <= 0f) continue;
+            var icons = RewardOsd.Icons(p, w);
+            if (icons.Count == 0) continue;
+            var anchor = pos - f.Camera - new Vector2(0f, RewardOsd.ArcLift);
+            RewardIcons.Osd(_ui, art, icons, anchor, f.StageTick, Vector2.Distance(f.HeroDraw, pos) <= RewardOsd.LabelRange, fogA);
+        }
+    }
+
+    /// <summary>열린 출구 문 위(벽 높이 위) 보상 아이콘 48px(<see cref="RewardIcons.Door"/>), 주인공이 300px 안이면 그 아래 이름·층(7.11).</summary>
     private void DrawGateIcons(WorldFrame f, ArtServices art)
     {
         var w = f.World;
@@ -700,12 +872,13 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             foreach (var c in gate.Cells) center += grid.Iso.CellCenter(c.X, c.Y);
             center /= gate.Cells.Count;
             var top = center - new Vector2(0, grid.Iso.ColumnHeight + 24) - f.Camera;
-            if (exit.Reward?.Icon is { } icon && art.TryGetSprite(icon.Sprite.Def, "", out var h)
-                && art.Source(icon.Sprite.Def, h, icon.Dir ?? 0, icon.Frame ?? 1, out _, out var src, out _, Vector2.Zero, 1f))
+            if (exit.Reward is { } reward)
             {
+                // 48px 칸에 비율대로 맞춤(v0.9 — 상인 문은 상인 그림 첫 프레임, 회복 문은 붉은 물약). 테 = 정예 방 붉게
                 var frame = exit.NextKind == RoomKind.Elite ? new Rgb(220, 40, 40) : new Rgb(200, 170, 90);
                 _ui.Fill(new RectF(top.X - 26, top.Y - 26, top.X + 26, top.Y + 26), frame, 0.9f);
-                _ui.Sprite(icon.Sprite.Def.Id, src, new RectF(top.X - 24, top.Y - 24, top.X + 24, top.Y + 24), icon.Tint ?? Rgb.White);
+                _ui.Fill(new RectF(top.X - 24, top.Y - 24, top.X + 24, top.Y + 24), new Rgb(24, 20, 18), 0.85f);
+                RewardIcons.Door(_ui, art, w.Defs, reward, new RectF(top.X - 23, top.Y - 23, top.X + 23, top.Y + 23));
             }
             if (Vector2.Distance(f.HeroDraw, center) > 300f) continue;
             var label = GateSeals.Label(exit);

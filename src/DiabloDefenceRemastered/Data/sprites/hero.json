@@ -1,4 +1,7 @@
-// 주인공 그림 묶음 — 마법사 slt 한 벌 (설계서 6.3·6.16, 기획 4.0). 첫 판 WP0a, 그 뒤 소유 WP5.
+// 주인공 그림 묶음 — 마법사 (설계서 6.3·6.16·6.19, 기획 4.0). 첫 판 WP0a(slt 한 벌), 그 뒤 소유 WP5.
+// v0.9.1 V10(단계 2 wp5): 겉모습 아홉 벌 set_sorcerer_<키> — 키 = 갑옷 무게 l·m·h + 든 것 n·u·t(HeroLook.Key), 직업 정의 looks 가 가리킨다.
+// 아홉 벌은 칸·방향·프레임 수가 모두 같다(가져오기 표 Table/hero.json — 원본 확인). 죽기는 그 갑옷의 맨손 벌(sln·smn·shn 의 dt)을 각 페이지의 die 동작으로 넣는다.
+// set_sorcerer(slt 한 벌)는 직업 정의 sprites 그대로 — 시뮬레이션(시전 프레임·걷기 재생)과 소리 연결(hero.<직업>)이 이 묶음을 본다. 동작 시간이 아홉 벌과 같아 그림만 바뀐다.
 // 칸·방향·프레임 수 = 이 PC 의 diabdat 원본 CL2 를 읽은 값. 죽기는 맨손 벌 sln\slndt(원작도 죽기는 맨손 벌에만 있다)를 같은 페이지의 die 동작으로 넣는다.
 // 프레임 시간 = 원작 플레이어 동작별 틱 수 × 50ms(서기 4, 죽기 2, 그 밖 1), 시전 프레임 = 원작 값 — 원본 파일에 없는 게임 동작 값이라 DevilutionX 참고.
 // origin 첫 값 = (칸 폭/2, 칸 높이 − 16), body_height 는 어림 — WP5 가 --preview 로 맞춘다.
@@ -10,7 +13,55 @@
     { "id": "slt_cast_fire",      "source": "atlas", "file": "d1/hero/slt.png", "action": "cast_fire",      "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
     { "id": "slt_cast_lightning", "source": "atlas", "file": "d1/hero/slt.png", "action": "cast_lightning", "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
     { "id": "slt_cast_magic",     "source": "atlas", "file": "d1/hero/slt.png", "action": "cast_magic",     "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
-    { "id": "sln_die",            "source": "atlas", "file": "d1/hero/slt.png", "action": "die",            "frame": [128, 96],  "directions": 8, "frames": 20, "origin": [64, 80] }
+    { "id": "sln_die",            "source": "atlas", "file": "d1/hero/slt.png", "action": "die",            "frame": [128, 96],  "directions": 8, "frames": 20, "origin": [64, 80] },
+    // 겉모습 여덟 벌(lt 는 위 slt, ln 의 죽기는 위 sln_die — 같은 원본 sln\slndt). plrgfx\sorceror\s<키>\s<키>{as,aw,fm,lm,qm}.cl2 + 맨손 벌 dt — 출처: 원본 확인(칸·방향·프레임이 slt 와 같음)
+    { "id": "sln_idle",            "source": "atlas", "file": "d1/hero/sln.png", "action": "idle",           "frame": [96, 96],   "directions": 8, "frames": 8,  "origin": [48, 80] },
+    { "id": "sln_walk",            "source": "atlas", "file": "d1/hero/sln.png", "action": "walk",           "frame": [96, 96],   "directions": 8, "frames": 8,  "origin": [48, 80] },
+    { "id": "sln_cast_fire",       "source": "atlas", "file": "d1/hero/sln.png", "action": "cast_fire",      "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "sln_cast_lightning",  "source": "atlas", "file": "d1/hero/sln.png", "action": "cast_lightning", "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "sln_cast_magic",      "source": "atlas", "file": "d1/hero/sln.png", "action": "cast_magic",     "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "slu_idle",            "source": "atlas", "file": "d1/hero/slu.png", "action": "idle",           "frame": [96, 96],   "directions": 8, "frames": 8,  "origin": [48, 80] },
+    { "id": "slu_walk",            "source": "atlas", "file": "d1/hero/slu.png", "action": "walk",           "frame": [96, 96],   "directions": 8, "frames": 8,  "origin": [48, 80] },
+    { "id": "slu_cast_fire",       "source": "atlas", "file": "d1/hero/slu.png", "action": "cast_fire",      "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "slu_cast_lightning",  "source": "atlas", "file": "d1/hero/slu.png", "action": "cast_lightning", "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "slu_cast_magic",      "source": "atlas", "file": "d1/hero/slu.png", "action": "cast_magic",     "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "slu_die",             "source": "atlas", "file": "d1/hero/slu.png", "action": "die",            "frame": [128, 96],  "directions": 8, "frames": 20, "origin": [64, 80] },
+    { "id": "smn_idle",            "source": "atlas", "file": "d1/hero/smn.png", "action": "idle",           "frame": [96, 96],   "directions": 8, "frames": 8,  "origin": [48, 80] },
+    { "id": "smn_walk",            "source": "atlas", "file": "d1/hero/smn.png", "action": "walk",           "frame": [96, 96],   "directions": 8, "frames": 8,  "origin": [48, 80] },
+    { "id": "smn_cast_fire",       "source": "atlas", "file": "d1/hero/smn.png", "action": "cast_fire",      "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "smn_cast_lightning",  "source": "atlas", "file": "d1/hero/smn.png", "action": "cast_lightning", "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "smn_cast_magic",      "source": "atlas", "file": "d1/hero/smn.png", "action": "cast_magic",     "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "smn_die",             "source": "atlas", "file": "d1/hero/smn.png", "action": "die",            "frame": [128, 96],  "directions": 8, "frames": 20, "origin": [64, 80] },
+    { "id": "smu_idle",            "source": "atlas", "file": "d1/hero/smu.png", "action": "idle",           "frame": [96, 96],   "directions": 8, "frames": 8,  "origin": [48, 80] },
+    { "id": "smu_walk",            "source": "atlas", "file": "d1/hero/smu.png", "action": "walk",           "frame": [96, 96],   "directions": 8, "frames": 8,  "origin": [48, 80] },
+    { "id": "smu_cast_fire",       "source": "atlas", "file": "d1/hero/smu.png", "action": "cast_fire",      "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "smu_cast_lightning",  "source": "atlas", "file": "d1/hero/smu.png", "action": "cast_lightning", "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "smu_cast_magic",      "source": "atlas", "file": "d1/hero/smu.png", "action": "cast_magic",     "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "smu_die",             "source": "atlas", "file": "d1/hero/smu.png", "action": "die",            "frame": [128, 96],  "directions": 8, "frames": 20, "origin": [64, 80] },
+    { "id": "smt_idle",            "source": "atlas", "file": "d1/hero/smt.png", "action": "idle",           "frame": [96, 96],   "directions": 8, "frames": 8,  "origin": [48, 80] },
+    { "id": "smt_walk",            "source": "atlas", "file": "d1/hero/smt.png", "action": "walk",           "frame": [96, 96],   "directions": 8, "frames": 8,  "origin": [48, 80] },
+    { "id": "smt_cast_fire",       "source": "atlas", "file": "d1/hero/smt.png", "action": "cast_fire",      "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "smt_cast_lightning",  "source": "atlas", "file": "d1/hero/smt.png", "action": "cast_lightning", "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "smt_cast_magic",      "source": "atlas", "file": "d1/hero/smt.png", "action": "cast_magic",     "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "smt_die",             "source": "atlas", "file": "d1/hero/smt.png", "action": "die",            "frame": [128, 96],  "directions": 8, "frames": 20, "origin": [64, 80] },
+    { "id": "shn_idle",            "source": "atlas", "file": "d1/hero/shn.png", "action": "idle",           "frame": [96, 96],   "directions": 8, "frames": 8,  "origin": [48, 80] },
+    { "id": "shn_walk",            "source": "atlas", "file": "d1/hero/shn.png", "action": "walk",           "frame": [96, 96],   "directions": 8, "frames": 8,  "origin": [48, 80] },
+    { "id": "shn_cast_fire",       "source": "atlas", "file": "d1/hero/shn.png", "action": "cast_fire",      "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "shn_cast_lightning",  "source": "atlas", "file": "d1/hero/shn.png", "action": "cast_lightning", "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "shn_cast_magic",      "source": "atlas", "file": "d1/hero/shn.png", "action": "cast_magic",     "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "shn_die",             "source": "atlas", "file": "d1/hero/shn.png", "action": "die",            "frame": [128, 96],  "directions": 8, "frames": 20, "origin": [64, 80] },
+    { "id": "shu_idle",            "source": "atlas", "file": "d1/hero/shu.png", "action": "idle",           "frame": [96, 96],   "directions": 8, "frames": 8,  "origin": [48, 80] },
+    { "id": "shu_walk",            "source": "atlas", "file": "d1/hero/shu.png", "action": "walk",           "frame": [96, 96],   "directions": 8, "frames": 8,  "origin": [48, 80] },
+    { "id": "shu_cast_fire",       "source": "atlas", "file": "d1/hero/shu.png", "action": "cast_fire",      "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "shu_cast_lightning",  "source": "atlas", "file": "d1/hero/shu.png", "action": "cast_lightning", "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "shu_cast_magic",      "source": "atlas", "file": "d1/hero/shu.png", "action": "cast_magic",     "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "shu_die",             "source": "atlas", "file": "d1/hero/shu.png", "action": "die",            "frame": [128, 96],  "directions": 8, "frames": 20, "origin": [64, 80] },
+    { "id": "sht_idle",            "source": "atlas", "file": "d1/hero/sht.png", "action": "idle",           "frame": [96, 96],   "directions": 8, "frames": 8,  "origin": [48, 80] },
+    { "id": "sht_walk",            "source": "atlas", "file": "d1/hero/sht.png", "action": "walk",           "frame": [96, 96],   "directions": 8, "frames": 8,  "origin": [48, 80] },
+    { "id": "sht_cast_fire",       "source": "atlas", "file": "d1/hero/sht.png", "action": "cast_fire",      "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "sht_cast_lightning",  "source": "atlas", "file": "d1/hero/sht.png", "action": "cast_lightning", "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "sht_cast_magic",      "source": "atlas", "file": "d1/hero/sht.png", "action": "cast_magic",     "frame": [128, 128], "directions": 8, "frames": 12, "origin": [64, 112] },
+    { "id": "sht_die",             "source": "atlas", "file": "d1/hero/sht.png", "action": "die",            "frame": [128, 96],  "directions": 8, "frames": 20, "origin": [64, 80] }
   ],
   "sprite_sets": [
     { "id": "set_sorcerer", "base_speed": 95, "base_radius": 14, "body_height": 76,
@@ -22,6 +73,43 @@
         "cast_fire":      { "sprite": "slt_cast_fire", "event_frame": 8 },                 // 출처: DevilutionX 참고(마법사 시전 프레임 8)
         "cast_lightning": { "sprite": "slt_cast_lightning", "event_frame": 8 },            // 출처: DevilutionX 참고(마법사 시전 프레임 8)
         "cast_magic":     { "sprite": "slt_cast_magic", "event_frame": 8 },                // 출처: DevilutionX 참고(마법사 시전 프레임 8)
-        "die":            { "sprite": "sln_die", "frame_time": 0.1 } } }                   // 출처: DevilutionX 참고(죽기 2틱)
+        "die":            { "sprite": "sln_die", "frame_time": 0.1 } } },                  // 출처: DevilutionX 참고(죽기 2틱)
+    // 겉모습 아홉 벌 — 프레임 시간·시전 프레임은 set_sorcerer 와 같다(출처: DevilutionX 참고, 위). 다르면 시험(Art/HeroLookArtTests)이 떨어진다
+    { "id": "set_sorcerer_ln", "base_speed": 95, "base_radius": 14, "body_height": 76, "frame_time": 0.05, "variants": [""],   // 출처: DevilutionX 참고
+      "clips": { "idle": { "sprite": "sln_idle", "frame_time": 0.2 }, "walk": { "sprite": "sln_walk" },   // 출처: DevilutionX 참고
+                 "cast_fire": { "sprite": "sln_cast_fire", "event_frame": 8 }, "cast_lightning": { "sprite": "sln_cast_lightning", "event_frame": 8 },   // 출처: DevilutionX 참고
+                 "cast_magic": { "sprite": "sln_cast_magic", "event_frame": 8 }, "die": { "sprite": "sln_die", "frame_time": 0.1 } } },   // 출처: DevilutionX 참고
+    { "id": "set_sorcerer_lu", "base_speed": 95, "base_radius": 14, "body_height": 76, "frame_time": 0.05, "variants": [""],   // 출처: DevilutionX 참고
+      "clips": { "idle": { "sprite": "slu_idle", "frame_time": 0.2 }, "walk": { "sprite": "slu_walk" },   // 출처: DevilutionX 참고
+                 "cast_fire": { "sprite": "slu_cast_fire", "event_frame": 8 }, "cast_lightning": { "sprite": "slu_cast_lightning", "event_frame": 8 },   // 출처: DevilutionX 참고
+                 "cast_magic": { "sprite": "slu_cast_magic", "event_frame": 8 }, "die": { "sprite": "slu_die", "frame_time": 0.1 } } },   // 출처: DevilutionX 참고
+    { "id": "set_sorcerer_lt", "base_speed": 95, "base_radius": 14, "body_height": 76, "frame_time": 0.05, "variants": [""],   // 출처: DevilutionX 참고
+      "clips": { "idle": { "sprite": "slt_idle", "frame_time": 0.2 }, "walk": { "sprite": "slt_walk" },   // 출처: DevilutionX 참고
+                 "cast_fire": { "sprite": "slt_cast_fire", "event_frame": 8 }, "cast_lightning": { "sprite": "slt_cast_lightning", "event_frame": 8 },   // 출처: DevilutionX 참고
+                 "cast_magic": { "sprite": "slt_cast_magic", "event_frame": 8 }, "die": { "sprite": "sln_die", "frame_time": 0.1 } } },   // 출처: DevilutionX 참고
+    { "id": "set_sorcerer_mn", "base_speed": 95, "base_radius": 14, "body_height": 76, "frame_time": 0.05, "variants": [""],   // 출처: DevilutionX 참고
+      "clips": { "idle": { "sprite": "smn_idle", "frame_time": 0.2 }, "walk": { "sprite": "smn_walk" },   // 출처: DevilutionX 참고
+                 "cast_fire": { "sprite": "smn_cast_fire", "event_frame": 8 }, "cast_lightning": { "sprite": "smn_cast_lightning", "event_frame": 8 },   // 출처: DevilutionX 참고
+                 "cast_magic": { "sprite": "smn_cast_magic", "event_frame": 8 }, "die": { "sprite": "smn_die", "frame_time": 0.1 } } },   // 출처: DevilutionX 참고
+    { "id": "set_sorcerer_mu", "base_speed": 95, "base_radius": 14, "body_height": 76, "frame_time": 0.05, "variants": [""],   // 출처: DevilutionX 참고
+      "clips": { "idle": { "sprite": "smu_idle", "frame_time": 0.2 }, "walk": { "sprite": "smu_walk" },   // 출처: DevilutionX 참고
+                 "cast_fire": { "sprite": "smu_cast_fire", "event_frame": 8 }, "cast_lightning": { "sprite": "smu_cast_lightning", "event_frame": 8 },   // 출처: DevilutionX 참고
+                 "cast_magic": { "sprite": "smu_cast_magic", "event_frame": 8 }, "die": { "sprite": "smu_die", "frame_time": 0.1 } } },   // 출처: DevilutionX 참고
+    { "id": "set_sorcerer_mt", "base_speed": 95, "base_radius": 14, "body_height": 76, "frame_time": 0.05, "variants": [""],   // 출처: DevilutionX 참고
+      "clips": { "idle": { "sprite": "smt_idle", "frame_time": 0.2 }, "walk": { "sprite": "smt_walk" },   // 출처: DevilutionX 참고
+                 "cast_fire": { "sprite": "smt_cast_fire", "event_frame": 8 }, "cast_lightning": { "sprite": "smt_cast_lightning", "event_frame": 8 },   // 출처: DevilutionX 참고
+                 "cast_magic": { "sprite": "smt_cast_magic", "event_frame": 8 }, "die": { "sprite": "smt_die", "frame_time": 0.1 } } },   // 출처: DevilutionX 참고
+    { "id": "set_sorcerer_hn", "base_speed": 95, "base_radius": 14, "body_height": 76, "frame_time": 0.05, "variants": [""],   // 출처: DevilutionX 참고
+      "clips": { "idle": { "sprite": "shn_idle", "frame_time": 0.2 }, "walk": { "sprite": "shn_walk" },   // 출처: DevilutionX 참고
+                 "cast_fire": { "sprite": "shn_cast_fire", "event_frame": 8 }, "cast_lightning": { "sprite": "shn_cast_lightning", "event_frame": 8 },   // 출처: DevilutionX 참고
+                 "cast_magic": { "sprite": "shn_cast_magic", "event_frame": 8 }, "die": { "sprite": "shn_die", "frame_time": 0.1 } } },   // 출처: DevilutionX 참고
+    { "id": "set_sorcerer_hu", "base_speed": 95, "base_radius": 14, "body_height": 76, "frame_time": 0.05, "variants": [""],   // 출처: DevilutionX 참고
+      "clips": { "idle": { "sprite": "shu_idle", "frame_time": 0.2 }, "walk": { "sprite": "shu_walk" },   // 출처: DevilutionX 참고
+                 "cast_fire": { "sprite": "shu_cast_fire", "event_frame": 8 }, "cast_lightning": { "sprite": "shu_cast_lightning", "event_frame": 8 },   // 출처: DevilutionX 참고
+                 "cast_magic": { "sprite": "shu_cast_magic", "event_frame": 8 }, "die": { "sprite": "shu_die", "frame_time": 0.1 } } },   // 출처: DevilutionX 참고
+    { "id": "set_sorcerer_ht", "base_speed": 95, "base_radius": 14, "body_height": 76, "frame_time": 0.05, "variants": [""],   // 출처: DevilutionX 참고
+      "clips": { "idle": { "sprite": "sht_idle", "frame_time": 0.2 }, "walk": { "sprite": "sht_walk" },   // 출처: DevilutionX 참고
+                 "cast_fire": { "sprite": "sht_cast_fire", "event_frame": 8 }, "cast_lightning": { "sprite": "sht_cast_lightning", "event_frame": 8 },   // 출처: DevilutionX 참고
+                 "cast_magic": { "sprite": "sht_cast_magic", "event_frame": 8 }, "die": { "sprite": "sht_die", "frame_time": 0.1 } } }   // 출처: DevilutionX 참고
   ]
 }
