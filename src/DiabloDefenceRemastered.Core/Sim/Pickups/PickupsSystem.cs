@@ -130,6 +130,9 @@ public sealed class PickupsSystem : ISimSystem
                 dist = Vector2.Distance(hero.Pos, p.Pos);
             }
             if (dist > hero.Radius + p.Radius) continue;
+            // v0.9.1 V8(단계 2 wp5 이음새): 상자를 연 이 틱에 떨어진 책은 이 틱에 집지 않는다 — DropReward 가 저장소 끝에 붙여 이 반복이 곧 만나고,
+            // 책 자리가 벽·맵 끝 때문에 상자 쪽으로 당겨지면 몸에 바로 닿아 책이 한 프레임도 안 보인 채 받아졌다(시험 Art/ChestBookSameTickTests)
+            if (p.Reward is not null && p.RewardStage == RewardPickupStage.Dropped && p.SpawnTick == world.Tick) continue;
             if (Collect(world, p)) store.RemoveAt(i);
         }
         (world.ShopService as ShopService)?.TryOpen();
