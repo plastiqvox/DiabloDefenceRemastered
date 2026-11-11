@@ -27,6 +27,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
 {
     private const float ProjectileFrameTime = 0.05f;
     private static readonly Rgb EnemyRim = new(255, 60, 40);
+    private static readonly Rgb EnemyHalo = new(255, 150, 60);
 
     private readonly AppServices _app;
     private readonly WorldFrame _frame = new();
@@ -518,7 +519,16 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             var tint = Mul(p.Def.Tint, p.Tint == default ? Rgb.White : p.Tint);
             var draw = new GlowDraw(h.Pages[page], src, dest, tint, 1f);
             (p.Def.Blend == BlendKind.Additive ? _additive : _alpha7).Add(draw);
-            if (p.Faction == Faction.Enemy) _additive.Add(new GlowDraw(h.Pages[page], src, Grow(dest, 1.15f), EnemyRim, 0.35f));
+            if (p.Faction == Faction.Enemy)
+            {
+                _additive.Add(new GlowDraw(h.Pages[page], src, Grow(dest, 1.15f), EnemyRim, 0.35f));
+                _additive.Add(draw with { Color = EnemyHalo, Alpha = 0.8f });   // 탄 그림 자체를 따뜻한 색으로 한 겹 더 — 어두운 화살대가 바닥과 갈리게
+                // 적 탄 둘레 빛 — 가는 화살이 바닥 무늬에 묻히지 않게(플레이 관찰). 크기는 판정 반경을 따르고, 자리는 그림 가운데(띄워 그린 높이 포함)
+                var half = Math.Max(16f, p.Def.Radius * 3.5f);
+                var c = dest.Center;
+                _additive.Add(new GlowDraw(prim.Light, new RectI(0, 0, prim.Light.Width, prim.Light.Height),
+                    new RectF(c.X - half, c.Y - half, c.X + half, c.Y + half), EnemyHalo, 0.6f));
+            }
             else _additive.Add(draw with { Alpha = 0.5f });
         }
         // 표시 이펙트(늘 그림 — 안개 위)

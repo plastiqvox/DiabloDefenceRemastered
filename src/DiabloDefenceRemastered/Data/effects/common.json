@@ -21,7 +21,8 @@
   ],
   "projectiles": [
     // 기획 13.7: 화살 arrows 원색 ×0.9, 반경 4, 260px/s, 350px, 장애물 막힘. 대체 그림: exe 화살(16방향)
-    { "id": "pj_enemy_arrow", "sprite": "exe_arrow", "scale": 0.6, "blend": "alpha",
+    // ×0.6 은 바닥 무늬에 묻혀 안 보였다(플레이 관찰) → 기획 값 ×0.9. 그리기가 적 탄 둘레 빛도 더한다
+    { "id": "pj_enemy_arrow", "sprite": "exe_arrow", "scale": 0.9, "blend": "alpha",
       "radius": 4, "speed": 260, "range": 350, "blocked_by_obstacles": true, "pierce": 1 },
     // 단계 2(wp4 — 이번에 한해 이 파일은 wp4). 기획 13.7: 불화살 farrow1..16(4프레임) ×0.9, 반경 5, 240px/s, 380px, 장애물 막힘, 맞으면 fx_spark(폭발 피해 없음) — 블랙애시 불화살 부채
     { "id": "pj_fire_arrow", "sprite": "farrow", "scale": 0.9, "blend": "alpha",
