@@ -3,6 +3,12 @@
   "hero_classes": [
     { "id": "sorcerer", "name": "마법사", "description": "마법 무기의 쿨다운이 조금 짧다",
       "sprites": "set_sorcerer", "radius": 14,
+      // v0.9.1 V10(설계서 6.19 "주인공 겉모습"): 겉모습 키(갑옷 무게 l·m·h + 든 것 n·u·t — HeroLook.Key) → 그림 묶음. 그리기(WP5)가 프레임마다 고르고,
+      // 키의 묶음이 못 가져온 것이면 look 의 벌, 그것도 없으면 sprites. 시뮬레이션은 sprites 하나만 본다(동작 시간이 아홉 벌 모두 같음)
+      "looks": { "ln": "set_sorcerer_ln", "lu": "set_sorcerer_lu", "lt": "set_sorcerer_lt",
+                 "mn": "set_sorcerer_mn", "mu": "set_sorcerer_mu", "mt": "set_sorcerer_mt",
+                 "hn": "set_sorcerer_hn", "hu": "set_sorcerer_hu", "ht": "set_sorcerer_ht" },
+      "look": "lt",
       "stats": {},                                            // rules.hero.stats 덮어쓰기 — 기본값이 마법사 값이라 비어 있음
       "start_weapons": ["magic_missile"],
       "traits": ["trait_arcane_affinity"] }                   // 특성 = trait 패시브(passives.json)

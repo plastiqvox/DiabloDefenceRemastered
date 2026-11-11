@@ -11,7 +11,15 @@ public class ArtDataTests
     {
         var sprites = RealData.Kind<SpriteDef>("sprites/objects.json", "sprites");
         Assert.Equal(sprites.Count, sprites.Select(s => s.Id).Distinct().Count());
-        foreach (var s in sprites)
+        // 단계 2 wp5: 원작 그림(atlas — 바닥 아이템 item_*·물체 obj_*1·상인 towner_*)은 가져오기가 만든 d1/ 아래, 대체 그림(grid)은 exe PNG
+        foreach (var s in sprites.Where(s => s.Source == SpriteSource.Atlas))
+        {
+            Assert.Matches("^(item_|obj_[a-z]+1$|towner_)", s.Id);
+            Assert.StartsWith("d1/", s.File);
+            Assert.Equal(1, s.Directions);
+            Assert.True(s.Origin.X >= 0 && s.Origin.X <= s.Frame.X && s.Origin.Y >= 0 && s.Origin.Y <= s.Frame.Y, $"{s.Id} origin 이 칸 밖");
+        }
+        foreach (var s in sprites.Where(s => s.Source != SpriteSource.Atlas))
         {
             Assert.StartsWith("obj_", s.Id);
             Assert.Equal(SpriteSource.Grid, s.Source);

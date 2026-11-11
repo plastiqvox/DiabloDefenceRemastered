@@ -1,9 +1,30 @@
-// 문 보상 물체·아이콘 그림 (설계서 6.18·7.11, 기획 11.4 — 소유 WP5). 원작 물체 그림(objects\)의 가져오기가 확인될 때까지(기획 열린 질문 32)
-// 원작 DiabloDefence exe PNG 를 대체 그림으로 쓴다 — 단계 1 은 마법서·보물 상자 둘, 단계 2 에 완전 회복 물약, 단계 3 에 성소 셋.
-// 크기는 그 exe PNG 의 실제 크기(가로 = 방향 1 × 칸, 세로 = 프레임 × 칸). 색 키는 속성을 적지 않아 검정(6.3 grid 기본값).
-// 물체 정의(pickups.json 의 obj_*)·보상 정의(rewards.json)는 WP3 가 이 ID 를 가리킨다. 음산한 성소의 어두운 색조(0.6)는 그 물체·아이콘 쪽 tint 다(그림 정의에는 색조 칸이 없다).
+// 문 보상 물체·바닥 아이템·상인 그림 (설계서 6.3·6.9·6.18·6.19·7.11, 기획 11.1·11.4·11.7 — 소유 WP5).
+// 두 갈래다:
+//  ① 원작 그림(atlas — 가져오기가 만든 d1/items·d1/objects·d1/towners, 단계 2 wp5 부터 획득물·보상·상인이 가리키는 쪽).
+//  ② 원작 DiabloDefence exe PNG 대체 그림(grid — obj_* 이름). 원작 그림을 못 가져온 실행(자원 없음·가져오기에서 빠짐)에서 획득물 draw·보상 icon 이
+//     되돌아가는 자리라 지우지 않는다(6.3 대체 규칙). 크기는 그 exe PNG 의 실제 크기, 색 키는 속성을 적지 않아 검정(6.3 grid 기본값).
+// 음산한 성소의 어두운 색조(0.6)는 그 물체·아이콘 쪽 tint 다(그림 정의에는 색조 칸이 없다).
 {
   "sprites": [
+    // ── ① 원작 그림 ──────────────────────────────────────────────
+    // 칸·프레임 수 = 가져오기 메타(이 PC 의 diabdat — Table/missiles.json 의 바닥 아이템·물체·상인 줄). 출처: 원본 확인.
+    // origin = 놓인 모습(바닥 아이템은 마지막 프레임, 물체는 첫 프레임)의 보이는 사각형 가운데 아래 — --preview sprites 로 맞춤(13장 WP5 단계 2 기록).
+    // 바닥 아이템: 떨어짐 애니 전부를 0.05s 로 한 번 돌리고 마지막 프레임에서 멈춘다(그리기 — PickupDef.floor 에 frame 이 없을 때).
+    { "id": "item_fbook",    "source": "atlas", "file": "d1/items/fbook.png",    "frame": [96, 160], "directions": 1, "frames": 13, "origin": [48, 152] },
+    { "id": "item_goldflip", "source": "atlas", "file": "d1/items/goldflip.png", "frame": [96, 160], "directions": 1, "frames": 10, "origin": [44, 155] },
+    { "id": "item_fbttlebr", "source": "atlas", "file": "d1/items/fbttlebr.png", "frame": [96, 160], "directions": 1, "frames": 16, "origin": [47, 143] },
+    { "id": "item_fbttlebb", "source": "atlas", "file": "d1/items/fbttlebb.png", "frame": [96, 160], "directions": 1, "frames": 16, "origin": [47, 143] },
+    // 경험치 보석(영혼석·큰 영혼석 — 기획 v0.9.3 11.1): 마법의 돌, 칸 96×96, 20프레임 중 마지막(20) 하나만 쓴다(획득물 floor.frame). 회색 돌이라 색 곱하기가 그대로 먹는다
+    { "id": "item_rock",     "source": "atlas", "file": "d1/items/rock.png",     "frame": [96, 96],  "directions": 1, "frames": 20, "origin": [44, 53] },
+    // 방 안 물체: 6프레임 — 1 닫힘, 2 열림(내용 있음), 3 열림(빔), 4~6 은 같은 셋의 반대 방향. 상자는 닫힘 1 → 열림(빔) 3(그리기 — 두 단계 보상), 책 받침은 펼친 책 2
+    { "id": "obj_chest1",    "source": "atlas", "file": "d1/objects/chest1.png", "frame": [96, 96],  "directions": 1, "frames": 6,  "origin": [42, 87] },
+    { "id": "obj_book1",     "source": "atlas", "file": "d1/objects/book1.png",  "frame": [96, 96],  "directions": 1, "frames": 6,  "origin": [42, 86] },
+    // 상인(기획 11.7): 서기 반복 한 방향, 96×96 — 그리스월드 16·아드리아 19·페핀 20프레임. 첫 프레임 = 문 위 아이콘(48px 안에 맞춤)
+    { "id": "towner_smith",  "source": "atlas", "file": "d1/towners/smithn.png", "frame": [96, 96],  "directions": 1, "frames": 16, "origin": [41, 83] },
+    { "id": "towner_witch",  "source": "atlas", "file": "d1/towners/witch.png",  "frame": [96, 96],  "directions": 1, "frames": 19, "origin": [42, 80] },
+    { "id": "towner_healer", "source": "atlas", "file": "d1/towners/healer.png", "frame": [96, 96],  "directions": 1, "frames": 20, "origin": [43, 83] },
+
+    // ── ② exe PNG 대체 그림 ──────────────────────────────────────
     // 방 안 물체(발 = 칸 아래쪽 가운데). Gold·HealingPotion 은 원작 exe 의 떨어진 금화·물약 반복 그림(칸 96×160)
     { "id": "obj_tome",        "source": "grid", "file": "MagicMissileICon.png", "sheet": [48, 48],    "frame": [48, 48],  "origin": [24, 44] },
     { "id": "obj_chest",       "source": "grid", "file": "Gold.png",             "sheet": [96, 1600],  "frame": [96, 160], "frames": 10, "origin": [48, 150] },
@@ -19,5 +40,16 @@
     { "id": "obj_shrine_icon",      "source": "grid", "file": "IncHealth.png",        "sheet": [48, 48], "frame": [48, 48], "origin": [24, 24] },
     { "id": "obj_shrine_red_icon",  "source": "grid", "file": "IncMana.png",          "sheet": [48, 48], "frame": [48, 48], "origin": [24, 24] },
     { "id": "obj_shrine_dark_icon", "source": "grid", "file": "RegenMana.png",        "sheet": [48, 48], "frame": [48, 48], "origin": [24, 24] }
+  ],
+  "sprite_sets": [
+    // 상인 그림 묶음(MerchantDef.sprite — 설계서 6.19): 서기 반복 하나(idle). 걷지 않고 충돌이 없어 base_speed·base_radius 는 쓰지 않는다.
+    // 프레임 시간은 적지 않는다 — 원작 상인 애니 간격을 원본으로 확인하지 못해(13.5-16 출처 주석을 달 수 없음) 그리는 쪽 첫 값(WorldRenderer.MerchantFrameTime 0.15s)을 쓴다.
+    // body_height 는 그림 높이 어림
+    { "id": "set_towner_smith",  "base_speed": 1, "base_radius": 14, "body_height": 66, "variants": [""],
+      "clips": { "idle": { "sprite": "towner_smith" } } },
+    { "id": "set_towner_witch",  "base_speed": 1, "base_radius": 14, "body_height": 56, "variants": [""],
+      "clips": { "idle": { "sprite": "towner_witch" } } },
+    { "id": "set_towner_healer", "base_speed": 1, "base_radius": 14, "body_height": 66, "variants": [""],
+      "clips": { "idle": { "sprite": "towner_healer" } } }
   ]
 }

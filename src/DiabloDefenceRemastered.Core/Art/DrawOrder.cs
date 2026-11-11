@@ -3,7 +3,7 @@ using DiabloDefenceRemastered.Core.Assets;
 namespace DiabloDefenceRemastered.Core.Art;
 
 /// <summary>4층 항목 종류(설계서 7.4). 렌더가 <see cref="DrawItem.Index"/> 를 어느 목록에서 찾을지.</summary>
-public enum DrawKind : byte { Hero, Enemy, Wall, FloorPiece, Overlay }
+public enum DrawKind : byte { Hero, Enemy, Wall, FloorPiece, Overlay, Merchant, Grate }
 
 /// <summary>
 /// 4층 정렬 항목 (설계서 7.4): 키 = <see cref="SortY"/>, 같으면 <see cref="Tiebreak"/>(개체 ID·칸 번호) — 같은 y 에서 깜빡임 없음.

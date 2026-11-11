@@ -26,6 +26,10 @@
     { "out": "d1/items/goldflip", "cl2": "items\\goldflip.cel", "width": 96, "shadow_alpha": 0.5 },
     { "out": "d1/items/fbttlebr", "cl2": "items\\fbttlebr.cel", "width": 96, "shadow_alpha": 0.5 },
     { "out": "d1/items/fbttlebb", "cl2": "items\\fbttlebb.cel", "width": 96, "shadow_alpha": 0.5 },
+    // 경험치 보석(기획 v0.9.3 11.1·열린 질문 55, 설계서 6.9 "보석 그림"): 마법의 돌 rock 20프레임, 칸 96×96(다른 바닥 아이템의 160 과 다름), 색인 0·135~254.
+    // 회색 돌이라 곱하기 색(tint)이 그대로 먹는다 — 회색조 변종을 두지 않음. 쓰는 것은 마지막 프레임 20 하나.
+    // 출처: 원본 확인(probe files·probe cel --sheet — 머리 20/20, 1~127 픽셀 0개)
+    { "out": "d1/items/rock",     "cl2": "items\\rock.cel",     "width": 96, "shadow_alpha": 0.5 },
 
     // 방 안 물체(기획 11.4): 상자 셋·책 받침 둘, 6프레임 96×96 — 1 닫힘, 2 열림(내용 있음), 3 열림(빔), 4~6 은 같은 셋의 반대 방향
     { "out": "d1/objects/chest1", "cl2": "objects\\chest1.cel", "width": 96, "shadow_alpha": 0.5 },
