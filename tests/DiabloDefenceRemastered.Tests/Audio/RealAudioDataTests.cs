@@ -61,10 +61,11 @@ public class RealAudioDataTests
         string[] pending =
         [
             "$.sound_bindings.effects.fx_bolt_hit", "$.sound_bindings.effects.fx_fire_explosion",
+            "$.sound_bindings.enemies.skeleton_king",
             "$.sound_bindings.hero.sorcerer",
             "$.sound_bindings.music.stage_cathedral",
             "$.sound_bindings.pickups.gem_blue", "$.sound_bindings.pickups.gold", "$.sound_bindings.pickups.healing_potion",
-            "$.sound_bindings.projectiles.pj_enemy_arrow",
+            "$.sound_bindings.projectiles.pj_boss_fireball", "$.sound_bindings.projectiles.pj_enemy_arrow", "$.sound_bindings.projectiles.pj_fire_arrow",
             "$.sound_bindings.rewards.reward_chest", "$.sound_bindings.rewards.reward_tome",
             "$.sound_bindings.weapons.arcane_orbit", "$.sound_bindings.weapons.fireball", "$.sound_bindings.weapons.magic_missile",
         ];

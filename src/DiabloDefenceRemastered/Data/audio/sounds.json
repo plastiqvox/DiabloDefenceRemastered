@@ -25,6 +25,20 @@
     { "id": "snd_zombie_attack",  "files": ["d1/sound/monsters/zombie/zombiea1.wav", "d1/sound/monsters/zombie/zombiea2.wav"], "category": "monster" },
     { "id": "snd_zombie_hit",     "files": ["d1/sound/monsters/zombie/zombieh1.wav", "d1/sound/monsters/zombie/zombieh2.wav"], "category": "monster_hit", "pitch_jitter": 0.05 },
     { "id": "snd_zombie_death",   "files": ["d1/sound/monsters/zombie/zombied1.wav", "d1/sound/monsters/zombie/zombied2.wav"], "category": "monster" },
+    // 단계 2(wp4): 특수 s(로트피스트 시체 부르기·블랙애시 해골 일으키기 — 같은 묶음 소리 그대로, 기획 9.4), 해골 대장 skelsd·해골왕 sking 묶음.
+    // 파일 이름 = 원본 확인(probe files — skelsd 소리 접두는 그림과 같은 sklsr, sking 은 sking)
+    { "id": "snd_skelbow_special", "files": ["d1/sound/monsters/skelbow/sklbws1.wav", "d1/sound/monsters/skelbow/sklbws2.wav"], "category": "monster" },
+    { "id": "snd_zombie_special",  "files": ["d1/sound/monsters/zombie/zombies1.wav", "d1/sound/monsters/zombie/zombies2.wav"], "category": "monster" },
+    { "id": "snd_skelsd_attack",  "files": ["d1/sound/monsters/skelsd/sklsra1.wav", "d1/sound/monsters/skelsd/sklsra2.wav"], "category": "monster" },
+    { "id": "snd_skelsd_hit",     "files": ["d1/sound/monsters/skelsd/sklsrh1.wav", "d1/sound/monsters/skelsd/sklsrh2.wav"], "category": "monster_hit", "pitch_jitter": 0.05 },
+    { "id": "snd_skelsd_death",   "files": ["d1/sound/monsters/skelsd/sklsrd1.wav", "d1/sound/monsters/skelsd/sklsrd2.wav"], "category": "monster" },
+    { "id": "snd_skelsd_special", "files": ["d1/sound/monsters/skelsd/sklsrs1.wav", "d1/sound/monsters/skelsd/sklsrs2.wav"], "category": "monster" },
+    { "id": "snd_sking_attack",   "files": ["d1/sound/monsters/sking/skinga1.wav", "d1/sound/monsters/sking/skinga2.wav"], "category": "monster" },
+    { "id": "snd_sking_hit",      "files": ["d1/sound/monsters/sking/skingh1.wav", "d1/sound/monsters/sking/skingh2.wav"], "category": "monster_hit", "pitch_jitter": 0.05 },
+    { "id": "snd_sking_death",    "files": ["d1/sound/monsters/sking/skingd1.wav", "d1/sound/monsters/sking/skingd2.wav"], "category": "monster" },
+    { "id": "snd_sking_special",  "files": ["d1/sound/monsters/sking/skings1.wav", "d1/sound/monsters/sking/skings2.wav"], "category": "monster" },
+    // 해골왕 등장 대사(기획 12.7 — sfx\monsters\sking01.wav, 원본 확인). 분류 boss_voice = 음악을 줄임(voice_duck)
+    { "id": "snd_sking_voice",    "files": ["d1/sound/sfx/monsters/sking01.wav"], "category": "boss_voice" },
 
     // 주인공(마법사, 기획 4.0·12.7): 맞음 = 신음 둘 중 무작위, 죽음 = mage71(dead.wav 는 전사 소리라 안 씀). 원작 폴더 철자 sorceror
     { "id": "snd_sorcerer_hurt",  "files": ["d1/sound/sfx/sorceror/mage69.wav", "d1/sound/sfx/sorceror/mage69b.wav"], "category": "hero" },

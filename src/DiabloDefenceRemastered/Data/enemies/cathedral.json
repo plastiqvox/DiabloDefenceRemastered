@@ -1,4 +1,4 @@
-// 단계 1 적 5종 (설계서 6.5, 기획 8.2·8.3 표 값). 소유 WP4. 그림 묶음·변종은 WP0a 의 sprites/monsters.json.
+// 대성당 일반 적 (설계서 6.5, 기획 8.2·8.3 표 값). 소유 WP4. 단계 1 = 5종, 단계 2 = 해골 대장(중간 보스·보스는 enemies/bosses/). 그림 묶음·변종은 WP0a 의 sprites/monsters.json.
 // 수치는 기획 첫 값(원본 유래 아님). 타격·발사 프레임은 그림 묶음 클립 값을 쓴다(event_frame 생략).
 // 투사체 pj_enemy_arrow·이펙트 fx_*는 WP5 effects/ 의 정의를 가리킨다(기획 13.7). 드롭은 모두 일반 드롭 표 dt_common(기획 11.1 — 금화 3%(1~5)·물약 등).
 {
@@ -33,6 +33,17 @@
       "hp": 22, "speed": 45, "damage": 10, "armor": 0, "knockback_resist": 0.2, "xp": 2, "movement": "flow", "drop_table": "dt_common",
       "behaviors": [
         { "type": "charge", "range_band": [0, 260], "telegraph": { "effect": "fx_warning_line", "time": 0.5 },
-          "speed": 280, "time": 1.0, "stun": 0.8, "cooldown": 4.0, "damage": 10 } ] }
+          "speed": 280, "time": 1.0, "stun": 0.8, "cooldown": 4.0, "damage": 10 } ] },
+
+    // 단계 2: 해골 대장(기획 8.2·8.3) — 지휘 오라(반경 200 skeleton 태그, 자신 제외·보스 제외)와 호위(이벤트로 나올 때만, 기본 해골 8).
+    // 확률 정예 무리의 종류 뽑기에서 뺀다(기획 9.1). 근접 쿨은 해골과 같은 1.0s(기획 8.3 표에 대장 값이 따로 없음 — 첫 값)
+    { "id": "skeleton_captain", "name": "해골 대장", "tags": ["skeleton", "undead", "leader"],
+      "sprites": "set_skelsd", "variant": "white", "glow": { "color": [255, 200, 90], "alpha": 0.2 }, "scale": 1.1,
+      "hp": 90, "speed": 70, "damage": 10, "armor": 1, "knockback_resist": 0.5, "xp": 10, "movement": "flow", "drop_table": "dt_common",
+      "elite_eligible": false,
+      "behaviors": [
+        { "id": "melee", "type": "chase_melee", "cooldown": 1.0, "event_frame": 8 },   // 타격 프레임 첫 값(기획 8.1 "대부분 공격 그림의 8번째" — 원작 표와 대조 못 함)
+        { "type": "command_aura", "radius": 200, "target_tag": "skeleton", "buff": "command" },
+        { "type": "escort", "default_count": 8, "escort_enemy": "skeleton", "formation_radius": 120, "break_range": 250, "fear_on_leader_death": 1.5 } ] }
   ]
 }

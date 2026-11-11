@@ -9,6 +9,10 @@
     // 폭발(기획 13.7). bigexp 는 원작처럼 칸 아래를 땅에 두는 그림이라, 파이어볼(fireba 칸 96·origin 48 = 칸 아래에서 48 위)과 같은 높이 관계로 origin y = 160 − 48
     { "id": "bigexp",   "source": "atlas", "file": "d1/missiles/bigexp.png",   "frame": [160, 160], "directions": 1, "frames": 16, "origin": [80, 112] },
     { "id": "firarwex", "source": "atlas", "file": "d1/missiles/firarwex.png", "frame": [64, 64], "directions": 1,  "frames": 6,  "origin": [32, 32] },
+    // 단계 2(wp4 — 이번에 한해 이 파일은 wp4, 기획 13.7): 불화살 farrow(16방향 4프레임), 산 웅덩이 acidpud1(생김 9)·acidpud2(유지 4). 칸·프레임 = 원본 확인(probe), origin 은 칸 가운데 첫 값
+    { "id": "farrow",   "source": "atlas", "file": "d1/missiles/farrow.png",   "frame": [96, 96], "directions": 16, "frames": 4,  "origin": [48, 48] },
+    { "id": "acidpud1", "source": "atlas", "file": "d1/missiles/acidpud1.png", "frame": [96, 96], "directions": 1,  "frames": 9,  "origin": [48, 48] },
+    { "id": "acidpud2", "source": "atlas", "file": "d1/missiles/acidpud2.png", "frame": [96, 96], "directions": 1,  "frames": 4,  "origin": [48, 48] },
 
     { "id": "icon_magic_missile", "source": "grid", "file": "d1/icons/magic_missile.png", "sheet": [56, 56], "frame": [56, 56], "color_key": null, "origin": [28, 28] },
     { "id": "icon_fireball",      "source": "grid", "file": "d1/icons/fireball.png",      "sheet": [56, 56], "frame": [56, 56], "color_key": null, "origin": [28, 28] },

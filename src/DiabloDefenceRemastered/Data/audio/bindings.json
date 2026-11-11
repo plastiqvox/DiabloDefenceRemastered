@@ -10,7 +10,9 @@
       "arcane_orbit":  { "fire": "snd_holybolt" }
     },
     "projectiles": {
-      "pj_enemy_arrow": { "fire": "snd_bfire" }
+      "pj_enemy_arrow": { "fire": "snd_bfire" },
+      "pj_fire_arrow":  { "fire": "snd_bfire" },
+      "pj_boss_fireball": { "fire": "snd_fbolt" }
     },
     "effects": {
       "fx_fire_explosion": "snd_firimp",
@@ -18,8 +20,13 @@
     },
     "sprite_sets": {
       "set_skelaxe": { "attack": "snd_skelaxe_attack", "hit": "snd_skelaxe_hit", "death": "snd_skelaxe_death" },
-      "set_skelbow": { "attack": "snd_skelbow_attack", "hit": "snd_skelbow_hit", "death": "snd_skelbow_death" },
-      "set_zombie":  { "attack": "snd_zombie_attack",  "hit": "snd_zombie_hit",  "death": "snd_zombie_death" }
+      "set_skelbow": { "attack": "snd_skelbow_attack", "hit": "snd_skelbow_hit", "death": "snd_skelbow_death", "special": "snd_skelbow_special" },
+      "set_zombie":  { "attack": "snd_zombie_attack",  "hit": "snd_zombie_hit",  "death": "snd_zombie_death",  "special": "snd_zombie_special" },
+      "set_skelsd":  { "attack": "snd_skelsd_attack",  "hit": "snd_skelsd_hit",  "death": "snd_skelsd_death",  "special": "snd_skelsd_special" },
+      "set_sking":   { "attack": "snd_sking_attack",   "hit": "snd_sking_hit",   "death": "snd_sking_death",   "special": "snd_sking_special" }
+    },
+    "enemies": {
+      "skeleton_king": { "voice": "snd_sking_voice" }
     },
     "pickups": {
       "gem_blue":       { "collect": "snd_gem" },

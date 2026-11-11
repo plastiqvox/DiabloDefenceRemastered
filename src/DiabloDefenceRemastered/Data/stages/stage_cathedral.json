@@ -1,25 +1,27 @@
-// 스테이지 1 = 액트 1 대성당 — 단계 1 판 (설계서 6.12 "단계 1 세로 조각", 기획 10.3·14.1). 소유 WP4.
-// slice: 일반 방 여섯(순번 표 번호 1·2·3·4·6·8 그대로, 정예·보스 방 없음), 보상은 마법서·보물 상자 둘.
-// 방 맵 풀(기획 v0.9 V2): 일반 방은 손으로 만든 작은 방 다섯(cathedral_room_a~e, 거울판 포함 열 가지) 중 무작위. 보스 방 맵은 cathedral_arena 그대로 —
-// 이 판엔 보스 방이 없어 방 없는 월드(--stage 바로 시작·시험 판)가 이 맵을 쓴다(World.NoRoomMap). 작은 방의 생성 수는 rules 의 area_scale 이 줄인다.
-// 구간표는 기획 10.3 표에서 단계 1 에 없는 종(폴른 원·썩은 시체·핀드·불타는 해골 궁수)의 가중을 뺀 것 — 2:00–2:30·2:30–3:00 은 한 줄로 합침,
-// 5:00–6:00·7:30–8:30(정예 방 t)은 이 판에서 쓰이지 않지만 13.5-3(빈틈 없음)을 지키려고 남긴다.
-// 이벤트는 기획 10.3 표에서 단계 1 에 있는 적만: 3번 방 포위(불타는 해골 12), 2번 방 행진(해골 궁수 5), 4번 방 정예 무리(해골 4, 접두사 없음),
-// 6번 방 우두머리 구울 정예 0:20·행진(폴른 원 20 대신 해골 20 — 폴른 원은 단계 2), 8번 방 포위(좀비 24)·경고. 해골 대장·중간 보스·보스·방 보급은 단계 2.
-// 단계 2 에서 전체 판(방 아홉·정예 둘·보스)으로 바꾸고 이 판은 지운다(두 판을 같이 두지 않는다).
+// 스테이지 1 = 액트 1 대성당 — 단계 2 전체 판 (설계서 6.12, 기획 2.5·10.3·14.1 단계 2). 소유 WP4. 단계 1 slice 판은 지웠다(두 판을 같이 두지 않는다).
+// 방 아홉: 1~4 일반, 5 정예(로트피스트), 6 일반, 7 정예(블랙애시), 8 일반, 9 보스(해골왕 — 맵 cathedral_arena). 마지막 액트라 해골왕 처치 = 승리(계단·next_act 는 단계 3).
+// 방 맵 풀(기획 10.8 v0.9): 일반·정예 방은 손으로 만든 작은 방 다섯(cathedral_room_a~e, 거울판 포함) — 액트 시작 때 섞은 덱 순서(RunPlanner ①). 작은 방의 동시 최대는 rules 의 area_scale 이 줄인다.
+// 구간표는 기획 10.3 표에서 이번 단계에 없는 종의 가중을 뺀 것(10.3 "단계에 없는 종은 가중을 빼고 쓴다") — 남은 것: 폴른 원(2:30~)·썩은 시체(6:00~)·핀드(7:00~)·불타는 해골 궁수(8:30~).
+// 이벤트는 기획 10.3 표 그대로 — 6번 방 행진의 폴른 원 20 만 해골 20 으로 대체(폴른 원은 남은 것). 해골 대장 이벤트는 진짜 대장(skeleton_captain, 호위 = escorts).
+// 문 보상 가중은 기획 11.4(v0.9 — 회복 문 15·상인 8·8·6), 1번 방 보상 = 마법서 고정, 정예·보스 방 앞 문은 덤 보상(같은 가중 — 3.6 ③).
 {
   "stages": [
-    { "id": "stage_cathedral", "name": "대성당", "slice": true,
+    { "id": "stage_cathedral", "name": "대성당",
       "room_maps": { "normal": ["cathedral_room_a", "cathedral_room_b", "cathedral_room_c", "cathedral_room_d", "cathedral_room_e"],
+                     "elite":  ["cathedral_room_a", "cathedral_room_b", "cathedral_room_c", "cathedral_room_d", "cathedral_room_e"],
                      "boss": "cathedral_arena" },
       "rooms": [
         { "kind": "normal", "from": "00:00", "to": "01:00", "number": 1, "floor": 1 },
         { "kind": "normal", "from": "01:00", "to": "02:15", "number": 2, "floor": 1 },
         { "kind": "normal", "from": "02:15", "to": "03:30", "number": 3, "floor": 2 },
         { "kind": "normal", "from": "03:30", "to": "05:00", "number": 4, "floor": 2 },
+        { "kind": "elite",  "from": "05:00", "to": "06:00", "number": 5, "floor": 2, "miniboss": "rotfeast" },
         { "kind": "normal", "from": "06:00", "to": "07:30", "number": 6, "floor": 3 },
-        { "kind": "normal", "from": "08:30", "to": "10:00", "number": 8, "floor": 4 } ],
-      "rewards": { "weights": { "reward_tome": 30, "reward_chest": 30 }, "first_room": "reward_tome", "gold_scale": 1.0 },
+        { "kind": "elite",  "from": "07:30", "to": "08:30", "number": 7, "floor": 3, "miniboss": "blackash" },
+        { "kind": "normal", "from": "08:30", "to": "10:00", "number": 8, "floor": 4 },
+        { "kind": "boss",   "from": "10:00",                "number": 9, "floor": 4, "boss": "skeleton_king" } ],
+      "rewards": { "weights": { "reward_tome": 30, "reward_chest": 30, "reward_potion": 15, "reward_smith": 8, "reward_witch": 8, "reward_healer": 6 },
+                   "first_room": "reward_tome", "gold_scale": 1.0 },
       "lighting": { "ambient": [200, 200, 215], "darkness": 0.5,
                     "hero_light": { "color": [255, 240, 220], "radius": 420 },
                     "unit_min_light": 0.6, "lights": [] },
@@ -28,7 +30,8 @@
       "spawn_intervals": [
         { "from": "00:00", "to": "01:00", "max_alive": 25,  "per_second": 0.8, "weights": { "skeleton": 100 } },
         { "from": "01:00", "to": "02:00", "max_alive": 45,  "per_second": 1.3, "weights": { "skeleton": 70, "zombie": 30 } },
-        { "from": "02:00", "to": "03:00", "max_alive": 60,  "per_second": 1.8, "weights": { "skeleton": 50, "zombie": 30, "skeleton_archer": 20 } },
+        { "from": "02:00", "to": "02:30", "max_alive": 60,  "per_second": 1.8, "weights": { "skeleton": 50, "zombie": 30, "skeleton_archer": 20 } },
+        { "from": "02:30", "to": "03:00", "max_alive": 60,  "per_second": 1.8, "weights": { "skeleton": 45, "zombie": 25, "skeleton_archer": 15 } },
         { "from": "03:00", "to": "04:00", "max_alive": 80,  "per_second": 2.3, "weights": { "skeleton": 35, "zombie": 20, "skeleton_archer": 15, "burning_dead": 15 } },
         { "from": "04:00", "to": "05:00", "max_alive": 100, "per_second": 2.8, "weights": { "skeleton": 30, "zombie": 20, "skeleton_archer": 10, "burning_dead": 15, "ghoul": 10 } },
         { "from": "05:00", "to": "06:00", "max_alive": 90,  "per_second": 2.5, "weights": { "skeleton": 30, "zombie": 20, "skeleton_archer": 10, "burning_dead": 15, "ghoul": 10 } },
@@ -36,15 +39,27 @@
         { "from": "07:00", "to": "07:30", "max_alive": 150, "per_second": 4.0, "weights": { "skeleton": 20, "zombie": 15, "skeleton_archer": 10, "burning_dead": 15, "ghoul": 10 } },
         { "from": "07:30", "to": "08:30", "max_alive": 135, "per_second": 3.6, "weights": { "skeleton": 20, "zombie": 15, "skeleton_archer": 10, "burning_dead": 15, "ghoul": 10 } },
         { "from": "08:30", "to": "09:00", "max_alive": 170, "per_second": 4.5, "weights": { "skeleton": 20, "zombie": 10, "skeleton_archer": 5, "burning_dead": 15, "ghoul": 10 } },
-        { "from": "09:00", "to": "10:00", "max_alive": 200, "per_second": 5.5, "weights": { "skeleton": 20, "zombie": 10, "burning_dead": 15, "ghoul": 15 } } ],
+        { "from": "09:00", "to": "10:00", "max_alive": 200, "per_second": 5.5, "weights": { "skeleton": 20, "zombie": 10, "burning_dead": 15, "ghoul": 15 } },
+        { "during": "boss", "max_alive": 120, "per_second": 3.0, "weights": { "skeleton": 60, "zombie": 40 } } ],
       "events": [
         { "at": "00:00", "type": "banner", "text": "대성당", "duration": 2 },
         { "at": "02:00", "type": "march", "enemy": "skeleton_archer", "count": 5, "at_entry": "gate_ne", "toward": "center", "straight": 15 },
         { "at": "03:00", "type": "ring", "enemy": "burning_dead", "count": 12, "radius": 400 },
-        { "at": "04:30", "type": "elite_pack", "enemy": "skeleton", "count": 4, "affixes": 0, "unique_chance": 0 },
-        { "at": "06:20", "type": "elite_pack", "enemy": "ghoul", "count": 4, "affixes": 0, "unique_chance": 1.0 },
+        { "at": "04:30", "type": "elite_pack", "enemy": "skeleton", "count": 4, "affixes": 1 },
+        { "at": "05:00", "type": "miniboss", "enemy": "rotfeast", "at_entry": "gate_sw" },
+        { "at": "05:20", "type": "escort", "enemy": "skeleton_captain", "escorts": 8, "at_entry": "gate_nw" },
+        { "at": "06:20", "type": "elite_pack", "enemy": "ghoul", "count": 4, "affixes": 1, "unique_chance": 1.0 },
         { "at": "07:00", "type": "march", "enemy": "skeleton", "count": 20, "at_entry": "gate_se", "toward_entry": "gate_nw", "straight": 15 },
+        { "at": "07:30", "type": "miniboss", "enemy": "blackash", "at_entry": "gate_nw" },
+        { "at": "07:50", "type": "escort", "enemy": "skeleton_captain", "escorts": 6, "at_entry": "gate_ne" },
+        { "at": "08:50", "type": "escort", "enemy": "skeleton_captain", "escorts": 8, "at_entry": "gate_nw" },
+        { "at": "08:50", "type": "escort", "enemy": "skeleton_captain", "escorts": 8, "at_entry": "gate_ne" },
         { "at": "09:25", "type": "ring", "enemy": "zombie", "count": 24, "radius": 420 },
-        { "at": "09:30", "type": "banner", "text": "땅이 울린다…", "duration": 3, "shake": { "px": 1, "duration": 30 } } ] }
+        { "at": "09:30", "type": "banner", "text": "땅이 울린다…", "duration": 3, "shake": { "px": 1, "duration": 30 } },
+        { "at": "10:00", "type": "boss", "enemy": "skeleton_king", "at_entry": "gate_ne" },
+        { "at": "10:40", "type": "room_supply", "anchor": "room_blood", "pickup": "healing_potion" },
+        { "at": "11:40", "type": "room_supply", "anchor": "room_grate", "pickup": "mana_surge" },
+        { "at": "12:40", "type": "room_supply", "anchor": "room_blood", "pickup": "magnet_rune" },
+        { "at": "13:40", "type": "room_supply", "anchor": "room_grate", "pickup": "healing_potion" } ] }
   ]
 }
