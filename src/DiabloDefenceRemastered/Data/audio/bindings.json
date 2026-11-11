@@ -31,18 +31,29 @@
     "pickups": {
       "gem_blue":       { "collect": "snd_gem" },
       "gold":           { "collect": "snd_gold" },
-      "healing_potion": { "collect": "snd_invpot", "drop": "snd_flippot" }
+      "healing_potion": { "collect": "snd_invpot", "drop": "snd_flippot" },
+      "gem_green":      { "collect": "snd_gem" },
+      "gem_red":        { "collect": "snd_gem" }
     },
     "hero": {
       "sorcerer": { "hurt": "snd_sorcerer_hurt", "death": "snd_sorcerer_death" }
     },
     "ui": {
       "menu_move": "snd_titlemov", "menu_select": "snd_titlslct", "level_up": "snd_magic", "chest_open": "snd_chest",
-      "elite_pack": "snd_magic1", "door_open": "snd_dooropen", "potion_drink": "snd_invpot"
+      "elite_pack": "snd_magic1", "door_open": "snd_dooropen", "potion_drink": "snd_invpot",
+      // 단계 2(wp4): 회복 문 들어옴 = 물약 소리(기획 12.7 물약 보상 invpot), 사기 = 금화, 상자 → 책 = flipbook, 장비 끼우기 = 칸마다.
+      // potion_denied·shop_denied 는 걸지 않는다 — 기획 11.7 "원작 '못 함' 소리 sfx\items\ 중, 없으면 무음" 인데 sfx\items 에 그런 소리가 없다(cantdoit 없음, 원본 확인)
+      "heal_on_enter": "snd_invpot", "shop_buy": "snd_shop_gold", "chest_drop": "snd_flipbook",
+      "equip": "snd_invgrab", "equip_head": "snd_invcap", "equip_body": "snd_invlarm", "equip_body_heavy": "snd_invharm",
+      "equip_shield": "snd_invshiel", "equip_staff": "snd_invstaf", "equip_ring": "snd_invring"
     },
     "rewards": {
       "reward_tome":  { "collect": "snd_invbook", "open": "snd_readbook" },
-      "reward_chest": { "collect": "snd_chest" }
+      "reward_chest": { "collect": "snd_chest" },
+      // 상인 인사 대사(창이 열릴 때 — 신호 ShopOpen 의 상인을 가리키는 보상)
+      "reward_smith":  { "open": "snd_smith_greet" },
+      "reward_witch":  { "open": "snd_witch_greet" },
+      "reward_healer": { "open": "snd_healer_greet" }
     },
     "music": {
       "title": "mus_title",

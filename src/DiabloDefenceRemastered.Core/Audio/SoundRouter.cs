@@ -7,7 +7,8 @@ namespace DiabloDefenceRemastered.Core.Audio;
 /// 연결 키: 무기 <c>weapons.&lt;id&gt;.fire</c>, 적 <c>enemies.&lt;id&gt;</c> → 없으면 <c>sprite_sets.&lt;그림 묶음&gt;</c>, 적 투사체 <c>projectiles.&lt;id&gt;.fire</c>,
 /// 주인공 <c>hero.&lt;World.HeroClass.Id&gt;</c>, 획득물 <c>pickups.&lt;id&gt;</c>, 문 보상 <c>rewards.&lt;id&gt;.collect</c>, 보스 대사 <c>enemies.&lt;id&gt;.voice</c>,
 /// 정예 무리 <c>ui.elite_pack</c>, 문 열림 <c>ui.door_open</c>, 방 정리 <c>ui.room_clear</c>, 물약 마심 <c>ui.potion_drink</c>(v0.9.1 <see cref="CueKind.PotionDrink"/> — v0.8 의 <c>belt_potion</c> 을 바꿈),
-/// v0.9 의 다른 새 신호(<c>PotionDenied</c>·<c>HealOnEnter</c>·<c>Shop*</c>·<c>ChestDrop</c>)는 연결 키를 WP8 이 정할 때까지 소리 없음,
+/// v0.9 의 새 신호(wp4 — WP8 단계 2): 못 마심 <c>ui.potion_denied</c>, 회복 문 <c>ui.heal_on_enter</c>, 상인 인사 <c>rewards.&lt;그 상인 보상&gt;.open</c>, 사기 <c>ui.shop_buy</c> + 장비면 끼우기 <c>ui.equip_&lt;칸&gt;</c>,
+/// 못 삼 <c>ui.shop_denied</c>, 상자 → 책 <c>ui.chest_drop</c>(그 책의 <c>PickupDropped</c> 는 내지 않음 — 둘이 겹치지 않게),
 /// 이펙트 <c>effects.&lt;id&gt;</c>, 시체 → 그 적의 <c>death</c>. 연결이 없는 신호는 소리 없음(화살 맞음처럼 — 기획 12.7).
 /// </para>
 /// <para>
@@ -37,7 +38,10 @@ public sealed class SoundRouter(GameDefs defs)
     public void Route(PresentationBuffer buffer, World world, SoundMixer mixer)
     {
         foreach (ref readonly var cue in buffer.Cues.AsSpan())
+        {
             if (TryCue(cue, world, out var r)) mixer.Request(r);
+            if (TryEquip(cue, out var equip)) mixer.Request(equip);   // 상인에게 산 장비: 금화 소리에 더해 끼우는 소리(기획 12.8)
+        }
         foreach (ref readonly var fx in buffer.Effects.AsSpan())
             if (TryEffect(fx, out var r)) mixer.Request(r);
         foreach (ref readonly var corpse in buffer.Corpses.AsSpan())
@@ -89,6 +93,8 @@ public sealed class SoundRouter(GameDefs defs)
                 break;
             case CueKind.PickupCollected:
             case CueKind.PickupDropped:
+                // 보물 상자를 열면 책(보상 Drop 획득물)의 PickupDropped 와 ChestDrop 이 같은 틱에 둘 다 난다(WP3 단계 2) — 책 떨어짐은 ChestDrop(ui.chest_drop) 하나로 낸다
+                if (cue.Kind == CueKind.PickupDropped && cue.Subject is PickupDef dropped && IsRewardDrop(dropped)) break;
                 if (cue.Subject is PickupDef pk && b.Pickups.TryGetValue(pk.Id, out var ps))
                     sound = Resolve(cue.Kind == CueKind.PickupCollected ? ps.Collect : ps.Drop);
                 break;
@@ -115,11 +121,67 @@ public sealed class SoundRouter(GameDefs defs)
                 sound = Ui(UiKeys.PotionDrink);
                 pos = null;
                 break;
+            // v0.9 새 신호(wp4 — WP8 단계 2): 못 함·회복 문·상인·상자 → 책. 대상 형은 WP3 약속(ShopOpen·ShopDenied = MerchantDef, ShopBuy = ItemBaseDef 또는 페핀 MerchantDef, ChestDrop = RewardDef)
+            case CueKind.PotionDenied:
+                sound = Ui(UiKeys.PotionDenied);
+                pos = null;
+                break;
+            case CueKind.HealOnEnter:
+                sound = Ui(UiKeys.HealOnEnter);
+                pos = null;
+                break;
+            case CueKind.ShopOpen:
+                // 인사 대사 = 그 상인을 가리키는 문 보상의 rewards.<보상 ID>.open(상인 창이 보상 창이다 — 기획 11.4 표의 "창 열림")
+                if (cue.Subject is MerchantDef m && MerchantReward(m) is { } mr && b.Rewards.TryGetValue(mr.Id, out var ms)) sound = Resolve(ms.Open);
+                pos = null;
+                break;
+            case CueKind.ShopBuy:
+                if (cue.Subject is ItemBaseDef or MerchantDef) sound = Ui(UiKeys.ShopBuy);
+                pos = null;
+                break;
+            case CueKind.ShopDenied:
+                if (cue.Subject is MerchantDef) sound = Ui(UiKeys.ShopDenied);
+                pos = null;
+                break;
+            case CueKind.ChestDrop:
+                if (cue.Subject is RewardDef) sound = Ui(UiKeys.ChestDrop);
+                break;
         }
 
         if (sound is null) return false;
         request = new SoundRequest(sound, cue.Tick, pos, category, limit);
         return true;
+    }
+
+    /// <summary>
+    /// 장비 끼우기(v0.9 — 기획 11.6·12.8): <c>ShopBuy</c> 의 대상이 <c>ItemBaseDef</c> 면 칸 종류의 <c>ui.equip_&lt;칸&gt;</c>(<see cref="UiKeys.Equip"/>), 그 키가 없으면 <c>ui.equip</c>.
+    /// 페핀 카드(<c>MerchantDef</c>)는 끼우는 것이 없어 거짓.
+    /// </summary>
+    public bool TryEquip(in CueEvent cue, out SoundRequest request)
+    {
+        request = default;
+        if (cue.Kind != CueKind.ShopBuy || cue.Subject is not ItemBaseDef item) return false;
+        var sound = Ui(UiKeys.Equip(item.Kind, item.Weight)) ?? Ui(UiKeys.EquipOther);
+        if (sound is null) return false;
+        request = new SoundRequest(sound, cue.Tick, null);
+        return true;
+    }
+
+    private HashSet<string>? _rewardDrops;
+
+    /// <summary>보상의 <c>drop</c>(보물 상자 → 책)이 가리키는 획득물인가(정의 표에서 한 번 모음).</summary>
+    private bool IsRewardDrop(PickupDef pickup)
+    {
+        _rewardDrops ??= [.. defs.Rewards.All.Where(r => r.Drop is not null).Select(r => r.Drop!.Id)];
+        return _rewardDrops.Contains(pickup.Id);
+    }
+
+    /// <summary>그 상인을 가리키는 문 보상(표 순서의 첫 것). 없으면 null.</summary>
+    private RewardDef? MerchantReward(MerchantDef merchant)
+    {
+        foreach (var r in defs.Rewards.All)
+            if (r.Merchant is { } rm && string.Equals(rm.Id, merchant.Id, StringComparison.Ordinal)) return r;
+        return null;
     }
 
     /// <summary>이펙트 → <c>effects.&lt;id&gt;</c>(무기 맞음·폭발·웅덩이 — 분류는 소리 정의).</summary>
@@ -230,6 +292,41 @@ public static class UiKeys
     /// <summary>물약 하나를 마심(v0.9.1 — v0.8 의 <c>belt_potion</c>, 저절로 마심을 바꿈).</summary>
     public const string PotionDrink = "potion_drink";
 
+    /// <summary>물약을 못 마심(v0.9.1 <c>PotionDenied</c> — 창·회복 중·물약 0·체력 가득, 기획 3절 "못 함" 소리).</summary>
+    public const string PotionDenied = "potion_denied";
+    /// <summary>회복 문으로 들어온 방의 첫 틱(v0.9 <c>HealOnEnter</c>).</summary>
+    public const string HealOnEnter = "heal_on_enter";
+    /// <summary>상인 카드를 삼(v0.9 <c>ShopBuy</c> — 원작 금화 소리, 기획 12.8).</summary>
+    public const string ShopBuy = "shop_buy";
+    /// <summary>금화가 모자라거나 살 수 없음(v0.9 <c>ShopDenied</c>).</summary>
+    public const string ShopDenied = "shop_denied";
+    /// <summary>보물 상자가 열려 책이 떨어짐(v0.9.1 <c>ChestDrop</c>).</summary>
+    public const string ChestDrop = "chest_drop";
+    /// <summary>장비 끼우기(칸 종류를 모르거나 그 칸 키가 없을 때).</summary>
+    public const string EquipOther = "equip";
+    public const string EquipHead = "equip_head";
+    public const string EquipBody = "equip_body";
+    /// <summary>판금 갑옷(무게 heavy — 원작 갑옷 소리가 경·판금 둘이다).</summary>
+    public const string EquipBodyHeavy = "equip_body_heavy";
+    public const string EquipShield = "equip_shield";
+    public const string EquipStaff = "equip_staff";
+    public const string EquipRing = "equip_ring";
+
+    /// <summary>장비 칸 종류(·무게)의 끼우기 키.</summary>
+    public static string Equip(EquipKind kind, ArmorWeight weight) => kind switch
+    {
+        EquipKind.Head => EquipHead,
+        EquipKind.Body => weight == ArmorWeight.Heavy ? EquipBodyHeavy : EquipBody,
+        EquipKind.Shield => EquipShield,
+        EquipKind.Staff => EquipStaff,
+        EquipKind.Ring => EquipRing,
+        _ => EquipOther,
+    };
+
     /// <summary>알려진 키(검사기가 모르는 키를 경고).</summary>
-    public static IReadOnlyList<string> All { get; } = [MenuMove, MenuSelect, LevelUp, ChestOpen, ElitePack, DoorOpen, RoomClear, PotionDrink];
+    public static IReadOnlyList<string> All { get; } =
+    [
+        MenuMove, MenuSelect, LevelUp, ChestOpen, ElitePack, DoorOpen, RoomClear, PotionDrink,
+        PotionDenied, HealOnEnter, ShopBuy, ShopDenied, ChestDrop, EquipOther, EquipHead, EquipBody, EquipBodyHeavy, EquipShield, EquipStaff, EquipRing,
+    ];
 }

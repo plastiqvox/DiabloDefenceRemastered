@@ -165,6 +165,7 @@ public sealed class GameApp : Game
     {
         if (disposing)
         {
+            _app.Audio?.Dispose();   // 종료 AUDIO 줄(계약 IAudioServices : IDisposable — v0.9 WP1g, wp4/WP8 단계 2 이음새)
             _runner?.Dispose();
             _perf?.Dispose();
         }
