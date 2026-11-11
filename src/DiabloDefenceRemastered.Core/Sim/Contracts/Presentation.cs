@@ -63,7 +63,7 @@ public enum CueKind : byte
     HealOnEnter,
     /// <summary>v0.9 WP3 — 상인 창이 열림(상인에 닿음). Subject = <c>MerchantDef</c>. 인사 대사(WP8).</summary>
     ShopOpen,
-    /// <summary>v0.9 WP3 — 상인 카드를 삼(장비면 끼움). Subject = <c>MerchantDef</c>. 금화·끼우기 소리.</summary>
+    /// <summary>v0.9 WP3 — 상인 카드를 삼(장비면 끼움). Subject = 산 장비의 <c>ItemBaseDef</c>(끼우기 소리를 칸 종류로 고름), 페핀 카드면 <c>MerchantDef</c>(WP3 단계 2 — 13장). 금화·끼우기 소리.</summary>
     ShopBuy,
     /// <summary>v0.9 WP3 — 금화가 모자라 못 삼(다시 굴리기 포함). Subject = <c>MerchantDef</c>. "못 함" 소리.</summary>
     ShopDenied,

@@ -1,22 +1,26 @@
-// 드롭 표 (기획 9.2·9.4·11.1, 설계서 6.9, 소유 WP3). 경험치 보석은 드롭 표가 아니라 규칙(죽으면 늘 하나).
+// 드롭 표 (기획 9.2·9.4·11.1·11.5·11.7, 설계서 6.9, 소유 WP3). 경험치 보석은 드롭 표가 아니라 규칙(죽으면 늘 하나).
+// v0.9.2 값(기획 11.1 표·열린 질문 51 답): 금화 일반 10%·3~7(지갑 — 상인), 체력 물약(물약 칸) 일반 0.3%·정예 10%·우두머리 30%·중간 보스 1개 확정.
+// 액트 보스 금화 100 은 이 파일이 아니라 보스 정의의 드롭 표(WP4).
 // elite_chest 의 value = 강화 횟수(중간 보스 3, 우두머리 1). dt_elite·dt_unique 는 rules.ranks(WP4), dt_common·dt_miniboss 는 적 정의(WP4)가 가리킨다.
 {
   "drop_tables": [
     { "id": "dt_common", "entries": [
-        { "pickup": "gold", "chance": 0.03, "value": [1, 5] },
+        { "pickup": "gold", "chance": 0.10, "value": [3, 7] },
         { "pickup": "healing_potion", "chance": 0.003 },
         { "pickup": "mana_surge", "chance": 0.002 },
         { "pickup": "magnet_rune", "chance": 0.001 } ] },
     { "id": "dt_elite", "entries": [
         { "pickup": "gold", "chance": 1.0, "value": [10, 30] },
-        { "pickup": "healing_potion", "chance": 0.25 },
+        { "pickup": "healing_potion", "chance": 0.10 },
         { "pickup": "mana_surge", "chance": 0.15 } ] },
     { "id": "dt_unique", "entries": [
         { "pickup": "elite_chest", "chance": 1.0, "value": [1, 1] },
-        { "pickup": "gold", "chance": 1.0, "value": [10, 30] } ] },
+        { "pickup": "gold", "chance": 1.0, "value": [10, 30] },
+        { "pickup": "healing_potion", "chance": 0.30 } ] },
     { "id": "dt_miniboss", "entries": [
         { "pickup": "elite_chest", "chance": 1.0, "value": [3, 3] },
         { "pickup": "gold", "chance": 1.0, "value": [50, 50] },
-        { "pickup": "magnet_rune", "chance": 1.0 } ] }
+        { "pickup": "magnet_rune", "chance": 1.0 },
+        { "pickup": "healing_potion", "chance": 1.0 } ] }
   ]
 }

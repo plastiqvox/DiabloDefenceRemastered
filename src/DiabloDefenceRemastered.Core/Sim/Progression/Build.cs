@@ -234,7 +234,7 @@ internal static class Build
                 var i = FirstEmptyWeapon(hero);
                 if (i < 0) return;
                 var def = world.Defs.Weapons.Get(card.Id);
-                hero.Weapons[i] = new WeaponSlot { Def = def, Level = 1, AcquiredTick = world.Tick, MaxedAtTick = def.MaxLevel <= 1 ? world.Tick : -1 };
+                hero.Weapons[i] = new WeaponSlot { Def = def, Level = 1, AcquiredTick = world.Tick, MaxedAtTick = def.MaxLevel <= 1 ? MaxedStamp(world) : -1 };
                 break;
             }
             case CardKind.WeaponUpgrade:
@@ -253,7 +253,7 @@ internal static class Build
                 if (def.OnAcquire is { } on)
                 {
                     hero.Hp = MathF.Min(hero.MaxHp, hero.Hp + on.Heal);
-                    world.RunStats.Gold += on.Gold;
+                    Wallet.Earn(world, on.Gold);
                 }
                 break;
             }
@@ -271,14 +271,20 @@ internal static class Build
         HeroStats.Recompute(world);
     }
 
-    /// <summary>무기 칸 레벨 ± (1..max). 만렙이 되면 <c>MaxedAtTick</c>, 만렙 아래로 내려가면 −1.</summary>
+    /// <summary>
+    /// 만렙이 된 순간의 <c>MaxedAtTick</c> = <c>Tick + CombatState.MaxedBase</c>(v0.9 — 짐에서 푼 만렙 순번 0..MaxedBase−1 보다 늘 뒤라, 새 방 첫 틱에 만렙이 된 무기가
+    /// 앞 방에서 먼저 만렙이 된 무기보다 앞서지 않는다. 첫 방은 밑 0 = 틱 그대로).
+    /// </summary>
+    public static int MaxedStamp(World world) => world.Tick + world.Combat.MaxedBase;
+
+    /// <summary>무기 칸 레벨 ± (1..max). 만렙이 되면 <c>MaxedAtTick</c>(<see cref="MaxedStamp"/>), 만렙 아래로 내려가면 −1.</summary>
     public static void AddWeaponLevels(World world, int slot, int delta)
     {
         ref var s = ref world.Hero.Weapons[slot];
         if (s.Def is not { } def || !NonEvolved(s)) return;
         var was = s.Level;
         s.Level = Math.Clamp(s.Level + delta, 1, def.MaxLevel);
-        if (s.Level == def.MaxLevel && was < def.MaxLevel) s.MaxedAtTick = world.Tick;
+        if (s.Level == def.MaxLevel && was < def.MaxLevel) s.MaxedAtTick = MaxedStamp(world);
         else if (s.Level < def.MaxLevel) s.MaxedAtTick = -1;
     }
 

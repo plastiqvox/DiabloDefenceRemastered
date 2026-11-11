@@ -4,12 +4,13 @@ using DiabloDefenceRemastered.Core.Sim.Heroes;
 using DiabloDefenceRemastered.Core.Sim.Pickups;
 using DiabloDefenceRemastered.Core.Sim.Progression;
 using DiabloDefenceRemastered.Core.Sim.Projectiles;
+using DiabloDefenceRemastered.Core.Sim.Shops;
 
 namespace DiabloDefenceRemastered.Core.Sim.Weapons;
 
 /// <summary>
 /// 주인공·전투·무기·성장 모듈 (소유 WP3, 설계서 11.1): 발사 패턴 6·조준 5·무기 효과 부품 등록, 무기 레벨 표 검사(13.5-2),
-/// 월드마다 <c>Hostiles</c>·<c>Spawner</c>·<c>Progression</c> 을 넣고 주인공을 만든 뒤 단계 시스템(HeroControl·Weapons·Projectiles·Hazards·DamageResolve·DeathRewards·Pickups)을 등록,
+/// 월드마다 <c>Hostiles</c>·<c>Spawner</c>·<c>Progression</c>·<c>ShopService</c>(v0.9 상인 창) 를 넣고 주인공을 만든 뒤 단계 시스템(HeroControl·Weapons·Projectiles·Hazards·DamageResolve·DeathRewards·Pickups)을 등록,
 /// 개발 옵션(<c>--level</c>·<c>--weapons</c>·<c>--passives</c>), 방 사이 짐(<see cref="HeroCarrier"/>).
 /// 모듈 인스턴스에는 상태가 없다(11.2 — 판 수명 상태는 짐·<c>RunState</c> 에만).
 /// </summary>
@@ -43,6 +44,7 @@ public sealed class CombatModule : IGameModule
         world.Hostiles = new HostileQuery(world);
         world.Spawner = new CombatSpawner(world);
         world.Progression = new ProgressionService(world);
+        world.ShopService = new ShopService(world);
         HeroSetup.Create(world);
         builder.Add(SimPhase.HeroControl, new HeroControlSystem());
         builder.Add(SimPhase.Weapons, new WeaponsSystem());

@@ -1,7 +1,7 @@
 namespace DiabloDefenceRemastered.Core.Sim.Heroes;
 
 /// <summary>
-/// 단계 3 HeroControl (WP3, 설계서 3.5): 능력치 다시 계산(바뀌었으면) → 레벨업 밀어내기(창이 닫힌 다음 틱) → 재생·시간 효과·허리띠 →
+/// 단계 3 HeroControl (WP3, 설계서 3.5): 능력치 다시 계산(바뀌었으면) → 레벨업 밀어내기(창이 닫힌 다음 틱) → 재생·시간 효과·물약 마시기(<c>Drink</c>)·서서히 회복 →
 /// 명령의 이동 벡터 → <c>Hero.Intent</c>·<c>MoveSpeed</c>(무리 끈적임)·바라보는 방향 → 그림 클립(걷기·서기, 시전은 무기가 시작). 위치 적분은 WP2 <c>Locomotion</c>.
 /// </summary>
 public sealed class HeroControlSystem : ISimSystem
@@ -29,6 +29,9 @@ public sealed class HeroControlSystem : ISimSystem
 
         var regen = hero.Stats[StatKey.Regen];
         if (regen > 0f && hero.Hp < hero.MaxHp) hero.Hp = MathF.Min(hero.MaxHp, hero.Hp + regen * World.Dt);
+        // v0.9.1 물약 칸(6.19): 마시기는 이 틱부터 회복 — 서서히 회복은 단계와 상관없이 판 틱마다(시간 효과 시계가 아님)
+        if ((world.Command.Buttons & CommandButtons.Drink) != 0 && world.Outcome == RunOutcome.Running) HeroPotions.Drink(world);
+        HeroPotions.StepHeal(world);
 
         var move = world.Outcome == RunOutcome.Running ? world.Command.Move : Vector2.Zero;
         var len = move.Length();

@@ -5,7 +5,8 @@ namespace DiabloDefenceRemastered.Core.Sim.Progression;
 /// <summary>
 /// 방 사이 빌드 넘기기(WP3 <see cref="IHeroCarry"/>, 설계서 3.6 결정 1 표 — v0.8 짐 필드 전부). 칸은 <b>칸 번호 그대로</b>(빈 칸 = 빈 ID, <c>Restore</c> 가 같은 칸 — v0.7.1).
 /// 넘기는 것: 레벨·경험치·재추첨 남은 수·체력·무기(ID·레벨·진화)·패시브·축복·열린 칸 수·허리띠·<c>Mods</c>(0 아닌 키, <see cref="StatKey"/> 순)·<c>Shrines</c>(서수 순)·
-/// 시간 효과(<see cref="CombatState.SurgeEffectId"/> 남은 틱·값). 넘기지 않는 것: 무기 쿨다운·패턴 상태·피격 무적·허리띠 간격(새 방에 들어오면 모두 준비).
+/// 시간 효과(<see cref="CombatState.SurgeEffectId"/> 남은 틱·값, v0.9.1 <see cref="CombatState.PotionHealEffectId"/> 마시던 회복의 남은 틱·남은 양 — 보통 문을 넘을 때만, 계단 문은 <c>RunSession</c> 이 바로 채움),
+/// v0.9 만렙 순번·장비·지갑·물약 칸. 넘기지 않는 것: 무기 쿨다운·패턴 상태·피격 무적(새 방에 들어오면 모두 준비).
 /// 대기(레벨업·상자·보상)가 남은 월드의 <see cref="Capture"/> 는 예외. 이 객체에는 상태가 없다(11.2 — 이어 하기는 새 모듈).
 /// </summary>
 public sealed class HeroCarrier : IHeroCarry
@@ -32,6 +33,8 @@ public sealed class HeroCarrier : IHeroCarry
         shrines.Sort(StringComparer.Ordinal);
         var effects = new List<CarriedEffect>();
         if (s.SurgeTicks > 0) effects.Add(new CarriedEffect(CombatState.SurgeEffectId, s.SurgeTicks, s.SurgePct));
+        if (hero.Heal.Active) effects.Add(new CarriedEffect(CombatState.PotionHealEffectId, hero.Heal.TicksLeft, hero.Heal.Remaining));   // v0.9.1 넘김 동안 멈췄다가 이어짐(기획 11.5)
+        effects.Sort((a, b) => string.CompareOrdinal(a.Id, b.Id));
         return new HeroCarry
         {
             Level = s.Level,
@@ -43,7 +46,7 @@ public sealed class HeroCarrier : IHeroCarry
             Blessings = blessings,
             WeaponSlotsOpen = hero.WeaponSlotsOpen,
             PassiveSlotsOpen = hero.PassiveSlotsOpen,
-            // v0.9 WP1g: 만렙 순번·장비·지갑·물약 칸(장비·물약 효과 본문은 WP3)
+            // v0.9: 만렙 순번·장비·지갑·물약 칸
             MaxedAtTick = MaxedOrder(hero),
             Equipment = Equipped(hero),
             Gold = hero.Gold,
@@ -78,6 +81,7 @@ public sealed class HeroCarrier : IHeroCarry
         hero.Gold = carry.Gold;
         Array.Clear(hero.Equipment);
         foreach (var e in carry.Equipment) hero.Equipment[(int)e.Slot] = e.Item;
+        s.MaxedBase = 0;
         for (var i = 0; i < WeaponSlots.SlotCount; i++)
         {
             var c = i < carry.Weapons.Count ? carry.Weapons[i] : default;
@@ -87,6 +91,7 @@ public sealed class HeroCarrier : IHeroCarry
             // v0.9 WP1g: 짐의 만렙 순번(없으면 v0.8 처럼 만렙 무기 0) — 방을 넘어도 "먼저 만렙이 된 무기" 순서가 남는다(같으면 칸 번호)
             var rank = i < carry.MaxedAtTick.Count ? carry.MaxedAtTick[i] : -1;
             hero.Weapons[i] = new WeaponSlot { Def = def, Level = c.Level, Evolved = c.Evolved, AcquiredTick = 0, MaxedAtTick = max ? Math.Max(0, rank) : -1 };
+            if (max) s.MaxedBase = Math.Max(s.MaxedBase, Math.Max(0, rank) + 1);   // 이 방에서 만렙이 되는 무기는 순번 뒤(Build.MaxedStamp)
         }
         for (var i = 0; i < PassiveSlots.SlotCount; i++)
         {
@@ -104,8 +109,12 @@ public sealed class HeroCarrier : IHeroCarry
         s.Shrines.AddRange(carry.Shrines);
         s.SurgeTicks = 0;
         s.SurgePct = 0f;
+        hero.Heal = default;
         foreach (var e in carry.Effects)
+        {
             if (e.Id == CombatState.SurgeEffectId) { s.SurgeTicks = e.TicksLeft; s.SurgePct = e.Value; }
+            else if (e.Id == CombatState.PotionHealEffectId) hero.Heal = new HealOverTime(e.TicksLeft, e.Value);
+        }
 
         // 능력치 → 체력(비율 기억을 짐의 덧값으로 맞춘 뒤 — 지금 체력을 비율로 다시 곱하지 않게)
         hero.MaxHp = 0f;
@@ -114,7 +123,7 @@ public sealed class HeroCarrier : IHeroCarry
         hero.MoveSpeed = HeroStats.MoveSpeed(hero);
     }
 
-    /// <summary>이어 하기 전 확인(v0.8.1): 모르는 정의 ID·시간 효과 ID, 진화 짝 어긋남, 칸 수·레벨 범위.</summary>
+    /// <summary>이어 하기 전 확인(v0.8.1 → v0.9): 모르는 정의 ID·시간 효과 ID(마력 폭주·마시던 회복), 진화 짝 어긋남, 칸 수·레벨 범위, 지갑·물약 칸 음수·장비 칸 겹침.</summary>
     public string? Validate(HeroCarry carry, GameDefs defs)
     {
         if (carry.Level < 1) return $"레벨 {carry.Level}";
@@ -147,9 +156,16 @@ public sealed class HeroCarrier : IHeroCarry
             if (!defs.Rewards.TryGet(s, out var r) || r.Kind != RewardKind.Shrine) return $"모르는 성소 '{s}'";
         foreach (var e in carry.Effects)
         {
-            if (e.Id != CombatState.SurgeEffectId) return $"모르는 시간 효과 '{e.Id}'";
+            if (e.Id is not (CombatState.SurgeEffectId or CombatState.PotionHealEffectId)) return $"모르는 시간 효과 '{e.Id}'";
             if (e.TicksLeft < 0) return $"시간 효과 '{e.Id}' 남은 틱 {e.TicksLeft}";
+            if (e.Id == CombatState.PotionHealEffectId && e.Value < 0f) return $"시간 효과 '{e.Id}' 남은 양 {e.Value}";
         }
+        if (carry.Gold < 0) return $"지갑 {carry.Gold}";
+        if (carry.Potions < 0 || carry.PotionSlotsLevel < 0 || carry.PotionSpeedLevel < 0)
+            return $"물약 칸({carry.Potions}, 주머니 {carry.PotionSlotsLevel}, 빠른 물약 {carry.PotionSpeedLevel})";
+        var seen = new HashSet<EquipSlot>();
+        foreach (var e in carry.Equipment)
+            if ((uint)e.Slot >= EquipSlots.Count || !seen.Add(e.Slot)) return $"장비 칸 {e.Slot}";
         return null;
     }
 

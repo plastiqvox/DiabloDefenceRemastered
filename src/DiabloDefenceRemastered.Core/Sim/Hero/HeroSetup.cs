@@ -32,7 +32,7 @@ public static class HeroSetup
             {
                 if (slot >= WeaponSlots.SlotCount) break;
                 var def = w.Def;
-                hero.Weapons[slot++] = new WeaponSlot { Def = def, Level = 1, AcquiredTick = world.Tick, MaxedAtTick = def.MaxLevel <= 1 ? world.Tick : -1 };
+                hero.Weapons[slot++] = new WeaponSlot { Def = def, Level = 1, AcquiredTick = world.Tick, MaxedAtTick = def.MaxLevel <= 1 ? Build.MaxedStamp(world) : -1 };
             }
         }
         hero.MaxHp = 0f;
@@ -43,7 +43,7 @@ public static class HeroSetup
                 if (t.Def.OnAcquire is { } on)
                 {
                     hero.Hp = MathF.Min(hero.MaxHp, hero.Hp + on.Heal);
-                    if (world.Run is null || world.Run.Rooms.Count == 0 && world.Run.Carry is null) world.RunStats.Gold += on.Gold;
+                    if (world.Run is null || world.Run.Rooms.Count == 0 && world.Run.Carry is null) Wallet.Earn(world, on.Gold);   // v0.9: 지갑과 얻은 금화 둘 다
                 }
         hero.MoveSpeed = HeroStats.MoveSpeed(hero);
     }
@@ -79,7 +79,7 @@ public sealed class HeroRunSetup : IRunSetup
                 hero.Weapons[i] = new WeaponSlot
                 {
                     Def = def, Level = level2, Evolved = def.BaseWeapon is not null, AcquiredTick = world.Tick,
-                    MaxedAtTick = def.BaseWeapon is not null || level2 >= def.MaxLevel ? world.Tick : -1,
+                    MaxedAtTick = def.BaseWeapon is not null || level2 >= def.MaxLevel ? Build.MaxedStamp(world) : -1,
                 };
             }
         }

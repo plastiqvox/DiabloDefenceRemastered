@@ -5669,6 +5669,52 @@ WP3(주인공·전투·무기·성장) 구현이 문서와 다르게 정했거�
 
 남은 것(확인 못 함 — 합친 뒤): WP2 실제 공간 해시로 시나리오 다시 돌리기, WP4 감독·`DeathHooks` 와 합친 실제 판의 끊고 잇기 같음, 게임 창에서 무기 `cast_clip`·피해 숫자·보상 창 보기.
 
+### WP3 단계 2 구현 기록 (wp/s2-wp3)
+
+WP3 단계 2(WP1g 기록 "단계 2 묶음에 넘길 것" WP3 줄 — 물약 칸 마시기, 장비 능력치, 지갑, 상인 창 `IShop`, 보물 상자 → 책, 만렙 순번, `LevelUpOffer.Reward`, 드롭 표, `StateHasher` 열)가 문서와 다르게 또는 더 정한 것. 코드가 정본이다. 커밋은 `git log --grep "WP3 단계 2"`.
+계약 형(`Sim/Contracts/**`·`Defs/**`)은 바꾸지 않았다(`CueKind.ShopBuy` 주석만 — 아래). 다른 묶음(wp4·wp5·wp6)이 기대는 약속(신호 대상·여는 거리·명령 길)은 지시 그대로다 — 반지 바꾸기 중의 `Skip` 하나만 더 정했다(아래 표).
+
+| 자리 | 정한 것 | 까닭 |
+|---|---|---|
+| 마시기 차례 | `HeroControl` 단계에서 재생 다음 `HeroPotions.Drink`(명령에 `Drink`, `Outcome == Running`) → `HeroPotions.StepHeal` — 마신 틱부터 회복이 들어가 3초 = 그 틱 포함 180틱째에 끝난다. 거절 조건에 대기 수(`PendingLevelUps`·`PendingChests`·`PendingRewards`)도 본다. 죽은 주인공·끝나 가는 판의 `Drink` 는 신호 없이 무시 | 한 시스템 안에서 마시기와 첫 회복이 같은 틱이면 "누른 틱부터 찬다" 가 화면과 맞다. 죽은 뒤 "못 함" 소리는 쓸모없다 |
+| 서서히 회복 시계 | 판 틱마다(`TimedEffectsRun` 이 아님) — 보상·문 단계에도 흐르고, 창·넘김·상인 창 동안은 판 틱이 돌지 않아 멈춘다 | 기획 11.5 "판 시간이 멈추면 멈춤" 은 판 틱 이야기다. 마력 폭주 같은 시간 효과 시계(보상·문 단계에 멈춤)를 쓰면 문 앞에서 마신 회복이 안 찬다 |
+| 문을 넘는 회복 | 짐 `Effects` 의 `potion_heal`(`TicksLeft` = 남은 틱, `Value` = 남은 양), `Id` 서수 순 정렬. 계단 문은 `RunSession.Settle` 이 이미 채워 `potion_heal` 이 들지 않는다. `Validate` 는 그 ID·남은 양 ≥ 0, 지갑·물약 칸 음수, 장비 칸 겹침도 거절 | 짐 필드를 더하지 않고(계약 그대로) 6.19 "보통 문을 넘는 회복은 시간 효과" 를 따른다 |
+| 장비 합산 | `HeroStats.Recompute` 가 짐 `Mods` 다음에 `EquipStats.Add` → `EquipStats.Clamp` — `rules.equipment` 가 없는 정의는 둘 다 하지 않는다(v0.8 시험 월드 그대로). 최대 체력 바뀜의 `RebaseHp` 는 `Recompute` 가 아니라 끼우는 곳 `HeroEquipment.Equip`(상인 `Buy`·`ReplaceRing`) | `Recompute` 는 레벨업·덧값·성소 비율·짐 풀기에서도 불린다. 거기서 "오른 만큼 지금 체력" 을 하면 v0.8 규칙(더하기만 바뀌면 지금 체력 그대로, 회복은 `on_acquire` 가 따로)이 바뀐다 |
+| 지갑 | `Wallet.Earn`(지갑 + `RunStats.Gold`)·`Wallet.TrySpend`(지갑만 −, `GoldSpent` +). 금화 줍기·보물 상자·특성/패시브 `on_acquire` 금화가 `Earn` | 얻는 곳을 한 함수로 — 한쪽만 늘던 단계 1 자리(`RunStats.Gold` 만)를 모두 바꿨다 |
+| 상인 열기 | `Pickups` 단계 끝(이번 틱 이동 뒤) `ShopService.TryOpen`: 거리 ≤ 주인공 반경 + 20(같음 포함). 다시 열기 조건·입력 잠금은 `World.Combat` 의 `ShopAway`(여는 거리 밖에 섰음 — 방 처음 참, `Leave` 가 거짓)·`ShopLockTicks` | `ShopState`(계약)에 칸을 더하지 않으려고 WP3 방 수명 상태에 뒀다 |
+| 입력 잠금 | 열 때 `round(input_lock × 60)` = 24 앱 틱. 그 앱 틱들은 고르기·다시 굴리기·떠나기를 버리고 25번째 앱 틱부터 받는다. `Drink` 는 잠금과 상관없이 `PotionDenied` | 레벨업 창과 같은 0.4s. 명령으로 세므로 재생·자동 조작이 같다 |
+| 버튼 여럿 | 한 앱 틱에 하나만 — `Choice1` → `Choice2` → `Choice3` → `Reroll` → `Skip` 차례로 첫 것 | 한 프레임에 두 번 사지 않게 |
+| 반지 바꾸기 | 반지 칸 둘이 다 찬 채 반지 카드를 고르면 `RingPending` = 그 카드(금화는 아직 — `ReplaceRing` 때 뺌). 그동안 `Buy`·`Reroll`·`Choice3` 은 무시, **`Skip` = 반지 바꾸기 그만(사지 않음, 창은 열린 채)** — 떠나려면 한 번 더 `Skip` | 기획 12.8 "바꿀 반지 카드 둘 … 건너뛰기 = 사지 않음". 지시의 `Skip = Leave()` 는 `RingPending < 0` 일 때 그대로다. `IShop` 에 취소 메서드가 없어 `ShopInput` 이 `RingPending = −1` 을 직접 쓴다(`ShopService.CancelRing` 도 같은 일) |
+| 못 삼 신호 | `ShopDenied` = 금화 모자람 + 살 수 없는 카드(산 장비·다 올림·가득·그 액트에 없는 빈 카드)·다시 굴리기 금화 모자람. 다시 굴리기 성공·페핀의 다시 굴리기(아무 일 없음)는 신호 없음 | "못 함" 소리 하나로 묶음. 다시 굴리기 성공에 맞는 `CueKind` 가 없다 |
+| 신호 자리 | `ShopOpen` 자리 = `Room.RewardSpot`(상인), `ShopBuy`·`ShopDenied`·`PotionDrink`·`PotionDenied` 자리 = 주인공, `ChestDrop` 자리 = 책. 대상은 약속대로(`ShopBuy` = 산 장비의 `ItemBaseDef`, 페핀 카드 `MerchantDef`) — 계약 `CueKind.ShopBuy` 주석이 `MerchantDef` 라 주석만 고쳤다 | wp4 소리가 대상으로 고른다 |
+| `StageStepper` 돌려주는 값 | 상인 창이 열려 있으면 `StageStep.AwaitingChoice`(새 값 없음, `World.AwaitingChoice` 는 None 그대로 — 앱이 레벨업 오버레이를 올리지 않음). 차례는 끝난 판 → 선택 대기 → **상인 창** → 방 나감 | 앱 `PlayScene` 이 그대로 돈다(오버레이는 `AwaitingChoice != None` 일 때만). 아래 "wp6 에 넘김" |
+| 상자 → 책 | 상자에 처음 닿은 틱(`Pickups` — `ProgressionService.DropReward`): 상자는 `RewardStage = Dropped`·`GatesExit = false` 로 **열린 상자로 남고**(다시 안 열림, 방을 나가면 사라짐), 책 = `RewardDef.Drop` 획득물을 `Reward` = 같은 보상으로 `SpawnPickup`(→ `GatesExit`). 상자·책 둘 다 `RewardChosen`(올릴 무기 칸, −1 = `단련`)·`Value`(금화) | WP5 가 상자(열린 그림)·책을 따로 그리고, 둘레 아이콘(`RewardOsd`)이 책에서 무기·금화 값을 읽는다. 책 구별 = 획득물 ID 가 `Drop` ID |
+| 상자 금화 | 올릴 무기와 함께 **금화도 여는 틱에** 방 난수 `Drop` 으로 굴려 `Value` 에(책을 집을 때 그 값). 뽑기 차례·수는 한 번에 받던 때와 같다(`RollBundle` 하나 — 무기 칸 하나, 금화 하나) | 기획 11.4 둘레 아이콘 "금화 아이콘 + 값" — 보이는 값과 받는 값이 같게. 지금 실제 데이터(`drop` 없음)는 줍는 틱에 같은 차례로 굴려 단계 1 판과 같다 |
+| 책 자리 | 주인공 → 상자 방향(겹치면 바라보는 방향)으로 상자에서 30px. 맵 밖·`clearance` 미달이면 `RewardSpot.Row` 의 당김(두 자리 줄의 둘째 자리 — 같은 함수)으로 상자 쪽으로 | "상자 앞" 을 상자 너머로 — 주인공 발밑에 떨어지면 다음 틱에 저절로 집혀 두 단계가 한 단계가 된다 |
+| 책을 집을 때 | `RewardChosen` 칸이 그 사이 만렙·진화가 되었으면 `단련`(다시 뽑지 않음). 물약 칸이 가득이면 물약만 빠짐 | 6.19 "책을 집는 틱에 다시 뽑지 않는다" |
+| 만렙 순번 | `HeroCarrier.Restore` 가 짐 순번 최댓값 + 1 을 `CombatState.MaxedBase` 에, 이 방에서 만렙이 된 무기의 `MaxedAtTick` = `Build.MaxedStamp` = `Tick + MaxedBase`(첫 방은 0 — 틱 그대로) | WP1g 기록 "더 정한 것" 3 의 어긋남(새 방 첫 틱 만렙 = 앞 방 순번 0 과 같아 칸 순서로 섞임)을 없앤다. 짐 모양 그대로 |
+| `LevelUpOffer.Reward` | 마법서·매혹의 성소 창에 그 `RewardDef`, 레벨업 창은 null | wp6 건너뛰기 문구 |
+| 드롭 표 | `dt_common` 금화 0.10·[3,7](물약 0.003 그대로), `dt_elite` 물약 0.10, `dt_unique` 물약 0.30 더함, `dt_miniboss` 물약 1.0 더함. 액트 보스 금화 100 은 wp4(보스 드롭 표) | 기획 v0.9.2(11.1·11.5·11.7) |
+
+**이음새(남의 파일 — 최소)**
+- `Sim/StageStepper.cs`(WP1): 선택 대기 다음 한 줄 `if (Shops.ShopInput.AppTick(world, command)) return StageStep.AwaitingChoice;` 와 판정 순서 주석.
+- `Dev/StateHasher.cs`(WP7): 방 해시 주인공 행에 `PotionSlotsLevel`·`PotionSpeedLevel`·`Gold`·`Heal.TicksLeft`·`Heal.Remaining`·장비 여섯 칸(기본 ID·접두사 ID·값·접미사 ID·값 — 빈 칸은 null·0). 상인 상태(`Room.Shop`)·`Pickup.RewardStage`/`RewardChosen` 은 넣지 않았다(지시 범위 밖 — WP7 판단).
+- `Sim/Contracts/Presentation.cs`(계약): `CueKind.ShopBuy` 주석의 대상만(형 그대로).
+- `tests/Data/RealDataLoadTests.cs`: 실제 드롭 표 시험의 값을 v0.9.2 로.
+
+**계약 변경**: 없음. **WP1h 요청**(급하지 않음)
+1. `IShop.CancelRing()`(반지 바꾸기 그만) — 지금은 `ShopInput` 이 `ShopState.RingPending` 을 직접 −1 로. 다른 `IShop` 구현이 생기면 필요.
+2. 상인 창 앱 틱을 가르는 `StageStep` 값(예: `Shop`) — 지금은 `AwaitingChoice` + `Room.Shop.Open` 으로 가른다. 아래 wp6 의 신호 소비를 앱이 값 하나로 하려면.
+
+**다른 묶음에 넘김**
+- wp6: `PlayScene.FixedTick` 은 `Stepped` 일 때만 표시 이벤트를 `Consume` 한다 — 상인 창 동안의 `ShopBuy`·`ShopDenied`·`PotionDenied` 는 판 틱이 돌지 않는 앱 틱에 쌓여 창을 닫은 다음 판 틱에야 소리가 난다. `Room.Shop.Open` 인 앱 틱에도 `Consume`(또는 `Cues` 만) 해야 산 순간 소리가 난다. 상인 창은 `ShopState`(+ `ShopService.Merchant`, `World.Combat.ShopLockTicks` 로 잠금 표시)만 읽고, 키는 `Choice1~3`·`Reroll`·`Skip` 비트로.
+- wp4: 자동 조작은 `Room.RewardSpot` 으로 걸어가 열고, 열리면 명령 비트(입력 잠금 24 앱 틱 동안은 눌러도 버림 — 계속 눌러도 됨). 반지 바꾸기 중 `Skip` 은 사지 않음이고 떠나지 않는다(위 표).
+- wp5: 열린 상자(`Reward` 있음·`RewardStage == Dropped`·`Def.Id != Drop.Id`)와 책(`Def.Id == Drop.Id`)을 가른다. 둘레 아이콘 값 = 책의 `RewardChosen`·`Value`. `rewards.json` 보물 상자 `drop: "pk_book"`·`bundle.potions: 1`·`pickups.json` 의 `pk_book` 이 들어오면 두 단계가 켜진다(그 전까지 실제 판은 한 번에 받음 — 물약 0).
+
+**기획서에 넘기는 것**: 반지 바꾸기 중 건너뛰기 = 사지 않음(창은 열린 채 — 떠나기는 한 번 더), 보물 상자 금화도 여는 순간 정함(둘레 아이콘 값 = 받는 값), 책은 주인공에서 본 상자 너머 30px 에 떨어짐, 다시 굴리기 성공 소리 신호는 없음(금화 소리를 원하면 `CueKind` 하나가 필요).
+
+**남은 것(확인 못 함)**: 상인 방이 실제 판에 나오는 것(가중표 — wp4)과 게임 창의 상인 창·물약 칸·둘레 아이콘(wp5·wp6), 실제 `drop` 데이터로 도는 두 단계 상자(wp5 데이터), 자동 조작의 `Drink`·상인 창 정책(wp4). 개발 실행(`--autoplay --room 1:3`, 60초)은 종료 코드 0 으로 돌았고 HUD 금화가 새 드롭 표로 오르는 것만 봤다 — 마시기·상인 창은 사람·자동 조작 입력이 아직 없어 화면으로 보지 못했다.
+
 ### WP4 구현 기록
 
 WP4(적·감독·자동 조작) 단계 1 코드가 문서와 다르게 또는 더 정한 것. 코드가 정본이다(11.4 와 같은 규칙). 계약 파일(WP1~WP1f 형)은 고치지 않았다 — 바꿀 것은 "WP1g 요청" 에 적는다.
