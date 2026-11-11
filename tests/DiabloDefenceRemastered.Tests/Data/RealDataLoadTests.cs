@@ -37,6 +37,7 @@ public sealed class RealDataLoadTests
     /// <summary>
     /// 첫 플레이(2026-11-11)에서 처치 141 에 금화 0 — 적 정의·등급 표에 drop_table 이 비어 드롭 표가 굴려지지 않았다.
     /// 기획 11.1: 일반 = dt_common(금화 3%, 1~5), 정예 = dt_elite(금화 100%, 10~30), 우두머리 = dt_unique.
+    /// v0.9.2 값(WP3 단계 2 — 기획 11.1·11.5·11.7): 금화 일반 10%·3~7, 체력 물약 일반 0.3%·정예 10%·우두머리 30%·중간 보스 1개 확정.
     /// </summary>
     [Fact]
     public void RealData_EnemiesAndRanksHaveDropTables_WithGold()
@@ -48,13 +49,20 @@ public sealed class RealDataLoadTests
         Assert.NotEmpty(normal);
         foreach (var e in normal) Assert.Equal("dt_common", e.DropTable?.Def.Id);
         var common = r.Defs.DropTables.Get("dt_common").Entries.Single(x => x.Pickup.Def.Id == "gold");
-        Assert.Equal(0.03f, common.Chance);
-        Assert.Equal([1, 5], common.Value!);
+        Assert.Equal(0.10f, common.Chance);
+        Assert.Equal([3, 7], common.Value!);
         var ranks = r.Defs.Rules.Ranks!;
         Assert.Equal("dt_elite", ranks.Elite!.DropTable?.Def.Id);
         Assert.Equal("dt_unique", ranks.Unique!.DropTable?.Def.Id);
         var elite = ranks.Elite.DropTable!.Def.Entries.Single(x => x.Pickup.Def.Id == "gold");
         Assert.Equal(1f, elite.Chance);
         Assert.Equal([10, 30], elite.Value!);
+
+        float Potion(string table) => r.Defs.DropTables.Get(table).Entries.Single(x => x.Pickup.Def.Id == "healing_potion").Chance;
+        Assert.Equal(0.003f, Potion("dt_common"));
+        Assert.Equal(0.10f, Potion("dt_elite"));
+        Assert.Equal(0.30f, Potion("dt_unique"));
+        Assert.Equal(1f, Potion("dt_miniboss"));
+        Assert.Equal(PickupKind.PotionStack, r.Defs.Pickups.Get("healing_potion").Kind);
     }
 }
