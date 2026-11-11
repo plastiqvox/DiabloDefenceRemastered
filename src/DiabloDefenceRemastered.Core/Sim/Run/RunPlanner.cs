@@ -183,13 +183,13 @@ public static class RunPlanner
             _rng = new RandomStream(RunSeeds.Flow(runSeed, actNumber, 0));
         }
 
-        /// <summary>남은 덱에서 <paramref name="pool"/> 에 든 첫 장. 없으면 다시 섞는다(바로 앞 방 맵 <paramref name="previous"/> 를 맨 앞에 두지 않음).</summary>
+        /// <summary>남은 덱에서 <paramref name="pool"/> 에 든 첫 장. 없으면 다시 섞는다(바로 앞 방 맵 <paramref name="previous"/> 가 그 풀에서 처음 뽑힐 장이 되지 않게).</summary>
         public MapDef Draw(IReadOnlyList<DefRef<MapDef>> pool, MapDef? previous)
         {
             var k = _left.FindIndex(m => InPool(pool, m));
             if (k < 0)
             {
-                Shuffle(previous);
+                Shuffle(pool, previous);
                 k = _left.FindIndex(m => InPool(pool, m));
                 if (k < 0) throw new ArgumentException("방 맵 덱에 그 방 종류 풀의 맵이 없다(room_maps)");
             }
@@ -202,7 +202,7 @@ public static class RunPlanner
             return card;
         }
 
-        private void Shuffle(MapDef? previous)
+        private void Shuffle(IReadOnlyList<DefRef<MapDef>> pool, MapDef? previous)
         {
             var order = new List<MapDef>(_cards);
             for (var n = order.Count - 1; n > 0; n--)
@@ -210,8 +210,17 @@ public static class RunPlanner
                 var j = (int)((ulong)_rng.NextUInt() * (uint)(n + 1) >> 32);
                 (order[n], order[j]) = (order[j], order[n]);
             }
-            if (order.Count >= 2 && previous is not null && string.Equals(order[0].Id, BaseId(previous), StringComparison.Ordinal))
-                (order[0], order[1]) = (order[1], order[0]);
+            // 바로 앞 방 맵이 이 방 종류 풀에서 처음 뽑힐 장이면 그 풀의 다음 장과 바꾼다 — order[0] 만 보면 일반·정예 풀이 다를 때
+            // [정예 전용 맵, 바로 앞 방 맵, …] 에서 같은 맵이 연달아 나온다. 두 풀이 같으면(액트 1) order[0]·order[1] 바꾸기와 같다.
+            if (previous is not null)
+            {
+                var first = order.FindIndex(m => InPool(pool, m));
+                if (first >= 0 && string.Equals(order[first].Id, BaseId(previous), StringComparison.Ordinal))
+                {
+                    var next = order.FindIndex(first + 1, m => InPool(pool, m));
+                    if (next >= 0) (order[first], order[next]) = (order[next], order[first]);
+                }
+            }
             _left.Clear();
             foreach (var m in order) _left.Add(_rng.NextUInt() >= 0x80000000u && m.Mirror ? MirrorOf(m) : m);   // 위 비트로(아래 비트는 약한 생성기가 있다)
         }

@@ -73,6 +73,26 @@ public sealed class DeckOrderTests
     }
 
     [Fact]
+    public void Reshuffle_avoids_previous_map_when_normal_and_elite_pools_differ()
+    {
+        // 일반 풀 셋 + 정예 전용 맵 둘 — 덱 다섯 장 중 일반 방이 뽑을 수 있는 것은 셋뿐이라, 다시 섞은 순서의 맨 앞이 정예 전용 맵일 수 있다
+        var normal = Act.RoomMaps.Normal.Take(3).ToList();
+        var eliteOnly = Act.RoomMaps.Normal.Skip(3).Concat(Act.RoomMaps.Elite).Where(r => normal.All(n => n.Id != r.Id)).DistinctBy(r => r.Id).ToList();
+        Assert.NotEmpty(eliteOnly);
+        var act = Act with
+        {
+            RoomMaps = Act.RoomMaps with { Normal = normal, Elite = eliteOnly },
+            Rooms = [.. Enumerable.Range(1, 30).Select(n => TestDefs.Room(RoomKind.Normal, (n - 1) * 60f, n * 60f, n))],
+        };
+        for (ulong seed = 1; seed <= 60; seed++)
+        {
+            var rooms = RunPlanner.PlanAct(act, 1, seed, Rules).Rooms;
+            Assert.All(rooms, r => Assert.Contains(normal, n => n.Id == Base(r)));
+            for (var i = 1; i < rooms.Count; i++) Assert.NotEqual(Base(rooms[i - 1]), Base(rooms[i]));
+        }
+    }
+
+    [Fact]
     public void Single_map_pool_alternates_orientation()
     {
         var one = Act with
