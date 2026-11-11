@@ -1,6 +1,7 @@
 using System.Globalization;
 using DiabloDefenceRemastered.Core.Art;
 using DiabloDefenceRemastered.Core.Sim.Core;
+using DiabloDefenceRemastered.Core.Sim.Heroes;
 using DiabloDefenceRemastered.Loading;
 using DiabloDefenceRemastered.Rendering;
 using Microsoft.Xna.Framework.Graphics;
@@ -14,7 +15,8 @@ namespace DiabloDefenceRemastered.Scenes;
 /// 그림 확인 씬(<c>--preview sprites/enemies/effects/tiles/blend/fog</c>, 설계서 7.6·7.10·8.1·9, 소유 WP5). SceneFactory(WP6)가 고른다.
 /// 배치는 고정(6.13)이고 앱 틱만 본다 — 같은 앱 시각에 캡처하면 늘 같은 그림이다.
 /// <list type="bullet">
-/// <item><c>sprites</c>: 그림 정의마다 한 행 — 방향마다 고정 칸(프레임은 재생) + 방향을 도는 칸 하나, 발 기준점 십자, ID. 4초마다 다음 쪽.</item>
+/// <item><c>sprites</c>: 첫 쪽 = 단계 2 견본(겉모습 아홉 벌, 바닥 아이템·보석 세 등급·금화·물약, 상인 셋, 상자·책·둘레 아이콘 — 합성 보상·획득물), 그다음 쪽부터
+/// 그림 정의마다 한 행 — 방향마다 고정 칸(프레임은 재생) + 방향을 도는 칸 하나, 발 기준점 십자, ID. 4초마다 다음 쪽.</item>
 /// <item><c>enemies</c>: 적 정의마다 한 행(그 변종·색조·크기의 걷기) + 몸 높이 선(<c>body_height</c> × 크기 — 기획 열린 질문 7).</item>
 /// <item><c>effects</c>: 이펙트 정의를 칸에 반복 재생(intro 포함). <c>blend</c>: 투사체·이펙트를 보통/가산 두 칸으로(기획 열린 질문 10).</item>
 /// <item><c>tiles</c>: <c>--map</c>(없으면 <c>--stage</c>·뿌리 액트의 보스 맵, <c>&lt;id&gt;@m</c> = 거울판)의 외곽 상자 전체를 줄여 그림 + 하위 칸 성질 세 색 + 입구·기준점·문 틈. 안개 없음.</item>
@@ -36,6 +38,7 @@ public sealed class PreviewScene : IScene, IDisposable
     private WorldRenderer? _renderer;
     private ArenaRenderer? _arena;
     private RenderTarget2D? _mapRT;
+    private GateGrateArt? _tileGrates;
     private int _scene = -1;
     private readonly BeginTickSystem _begin = new();
 
@@ -87,6 +90,8 @@ public sealed class PreviewScene : IScene, IDisposable
 
     public void Draw(RenderContext rc, float alpha)
     {
+        // 그림 행·견본 쪽은 화면 전체를 덮지 않는다 — 프레임마다 지우지 않으면 앞 프레임이 남아 가산 빛이 쌓이고(희게 포화) 흔들리는 글자가 번졌다(단계 2 wp5)
+        if (_target is "sprites" or "enemies" or "effects" or "blend") rc.Device.Clear(Color.Black);
         switch (_target)
         {
             case "sprites": DrawSprites(rc); break;
@@ -117,12 +122,20 @@ public sealed class PreviewScene : IScene, IDisposable
     private void DrawSprites(RenderContext rc)
     {
         var sprites = _app.Defs.Sprites.All;
+        var perPage = (int)((540f - Top) / RowHeight);
+        var total = 1 + Math.Max(1, (sprites.Count + perPage - 1) / perPage);
+        var page = (int)(_now / PageTicks % total);
+        if (page == 0)
+        {
+            DrawShowcase(rc, total);
+            return;
+        }
         DrawRows(rc, "sprites", sprites.Count, (batch, row, y) =>
         {
             var s = sprites[row];
             DrawSpriteRow(batch, s, "", Rgb.White, 1f, y, s.Directions, frameTime: 0.08f);
             return $"{s.Id}  {s.Frame.X}×{s.Frame.Y} d{s.Directions} f{s.Frames}";
-        });
+        }, page - 1, (page, total));
     }
 
     private void DrawEnemies(RenderContext rc)
@@ -176,11 +189,12 @@ public sealed class PreviewScene : IScene, IDisposable
         batch.Draw(_pixel, new Rectangle((int)foot.X, (int)foot.Y - 4, 1, 9), c);
     }
 
-    private void DrawRows(RenderContext rc, string title, int count, Func<SpriteBatch, int, float, string> row)
+    /// <param name="rowPage">행 쪽을 정해 줌(첫 쪽이 견본인 <c>sprites</c>) — 없으면 앱 시각으로 돈다. <paramref name="shown"/> = 제목에 보일 (쪽, 전체).</param>
+    private void DrawRows(RenderContext rc, string title, int count, Func<SpriteBatch, int, float, string> row, int? rowPage = null, (int Page, int Total)? shown = null)
     {
         var perPage = (int)((540f - Top) / RowHeight);
         var pages = Math.Max(1, (count + perPage - 1) / perPage);
-        var page = (int)(_now / PageTicks % pages);
+        var page = rowPage ?? (int)(_now / PageTicks % pages);
         var labels = new List<(float Y, string Text)>();
         _pixel = Prim(rc).Pixel;
         rc.Batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, VirtualToPresent(rc));
@@ -193,9 +207,156 @@ public sealed class PreviewScene : IScene, IDisposable
         }
         rc.Batch.End();
         _ui.Begin(rc);
-        _ui.Text($"--preview {title}  {page + 1}/{pages}  ({count})", new Vector2(8, 6), 14f, Rgb.White);
+        var (sp, st) = shown ?? (page + 1, pages);
+        _ui.Text($"--preview {title}  {sp}/{st}  ({count})", new Vector2(8, 6), 14f, Rgb.White);
         foreach (var (y, text) in labels) _ui.Text(text, new Vector2(8, y + RowFoot - 14), 11f, new Rgb(220, 220, 220));
         if (count == 0) _ui.Text("정의가 없다", new Vector2(8, 40), 14f, new Rgb(255, 120, 120));
+        _ui.End();
+    }
+
+    // ── sprites 첫 쪽: 단계 2 견본(wp5) ─────────────────────────────
+
+    private World? _showWorld;
+
+    /// <summary>
+    /// 단계 2 견본 한 화면(설계서 9 <c>--preview sprites</c>, 13장 WP5 단계 2 기록 — 캡처 판정용): ① 겉모습 아홉 벌(서기, 남쪽) ② 바닥 아이템 — 작은 영혼석(마름모)·영혼석·큰 영혼석(돌 + 색)·
+    /// 금화·체력 물약·마력 폭주·책(놓인 모습)과 보석 빛 ③ 상인 셋(서기 반복)·상자(닫힘·열림)·책 받침 ④ 둘레 아이콘 견본(합성 <c>Pickup</c> — 닫힌 상자·연 뒤 책·물약 칸 가득·마법서·정예 상자).
+    /// 칸마다 발 기준점 십자. 원작 그림이 없으면 그 칸은 대체 그림(획득물 <c>draw</c>)이나 빈 칸.
+    /// </summary>
+    private void DrawShowcase(RenderContext rc, int pages)
+    {
+        var defs = _app.Defs;
+        var prim = Prim(rc);
+        _pixel = prim.Pixel;
+        var w = _showWorld ??= new World(defs, _app.Options.Seed, null, HeroClass());
+        var labels = new List<(Vector2 Pos, string Text)>();
+        var glows = new List<(Vector2 Pos, Rgb Color, float Half, float Alpha)>();
+        var lifts = new List<(SpriteDef Sprite, int Frame, XnaVector2 Foot, Rgb Tint)>();
+        var batch = rc.Batch;
+        batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, VirtualToPresent(rc));
+
+        // ① 겉모습 아홉 벌
+        var hero = HeroClass();
+        const float y1 = 130f;
+        if (hero is not null)
+        {
+            var keys = hero.Looks.Count > 0 ? hero.Looks.Keys.ToList() : [hero.Look];
+            for (var i = 0; i < keys.Count; i++)
+            {
+                var set = HeroLookArt.Pick(hero, keys[i], s => s.Clips.Idle?.Sprite.Def is { } sp && Art.TryGetSprite(sp, "", out _));
+                var foot = new XnaVector2(60f + i * 100f, y1);
+                if (set.Clips.Idle?.Sprite.Def is { } idle)
+                {
+                    var frame = 1 + (int)(_now * World.Dt / (set.Clips.Idle.FrameTime ?? set.FrameTime)) % Math.Max(1, idle.Frames);
+                    Art.DrawFrame(batch, idle, "", 0, frame, foot, 1f, Color.White);
+                }
+                Cross(batch, foot);
+                labels.Add((new Vector2(foot.X - 30f, y1 + 4f), $"{keys[i]} → {set.Id}"));
+            }
+        }
+
+        // ② 바닥 아이템(놓인 모습)과 보석
+        const float y2 = 250f;
+        string[] items = ["gem_blue", "gem_green", "gem_red", "gold", "healing_potion", "mana_surge", "pk_book"];
+        for (var i = 0; i < items.Length; i++)
+        {
+            if (!defs.Pickups.TryGet(items[i], out var p)) continue;
+            var foot = new Vector2(70f + i * 120f, y2);
+            var floorDrawn = false;
+            if (p.Floor is { } floor && floor.Sprite.Def is var fs && Art.TryGetSprite(fs, "", out _))
+            {
+                Art.DrawFrame(batch, fs, "", 0, PickupArt.FloorFrame(floor, fs.Frames, 999f, false), foot.ToXna(), floor.Scale ?? 1f, (floor.Tint ?? Rgb.White).ToXna());
+                if (p.Kind == PickupKind.Xp && floor.Tint is { } lift) lifts.Add((fs, PickupArt.FloorFrame(floor, fs.Frames, 999f, false), foot.ToXna(), lift));
+                floorDrawn = true;
+            }
+            else if (p.Draw.Sprite?.Def is { } ds)
+                Art.DrawFrame(batch, ds, "", 0, p.Draw.Frame ?? ds.Frames, foot.ToXna(), p.Draw.Scale, (p.Draw.Tint ?? Rgb.White).ToXna());
+            else
+            {
+                var size = p.Draw.Size is { } sz ? new Vector2(sz.X, sz.Y) : new Vector2(10, 14);
+                BatchX.Blit(batch, prim.Diamond, new RectF(foot.X - size.X * 0.5f, foot.Y - size.Y, foot.X + size.X * 0.5f, foot.Y),
+                            new Rectangle(0, 0, prim.Diamond.Width, prim.Diamond.Height), (p.Draw.Color ?? Rgb.White).ToXna());
+            }
+            var k = PickupArt.GlowScale(p, floorDrawn);
+            if (k > 0f && p.Draw.Color is { } gc)
+            {
+                var size = p.Draw.Size is { } sz2 ? MathF.Max(sz2.X, sz2.Y) : 14f;
+                glows.Add((foot - new Vector2(0f, size * 0.5f), gc, size * 1.6f * MathF.Sqrt(k), 0.8f * k));
+            }
+            Cross(batch, foot.ToXna());
+            labels.Add((new Vector2(foot.X - 40f, y2 + 4f), $"{p.Id}{(floorDrawn ? "" : " (대체)")}"));
+        }
+
+        // ③ 상인 셋·상자 닫힘/열림·책 받침
+        const float y3 = 385f;
+        var x = 70f;
+        foreach (var m in defs.Merchants.All)
+        {
+            var foot = new XnaVector2(x, y3);
+            if (m.Sprite?.Def.Clips.Idle?.Sprite.Def is { } idle)
+                Art.DrawFrame(batch, idle, "", 0, 1 + (int)(_now * World.Dt / WorldRenderer.MerchantFrameTime) % Math.Max(1, idle.Frames), foot, 1f, Color.White);
+            Cross(batch, foot);
+            labels.Add((new Vector2(x - 30f, y3 + 4f), $"{m.Name} {m.Sprite?.Id}"));
+            x += 110f;
+        }
+        foreach (var (id, opened, text) in new[] { ("obj_chest", false, "상자 닫힘"), ("obj_chest", true, "상자 열림(빔)"), ("obj_tome", false, "책 받침") })
+        {
+            var foot = new XnaVector2(x, y3);
+            if (defs.Pickups.TryGet(id, out var p) && p.Floor is { } floor && floor.Sprite.Def is var fs && Art.TryGetSprite(fs, "", out _))
+                Art.DrawFrame(batch, fs, "", 0, PickupArt.FloorFrame(floor, fs.Frames, 999f, opened), foot, 1f, Color.White);
+            Cross(batch, foot);
+            labels.Add((new Vector2(x - 30f, y3 + 4f), text));
+            x += 110f;
+        }
+        batch.End();
+
+        if (glows.Count > 0 || lifts.Count > 0)
+        {
+            batch.Begin(SpriteSortMode.Deferred, BlendState.Additive, SamplerState.LinearClamp, null, null, null, VirtualToPresent(rc));
+            foreach (var (pos, color, half, alpha) in glows)
+                BatchX.Centered(batch, prim.Light, pos, new Vector2(half * 2f), color.ToXna(alpha));
+            foreach (var (sprite, frame, foot, tint) in lifts) Art.DrawFrame(batch, sprite, "", 0, frame, foot, 1f, tint.ToXna(WorldRenderer.GemLift));
+            batch.End();
+        }
+
+        // ④ 둘레 아이콘 견본(합성 획득물 — 무기 칸 0 = 매직 미사일 Lv3)
+        _ui.Begin(rc);
+        _ui.Text($"--preview sprites  1/{pages}  단계 2 견본 — 겉모습 아홉 벌 · 바닥 아이템·보석 · 상인·물체 · 둘레 아이콘", new Vector2(8, 6), 13f, Rgb.White);
+        foreach (var (pos, text) in labels) _ui.Text(text, pos, 10f, new Rgb(220, 220, 220));
+        if (defs.Weapons.TryGet("magic_missile", out var mm) && w.Hero.Weapons[0].IsEmpty) w.Hero.Weapons[0] = new WeaponSlot { Def = mm, Level = 3, MaxedAtTick = -1 };
+        var samples = new List<(Pickup P, string Text, bool Full)>();
+        Pickup Make(string id, RewardDef? reward, RewardPickupStage stage, int chosen, int value)
+        {
+            var p = new Pickup();
+            p.Reset();
+            p.Def = defs.Pickups.Get(id);
+            p.Reward = reward;
+            p.RewardStage = stage;
+            p.RewardChosen = chosen;
+            p.Value = value;
+            return p;
+        }
+        if (defs.Rewards.TryGet("reward_chest", out var chest))
+        {
+            samples.Add((Make(chest.Object!.Id, chest, RewardPickupStage.Closed, -1, 0), "닫힌 상자", false));
+            if (chest.Drop is { } drop)
+            {
+                samples.Add((Make(drop.Id, chest, RewardPickupStage.Dropped, 0, 45), "연 뒤 책", false));
+                samples.Add((Make(drop.Id, chest, RewardPickupStage.Dropped, 0, 45), "책 — 물약 칸 가득", true));
+            }
+        }
+        if (defs.Rewards.TryGet("reward_tome", out var tome)) samples.Add((Make(tome.Object!.Id, tome, RewardPickupStage.Closed, -1, 0), "마법서", false));
+        if (defs.Pickups.All.FirstOrDefault(p => p.Kind == PickupKind.Chest) is { } elite) samples.Add((Make(elite.Id, null, RewardPickupStage.Closed, -1, 3), "정예 상자", false));
+        for (var i = 0; i < samples.Count; i++)
+        {
+            var (p, text, full) = samples[i];
+            w.Hero.Potions = full ? HeroPotions.Capacity(w) : 0;
+            var anchor = new Vector2(100f + i * 190f, 500f - RewardOsd.ArcLift);
+            RewardIcons.Osd(_ui, Art, RewardOsd.Icons(p, w), anchor, (int)_now, labels: true, 1f);
+            var m = _ui.MeasureText(text, 11f);
+            _ui.Text(text, new Vector2(anchor.X - m.X * 0.5f, 512f), 11f, new Rgb(255, 210, 120));
+        }
+        w.Hero.Potions = 0;
         _ui.End();
     }
 
@@ -306,11 +467,30 @@ public sealed class PreviewScene : IScene, IDisposable
         var fit = Math.Min(lb.Width / (float)_mapRT.Width, (lb.Height - 24f) / _mapRT.Height);
         var dw = (int)(_mapRT.Width * fit);
         var dh = (int)(_mapRT.Height * fit);
+        var ox = lb.X + (lb.Width - dw) / 2;
+        var oy = lb.Y + 24 + (lb.Height - 24 - dh) / 2;
         rc.Batch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.LinearClamp);
-        rc.Batch.Draw(_mapRT, new Rectangle(lb.X + (lb.Width - dw) / 2, lb.Y + 24 + (lb.Height - 24 - dh) / 2, dw, dh), Color.White);
+        rc.Batch.Draw(_mapRT, new Rectangle(ox, oy, dw, dh), Color.White);
         rc.Batch.End();
+        // 문 봉인 창살(v0.9.4 V13, 단계 2 wp5): 2.5초 주기로 닫힘 1초 → 0.6초 동안 내려감 → 열림. 맵 그림 위에 겹쳐 그린다(정렬 없음 — 문 틈은 둘레라 가릴 것이 앞 턱뿐)
+        var grateState = "";
+        _tileGrates ??= GateGrateArt.Build(w, Art, _app.Defs.Maps.All.SelectMany(m => m.Mirrored is { } mm ? new[] { m, mm } : [m]));
+        if (_tileGrates is { } grates)
+        {
+            var cycle = (int)(_now % 150);
+            var sink = Math.Clamp((cycle - 60) / (float)GateGrates.OpenTicks, 0f, 1f);
+            grateState = sink <= 0f ? "  창살 닫힘" : sink >= 1f ? "  창살 열림" : string.Create(CultureInfo.InvariantCulture, $"  창살 내려감 {sink:0.00}");
+            var placed = new List<GateGrateArt.Placed>();
+            foreach (var (_, gate) in w.Gates) grates.Place(gate, grid.Iso, sink, placed);
+            var scale = _mapRT.Width / (float)bw * fit;
+            rc.Batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, null, null, null,
+                           Matrix.CreateScale(scale) * Matrix.CreateTranslation(ox, oy, 0f));
+            foreach (var p in placed) BatchX.Blit(rc.Batch, p.Page, p.Dest, p.Src, Color.White);
+            rc.Batch.End();
+        }
+        else grateState = "  창살 그림 없음(코드 봉인)";
         DrawTitle(rc, string.Create(CultureInfo.InvariantCulture,
-            $"--preview tiles  {w.Map!.Id}  {bw}×{bh}  {(_arena?.Art is null ? "코드 그림(자원 없음)" : "arena.json")}  걷기=빨강 투사체=파랑 시야=노랑"));
+            $"--preview tiles  {w.Map!.Id}  {bw}×{bh}  {(_arena?.Art is null ? "코드 그림(자원 없음)" : "arena.json")}  걷기=빨강 투사체=파랑 시야=노랑{grateState}"));
     }
 
     private void DrawTitle(RenderContext rc, string text)

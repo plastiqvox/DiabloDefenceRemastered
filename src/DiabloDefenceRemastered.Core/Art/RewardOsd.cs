@@ -114,13 +114,13 @@ public static class RewardOsd
     }
 
     /// <summary>
-    /// <paramref name="count"/> 개 중 <paramref name="index"/> 번째 아이콘 가운데(호 가운데 기준, 월드 px — y 아래가 +). 위 반원(180°)을 count + 1 로 나눈 각에 왼쪽부터 —
-    /// 하나면 바로 위, 셋이면 45°·90°·135°.
+    /// <paramref name="count"/> 개 중 <paramref name="index"/> 번째 아이콘 가운데(호 가운데 기준, 월드 px — y 아래가 +). 위 반원(180°)의 양 끝을 포함해 고르게, 왼쪽부터 —
+    /// 하나면 바로 위, 둘이면 왼쪽·오른쪽, 셋이면 180°·90°·0°, 넷이면 60° 간격. 양 끝을 빼고 나누면(45° 간격) 24px 아이콘이 반지름 28 호에서 겹쳤다(미리보기 — 13장 WP5 단계 2 기록).
     /// </summary>
     public static Vector2 Offset(int count, int index)
     {
         if (count <= 0) return Vector2.Zero;
-        var a = MathF.PI * (count - index) / (count + 1);   // 왼쪽(π 가까이)부터
+        var a = count == 1 ? MathF.PI * 0.5f : MathF.PI * (count - 1 - index) / (count - 1);   // 왼쪽(π)부터
         return new Vector2(MathF.Cos(a) * ArcRadius, -MathF.Sin(a) * ArcRadius);
     }
 

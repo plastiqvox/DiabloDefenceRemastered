@@ -120,15 +120,19 @@ public class RewardOsdTests
         Assert.True(RewardOsd.Icons(big, w, decided: true, chosen: 0, gold: 40).Count <= RewardOsd.MaxIcons);
         Assert.Equal("물약 3", RewardOsd.Icons(big, w, decided: true, chosen: 0, gold: 40)[1].Label);
 
-        // 호: 하나면 바로 위, 셋이면 왼쪽 → 오른쪽, 모두 위쪽 반지름 28
+        // 호: 하나면 바로 위, 셋이면 왼쪽(180°)·위(90°)·오른쪽(0°), 모두 위쪽 반원 반지름 28
         var one = RewardOsd.Offset(1, 0);
         Assert.Equal(0f, one.X, 3);
         Assert.Equal(-RewardOsd.ArcRadius, one.Y, 3);
         var three = Enumerable.Range(0, 3).Select(i => RewardOsd.Offset(3, i)).ToArray();
         Assert.True(three[0].X < three[1].X && three[1].X < three[2].X);
-        Assert.All(three, o => { Assert.True(o.Y < 0f); Assert.Equal(RewardOsd.ArcRadius, o.Length(), 3); });
+        Assert.All(three, o => { Assert.True(o.Y <= 1e-3f); Assert.Equal(RewardOsd.ArcRadius, o.Length(), 3); });
         Assert.Equal(-three[0].X, three[2].X, 3);
-        Assert.All(Enumerable.Range(0, RewardOsd.MaxIcons).Select(i => RewardOsd.Offset(RewardOsd.MaxIcons, i)), o => Assert.True(o.Y < 0f));
+        Assert.Equal(-RewardOsd.ArcRadius, three[1].Y, 3);
+        // 24px 아이콘이 서로 겹치지 않는다(이웃 가운데 거리 ≥ 24) — 넷까지
+        for (var n = 2; n <= RewardOsd.MaxIcons; n++)
+            for (var i = 1; i < n; i++)
+                Assert.True(Vector2.Distance(RewardOsd.Offset(n, i - 1), RewardOsd.Offset(n, i)) >= RewardOsd.IconSize, $"{n}개 중 {i}");
 
         // 흔들림: 1초(60틱) 주기, ±2px
         Assert.Equal(RewardOsd.Bob(0), RewardOsd.Bob(60), 3);

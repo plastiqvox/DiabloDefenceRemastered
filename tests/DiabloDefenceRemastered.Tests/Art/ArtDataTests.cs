@@ -34,6 +34,26 @@ public class ArtDataTests
         Assert.Empty(expected.Except(sprites.Select(s => s.Id)));
     }
 
+    /// <summary>
+    /// 단계 2 wp5: 실제 데이터의 액트 미리 읽기에 겉모습 아홉 벌(상인에게 산 장비로 방 안에서 바뀜)·상인 묶음(방 안 상인·문 위 아이콘)·원작 바닥 그림이 다 든다 —
+    /// 빠지면 그리기가 <c>TryGetSprite</c> 에서 예외(미리 읽기 누락 버그 — 7.5). 상인 묶음이 빠져 개발 실행이 문 단계에서 멈춘 것을 고친 시험.
+    /// </summary>
+    [Fact]
+    public void ActPreload_RealData_AllLooksMerchantsAndFloorArt()
+    {
+        var defs = RealArtDefs.Defs;
+        var hero = defs.HeroClasses.Get("sorcerer");
+        foreach (var stage in defs.Stages.All)
+        {
+            var uses = ActPreload.Sprites(defs, stage, hero).Select(u => u.Sprite.Id).ToHashSet();
+            foreach (var look in hero.Looks.Values)
+                foreach (var kind in Enum.GetValues<ClipKind>())
+                    if (look.Def.Clips.Get(kind) is { } clip) Assert.Contains(clip.Sprite.Id, uses);
+            foreach (var m in defs.Merchants.All) Assert.Contains(m.Sprite!.Def.Clips.Idle!.Sprite.Id, uses);
+            foreach (var id in new[] { "item_rock", "item_fbook", "item_goldflip", "item_fbttlebr", "item_fbttlebb", "obj_chest1", "obj_book1" }) Assert.Contains(id, uses);
+        }
+    }
+
     [Fact]
     public void ActPreload_ReachableSetsWithVariants_LooseSpritesAll_MapsWithMirrors()
     {
