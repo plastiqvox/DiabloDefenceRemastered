@@ -540,7 +540,7 @@ public static class TestDefs
     /// <summary>합성 <c>rules.rooms.rewards</c> = 6.19 첫 값.</summary>
     public static RewardRulesDef RewardRules() => new()
     {
-        HealSkipAtLeast = 0.75f, HealGuaranteeBelow = 0.40f, HealLowHp = 0.50f, HealLowHpWeight = 30f,
+        HealSkipAtLeast = 0.75f, HealGuaranteeBelow = 0.40f, HealLowHp = 0.50f, HealLowHpWeight = 30f, HealAmount = 0.5f,
         MerchantFirstRoom = 3, MerchantPerAct = 2, MerchantGuaranteeRoom = [4, 5], MerchantMetOther = 1.5f,
         HealerBoost = 1.5f, HealerBoostBelow = 0.50f,
     };

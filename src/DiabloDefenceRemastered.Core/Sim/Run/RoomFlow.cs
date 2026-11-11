@@ -29,12 +29,14 @@ public static class RoomFlow
         if (room is null || world.Outcome != RunOutcome.Running) return;
         var rules = world.Defs.Rules.Rooms ?? throw new InvalidOperationException("방 월드에 rules.rooms 가 없다");
 
-        // v0.9 회복 문: 들어온 방의 첫 시뮬레이션 틱(넘김 어둠이 걷힌 뒤)에 체력 전부(6.19 "회복 문")
+        // v0.9 회복 문: 들어온 방의 첫 시뮬레이션 틱(넘김 어둠이 걷힌 뒤)에 체력을 채운다(6.19 "회복 문").
+        // 2026-11-12 사용자 결정: 체력 전부 → 최대 체력 × rules.rooms.rewards.heal_amount(최대를 넘지 않음)
         if (room.HealOnEnter)
         {
             room.HealOnEnter = false;
             var hero = world.Hero;
-            if (!hero.Dead && hero.Hp < hero.MaxHp) hero.Hp = hero.MaxHp;
+            var amount = hero.MaxHp * Math.Clamp(rules.Rewards.HealAmount, 0f, 1f);
+            if (!hero.Dead && hero.Hp < hero.MaxHp) hero.Hp = Math.Min(hero.MaxHp, hero.Hp + amount);
             world.Presentation.Cue(new CueEvent(world.Tick, CueKind.HealOnEnter, hero.Pos, room.Reward));
         }
 

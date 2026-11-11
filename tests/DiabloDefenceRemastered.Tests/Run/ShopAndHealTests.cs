@@ -199,7 +199,7 @@ public class ShopAndHealTests
     }
 
     [Fact]
-    public void HealDoor_FirstTickAfterEntering_FullHp_EliteBonusToo()
+    public void HealDoor_FirstTickAfterEntering_HealsPart_EliteBonusToo()
     {
         foreach (var start in new[] { 1, 3 })   // 일반 방, 정예 방(덤 보상)
         {
@@ -210,12 +210,23 @@ public class ShopAndHealTests
             w.Hero.Hp = 30f;
             Assert.Equal(30f, w.Hero.Hp);                                                   // 넘김 어둠 동안(첫 틱 전) 그대로
             StageStepper.AppTick(w, PlayerCommand.None);
-            Assert.Equal(100f, w.Hero.Hp);                                                  // 들어옴 첫 틱에 최대
+            Assert.Equal(80f, w.Hero.Hp);                                                   // 들어옴 첫 틱에 최대 × heal_amount 0.5 만큼(전부가 아님)
             Assert.False(w.Room.HealOnEnter);
             w.Hero.Hp = 40f;
             StageStepper.AppTick(w, PlayerCommand.None);
             Assert.Equal(40f, w.Hero.Hp);                                                   // 한 번뿐
         }
+    }
+
+    [Fact]
+    public void HealDoor_NeverAboveMax()
+    {
+        var s = Session(WithOnlyReward(TestDefs.RewardPotionId), startIndex: 1);
+        var w = s.World;
+        w.Hero.MaxHp = 100f;
+        w.Hero.Hp = 70f;
+        StageStepper.AppTick(w, PlayerCommand.None);
+        Assert.Equal(100f, w.Hero.Hp);                                                      // 70 + 50 → 최대에서 멈춤
     }
 
     [Fact]
@@ -239,8 +250,9 @@ public class ShopAndHealTests
         Assert.False(s.Run.HealOnEnter);                                                    // 다음 방 RoomState 로 넘어감
         Assert.True(s.World.Room!.HealOnEnter);
         Assert.Equal(25f, s.World.Hero.Hp);
+        var max = s.World.Hero.MaxHp;
         StageStepper.AppTick(s.World, PlayerCommand.None);
-        Assert.Equal(s.World.Hero.MaxHp, s.World.Hero.Hp);
+        Assert.Equal(Math.Min(max, 25f + max * 0.5f), s.World.Hero.Hp, 3);
         Assert.Equal(TestDefs.RewardTomeId, s.Run.Rooms[0].RewardId);
         Assert.Equal(0f, s.Run.Rooms[0].HpIn);                                              // 첫 방: 시험 모듈은 주인공을 만들지 않아 들어올 때 체력 0
         Assert.Equal(0, s.Run.Rooms[0].GoldSpent);

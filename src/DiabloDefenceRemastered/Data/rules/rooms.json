@@ -10,7 +10,8 @@
                "stairs": { "weapon_slots": 1, "passive_slots": 1 },
                "autoplay_door_skip": 20,
                // 문 보상 뽑기(v0.9 — 설계서 6.19, 기획 11.4·11.7 첫 값): 회복 문 빠짐 75%·보장 40%·저체력 50% 미만이면 가중 30, 상인 = 액트 1 3번 방 문부터·액트마다 2번·보장 액트 1 4번·액트 2 5번 방 문
-               "rewards": { "heal_skip_at_least": 0.75, "heal_guarantee_below": 0.40, "heal_low_hp": 0.50, "heal_low_hp_weight": 30,
+               // heal_amount: 회복 문이 채우는 양 = 최대 체력 × 0.5(2026-11-12 사용자 결정 — 전부가 아니라 일부)
+               "rewards": { "heal_skip_at_least": 0.75, "heal_guarantee_below": 0.40, "heal_low_hp": 0.50, "heal_low_hp_weight": 30, "heal_amount": 0.5,
                             "merchant_first_room": 3, "merchant_per_act": 2, "merchant_guarantee_room": [4, 5], "merchant_met_other": 1.5,
                             "healer_boost": 1.5, "healer_boost_below": 0.50 } }
   }

@@ -133,7 +133,7 @@ public class RoomDefsTests
           "reward_spot": { "distance": 100, "spacing": 40, "clearance": 30 }, "fallback_reward": "reward_chest",
           "stairs": { "weapon_slots": 1, "passive_slots": 1 },
           "autoplay_door_skip": 20,
-          "rewards": { "heal_skip_at_least": 0.75, "heal_guarantee_below": 0.40, "heal_low_hp": 0.50, "heal_low_hp_weight": 30,
+          "rewards": { "heal_skip_at_least": 0.75, "heal_guarantee_below": 0.40, "heal_low_hp": 0.50, "heal_low_hp_weight": 30, "heal_amount": 0.5,
                        "merchant_first_room": 3, "merchant_per_act": 2, "merchant_guarantee_room": [4, 5], "merchant_met_other": 1.5,
                        "healer_boost": 1.5, "healer_boost_below": 0.50 } }
         """;

@@ -83,6 +83,8 @@ public sealed record RewardRulesDef
     public required float HealLowHp { get; init; }
     /// <summary>저체력 회복 문 가중(30 — 보통은 액트 가중표 값 15).</summary>
     public required float HealLowHpWeight { get; init; }
+    /// <summary>회복 문으로 들어온 방의 첫 틱에 채우는 양 = 최대 체력 × 이 값(0.5, 최대를 넘지 않음). 2026-11-12 사용자 결정 — 체력 전부(v0.9)에서 일부로.</summary>
+    public required float HealAmount { get; init; }
     /// <summary>액트 1 에서 상인 문이 처음 나오는 다음 방 번호(3 — 1·2번 방을 깨는 동안은 금화가 모자람, 기획 11.7).</summary>
     public required int MerchantFirstRoom { get; init; }
     /// <summary>한 액트에 상인 방 상한(2 — 상인 셋을 합쳐 셈).</summary>
