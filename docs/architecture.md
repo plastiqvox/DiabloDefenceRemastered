@@ -5751,6 +5751,74 @@ WP4(적·감독·자동 조작) 단계 1 코드가 문서와 다르게 또는 �
 - WP6: `AutoplayPolicy.DoorSkips`·`RewardStalls`·`Events` 를 로그 줄로. 메뉴 오버레이가 `PickCard` 를 부르기 전에 그 판의 `Next` 가 한 번 이상 불렸어야 진화 재료 순위가 선다.
 - WP7: 로더가 생기면 `Wp4Data`·`ResolveVariant` 를 로더 호출로 바꾸고, `EnemyDataValidator`(이미 `EnemyModule` 이 `AddValidator`)가 실제 읽기에서 돈다.
 
+### WP4·WP8 단계 2 구현 기록 (wp/s2-wp4)
+
+WP4(적·감독·자동 조작·방 흐름)·WP8(소리) 단계 2 묶음 wp4 — 사용자 범위 ④(액트 1 아홉 방 한 판, 해골왕 처치까지)·②의 방 흐름 쪽(상인 방·회복 문이 판에 나옴)·새 신호 소리. 이번에 한해 적·보스가 쓰는 그림·이펙트·가져오기 표 줄(`sprites/monsters.json`·`sprites/missiles.json`·`effects/common.json`·가져오기 `Table/monsters.json`·`sounds.json`·`missiles.json` 마법 자리)도 이 묶음이 고쳤다.
+코드가 정본이다. 커밋은 `git log wp/s2-wp4` 의 다섯(`2b2a9cd`·`6906696`·`12d2e8b`·`8822526`·`ef57355`). 계약 형(`Sim/Contracts/**`·`Defs/**`)은 바꾸지 않았다.
+
+**다르게·더 정한 것**
+
+| 자리 | 정한 것 | 까닭 |
+|---|---|---|
+| 스테이지 `stage_cathedral` | 단계 1 `slice` 판을 지우고 액트 1 전체(방 아홉, 정예 5 로트피스트·7 블랙애시, 보스 9 해골왕 `cathedral_arena`, `next_act` 없음 — 해골왕 처치 = 승리). 구간표는 기획 10.3 에서 폴른 원·썩은 시체·핀드·불타는 해골 궁수 가중만 뺐고(2:00–2:30·2:30–3:00 은 기획처럼 두 줄), 6번 방 행진만 해골 20 대체, 해골 대장 이벤트 넷은 진짜 대장, 보스 방 보급 넷, 4:30 정예 무리는 접두사 1(우두머리 확률은 `rules.ranks` 기본) | 지시 3. 두 판을 같이 두지 않음 |
+| 해골왕 타격·특수 프레임 | 기획 9.5 첫 값(내려치기 9·특수 8)을 그림 묶음 클립이 아니라 패턴 `event_frame` 에. 해골 대장 근접 8 은 `chase_melee.event_frame`. 두 묶음의 서기 간격은 따로 적지 않음(묶음 0.05) | 원작 표(DevilutionX)와 대조하지 못했다 — 그림 파일의 `frame_time`·`event_frame` 은 출처 주석(원본 확인·DevilutionX 참고)이 필수(13.5-16)라 기획 첫 값을 그 파일에 적지 않았다 |
+| 해골왕 그림 | `set_sking` 변종 `["", "genrl"]`, `body_height` 120(칸 160). 해골 대장 `set_skelsd` 변종 `["", "white"]` | 실제 그림 시험이 모든 묶음에 원색 변종을 요구(가져오기 표도 `""` 쪽 페이지를 만든다). 몸 높이 상한 시험(50~100)은 칸 160 묶음만 칸 높이 기준으로 고쳤다 |
+| 액트 보스 드롭 | `dt_boss` = 정예 상자 3회 + 금화 100, 보스 파일 `enemies/bosses/act1.json` 안 | 6.1(그 적만 쓰는 표). 마지막 액트라 지금은 승리로 끝나 줍지 않는다 — 계단이 생기는 단계 3 부터 |
+| 맵 덱(3.6 결정 2 ①, 33-6) | 일반·정예 풀의 서로 다른 맵을 덱 흐름 `RunSeeds.Flow(씨앗, 액트, 0)` 으로 섞고(Fisher–Yates, 장마다 방향 난수 — 위 비트), 방마다 남은 덱에서 그 방 종류 풀의 첫 장. 다시 섞을 때 바로 앞 방 맵이 맨 앞이면 둘째와 바꿈, 덱 한 장이면 앞 방과 반대 방향. 방 흐름 난수 ① 은 한 번 그대로 써서 ②~④ 는 v0.8 값 | `RunSeeds` 에 소금을 더하지 않으려고 방 번호 0(쓰이지 않음)을 덱 흐름으로. 방향을 아래 비트로 뽑은 첫 판은 합성 액트가 모두 거울판으로 나왔다 |
+| 자동 조작 상인 창 | 견주는 값 = 장비만의 `EquipStats.Sum` 의 `max_hp` + **10 ×** `armor`(기획 15절 v0.9), 동률 왼쪽. 한 번 사면 `Skip`(반지 바꾸기 중이면 값이 작은 반지 자리 `Choice1/2` 먼저). 입력 잠금(`Combat.ShopLockTicks`) 동안 아무 버튼도 안 누름. 상인 창 앱 틱에는 `Drink` 를 붙이지 않음(`PotionDenied` 만 남) | 지시는 "최대 체력 + 방어" — 기획 문장의 방어 무게(×10)를 따랐다. 같은 판에서 살 수 없으면 바로 떠난다 |
+| 자동 조작 문 우선순위 | 회복 문 = 체력 < 50% **∧ 물약 칸 0** 이면 맨 앞(기획 15절 v0.9.1 문장), 상인 문 = 금화 ≥ 150 이면 보물 상자와 같은 순위(`AutoplayPolicy.MerchantGold`) | 기획 15절 |
+| 상인 자리(WP3 넘김) | 상인 방 보상 단계에서 줄 자리가 둘 이상(정예 상자)이면 `Room.RewardSpot` = 줄의 첫 자리 | 상인(그리기·열기·신호 자리)과 상자 줄이 어긋나 있었다 |
+| `DamageCause` | 적 본체 피해(`EnemyCtx.HitHero` — 근접·자폭·돌진·내려치기)에 `Body`. 투사체·장판·예고 폭발은 그것을 만드는 WP3 쪽 | WP1g 넘김 |
+| 오라 범위 질의(버그) | `EnemyBuffs.ApplyArea`(오라·함성·`buff_area`)가 공간 해시 대신 저장소를 훑음 | EnemyThink(5)는 해시를 다시 짓기(6·8) 전이라 해시 밀집 인덱스가 앞 틱 압축 전 것(4.8 "그 틱에만 유효") — 앞 틱에 적이 지워지면 범위 밖 인덱스 예외. 실제 데이터에서 처음 쓰는 해골 대장 오라가 실제 모듈 판에서 드러냄 |
+| 호위 따르기 | 대형 자리가 맵 밖·`Clearance < 반경` 이면 대장 자리로, 자리 12px(`FollowArrive`) 안이면 `Hold` | 작은 방에서 닿지 못할 자리를 향해 벽에 붙어 선 호위가 불변식 stuck(2%)을 넘김(씨앗 3, 8번 방) |
+| 소리 키 | `ui.potion_denied`·`heal_on_enter`·`shop_buy`·`shop_denied`·`chest_drop`·`equip`·`equip_head`·`equip_body`·`equip_body_heavy`·`equip_shield`·`equip_staff`·`equip_ring`, 인사 = `ShopOpen` 의 상인을 가리키는 보상의 `rewards.<id>.open`. 끼우기는 `SoundRouter.TryEquip`(`Route` 가 금화 소리에 더해 낸다), 보상 `drop` 획득물의 `PickupDropped` 는 소리 없음(상자 → 책은 `ChestDrop` 하나) | 연결 표에 아이템 칸 종류가 없다 — `ui` 키로. 원작 갑옷 소리가 경(`invlarm`)·판금(`invharm`) 둘이라 무게 키를 하나 더 |
+| 소리 데이터 | 상인 인사 `bsmith44`·`witch38`·`healer37`(원작 줄 중 가장 짧은 것 — 귀로 듣지 못함), 사기 `gold.wav`(분류 ui), 상자 → 책 `flipbook`, 끼우기 `invcap`·`invlarm`·`invharm`·`invshiel`·`invstaf`·`invring`·`invgrab`, 회복 문 들어옴 = 물약 `invpot`. **`potion_denied`·`shop_denied` 는 걸지 않음** | 지시의 `invhelm`·`invarmor` 와 "못 함"(`cantdoit`)은 원본에 없다(probe). 기획 11.7 "원작 '못 함' 소리 `sfx\items\` 중 — 없으면 무음" |
+| 종료 `AUDIO` 줄 | `AudioSystem` 은 계약 `IAudioServices`(: `IDisposable`)만 구현, `GameApp.Dispose` 가 `_app.Audio?.Dispose()` | 지금까지 아무도 부르지 않아 종료 `AUDIO muted=…` 줄이 없었다(`--sound`/`--mute` 수를 견줄 줄) |
+
+**원본으로 확인한 이름·칸·프레임**(출처: 원본 확인 — 이 PC 의 diabdat 를 가져오기 도구 `probe files`·`probe cl2`·`probe cel` 로)
+- `monsters\skelsd\sklsr{n,w,a,d,s}.cl2` 칸 폭 128, 13·8·12·15·16프레임, `skelsd\white.trn`. 소리 접두도 `sklsr{a,h,d,s}{1,2}.wav`(`skls*` 는 없음).
+- `monsters\sking\sking{n,w,a,d,s}.cl2` 칸 폭 160, 8·8·16·16·12프레임, 소리 `sking{a,h,d,s}{1,2}.wav`, 대사 `sfx\monsters\sking01.wav`.
+- 고유 TRN `monsters\monsters\eth.trn`·`bashtb.trn`·`genrl.trn`(각 256바이트). 특수 `zombie\zombies.cl2`·`skelbow\sklbws.cl2` 16프레임, 소리 `zombies{1,2}`·`sklbws{1,2}`.
+- `missiles\farrow1..16.cl2`(16방향 4프레임, 폭 96 — `farrow17`·`farrow.cl2` 없음), `acidpud1.cl2` 9프레임 폭 96, `acidpud2.cl2` 4프레임(`probe cl2` 의 그룹 판별이 깨져 `probe cel` 로 수만 — 가져오기는 평면 읽기라 정상, 메타 칸 96).
+- 소리: `sfx\items\flipbook·invcap·invlarm·invharm·invshiel·invstaf·invring·invgrab·gold` 있음, `invhelm·invarmor·invgem·flipgem·cantdoit` 없음. `sfx\towners\bsmith01..56·witch*·healer*` 있음.
+
+**검증**
+- 시험(`dotnet test … -p:SkipAssetCheck=true`): 1139 통과·13 건너뜀(main c84ea8e 1114·11 + 새 25 — `Enemies/BossAct1Tests` 8, `Run/DeckOrderTests` 4, `Sim/AutoplayShopTests` 6, `Run/ShopRewardSpotTests` 2, `Audio/SoundRouterV09Tests` 4, `RealAudioDataTests` 1; 건너뜀 +2 는 실제 모듈 판의 씨앗 둘 Theory). `DDR_RUN=Scenario` 10 통과:
+  가짜 이웃 아홉 방 판(`Stage1ScenarioTests` — 상인 가중 0, 가짜 무기 피해 60) 해골왕 승리·해시 같음·방 들르기, 실제 모듈 판(`RealActScenarioTests`) 상인 가중 0 씨앗 7·3 해골왕 승리 깊이 1:9(약 13분, `boss_s` 해골왕 76~97초, 로트피스트 64초, 블랙애시 33~54초), `DOOR_SKIP`·`REWARD_STALL`·공정성 셋 0·불변식 통과,
+  실제 가중 씨앗 7 이 8번 방 페핀에서 80 금화를 쓰고 떠남, 같은 씨앗 같은 `ROOM` 목록.
+- 가져오기(저장소 밖 복사본, 메인 `Assets` 를 robocopy): 종료 코드 0, 몬스터 5묶음·마법 41·소리 72.
+- 캡처(저장소 밖, `--background --mute --window 1280x720`, 로그에 예외 없음):
+  `--preview enemies` 1쪽 — 로트피스트 `eth`(누런 몸에 붉은 반점, ×1.6 이라 픽셀이 굵음), 블랙애시 `bashtb`(붉은 해골 궁수, ×1.5), 해골왕 `genrl`(붉은·검은 해골 + 칼, 칸 160 ×1.0 — 주인공보다 조금 큰 정도)의 발 기준점(붉은 십자)이 모두 발에 맞음.
+  2쪽은 앞 쪽 그림 위에 겹쳐 그려져(미리보기 화면이 쪽을 지우지 않음 — WP5 `PreviewScene`) 해골 대장은 "흰 해골 + 칼·방패, 금빛" 정도로만 봤다.
+  `--autoplay --seed 1 --room 1:9 --god --level 18 --weapons magic_missile:8,fireball:8,arcane_orbit:8` 8s·20s — 보스 막대 `해골왕`, 20s 에 해골왕이 주인공 위쪽에서 칼을 들고 다가오고 둘레에 부른 해골 시체가 깔림(소환). 파이어볼 부채의 날아가는 공은 정지 화면에서 가려내지 못했다.
+  `--room 1:5`(10s·25s) 보스 막대 `굶주린 로트피스트`, 25s 에 체력 약 35%·좀비 무리. `--room 1:7`(10s·25s) 보스 막대 `불타는 블랙애시`, 25s 에 붉은 큰 궁수와 주인공 쪽으로 나는 작은 불화살.
+  주황 얼룩은 주인공 파이어볼 폭발(`bigexp`)로 보인다 — 로트피스트 독 웅덩이(`acidpud`)를 화면에서 가려내지 못했다(약한 무기 판 캡처에서도 무리에 가림).
+  `--room 1:9` 40초 `--mute`·`--sound` 의 종료 줄 `AUDIO … requested=759 played=533 dropped_cap=38 dropped_interval=151 dropped_offscreen=37` 같음.
+
+**이음새(남의 파일 — 최소)**
+- `GameApp.cs`(WP7): `Dispose` 에 `_app.Audio?.Dispose();` 한 줄.
+- `tests/…/Data/RealSpriteAndSightTests.cs`(WP0a/WP7): 단계 2 묶음·변종·특수 클립 기대 값, 몸 높이 상한을 칸 160 묶음만 칸 높이 기준으로.
+- `tests/…/Audio/RealAudioDataTests.cs`(WP8 — 이 묶음): 대상 없음 목록·단계 2 연결 시험.
+- `tests/…/Run/RunPlannerTests.cs`: 고정 값의 맵 열.
+- `Sim/Run/RoomFlow.cs`·`RunPlanner.cs` 는 WP4 소유(11.3), `StageStepper.cs`·`drop_tables.json`·`rules/hero.json`·`rules/equipment.json`·wp5·wp6 파일은 고치지 않았다.
+
+**계약 변경**: 없음. **WP1h 요청**(급하지 않음)
+1. 연결 표에 아이템 칸 종류 키(`items.<kind>.equip` 같은 것) — 지금은 `ui.equip_<칸>`(무게 키 하나 더)로 우회.
+2. `SpatialHash` 를 EnemyThink 단계에서 쓸 수 없다는 규칙을 4.8·6.6 에 한 줄(지금은 오라가 저장소를 훑음). 필요하면 EnemyThink 앞(4 Navigation 뒤)에서 한 번 더 짓는 자리.
+
+**기획서에 넘기는 것**
+- 자동 조작 상인 견줌은 기획 15절 그대로 "최대 체력 + 10 × 방어"(지시의 "+ 방어" 와 다름 — 확인 거리).
+- 맵 덱의 방향(원판·거울판)은 섞을 때 장마다 정한다 — 풀 5장 × 거울판이 같은 맵 두 방향을 한 바퀴에 쓰지 않는다.
+- "못 함" 소리는 원본 `sfx\items\` 에 없어 무음(기획 11.7 규칙 그대로). 상인 인사 줄 셋은 가장 짧은 줄로 골랐을 뿐이다 — 들어 보고 바꿀 거리.
+- 해골왕 크기 ×1.0(칸 160)은 화면에서 주인공보다 조금 큰 정도다 — 보스로 보이게 키울지 확인 거리(기획 9.5 "×1.0").
+
+**남은 것**
+- 이번 단계에서 뺀 것(지시 경계): 새 몬스터 넷(폴른 원·썩은 시체·핀드·불타는 해골 궁수 — 구간표 가중·6번 방 폴른 원 행진), 접두사 "불타는", 무기 3·패시브 3·진화 2, AI 확대 2배 그리기.
+- 해골 대장·해골왕의 서기 간격·타격 프레임을 원작 표(DevilutionX)로 대조. `acidpud` 독 웅덩이의 `fit_radius` 40·색(팔레트)·발 기준점을 미리보기로.
+- 미리보기 2쪽이 1쪽 위에 겹쳐 그려짐(WP5).
+- 액트 보스 드롭 `dt_boss` 는 계단(단계 3)이 생겨야 쓰인다.
+- 확인 못 함: 소리를 귀로 듣기(인사·끼우기·대사), 파이어볼 부채 5발·불비 예고 원·독 웅덩이를 화면에서 가려 보기, 사람이 하는 판의 상인 창(화면 wp6).
+
 ### WP0 구현 기록 (단계 1 — 커밋은 `git log --grep WP0`)
 
 WP0 이 다른 묶음과 동시에 일해서, 1.4 본문에 적기로 한 실측 값과 문서와 다르게 정한 것을 이 소절 하나에 모았다. 통합 때 1.4 해당 문단으로 옮긴다.
