@@ -12,7 +12,7 @@ public readonly record struct ShopView(ShopState Shop, MerchantDef? Merchant, He
 /// <c>PlayScene</c> 이 앱 틱마다 명령을 계속 <c>StageStepper</c> 로 넘기고(시간 멈춤·사기는 Core <c>ShopInput</c>), 이 창은 사람 입력을 명령 비트로 바꾸고(<see cref="Buttons"/>) 그리기만 한다.
 /// 자동 조작은 Core 정책이 명령을 내고 이 창은 그림만 그린다.
 /// <list type="bullet">
-/// <item>입력: <c>1/2/3</c>·카드 클릭·←→/↑↓ + Enter/Space → <c>Choice1~3</c>, <c>R</c>·다시 굴리기 단추 → <c>Reroll</c>, <c>X</c>·<c>Esc</c>·떠나기 단추 → <c>Skip</c>
+/// <item>입력: <c>1/2/3</c>·카드 클릭·←→/↑↓ + Enter/Space → <c>Choice1~3</c>, <c>R</c>·다시 굴리기 단추 → <c>Reroll</c>, <c>X</c>·<c>Esc</c>·<c>Backspace</c>(둘 다 <c>Cancel</c>)·떠나기 단추 → <c>Skip</c>
 /// (반지 바꾸기 중이면 <c>Skip</c> = 사지 않음). 선택 입력 잠금 0.4s 는 Core(<c>ShopLockTicks</c>)가 버린다.</item>
 /// <item>모양: 위에 상인 그림 한 프레임 + 이름 + 지갑 금화, 가운데 카드 셋(200×170 — 인벤토리 그림·이름 등급 색·무게 줄·효과 줄·차이 줄·값), 아래 다시 굴리기·떠나기.
 /// 모자란 카드는 어둡고 값이 붉다, 산 카드는 <c>산 것</c> 으로 자리를 지킨다. <c>RingPending ≥ 0</c> 이면 "바꿀 반지" 카드 둘(지금 반지 둘).
@@ -26,7 +26,11 @@ public sealed class ShopWindow(AppServices app)
     public const float CardWidth = 200f;
     public const float CardHeight = 170f;
     public const float CardGap = 20f;
-    public const float CardTop = 178f;
+    public const float CardTop = 188f;
+    /// <summary>머리(상인 그림·이름·지갑) 위 끝 — HUD 방 줄과 띄움(전에는 40 이라 이름이 방 줄 아래에 붙었다).</summary>
+    public const float HeaderTop = 54f;
+    /// <summary>바꿀 반지 카드의 차이 줄 수(키마다 한 줄).</summary>
+    public const int RingDiffParts = 3;
     /// <summary>아래 단추 줄 위(카드 아래 30).</summary>
     public const float ButtonTop = CardTop + CardHeight + 26f;
 
@@ -37,6 +41,8 @@ public sealed class ShopWindow(AppServices app)
 
     private bool _wasOpen;
     private int _wasPending = -1;
+    /// <summary>앞 <see cref="Buttons"/> 의 마우스 위치(창이 새로 열리면 null — 열린 첫 틱에 카드 위면 그 카드로).</summary>
+    private Vector2? _lastMouse;
 
     /// <summary>고른 카드(키보드·마우스 올림).</summary>
     public int Focus { get; private set; }
@@ -49,6 +55,7 @@ public sealed class ShopWindow(AppServices app)
         var open = shop is { Open: true };
         var opened = open && !_wasOpen;
         if (opened || open && shop!.RingPending != _wasPending) Focus = 0;
+        if (opened) _lastMouse = null;
         _wasOpen = open;
         _wasPending = open ? shop!.RingPending : -1;
         return opened;
@@ -71,7 +78,7 @@ public sealed class ShopWindow(AppServices app)
 
     /// <summary>
     /// 사람 입력 한 앱 틱 → 상인 창 명령 비트(<c>KeyboardMouseSource</c> 가 창이 열린 동안 부른다). 첫으로 맞는 것 하나: 숫자 → 카드, Enter/Space → 고른 카드,
-    /// 클릭(카드·단추), <c>R</c> → 다시 굴리기, <c>X</c>·<c>Esc</c> → 떠나기(반지 바꾸기 중이면 사지 않음). 방향키·마우스 올림은 고른 카드만 바꾼다.
+    /// 클릭(카드·단추), <c>R</c> → 다시 굴리기, <c>X</c>·<c>Esc</c> → 떠나기(반지 바꾸기 중이면 사지 않음). 방향키·마우스 올림은 고른 카드만 바꾼다(마우스 올림은 마우스가 움직였을 때만 — 아니면 방향키 선택 유지).
     /// <paramref name="mouse"/> = 가상 좌표 마우스(창 밖이면 null).
     /// </summary>
     public CommandButtons Buttons(InputFrame input, Vector2? mouse, ShopState shop)
@@ -83,10 +90,18 @@ public sealed class ShopWindow(AppServices app)
             if (input.IsPressed(UiButtons.Left) || input.IsPressed(UiButtons.Up)) Focus = (Focus + n - 1) % n;
             if (input.IsPressed(UiButtons.Right) || input.IsPressed(UiButtons.Down)) Focus = (Focus + 1) % n;
         }
+        // 마우스 올림은 마우스가 움직인 앱 틱에만 고른 카드를 바꾼다 — 가만히 카드 위에 있으면 방향키가 먹지 않았다(매 틱 되돌림)
         var hovered = -1;
+        var moved = mouse != _lastMouse;
+        _lastMouse = mouse;
         if (mouse is { } m)
             for (var i = 0; i < n; i++)
-                if (Inside(m, CardRect(i, n))) { hovered = i; Focus = i; break; }
+                if (Inside(m, CardRect(i, n)))
+                {
+                    hovered = i;
+                    if (moved) Focus = i;
+                    break;
+                }
         Focus = n > 0 ? Math.Clamp(Focus, 0, n - 1) : 0;
         if (Focus != before) app.Audio?.PlayUi("menu_move");
 
@@ -161,7 +176,9 @@ public sealed class ShopWindow(AppServices app)
 
     private void DrawHeader(UiCanvas c, ShopView v)
     {
-        var box = new RectF(Theme.Width / 2 - 170, 40, Theme.Width / 2 - 90, 140);
+        // 머리는 HeaderTop 부터 — HUD 위 가운데 방 줄(12)·방 칸(32~44)·방 상태 줄(48~)과 띄운다
+        var top = HeaderTop;
+        var box = new RectF(Theme.Width / 2 - 170, top, Theme.Width / 2 - 90, top + 100);
         var drawn = false;
         if (v.Merchant?.Sprite?.Def.Clips.Idle?.Sprite.Def is { } towner && app.Art is ArtServices art)
             drawn = RewardIcons.Fit(c, art, towner, 0, 1, box, Rgb.White, 1f);
@@ -173,9 +190,9 @@ public sealed class ShopWindow(AppServices app)
             c.Fill(new RectF(cx - 22, box.Y0 + 42, cx + 22, box.Y1 - 6), Theme.PanelEdge, 0.9f);
         }
         var name = v.Merchant?.Name is { Length: > 0 } nm ? nm : v.Shop.MerchantId;
-        c.Text(name, new Vector2(Theme.Width / 2 - 70, 58), Theme.TitleText, Theme.Gold);
-        ItemArt.Gold(c, app, new RectF(Theme.Width / 2 - 70, 104, Theme.Width / 2 - 48, 126));
-        c.Text($"금화 {RunText.Number(v.Hero.Gold)}", new Vector2(Theme.Width / 2 - 42, 104), Theme.MenuText, Theme.Text);
+        c.Text(name, new Vector2(Theme.Width / 2 - 70, top + 18), Theme.TitleText, Theme.Gold);
+        ItemArt.Gold(c, app, new RectF(Theme.Width / 2 - 70, top + 64, Theme.Width / 2 - 48, top + 86));
+        c.Text($"금화 {RunText.Number(v.Hero.Gold)}", new Vector2(Theme.Width / 2 - 42, top + 64), Theme.MenuText, Theme.Text);
     }
 
     private static void DrawButton(UiCanvas c, RectF r, string text, Rgb color)
@@ -225,10 +242,13 @@ public sealed class ShopWindow(AppServices app)
             ly += size + 3;
         }
 
-        // 차이 줄 + 값
-        var slot = DiffSlot(v.Hero, b.Kind);
-        var diff = slot is { } s ? ItemText.DiffLine(v.Hero.Equipment[(int)s], item, defs, rules) : "반지 둘 — 고르면 바꿀 것을 묻는다";
-        FitText(c, diff, new Vector2(r.X0 + 10, r.Y1 - 44), r.Width - 20, 11f, Theme.TextDim);
+        // 차이 줄 + 값 — 산 카드는 차이 줄을 그리지 않는다(산 뒤에는 지금 장비가 그 물건이라 뜻이 없고, `산 것` 띠 아래로 반쯤 비쳤다)
+        if (!card.Bought)
+        {
+            var slot = DiffSlot(v.Hero, b.Kind);
+            var diff = slot is { } s ? ItemText.DiffLine(v.Hero.Equipment[(int)s], item, defs, rules) : "반지 둘 — 고르면 바꿀 것을 묻는다";
+            FitText(c, diff, new Vector2(r.X0 + 10, r.Y1 - 44), r.Width - 20, 11f, Theme.TextDim);
+        }
         PriceRow(c, r, card.Price, v.Hero.Gold >= card.Price);
 
         if (card.Bought) Done(c, r, "산 것");
@@ -252,7 +272,15 @@ public sealed class ShopWindow(AppServices app)
             FitText(c, line, new Vector2(r.X0 + 10, ly), r.Width - 20, Theme.SmallText, Theme.Text);
             ly += Theme.SmallText + 3;
         }
-        FitText(c, ItemText.DiffLine(ring, buying, defs, defs.Rules.Equipment), new Vector2(r.X0 + 10, r.Y1 - 44), r.Width - 20, 11f, Theme.TextDim);
+        // 차이 줄은 키마다 한 줄, 세 키까지(반지끼리는 다른 키가 둘 셋인 일이 흔해 한 줄로 이으면 `…` 로 잘렸다) — 마지막 줄이 r.Y1 - 40,
+        // 위로 13 간격(세 줄이면 첫 줄 r.Y0 + 104 — 반지 효과 줄 둘(74·89)의 아래)
+        var diffs = ItemText.DiffLines(ring, buying, defs, defs.Rules.Equipment, RingDiffParts);
+        var dy = r.Y1 - 40 - (diffs.Count - 1) * 13f;
+        foreach (var diff in diffs)
+        {
+            FitText(c, diff, new Vector2(r.X0 + 10, dy), r.Width - 20, 11f, Theme.TextDim);
+            dy += 13f;
+        }
         Ui.Centered(c, "이 반지를 바꾼다", r.Center.X, r.Y1 - 24, Theme.SmallText, Theme.Focus);
     }
 
