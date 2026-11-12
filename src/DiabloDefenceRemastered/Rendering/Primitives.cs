@@ -193,11 +193,12 @@ public static class FogBlend
 /// <summary>SpriteBatch 도우미: 실수 사각형으로 그리기(그림 배율 s 에서 반 픽셀 자리를 잃지 않게 — 위치·배율을 실수로 넘긴다, 7.1).</summary>
 public static class BatchX
 {
-    public static void Blit(SpriteBatch batch, Texture2D tex, RectF dest, Microsoft.Xna.Framework.Rectangle src, Color color)
+    /// <param name="depth">정점 깊이(0..1 — 깊이 버퍼를 쓰는 패스만, <see cref="UnitOutlines"/>). 보통은 0.</param>
+    public static void Blit(SpriteBatch batch, Texture2D tex, RectF dest, Microsoft.Xna.Framework.Rectangle src, Color color, float depth = 0f)
     {
         if (src.Width <= 0 || src.Height <= 0) return;
         var scale = new XnaVector2(dest.Width / src.Width, dest.Height / src.Height);
-        batch.Draw(tex, new XnaVector2(dest.X0, dest.Y0), src, color, 0f, XnaVector2.Zero, scale, SpriteEffects.None, 0f);
+        batch.Draw(tex, new XnaVector2(dest.X0, dest.Y0), src, color, 0f, XnaVector2.Zero, scale, SpriteEffects.None, depth);
     }
 
     /// <summary>텍스처 전체를 가운데 <paramref name="center"/>, 크기 <paramref name="size"/> 로.</summary>
