@@ -17,7 +17,7 @@ public readonly record struct WorldDrawStats(int DrawCalls, int Lights, int Enem
 /// PlayScene(WP6)이 만들고 프레임마다 <see cref="Fx"/>.Consume → <c>Audio.Consume</c>(7.9) → <c>world.Presentation.Clear()</c> → <see cref="Draw"/> 순으로 부른다.
 /// <list type="bullet">
 /// <item>층(7.3): 0 바닥 → 0b 맵 밖 뒤쪽 입장 유닛·뒷둘레 벽 → 1 장판·예고·발밑 원 → 2 시체 → 3 획득물(원작 바닥 그림·대체) → 4 y 정렬(유닛·안쪽 벽·바닥 위 조각·덧그림·상인·
-/// 문 봉인 창살(단계 2 wp5), 주인공 앞 벽 반투명) → 5 앞둘레 턱·맵 밖 앞쪽 입장 유닛·창살 그림이 없는 문의 코드 봉인 → 6 빛·안개 곱하기
+/// 문 봉인 창살(단계 2 wp5) — 벽은 늘 불투명) → 5 앞둘레 턱·맵 밖 앞쪽 입장 유닛·창살 그림이 없는 문의 코드 봉인 → 6 빛·안개 곱하기 → 벽 뒤 유닛 윤곽선(<see cref="UnitOutlines"/>)
 /// → 7 발광(투사체·이펙트·발광·번쩍임·예고 테두리·보석 빛) → 8 화면 효과 → (<c>PresentRT</c>) 9 월드 UI(보상 물체 둘레 아이콘·문 위 아이콘 포함).</item>
 /// <item>그림 배율 s(7.1): <c>WorldRT</c> = (960·s)×(540·s), 월드 → 타깃 행렬에 s 를 곱하고 모든 월드 그리기는 <c>PointClamp</c>. 빛·안개 타깃은 480×270 그대로.</item>
 /// <item>안개(7.10): <c>--reveal</c>(<see cref="AppOptions.Reveal"/>)이거나 시야가 꺼졌으면 건너뜀. 알파 0 인 대상은 항목을 아예 모으지 않는다.</item>
@@ -38,6 +38,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
     private readonly List<GlowDraw> _additive = new(256);
     private readonly List<GlowDraw> _alpha7 = new(256);
     private readonly List<Telegraph> _telegraphs = new(64);
+    private readonly UnitOutlines _outlines = new();
     private readonly UiCanvas _ui;
     private World? _world;
     private ArenaRenderer? _arena;
@@ -132,6 +133,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         _additive.Clear();
         _alpha7.Clear();
         _enemiesDrawn = _enemiesHidden = 0;
+        _outlines.Clear();
         _arena?.Prepare(f.View.Inflate(64));
 
         var toTarget = Matrix.CreateTranslation(-cam.X, -cam.Y, 0f) * Matrix.CreateScale(s);
@@ -149,7 +151,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         DrawCorpses(batch, f);
         DrawPickups(batch, f, prim);
         DrawLayer4(batch, f, prim);
-        _arena?.DrawGroup(batch, WallGroup.Front, prim, i => FrontFade(i, f));
+        _arena?.DrawGroup(batch, WallGroup.Front, prim);
         DrawOutsideEnemies(batch, f, back: false);
         DrawGateSeals(batch, f, prim);
         batch.End();
@@ -161,6 +163,9 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         batch.Begin(SpriteSortMode.Deferred, FogBlend.Multiply, SamplerState.LinearClamp);
         batch.Draw(_light.LightRT, new Rectangle(0, 0, _worldRT!.Width, _worldRT.Height), Color.White);
         batch.End();
+
+        // ── 6층 뒤: 벽 뒤 유닛 윤곽선(빛에 어두워지지 않게 곱한 뒤, 발광 앞) ─────
+        if (_arena is not null) _outlines.Draw(device, batch, prim, _arena, f.View, toTarget, _worldRT.Width, _worldRT.Height);
 
         // ── 7층 발광(알파 → 가산) ────────────────────────────────
         DrawLayer7(batch, f, prim, toTarget);
@@ -195,7 +200,8 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             _upRT?.Dispose();
             _upRT = null;
             var size = ArtScale.WorldTarget(s);
-            _worldRT = new RenderTarget2D(device, size.X, size.Y, false, SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
+            // 깊이·스텐실은 벽 뒤 윤곽선(UnitOutlines)만 쓴다
+            _worldRT = new RenderTarget2D(device, size.X, size.Y, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents);
             _scale = s;
         }
         if (_light is null)
@@ -238,6 +244,8 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         if (!UnitFrame(set, hero.Anim.Clip, hero.Anim, hero.Facing, "", 1f, f.HeroDraw, out var h, out var page, out var src, out var dest)) return;
         _heroRect = dest;
         DrawUnit(batch, h.Pages[page], src, dest, Rgb.White, 1f);
+        if (_arena is not null)
+            _outlines.Add(h.Pages[page], new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, DrawOrder.UnitSortY(_arena.Table, _arena.Iso, f.HeroDraw), f.View, UnitOutlines.Kind.Hero);
         var shape = new ShapeDraw(h.Pages[page], new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, f.HeroDraw, 1f, Forced: true, MinLight: !FrontWallCovers(dest), FogShape: false);
         f.Shapes.Add(shape);
         // 보스 묶음 B(6.20 ㉑): 순간이동 시전 중·도착 무적 동안 푸른 가산 덧칠 — 피격 번쩍임과 겹치면 덧칠만.
@@ -275,6 +283,10 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         _enemiesDrawn++;
         var tex = h.Pages[page];
         DrawUnit(batch, tex, src, dest, def.Tint, a);
+        // 벽 뒤 윤곽(안개에 반 넘게 가린 적·맵 밖 입장 중인 적은 뺌)
+        if (_arena is not null && a >= 0.5f && _arena.Iso.IsInsideMap(e.Pos))
+            _outlines.Add(tex, new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, DrawOrder.UnitSortY(_arena.Table, _arena.Iso, draw), f.View,
+                          def.Rank is DefRank.Miniboss or DefRank.Boss ? UnitOutlines.Kind.Elite : UnitOutlines.Kind.Enemy);
         var forced = fogA >= 1f && f.Fog && (def.Rank is DefRank.Miniboss or DefRank.Boss || e.Visual.ForceShown);
         f.Shapes.Add(new ShapeDraw(tex, new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, draw, a, forced, !FrontWallCovers(dest), FogShape: true));
         if (e.Visual.GlowAlpha > 0f) _glows.Add(new GlowDraw(tex, src, dest, e.Visual.GlowColor, e.Visual.GlowAlpha * fogA));
@@ -483,7 +495,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         CollectGrates(f);
         System.Runtime.InteropServices.CollectionsMarshal.AsSpan(_items).Sort(DrawItem.Comparer.Compare);
 
-        // 주인공 사각형을 먼저 알아야 앞 벽 반투명을 판정한다 — 그림 사각형만 미리 계산
+        // 주인공 사각형을 먼저 알아야 창살 반투명을 판정한다 — 그림 사각형만 미리 계산
         PeekHeroRect(f);
         foreach (var it in _items)
         {
@@ -494,10 +506,8 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
                 case DrawKind.Merchant: DrawMerchant(batch, f, prim); break;
                 case DrawKind.Grate: DrawGrate(batch, f, it); break;
                 default:
-                    var item = _arena!.Items[it.Index];
-                    var fade = WallFade.Fades(false, it.SortY, _arena.ItemRect(item), _arena.Iso.CellCenter(item.Tx, item.Ty), f.HeroDraw, _heroRect,
-                                              WallFade.Radius(w.Map!.WallFade, w.Lighting.HeroLightRadius), w.Map.WallFade.Mode);
-                    _arena.DrawItem(batch, it.Index, prim, fade ? WallFade.Alpha : 1f);
+                    // 벽은 늘 불투명(2026-11-13 — 가려진 유닛은 UnitOutlines 윤곽선)
+                    _arena!.DrawItem(batch, it.Index, prim, 1f);
                     break;
             }
         }
@@ -510,15 +520,6 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         if (_heroSet is { } set
             && UnitFrame(set, w.Hero.Anim.Clip, w.Hero.Anim, w.Hero.Facing, "", 1f, f.HeroDraw, out _, out _, out _, out var dest))
             _heroRect = dest;
-    }
-
-    private float FrontFade(int index, WorldFrame f)
-    {
-        var w = f.World;
-        var it = _arena!.Items[index];
-        var fade = WallFade.Fades(true, 0f, _arena.ItemRect(it), _arena.Iso.CellCenter(it.Tx, it.Ty), f.HeroDraw, _heroRect,
-                                  WallFade.Radius(w.Map!.WallFade, w.Lighting.HeroLightRadius), w.Map.WallFade.Mode);
-        return fade ? WallFade.Alpha : 1f;
     }
 
     /// <summary>앞(화면 아래) 안쪽 벽·앞 턱이 겹친 유닛(7.7 ④ — 최소 밝기·발광을 건너뜀).</summary>
@@ -954,6 +955,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         _worldRT?.Dispose();
         _upRT?.Dispose();
         _light?.Dispose();
+        _outlines.Dispose();
     }
 
     /// <summary>7층 그리기 하나(텍스처·원본·자리·색·알파).</summary>

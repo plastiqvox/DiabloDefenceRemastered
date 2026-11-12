@@ -134,6 +134,21 @@ public sealed class ArenaRenderer
         }
     }
 
+    /// <summary>항목 그림을 깊이 <paramref name="depth"/> 로(색은 흰색 — 깊이만 쓰는 패스, <see cref="UnitOutlines"/>). 자원이 없으면 기둥 사각형.</summary>
+    public void DrawItemDepth(SpriteBatch batch, int index, Primitives prim, float depth)
+    {
+        var it = _items[index];
+        if (Art is { ColumnMeta: not null, Columns: { } action } art && it.Frame >= 1 && it.Frame <= action.Frames)
+        {
+            var r = action.Rect(0, it.Frame);
+            if (!r.IsEmpty) BatchX.Blit(batch, art.ColumnPages[r.Page], ItemRect(it), new Rectangle(r.X, r.Y, r.W, r.H), Color.White, depth);
+            return;
+        }
+        if (it.Kind != ArenaCellKind.Wall) return;
+        var c = Iso.CellCenter(it.Tx, it.Ty);
+        BatchX.Blit(batch, prim.Pixel, new RectF(c.X - 32, c.Y - 80, c.X + 32, c.Y + 16), new Rectangle(0, 0, 1, 1), Color.White, depth);
+    }
+
     /// <summary>안개 벽 값 조각 폭(월드 px) — 빛 RT 텍셀 하나(월드 2px).</summary>
     public const float ShadeSliceWidth = 2f;
 
