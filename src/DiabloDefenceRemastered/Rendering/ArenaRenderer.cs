@@ -134,6 +134,40 @@ public sealed class ArenaRenderer
         }
     }
 
+    /// <summary>안개 벽 값 조각 폭(월드 px) — 빛 RT 텍셀 하나(월드 2px).</summary>
+    public const float ShadeSliceWidth = 2f;
+
+    /// <summary>
+    /// 안개 벽 찍기(7.10 3단계): 기둥을 <see cref="ShadeSliceWidth"/> 폭 세로 조각으로 나눠 알파 = 칸 가운데 <paramref name="center"/> 에서 화면 x 로 ±32(이웃 기둥 가운데)의
+    /// <paramref name="left"/>·<paramref name="right"/> 까지 선형. 이웃 기둥도 같은 식이라 이음매에서 값이 같아 칸 단위 계단이 없다. 자원이 없으면 가운데 값 하나로.
+    /// </summary>
+    public void DrawItemShaded(SpriteBatch batch, int index, Primitives prim, float center, float left, float right)
+    {
+        var it = _items[index];
+        if (Art is { ColumnMeta: { } meta, Columns: { } action } art && it.Frame >= 1 && it.Frame <= action.Frames)
+        {
+            var r = action.Rect(0, it.Frame);
+            if (r.IsEmpty) return;
+            var page = art.ColumnPages[r.Page];
+            var dest = ItemRect(it);
+            var cx = Iso.CellCenter(it.Tx, it.Ty).X;
+            var m = meta.Scale;
+            var step = Math.Max(1, (int)(ShadeSliceWidth * m));
+            for (var sx = 0; sx < r.W; sx += step)
+            {
+                var w = Math.Min(step, r.W - sx);
+                var x0 = dest.X0 + sx / (float)m;
+                var x1 = x0 + w / (float)m;
+                var u = ((x0 + x1) * 0.5f - cx) / 32f;
+                var level = u < 0f ? center + (left - center) * MathF.Min(1f, -u) : center + (right - center) * MathF.Min(1f, u);
+                if (level <= 0f) continue;
+                BatchX.Blit(batch, page, new RectF(x0, dest.Y0, x1, dest.Y1), new Rectangle(r.X + sx, r.Y, w, r.H), new Color(255, 255, 255, (int)(MathF.Min(1f, level) * 255f)));
+            }
+            return;
+        }
+        if (center > 0f) DrawItem(batch, index, prim, 1f, new Color(255, 255, 255, (int)(MathF.Min(1f, center) * 255f)));
+    }
+
     /// <summary>항목 하나 그리기(틴트 = 흰색 × 알파 — premultiplied). <paramref name="tint"/> 가 있으면 그 색(안개 모양 찍기).</summary>
     public void DrawItem(SpriteBatch batch, int index, Primitives prim, float alpha, Color? tint = null)
     {

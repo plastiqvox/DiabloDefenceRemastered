@@ -184,8 +184,22 @@ public sealed class FogRenderer(GraphicsDevice device, Primitives prim, RenderTa
     private Color[] _exploredData = [];
     private int _exploredVersion = -1;
     private VisibilityField? _field;
+    /// <summary>이번 프레임 보이는 벽 칸의 안개 값(<c>ty·N + tx</c>, 그 밖은 NaN) — ③ 이웃 잇기.</summary>
+    private float[] _wallLevels = [];
 
     public RenderTarget2D FogRT { get; } = fogRT;
+
+    /// <summary>
+    /// 화면 x 로 한쪽 이웃 벽 기둥 값: 칸 (ax, ay)·(bx, by)(같은 화면 x 쪽 두 이웃 — 벽 줄 방향이 둘) 중 이번 프레임 보이는 벽의 값 평균, 없으면 <paramref name="self"/>.
+    /// </summary>
+    private float Neighbor(int size, int ax, int ay, int bx, int by, float self)
+    {
+        var a = At(ax, ay);
+        var b = At(bx, by);
+        return float.IsNaN(a) ? (float.IsNaN(b) ? self : b) : float.IsNaN(b) ? a : (a + b) * 0.5f;
+
+        float At(int x, int y) => x < 0 || y < 0 || x >= size || y >= size ? float.NaN : _wallLevels[y * size + x];
+    }
 
     /// <summary>새 월드(맵): 텍스처를 맵 크기로 다시 만든다.</summary>
     public void Attach(World world)
@@ -260,11 +274,31 @@ public sealed class FogRenderer(GraphicsDevice device, Primitives prim, RenderTa
         // ③ 벽 기둥은 자기 칸 값 × 칸 중심 흐림, ④ 필요한 대상 모양
         var stamp = LightRenderer.StampToLight(f.Camera);
         batch.Begin(SpriteSortMode.Deferred, FogBlend.MaxA, SamplerState.PointClamp, null, null, null, stamp);
+        // 기둥 값 하나로 찍으면 이웃 기둥과 값이 다를 때 64px 칸 단위 계단이 보인다(2026-11-13 사용자 지적) → 먼저 보이는 벽마다 값을 구하고,
+        // 기둥을 세로 조각으로 나눠 화면 x 로 ±32 떨어진 이웃 벽 기둥(가운데) 값 쪽으로 선형으로 잇는다(ArenaRenderer.DrawItemShaded).
+        var size = arena.Grid.Size;
+        if (_wallLevels.Length != size * size)
+        {
+            _wallLevels = new float[size * size];
+            Array.Fill(_wallLevels, float.NaN);
+        }
         foreach (var i in arena.VisibleWalls)
         {
             var it = arena.Items[i];
-            var level = FogShade.WallLevel(field, iso, it.Tx, it.Ty, f.HeroDraw, f.StageTick);
-            if (level > 0f) arena.DrawItem(batch, i, prim, 1f, new Color(255, 255, 255, (int)(level * 255f)));
+            _wallLevels[it.Ty * size + it.Tx] = FogShade.WallLevel(field, iso, it.Tx, it.Ty, f.HeroDraw, f.StageTick);
+        }
+        foreach (var i in arena.VisibleWalls)
+        {
+            var it = arena.Items[i];
+            var level = _wallLevels[it.Ty * size + it.Tx];
+            var left = Neighbor(size, it.Tx - 1, it.Ty, it.Tx, it.Ty + 1, level);
+            var right = Neighbor(size, it.Tx + 1, it.Ty, it.Tx, it.Ty - 1, level);
+            if (MathF.Max(level, MathF.Max(left, right)) > 0f) arena.DrawItemShaded(batch, i, prim, level, left, right);
+        }
+        foreach (var i in arena.VisibleWalls)
+        {
+            var it = arena.Items[i];
+            _wallLevels[it.Ty * size + it.Tx] = float.NaN;
         }
         foreach (var s in f.Shapes)
             if (s.FogShape && s.Alpha > 0f && (s.Forced || FogShade.NeedsShape(field, s.Dest, s.Foot, f.HeroDraw, f.StageTick)))
