@@ -50,7 +50,6 @@ public static class GateGrates
     public static bool EnemyPassing(GateZone zone, IsoMath iso, ReadOnlySpan<Enemy> enemies)
     {
         ArgumentNullException.ThrowIfNull(zone);
-        ArgumentNullException.ThrowIfNull(iso);
         const float r2 = PassRadius * PassRadius;
         foreach (var e in enemies)
         {
