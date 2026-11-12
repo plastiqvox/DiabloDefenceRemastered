@@ -4,7 +4,8 @@ namespace DiabloDefenceRemastered.Tests.Heroes;
 
 /// <summary>
 /// 보스 묶음 B 시험 도우미: <see cref="CombatKit"/> 합성 정의에 순간이동 규칙(기획 v0.9.5 3절 첫 값)·순간이동 숙련(6절 레벨별 효과)·카드 라벨·이펙트를 더한다.
-/// 실제 <c>Data/</c> 에 기대지 않는다(실제 데이터는 <see cref="HeroBlinkTests"/> 의 엄격 로딩 시험).
+/// 실제 <c>Data/</c> 에 기대지 않는다(실제 데이터는 <see cref="HeroBlinkTests"/> 의 엄격 로딩 시험). 2026-11-13 에 실제 데이터는 1칸·96px·거리 숙련으로 바뀌었지만,
+/// 여기 값(2칸·160px·시전 숙련)은 칸 여럿·시전 0 같은 경우를 시험하려고 그대로 둔다.
 /// </summary>
 public static class BlinkKit
 {

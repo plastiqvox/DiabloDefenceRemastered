@@ -66,6 +66,21 @@ public sealed class HeroBlinkTests
     }
 
     [Fact]
+    public void DistanceStat_AddsToRule_FloorsAtMinDistance()
+    {
+        // blink_distance(숙련 Lv1·4 +24)는 규칙 거리에 더한다. 음수로 깎여도 min_distance 아래로는 안 줄어듦
+        var t = World();
+        t.Hero.Stats[StatKey.BlinkDistance] = 24f;
+        var start = t.Hero.Pos;
+        PressAndRun(t, Right, 9);
+        Assert.Equal(start.X + 184f, t.Hero.Pos.X, 3);
+
+        var rules = t.World.Defs.Rules.Hero!.Blink!;
+        t.Hero.Stats[StatKey.BlinkDistance] = -1000f;
+        Assert.Equal(rules.MinDistance, Core.Sim.Heroes.HeroBlink.Distance(t.Hero, rules));
+    }
+
+    [Fact]
     public void StopsBeforeWall()
     {
         // 벽 x = 시작 + 100: 4px 마다 clearance ≥ 몸 반경 14 인 마지막 자리 = 시작 + 84
@@ -337,7 +352,7 @@ public sealed class HeroBlinkTests
         var defs = r.Defs;
 
         var blink = defs.Rules.Hero!.Blink!;
-        Assert.Equal((2, 6f, 0.15f, 160f, 0.2f, 24f), (blink.Charges, blink.Recharge, blink.Cast, blink.Distance, blink.Invuln, blink.MinDistance));
+        Assert.Equal((1, 6f, 0.15f, 96f, 0.2f, 24f), (blink.Charges, blink.Recharge, blink.Cast, blink.Distance, blink.Invuln, blink.MinDistance));   // 2026-11-13: 1칸·96px 시작
         var fx = blink.Effect!.Effect.Def;
         Assert.Equal("fx_blink", fx.Id);
         Assert.Same(defs.Sprites.Get("miniltng"), fx.Sprite!.Def);
@@ -347,15 +362,17 @@ public sealed class HeroBlinkTests
         var mastery = defs.Passives.Get("blink_mastery");
         Assert.Equal(5, mastery.MaxLevel);
         Assert.Empty(mastery.PerLevel);
-        Assert.Equal(new Rgb(150, 190, 255), mastery.Icon!.Tint);
-        Assert.Equal("FieldRunner", mastery.Icon.Sprite.Id);
-        Assert.Equal([StatKey.BlinkCast, StatKey.BlinkCharges, StatKey.BlinkCast, StatKey.BlinkRechargePct, StatKey.BlinkCast],
+        Assert.Null(mastery.Icon!.Tint);
+        Assert.Equal("icon_teleport", mastery.Icon.Sprite.Id);
+        Assert.Equal([StatKey.BlinkDistance, StatKey.BlinkCharges, StatKey.BlinkRechargePct, StatKey.BlinkDistance, StatKey.BlinkCast],
                      mastery.Levels!.Select(l => Assert.Single(l).Key));
+        Assert.Equal([24f, 1f, -0.15f, 24f, -0.10f], mastery.Levels!.Select(l => Assert.Single(l).Value));
 
         var labels = defs.Rules.LevelUp!.StatLabels;
         Assert.Equal("순간이동 칸", labels["blink_charges"].Label);
         Assert.Equal("s", labels["blink_cast"].Unit);
         Assert.Equal(StatFormat.Pct, labels["blink_recharge_pct"].Format);
+        Assert.Equal("순간이동 거리", labels["blink_distance"].Label);
 
         var sound = defs.SoundBindings.Ui["blink"].Def;
         Assert.Equal("snd_blink", sound.Id);

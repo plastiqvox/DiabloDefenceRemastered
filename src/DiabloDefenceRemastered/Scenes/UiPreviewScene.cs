@@ -113,7 +113,7 @@ public sealed class UiPreviewScene(AppServices app) : IScene
                 hero.Potions = 2;
                 hero.Gold = 1240;
                 FullEquipment(hero);
-                Blink(hero, charges: 1, fill: 0.5f);
+                Blink(hero, charges: 0, fill: 0.5f);   // 1칸 — 다 써서 충전 중(짙은 덮개)
                 break;
             case 2:
                 hero.Hp = 48f;
@@ -122,7 +122,7 @@ public sealed class UiPreviewScene(AppServices app) : IScene
                 hero.PotionSlotsLevel = 3;
                 hero.Gold = 380;
                 FullEquipment(hero);
-                hero.Stats[StatKey.BlinkCharges] = 1;   // 숙련 Lv2 — 3칸
+                hero.Stats[StatKey.BlinkCharges] = 1;   // 숙련 Lv2 — 2칸
                 Blink(hero, charges: 0, fill: 0.3f);
                 hero.BlinkCast = 0.1f;
                 break;
@@ -165,7 +165,8 @@ public sealed class UiPreviewScene(AppServices app) : IScene
             case 8:
                 hero.Hp = 100f;
                 FullEquipment(hero);
-                Blink(hero, charges: 1, fill: 0.1f);
+                hero.Stats[StatKey.BlinkCharges] = 1;   // 2칸 중 1칸 — 다음 칸 충전 중(옅은 덮개)
+                Blink(hero, charges: 1, fill: 0.6f);
                 break;
             default:
             {

@@ -1,6 +1,7 @@
 // 무기 아이콘 가져오기 표 (설계서 1.4, 기획 5.9, 소유 WP0). 아이콘 = 원작 마법 아이콘 ctrlpan\spelicon.cel(56×56, 프레임 머리 없는 CEL)의 한 칸.
 // frame 은 1부터. 번호는 원작 마법 표의 아이콘 번호 — devilution Source/control.cpp SpellITbl(DevilutionX Source/panels/spell_icons.cpp 로 옮김, 1부터):
-// 파이어볼 SPL_FIREBALL(12) → 12, 차지드 볼트 SPL_CBOLT(30) → 39(매직 미사일 투사체가 차지드 볼트 miniltng), 홀리 볼트 SPL_HBOLT(31) → 42(비전 구체 투사체가 holy).
+// 파이어볼 SPL_FIREBALL(12) → 12, 차지드 볼트 SPL_CBOLT(30) → 39(매직 미사일 투사체가 차지드 볼트 miniltng), 홀리 볼트 SPL_HBOLT(31) → 42(비전 구체 투사체가 holy),
+// 순간이동 SPL_TELEPORT(23) → 24(주인공 순간이동 HUD 칸·순간이동 숙련 아이콘).
 // (v0.9 전에는 투사체 CL2 한 프레임을 48px 로 줄여 썼다 — 투명 섞임으로 어두웠다)
 {
   "size": 56,
@@ -8,6 +9,7 @@
   "icons": [
     { "out": "d1/icons/arcane_orbit", "cel": "ctrlpan\\spelicon.cel", "width": 56, "layers": [ { "frame": 42 } ] },
     { "out": "d1/icons/fireball", "cel": "ctrlpan\\spelicon.cel", "width": 56, "layers": [ { "frame": 12 } ] },
-    { "out": "d1/icons/magic_missile", "cel": "ctrlpan\\spelicon.cel", "width": 56, "layers": [ { "frame": 39 } ] }
+    { "out": "d1/icons/magic_missile", "cel": "ctrlpan\\spelicon.cel", "width": 56, "layers": [ { "frame": 39 } ] },
+    { "out": "d1/icons/teleport", "cel": "ctrlpan\\spelicon.cel", "width": 56, "layers": [ { "frame": 24 } ] }
   ]
 }

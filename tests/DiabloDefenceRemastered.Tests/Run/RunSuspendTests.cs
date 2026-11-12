@@ -507,7 +507,7 @@ public class RunSuspendTests
     public void ShapeFingerprint_MatchesCurrentFormat_DamageByWeaponIsSix()
     {
         // 짐·RunStats(조각 포함)·FairnessCounters·RoomRecord·RunDepth·RunSnapshot 의 공개 멤버를 바꾸면 깨진다 → RunSnapshot.CurrentFormat 과 ShapeFingerprint 를 함께 올린다
-        Assert.Equal(3, RunSnapshot.CurrentFormat);   // 보스 묶음 B: StatKey 순간이동 키 셋(CarriedStat)·RunStats.Blinks (2 = v0.9 WP1g: 짐 장비·지갑·물약 칸·만렙 순번, GoldSpent·PotionsDrunk, RoomRecord 새 열, MerchantsMet)
+        Assert.Equal(4, RunSnapshot.CurrentFormat);   // 4: StatKey.BlinkDistance, 3 = 보스 묶음 B: StatKey 순간이동 키 셋(CarriedStat)·RunStats.Blinks (2 = v0.9 WP1g: 짐 장비·지갑·물약 칸·만렙 순번, GoldSpent·PotionsDrunk, RoomRecord 새 열, MerchantsMet)
         Assert.Equal(RunSnapshot.ShapeFingerprint, RunSnapshot.ComputeShapeFingerprint());
         Assert.Equal(6, new RunStats().DamageByWeapon.Length);
         Assert.Null(typeof(RunStats).GetField("WeaponSlotCount"));    // v0.8.1: 상수 없앰

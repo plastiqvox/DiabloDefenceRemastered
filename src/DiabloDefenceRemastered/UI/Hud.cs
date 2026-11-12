@@ -33,9 +33,9 @@ public sealed record HudModel
     public int BlinkCharges { get; init; }
     /// <summary>순간이동 최대 칸(<c>HeroBlink.MaxCharges</c> — 규칙이 없으면 0, 칸을 그리지 않음).</summary>
     public int BlinkMax { get; init; }
-    /// <summary>충전 중인 첫 빈 칸의 진행(0..1 — 시계 방향 부채꼴).</summary>
+    /// <summary>충전 중인 칸의 진행(0..1 — 아이콘 위 덮개가 시계 방향으로 걷힘).</summary>
     public float BlinkFill { get; init; }
-    /// <summary>시전 중(쓰는 칸이 맥동).</summary>
+    /// <summary>시전 중(아이콘이 맥동).</summary>
     public bool BlinkCasting { get; init; }
     /// <summary>"못 함" 뒤 0.2s(칸 테가 모두 붉음 — <see cref="Hud.BlinkDeniedTicks"/>).</summary>
     public bool BlinkDenied { get; init; }
@@ -150,7 +150,7 @@ public sealed record HudModel
 /// HUD (설계서 8.2, 기획 12.1). <see cref="IWorldBound"/> — 방마다 그 월드에 다시 붙는다(7.11, <c>PlayScene</c> 이 <c>WorldRenderer → FxSystem → Hud → 미니맵 → 소리</c> 순서로).
 /// 그리기 값은 <see cref="HudModel"/>, 그리기는 <c>UiCanvas</c>(WP5).
 /// 단계 2 wp6(기획 12.1 V9·V12): 왼쪽 아래 원작 체력 구슬(<c>ui_panel8</c> 의 구슬을 둥글게 오려 청동 테 — 잃은 비율만큼 위에서 어둡게)·물약 칸 하나(<c>2/3</c>·키 <c>Q</c>),
-/// 왼쪽 위 장비 줄 여섯 칸, 오른쪽 위 지갑 금화(늘면 0.3s 금색). 그림이 없으면 코드 그림. 물약 칸 오른쪽 <see cref="TeleportReserve"/> 에 순간이동 충전 칸(보스 묶음 B — 코드 그림).
+/// 왼쪽 위 장비 줄 여섯 칸, 오른쪽 위 지갑 금화(늘면 0.3s 금색). 그림이 없으면 코드 그림. 물약 칸 오른쪽 <see cref="TeleportReserve"/> 에 순간이동 칸(원작 순간이동 아이콘 + 쿨타임 덮개).
 /// </summary>
 public sealed class Hud(AppServices app) : IWorldBound
 {
@@ -173,16 +173,14 @@ public sealed class Hud(AppServices app) : IWorldBound
     /// <summary>물약 칸(28×28 — 구슬 오른쪽 아래에 맞춤).</summary>
     public static readonly RectF PotionBox = new(88, 490, 116, 518);
     /// <summary>
-    /// 순간이동 충전 칸 자리(기획 v0.9.5 12.1 V21, 설계서 6.20 ⑳ — 물약 칸 옆, 지름 20 원을 칸 수만큼 22px 간격, 왼쪽 위 키 <c>Space</c>). <see cref="DrawBlinkSlots"/>.
+    /// 순간이동 칸(기획 v0.9.5 12.1 V21, 설계서 6.20 ⑳ — 물약 칸 오른쪽, 같은 28×28, 왼쪽 위 키 <c>Space</c>). <see cref="DrawBlinkSlot"/>.
     /// </summary>
-    public static readonly RectF TeleportReserve = new(122, 494, 214, 518);
-    /// <summary>순간이동 칸 원 지름·간격(가상 px).</summary>
-    public const float BlinkSlotSize = 20f, BlinkSlotStep = 22f;
+    public static readonly RectF TeleportReserve = new(122, 490, 150, 518);
+    /// <summary>순간이동 칸 아이콘(원작 순간이동 마법 아이콘 — <c>sprites/missiles.json</c>).</summary>
+    public const string BlinkIcon = "icon_teleport";
     /// <summary>"못 함" 붉은 테 길이(스테이지 틱, 0.2s).</summary>
     public const int BlinkDeniedTicks = 12;
-    private static readonly Rgb BlinkFullColor = new(120, 180, 255);
-    private static readonly Rgb BlinkEmptyColor = new(20, 24, 38);
-    private static readonly Rgb BlinkRimDark = new(70, 78, 96);
+    private static readonly Rgb BlinkFallbackColor = new(120, 180, 255);
     /// <summary>원작 조작판 칸 좌표: 체력 구슬 (96,0,88,88), 허리띠 칸 0 (205,21,28,28) — 가져오기 표 주석의 자리.</summary>
     public static readonly RectI OrbCell = new(96, 0, 184, 88);
     public static readonly RectI BeltCell = new(205, 21, 233, 49);
@@ -301,7 +299,7 @@ public sealed class Hud(AppServices app) : IWorldBound
         DrawOrb(c, app, ratio, m.HealTarget, _world.Tick);
         Ui.Centered(c, string.Create(Inv, $"{MathF.Ceiling(m.Hp):0} / {MathF.Ceiling(m.MaxHp):0}"), OrbBox.Center.X, OrbBox.Y1 + 2, Theme.SmallText, Theme.Text);
         DrawPotionSlot(c, app, m.Potions, m.PotionSlots, m.HealTarget >= 0f, BeltFlashing, _world.Tick);
-        DrawBlinkSlots(c, m.BlinkCharges, m.BlinkMax, m.BlinkFill, m.BlinkCasting, m.BlinkDenied, _world.Tick);
+        DrawBlinkSlot(c, app, m.BlinkCharges, m.BlinkMax, m.BlinkFill, m.BlinkCasting, m.BlinkDenied, _world.Tick);
 
         // 체력 30% 아래 붉은 가장자리(1초 주기 — 앱 틱이 아니라 스테이지 틱으로, 멈추면 같이 멈춤)
         if (ratio < 0.3f && m.MaxHp > 0)
@@ -408,34 +406,39 @@ public sealed class Hud(AppServices app) : IWorldBound
     }
 
     /// <summary>
-    /// 순간이동 충전 칸(보스 묶음 B — 기획 12.1 V21, 설계서 6.20 ⑳, 코드 그림): <paramref name="max"/> 개의 지름 20 원을 22px 간격으로 왼쪽부터.
-    /// 찬 칸 = 밝은 파랑 + 흰 테, 충전 중인 첫 빈 칸 = 위에서 시계 방향 부채꼴(<paramref name="fill"/>), 나머지 빈 칸 = 어두운 테. 왼쪽 위 키 <c>Space</c>(물약 칸 <c>Q</c> 와 같은 글꼴).
-    /// 시전 중이면 쓰는 칸(첫 빈 칸)이 맥동, "못 함" 뒤 0.2s 는 테가 모두 붉다.
+    /// 순간이동 칸(기획 12.1 V21, 설계서 6.20 ⑳ — 2026-11-13 사용자 결정: 하늘색 구슬 대신 스킬 아이콘 + 쿨타임): 물약 칸과 같은 허리띠 칸 그림 위에 원작 순간이동 아이콘.
+    /// 충전 중이면 남은 시간만큼 어두운 덮개가 12시부터 시계 방향으로 걷힌다(<paramref name="fill"/>) — 칸이 0 이면 짙게(못 씀), 남은 칸이 있으면 옅게.
+    /// 최대 칸이 2 이상이면 오른쪽 아래 <c>1/2</c>(물약 칸 숫자와 같은 꼴). 시전 중이면 아이콘이 맥동, "못 함" 뒤 0.2s 는 테가 붉다. 왼쪽 위 키 <c>Space</c>.
     /// </summary>
-    public static void DrawBlinkSlots(UiCanvas c, int charges, int max, float fill, bool casting, bool denied, int stageTick)
+    public static void DrawBlinkSlot(UiCanvas c, AppServices app, int charges, int max, float fill, bool casting, bool denied, int stageTick)
     {
         if (max <= 0) return;
         var r = TeleportReserve;
-        const float radius = BlinkSlotSize / 2f;
-        var cy = r.Y1 - radius;
-        for (var i = 0; i < max; i++)
+        if (!ItemArt.Has(app, "ui_panel8") || !ItemArt.Crop(c, app, "ui_panel8", 1, BeltCell, r, Rgb.White, 1f))
         {
-            var center = new Vector2(r.X0 + radius + i * BlinkSlotStep, cy);
-            var full = i < charges;
-            var rim = denied ? Theme.Red : full ? Theme.White : BlinkRimDark;
-            c.Disc(center, radius, rim, denied || full ? 1f : 0.9f);
-            c.Disc(center, radius - 1.5f, full ? BlinkFullColor : BlinkEmptyColor, full ? 1f : 0.92f);
-            if (!full && i == charges && fill > 0f) c.Wedge(center, radius - 2.5f, -MathF.PI / 2f, MathF.Tau * Math.Clamp(fill, 0f, 1f), BlinkFullColor, 0.75f);
-            if (casting && i == charges)
-            {
-                var pulse = 0.25f + 0.2f * MathF.Sin(stageTick * MathF.Tau / World.TicksPerSecond * 4f);
-                c.Disc(center, radius - 1.5f, Theme.White, pulse);
-            }
-            if (full) c.Disc(center + new Vector2(-3f, -3.5f), 2.5f, Theme.White, 0.45f);
+            c.Fill(r, Theme.Panel, 0.9f);
+            Ui.Outline(c, r, Theme.PanelEdge);
         }
-        var label = new RectF(r.X0 - 2, r.Y0 - 7, r.X0 + 25, r.Y0 + 4);
+        var icon = Shrink(r, 2);
+        if (!ItemArt.FitSprite(c, app, BlinkIcon, 1, icon, Rgb.White, 1f))
+            c.Disc(icon.Center, icon.Width / 2f - 2f, BlinkFallbackColor);
+        if (charges < max) c.Sweep(icon, fill, Theme.Black, charges > 0 ? 0.35f : 0.7f);
+        if (casting)
+        {
+            var pulse = 0.2f + 0.15f * MathF.Sin(stageTick * MathF.Tau / World.TicksPerSecond * 4f);
+            c.Fill(icon, Theme.White, pulse);
+        }
+        if (denied) Ui.Outline(c, Shrink(r, -1), Theme.Red, 1f, 2f);
+
+        var label = new RectF(r.X0, r.Y0, r.X0 + 26, r.Y0 + 11);
         c.Fill(label, Theme.Black, 0.6f);
         c.Text("Space", new Vector2(label.X0 + 1, label.Y0), 10f, Theme.Text);
+        if (max < 2) return;
+        var count = string.Create(Inv, $"{charges}/{max}");
+        var size = c.MeasureText(count, 11f);
+        var at = new Vector2(r.X1 - size.X - 1, r.Y1 - size.Y);
+        c.Fill(new RectF(at.X - 1, at.Y, r.X1, r.Y1), Theme.Black, 0.6f);
+        c.Text(count, at, 11f, charges >= max ? Theme.Gold : charges > 0 ? Theme.Text : Theme.TextDim);
     }
 
     /// <summary>장비 줄(HUD·결과 — 기획 12.1·12.4): 칸 <paramref name="size"/> px, <paramref name="step"/> 간격으로 여섯. 마법 = 파란 테, 빈 칸 = 어두운 실루엣.</summary>
