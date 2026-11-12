@@ -146,7 +146,7 @@ public sealed class SoundRouter(GameDefs defs)
             case CueKind.ChestDrop:
                 if (cue.Subject is RewardDef) sound = Ui(UiKeys.ChestDrop);
                 break;
-            // 보스 묶음 B(6.20 ⑲): 순간이동 도착 = ui.blink(원작 holybolt 빌림), 자리 = 도착 자리. BlinkDenied 는 연결하지 않는다(무음 — HUD 만)
+            // 보스 묶음 B(6.20 ⑲): 순간이동 도착 = ui.blink(원작 holybolt 빌림), 자리 없음(UI 소리 — 주인공 소리라 화면 어디서나 같은 크기). BlinkDenied 는 연결하지 않는다(무음 — HUD 만)
             case CueKind.Blink:
                 sound = Ui(UiKeys.Blink);
                 pos = null;

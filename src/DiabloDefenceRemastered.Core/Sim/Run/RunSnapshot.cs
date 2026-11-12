@@ -24,7 +24,7 @@ public sealed record RunSnapshot(int Format, ulong Seed, string StartActId, stri
     /// 지금 저장 모양의 판(v0.8.1 → v0.9 WP1g: 2 — 짐에 장비·지갑·물약 칸·만렙 순번, <c>RunStats.GoldSpent</c>·<c>PotionsDrunk</c>, <c>RoomRecord</c> 새 열, <c>MerchantsMet</c>).
     /// 모양 지문 시험의 기대 값(<see cref="ShapeFingerprint"/>)과 함께 올린다. 옛 판 1 의 <c>run.json</c> 은 불일치로 버려진다(8.3 — 단계 1 은 계단 저장을 쓰지 않음).
     /// 보스 묶음 B(6.20 ⑮): 3 — <c>StatKey</c> 에 순간이동 키 셋(짐 <c>CarriedStat</c> 이 담음)·<c>RunStats.Blinks</c>. 옛 판 2 의 <c>run.json</c> 은 버려진다 —
-    /// 단계 2 는 계단 저장을 쓰지 않아(8.3) 사용자 판 손실이 없다.
+    /// 액트 1 보스 방 문 단계의 계단 저장(<c>RunSession.CanSuspend</c> — 다음 액트가 있으면 열림)으로 판 2 저장을 해 둔 사용자는 그 판 하나를 잃는다(8.3, 6.20 ⑮ 가 받아들임).
     /// </summary>
     public const int CurrentFormat = 3;
 

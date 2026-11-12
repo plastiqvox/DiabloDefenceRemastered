@@ -3284,7 +3284,7 @@ public int BlinkDeniedTick = int.MinValue / 2;   // 마지막 "못 함" 틱(HUD 
 ⑭ **규칙**(계약 — `rules.hero.blink`, WP3 `rules/hero.json`, `RulesDefs.HeroBlinkRules`): `{ "charges": 2, "recharge": 6.0, "cast": 0.15, "distance": 160, "invuln": 0.2, "min_distance": 24 }`.
   `HeroBlink`(WP3 `Sim/Hero/HeroBlink.cs` static): `MaxCharges = charges + round(Stats[BlinkCharges])`(≥ 1), `CastTime = max(0, cast + Stats[BlinkCast])`, `RechargeTime = recharge × (1 + max(−0.5, Stats[BlinkRechargePct]))`.
 
-⑮ **능력치 키 셋**(계약 — `StatKey` 끝에 `blink_charges`·`blink_cast`·`blink_recharge_pct`, 기획 4.1): `CarriedStat` 이 `StatKey` 를 담아 **모양 지문이 바뀐다** → `RunSnapshot.CurrentFormat` 2 → **3**, `ShapeFingerprint` 새 값(옛 `run.json` 은 불일치로 버려짐 — 단계 2 는 계단 저장을 쓰지 않아 사용자 판 손실 없음, 8.3).
+⑮ **능력치 키 셋**(계약 — `StatKey` 끝에 `blink_charges`·`blink_cast`·`blink_recharge_pct`, 기획 4.1): `CarriedStat` 이 `StatKey` 를 담아 **모양 지문이 바뀐다** → `RunSnapshot.CurrentFormat` 2 → **3**, `ShapeFingerprint` 새 값(옛 `run.json` 은 불일치로 버려짐 — 8.3. 액트 2 데이터가 있어 액트 1 보스 방 문 단계에서 계단 저장(`CanSuspend`)이 열리므로, 판 2 로 계단 저장을 해 둔 사용자는 그 판 하나를 잃는다. 받아들임).
   `rules.level_up.stat_labels` 에 `blink_charges`(`순간이동 칸`)·`blink_cast`(`순간이동 시전`, unit `s`)·`blink_recharge_pct`(`순간이동 충전`, pct).
 
 ⑯ **패시브 레벨별 효과**(계약 — `PassiveDef.Levels`, JSON `levels`, 선택): `IReadOnlyList<IReadOnlyDictionary<StatKey, float>>`, `levels[k]` = Lv(k+1) 에 더하는 값. `HeroStats` 합산 = `per_level × L`(지금) 또는 `levels[0..L−1]` 의 합. 둘 다 적으면 오류, `levels` 길이 ≠ `max_level` 이면 오류(13.5 보탬).
@@ -6408,6 +6408,11 @@ WP6(화면·UI·입력 — 11.1 WP6) 코드가 문서와 다르게 또는 더 �
 - 낮음: 자동 조작 왕복(위 시나리오).
 - 낮음(묶음 A 지적 2, B 에 넘긴 것): 끝 내려찍기 예고·폭발이 페이즈 전환 뒤 남음 — 적 쪽(`PhaseController`·`Sim/Enemies/**`)이라 B 지시("적 쪽 동작은 고치지 않는다")대로 고치지 않았다.
 - 확인 못 함: 사람이 키보드로 `Space` 를 누르는 것(창 열림 중·창을 닫은 누름·마우스 걷기 방향 + `Space`) — 메인 세션 확인 몫. 소리를 귀로 듣지 못함(개발 실행 `--mute`). 직접 해 본 난이도 느낌. Release 빌드.
+
+**통합 때 고친 것**(검증 지적)
+- 중간: 판 중 `Space`(순간이동)가 `Confirm` 도 겸해서, 연타하다 죽으면 결과 화면이 열리자마자 `다시 하기` 로 넘어가 결과를 못 봄 → `ResultScene` 이 열린 뒤 `rules.level_up.input_lock`(0.4s) 동안 메뉴 입력을 버린다(레벨업 창과 같은 잠금, 자동 조작도 같은 잠금 뒤).
+- 낮음: `SoundRouter` 의 `CueKind.Blink` 주석이 "자리 = 도착 자리" 였으나 코드는 자리 없는 UI 소리 → 주석을 코드에 맞춤.
+- 낮음: 저장 판 3 의 "사용자 판 손실 없음" 문장(⑮·`RunSnapshot`)이 틀림 — 액트 1 보스 방 문 단계 계단 저장은 열려 있어 판 2 저장 하나는 버려진다. 문장만 고침(동작은 6.20 ⑮ 그대로).
 
 **기획서에 넘기는 것**: 시전 = 누른 뒤 0.15초(9틱)에 도착, 죽음·끝난 판의 `Space` 는 못 함 번쩍임 없이 버림, 시전 중 다시 누름 = 못 함, 순간이동 소리에 높낮이 흔들기 없음, 푸른 빛 = 그림 덧칠 + 몸 둘레 빛, HUD `Space` 글자는 칸 위, `ROOM` 줄 `blinks`·`damage`, 자동 조작은 도착 무적 중 순간이동하지 않고 무리(ⓒ)에서는 멀어지는 쪽으로.
 
