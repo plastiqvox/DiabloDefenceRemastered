@@ -111,14 +111,49 @@ public sealed class ArenaRenderer
     }
 
     /// <summary>무리 하나의 벽(0b 층 = 뒷둘레, 5층 = 앞둘레)을 칸 줄 순으로. <paramref name="alpha"/> 가 항목마다 알파(가림 반투명)를 준다.</summary>
-    public void DrawGroup(SpriteBatch batch, WallGroup group, Primitives prim, Func<int, float>? alpha = null)
+    public void DrawGroup(SpriteBatch batch, WallGroup group, Primitives prim, ShaderLight? ground = null)
     {
         foreach (var i in _visibleWalls)
         {
             var it = _items[i];
             if (it.Group != group) continue;
-            DrawItem(batch, i, prim, alpha?.Invoke(i) ?? 1f);
+            DrawItem(batch, i, prim, 1f);
+            if (ground is not null) AddGround(ground, i);
         }
+    }
+
+    /// <summary>
+    /// 셰이더 빛의 바닥 y 버퍼에 항목 하나(<see cref="ShaderLight"/>): 벽 기둥은 칸 가운데 y 를 화면 x ±32 이웃 막힌 칸 가운데 y 쪽으로 잇는 바닥선, 그 밖(바닥 위 조각·덧그림)은 칸 가운데 y.
+    /// 자원이 없으면 넣지 않는다(바닥으로 침).
+    /// </summary>
+    public void AddGround(ShaderLight ground, int index)
+    {
+        var it = _items[index];
+        if (Art is not { ColumnMeta: { } meta, Columns: { } action } art || it.Frame < 1 || it.Frame > action.Frames) return;
+        var r = action.Rect(0, it.Frame);
+        if (r.IsEmpty) return;
+        var page = art.ColumnPages[r.Page];
+        var src = new Rectangle(r.X, r.Y, r.W, r.H);
+        var c = Iso.CellCenter(it.Tx, it.Ty);
+        if (it.Kind != ArenaCellKind.Wall)
+        {
+            ground.AddGround(page, src, ItemRect(it), c.Y);
+            return;
+        }
+        var left = WallNeighborY(it.Tx - 1, it.Ty, it.Tx, it.Ty + 1, c.Y);
+        var right = WallNeighborY(it.Tx + 1, it.Ty, it.Tx, it.Ty - 1, c.Y);
+        ground.AddGroundColumn(page, src, ItemRect(it), meta.Scale, c.X, c.Y, left, right);
+    }
+
+    /// <summary>화면 x 로 한쪽 두 이웃 칸 중 막힌 칸 가운데 y(둘이면 평균, 없으면 <paramref name="self"/>).</summary>
+    private float WallNeighborY(int ax, int ay, int bx, int by, float self)
+    {
+        var a = Iso.IsInsideGrid(ax, ay) && !Grid.IsWalkable(ax, ay);
+        var b = Iso.IsInsideGrid(bx, by) && !Grid.IsWalkable(bx, by);
+        if (a && b) return (Iso.CellCenter(ax, ay).Y + Iso.CellCenter(bx, by).Y) * 0.5f;
+        if (a) return Iso.CellCenter(ax, ay).Y;
+        if (b) return Iso.CellCenter(bx, by).Y;
+        return self;
     }
 
     /// <summary>4층 항목(안쪽 벽·바닥 위 조각·아치 덧그림)을 정렬 배열에 넣는다.</summary>

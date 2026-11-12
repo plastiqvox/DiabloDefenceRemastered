@@ -29,8 +29,8 @@ public sealed class WorldFrame
 }
 
 /// <summary>
-/// 빛 지도 <c>LightRT</c> (설계서 7.7, 소유 WP5): 480×270(월드의 절반). 순서 ① 바탕으로 지움 → ② 빛 가산 → ③ 안개 합치기(<see cref="FogRenderer"/>) → ④ 유닛 최소 밝기 →
-/// <c>WorldRT</c> 에 곱하기. <c>--reveal</c> 이면 ③ 을 건너뛴다. 빛 상한 64(<see cref="LightMath.Pick"/>).
+/// 빛 지도 <c>LightRT</c> (설계서 7.7, 소유 WP5): 셰이더 빛이면 <c>WorldRT</c> 크기, 아니면 480×270(월드의 절반). 순서 ① 바탕으로 지움 → ② 빛 가산(<see cref="ShaderLight"/> 또는 빛 텍스처)
+/// → ③ 안개 합치기(<see cref="FogRenderer"/> — 안개 RT 는 늘 480×270, 늘려 합침) → ④ 유닛 최소 밝기 → <c>WorldRT</c> 에 곱하기. <c>--reveal</c> 이면 ③ 을 건너뛴다. 빛 상한 64(<see cref="LightMath.Pick"/>).
 /// </summary>
 public sealed class LightRenderer : IDisposable
 {
@@ -50,25 +50,37 @@ public sealed class LightRenderer : IDisposable
     private readonly (Vector2 Pos, float Radius, Rgb Color, float Intensity)[] _lights = new (Vector2, float, Rgb, float)[256];
     private readonly int[] _picked = new int[LightMath.MaxLights];
     private readonly int[] _scratch = new int[256];
+    private readonly (Vector2 Pos, float Radius, Rgb Color, float Intensity)[] _pickedLights = new (Vector2, float, Rgb, float)[LightMath.MaxLights];
+    private readonly ShaderLight? _shader;
+    /// <summary>④ 최소 밝기의 보조 RT(<see cref="LightRT"/> 크기).</summary>
+    private readonly RenderTarget2D _minRT;
 
-    public LightRenderer(GraphicsDevice device, Primitives prim)
+    /// <param name="lightSize"><see cref="LightRT"/> 크기 — 셰이더 빛이면 <c>WorldRT</c> 크기(전체 해상도), 아니면 480×270. 안개 RT 는 늘 480×270.</param>
+    public LightRenderer(GraphicsDevice device, Primitives prim, Int2 lightSize, ShaderLight? shader)
     {
         _device = device;
         _prim = prim;
-        LightRT = Target(device);
-        MemRT = Target(device);
-        Fog = new FogRenderer(device, prim, Target(device), MemRT);
+        _shader = shader;
+        LightSize = lightSize;
+        LightRT = Target(device, lightSize);
+        _minRT = Target(device, lightSize);
+        MemRT = Target(device, new Int2(Width, Height));
+        Fog = new FogRenderer(device, prim, Target(device, new Int2(Width, Height)), MemRT);
     }
 
     public RenderTarget2D LightRT { get; }
-    /// <summary>안개 기억 정도(7.10) — ③ 뒤 비어 ④ 최소 밝기의 보조 RT 로 다시 쓴다.</summary>
+    public Int2 LightSize { get; }
+    /// <summary>안개 기억 정도(7.10).</summary>
     public RenderTarget2D MemRT { get; }
     public FogRenderer Fog { get; }
     /// <summary>이번 프레임에 그린 빛 수(로그·측정).</summary>
     public int LightCount { get; private set; }
 
-    private static RenderTarget2D Target(GraphicsDevice device) =>
-        new(device, Width, Height, false, SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
+    private static RenderTarget2D Target(GraphicsDevice device, Int2 size) =>
+        new(device, size.X, size.Y, false, SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
+
+    /// <summary>월드 px → <see cref="LightRT"/> px(카메라 빼고 <c>LightRT 폭 / 960</c> 배).</summary>
+    private Matrix ToLight(Vector2 camera) => Matrix.CreateTranslation(-camera.X, -camera.Y, 0f) * Matrix.CreateScale(LightSize.X / (float)ArtScale.Virtual.X);
 
     /// <summary>월드 px → <c>LightRT</c> px(카메라 빼고 반으로).</summary>
     public static Matrix WorldToLight(Vector2 camera) => Matrix.CreateTranslation(-camera.X, -camera.Y, 0f) * Matrix.CreateScale(0.5f);
@@ -87,7 +99,8 @@ public sealed class LightRenderer : IDisposable
     {
         var w = f.World;
         var lighting = w.Lighting;
-        var toLight = WorldToLight(f.Camera);
+        var toLight = ToLight(f.Camera);
+        var full = new Rectangle(0, 0, LightSize.X, LightSize.Y);
 
         // ① 바탕
         _device.SetRenderTarget(LightRT);
@@ -101,13 +114,22 @@ public sealed class LightRenderer : IDisposable
             Put(ref n, LightKind.Point, p.Pos, p.Radius, p.Color, LightMath.Intensity(w.Seed, p.Id, f.StageTick, p.Flicker, p.PulsePeriod, p.PulseAmount));
         foreach (var s in f.ShortLights) Put(ref n, LightKind.Short, s.Pos, s.Radius, s.Color, s.Intensity);
         LightCount = LightMath.Pick(_candidates.AsSpan(0, n), f.HeroDraw, _picked, _scratch);
-        batch.Begin(SpriteSortMode.Deferred, LightAdd, SamplerState.LinearClamp, null, null, null, toLight);
-        for (var i = 0; i < LightCount; i++)
+        if (_shader is not null && arena is not null)
         {
-            var (pos, radius, color, k) = _lights[_picked[i]];
-            BatchX.Centered(batch, _prim.Light, pos, new Vector2(radius * 2f), new Color(color.R / 255f * k, color.G / 255f * k, color.B / 255f * k, 1f));
+            // 셰이더 빛: 바닥 자리 감쇠 + 은은한 벽 그림자(ShaderLight)
+            for (var i = 0; i < LightCount; i++) _pickedLights[i] = _lights[_picked[i]];
+            _shader.AddLights(batch, _pickedLights.AsSpan(0, LightCount), LightSize, toLight, f.Camera, w.ViewSize, arena.Iso, _prim.Pixel);
         }
-        batch.End();
+        else
+        {
+            batch.Begin(SpriteSortMode.Deferred, LightAdd, SamplerState.LinearClamp, null, null, null, toLight);
+            for (var i = 0; i < LightCount; i++)
+            {
+                var (pos, radius, color, k) = _lights[_picked[i]];
+                BatchX.Centered(batch, _prim.Light, pos, new Vector2(radius * 2f), new Color(color.R / 255f * k, color.G / 255f * k, color.B / 255f * k, 1f));
+            }
+            batch.End();
+        }
 
         // ③ 안개 합치기
         if (f.Fog && !reveal && arena is not null)
@@ -116,10 +138,10 @@ public sealed class LightRenderer : IDisposable
             var m = LightMath.Memory(lighting.Ambient, lighting.Darkness, w.Defs.Rules.Sight?.MemoryRatio ?? 0f);
             _device.SetRenderTarget(LightRT);
             batch.Begin(SpriteSortMode.Deferred, FogBlend.MulRgbBySrcA, SamplerState.LinearClamp);
-            batch.Draw(Fog.FogRT, Vector2Zero, Color.White);
+            batch.Draw(Fog.FogRT, full, Color.White);
             batch.End();
             batch.Begin(SpriteSortMode.Deferred, FogBlend.AddRgbBySrcA, SamplerState.LinearClamp);
-            batch.Draw(MemRT, Vector2Zero, new Color(m.X, m.Y, m.Z, 1f));
+            batch.Draw(MemRT, full, new Color(m.X, m.Y, m.Z, 1f));
             batch.End();
         }
 
@@ -144,13 +166,13 @@ public sealed class LightRenderer : IDisposable
         foreach (var s in f.Shapes) if (s.MinLight && s.Alpha > 0f) { any = true; break; }
         if (!any) return;
 
-        _device.SetRenderTarget(MemRT);
+        _device.SetRenderTarget(_minRT);
         _device.Clear(Color.Transparent);
         batch.Begin(SpriteSortMode.Deferred, FogBlend.CopyRgb, SamplerState.PointClamp);
         batch.Draw(LightRT, Vector2Zero, Color.White);
         batch.End();
         batch.Begin(SpriteSortMode.Deferred, FogBlend.MaxRgb, SamplerState.PointClamp);
-        batch.Draw(_prim.Pixel, new Rectangle(0, 0, Width, Height), new Color(m, m, m, 1f));
+        batch.Draw(_prim.Pixel, new Rectangle(0, 0, LightSize.X, LightSize.Y), new Color(m, m, m, 1f));
         batch.End();
         batch.Begin(SpriteSortMode.Deferred, FogBlend.MaxA, SamplerState.LinearClamp, null, null, null, toLight);
         foreach (var s in f.Shapes)
@@ -159,13 +181,14 @@ public sealed class LightRenderer : IDisposable
         batch.End();
         _device.SetRenderTarget(LightRT);
         batch.Begin(SpriteSortMode.Deferred, FogBlend.LerpRgbBySrcA, SamplerState.PointClamp);
-        batch.Draw(MemRT, Vector2Zero, Color.White);
+        batch.Draw(_minRT, Vector2Zero, Color.White);
         batch.End();
     }
 
     public void Dispose()
     {
         LightRT.Dispose();
+        _minRT.Dispose();
         MemRT.Dispose();
         Fog.Dispose();
     }
