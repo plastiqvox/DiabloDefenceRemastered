@@ -237,7 +237,8 @@ public sealed class RunSession
         }
 
         var h = world.Hero;
-        _hpIn = room.HealOnEnter && h.MaxHp > 0f ? h.MaxHp : h.Hp;
+        // 회복 문이면 들어옴 첫 틱에 채운 뒤 값(RoomFlow 와 같은 식 — v0.9.4 V15: 최대 × heal_amount, 최대에서 자름). v0.9 의 "= 최대" 가 남아 hp_in 이 늘 1 로 찍혔다(단계 2 wp6)
+        _hpIn = room.HealOnEnter && !h.Dead && h.Hp < h.MaxHp ? MathF.Min(h.MaxHp, h.Hp + h.MaxHp * Math.Clamp(_rules.Rewards.HealAmount, 0f, 1f)) : h.Hp;
         _potionsIn = h.Potions;
         _goldSpentIn = Run.Stats.GoldSpent;
         _drunkIn = Run.Stats.PotionsDrunk;
