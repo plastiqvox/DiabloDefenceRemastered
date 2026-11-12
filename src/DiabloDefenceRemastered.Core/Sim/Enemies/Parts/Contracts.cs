@@ -59,8 +59,15 @@ public interface IEnemyAction
 {
     void Begin(in EnemyCtx ctx, ref ActionState action);
     ActionStatus Tick(in EnemyCtx ctx, ref ActionState action) => ActionStatus.Done;
-    /// <summary>여러 틱 걸리는 동작(dash)인가 — <c>actions</c> 의 마지막에만 올 수 있다(검사).</summary>
+    /// <summary>
+    /// 여러 틱 걸리는 동작인가(v0.9.4, 6.20 ②): <c>barrage</c>(파도 여럿)는 한 패턴에 몇 개든 함께 돈다.
+    /// 상태를 쓰는 것(<see cref="OwnsState"/> — <c>dash</c>·<c>teleport</c>)은 <c>actions</c> 의 마지막 하나이고 다른 여러 틱 동작과 같이 둘 수 없다(검사).
+    /// </summary>
     bool MultiTick => false;
+    /// <summary><see cref="ActionState"/> 의 <c>T</c>·<c>Count</c>·<c>Sub</c>·<c>Point</c>·<c>From</c> 를 쓰는 여러 틱 동작(<c>dash</c>·<c>teleport</c>).</summary>
+    bool OwnsState => false;
+    /// <summary>진행 중에 끊김(페이즈·공포·죽음) — 표시 상태 되돌리기.</summary>
+    void Interrupt(in EnemyCtx ctx, ref ActionState action) { }
 }
 
 /// <summary><c>trigger: cooldown</c> 으로 감쌀 수 있는 동작(매개변수 <c>cooldown</c>).</summary>
@@ -115,6 +122,17 @@ public struct ActionState
     public bool Hit;
     /// <summary>이 행동이 만드는 투사체가 시야 조건을 지켜야 함(<c>shoot_projectile</c>·<c>clear_sight</c> 패턴 — <c>EnemyProjectileSpawn.SightGated</c>).</summary>
     public bool SightGated;
+    /// <summary>패턴 이벤트 프레임의 틱(v0.9.4, 6.20 ① — <c>barrage</c> 파도 k 의 틱 = 이것 + round(k × interval / Dt), 상태 없음).</summary>
+    public int BeginTick;
+    /// <summary>몇 번째 돌진(<c>dash</c> 연속, 0부터).</summary>
+    public int Count;
+    /// <summary>여러 틱 동작의 안쪽 단계(<c>dash</c>: 0 줄 예고 / 1 달림).</summary>
+    public byte Sub;
+    /// <summary>
+    /// 지난 틱 자리(돌진 몸통의 지나간 길 판정 — <c>Enemy.PrevPos</c> 는 BeginTick 이 EnemyThink 앞에서 지금 자리로 덮어 쓰므로 따로 둔다) /
+    /// 빈틈 벽의 줄 기준 주인공 자리(첫 파도 틱). 보스 묶음 A 가 더함(WP4 소유 형).
+    /// </summary>
+    public Vector2 From;
 
     public readonly bool Active => PartIndex >= 0;
 

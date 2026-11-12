@@ -47,6 +47,11 @@ public sealed partial class Enemy
     public bool Igniting;
     /// <summary>돌진 예고 중(붉은 번쩍임).</summary>
     public bool ChargeWarn;
+    /// <summary>보스 순간이동 사라짐 시작 틱·길이(틱, 0 = 사라지는 중 아님 — <c>Visual.AlphaMul</c> 1 → 0, 6.20 ⑧).</summary>
+    public int FadeOutTick;
+    public int FadeOutTicks;
+    /// <summary>순간이동 뒤 이 틱까지 그리지 않는다(<c>AlphaMul</c> 0). 그 뒤 깰 때(<see cref="WakeTick"/>)까지 0 → 1(6.20 ⑧).</summary>
+    public int HiddenUntilTick;
     /// <summary>입장·등장 끝에 생성 훅을 부를 생성 맥락(호위 데려오기는 들어온 뒤).</summary>
     public SpawnContext PendingSpawn;
     public bool SpawnHooksPending;
@@ -75,5 +80,6 @@ public sealed partial class Enemy
         Igniting = ChargeWarn = false;
         PendingSpawn = default;
         SpawnHooksPending = false;
+        FadeOutTick = FadeOutTicks = HiddenUntilTick = 0;
     }
 }

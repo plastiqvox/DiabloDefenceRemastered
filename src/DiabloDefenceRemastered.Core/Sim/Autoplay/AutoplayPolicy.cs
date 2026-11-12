@@ -32,6 +32,7 @@ public readonly record struct RewardStall(int Act, int Room, RoomPhase Phase, in
 /// <item>방(v0.7·v0.8): 정리 단계 남은 적 ≤ 10 이면 가장 가까운 적 쪽 길 방향 0.8, 정예 방 생성이 멈추면 중간 보스 쪽 0.8, 보상 단계는 보상 물체·<c>GatesExit</c> 상자로,
 /// 문 단계는 문 우선순위로 고른 문의 나가는 자리로. 문 단계가 <c>autoplay_door_skip</c> 을 넘으면 <c>Exit</c> 명령 + <see cref="DoorSkips"/>, 보상 단계가 넘으면 <see cref="RewardStalls"/>.</item>
 /// <item>방마다 판단 상태는 월드가 바뀔 때 비운다(v0.8 — 계단 저장으로 끊고 이은 판이 같게).</item>
+/// <item>보스 탄막(v0.9.4, 6.20 ⑪ — 기획 15절): 다가오는 적 탄을 피해 탄 길에 수직으로 비킴(<see cref="Dodge"/>), 보스와 180~280 을 두고 둘레를 돎(<see cref="BossOrbit"/>). 탄·보스가 없으면 0.</item>
 /// </list>
 /// </summary>
 public sealed class AutoplayPolicy(AutoplayVisit visit)
@@ -43,6 +44,10 @@ public sealed class AutoplayPolicy(AutoplayVisit visit)
     public const int PathRefreshTicks = 30;
     /// <summary>상인 문을 보물 상자와 같은 순위로 올리는 지갑(기획 15절 v0.9 첫 값 — 자동 조작 판이 상인 창을 지나가게).</summary>
     public const int MerchantGold = 150;
+    /// <summary>탄 피하기(6.20 ⑪): 보는 반경(px)·앞을 보는 시간(초)·판정 여유(px)·가중.</summary>
+    public const float DodgeRadius = 200f, DodgeLookahead = 0.8f, DodgeMargin = 10f, DodgeWeight = 2f;
+    /// <summary>보스 둘레 돌기(6.20 ⑪): 거리 띠(px)·띠 밖 가중·접선 가중.</summary>
+    public const float OrbitMin = 180f, OrbitMax = 280f, OrbitRadialWeight = 0.6f, OrbitTangentWeight = 0.4f;
 
     private readonly List<RoomVisit> _events = [];
     private readonly Dictionary<(string Map, string Room), (int Visits, int Skips, int Ticks, float Damage)> _stats = [];
@@ -144,6 +149,8 @@ public sealed class AutoplayPolicy(AutoplayVisit visit)
             move += PathDir(world, mb) * 0.8f;
         if (Visit == AutoplayVisit.Rooms && (room is null || room.Phase <= RoomPhase.Cleanup) && VisitTarget(world) is { } anchor)
             move += PathDir(world, anchor) * 0.8f;
+        move += Dodge(world);
+        move += BossOrbit(world);
         move += EdgePull(world);
         TrackInside(world);
         var len = move.Length();
@@ -295,6 +302,61 @@ public sealed class AutoplayPolicy(AutoplayVisit visit)
         }
         var l = sum.Length();
         return l > 1f ? sum / l : sum;
+    }
+
+    /// <summary>
+    /// 탄 피하기(v0.9.4, 6.20 ⑪ — 기획 15절, 결정적): 주인공 200px 안 적 투사체마다 v = 속도, r = 주인공 − 탄. 다가오면(v·r &gt; 0) t* = clamp(v·r / |v|², 0, 0.8),
+    /// 가까움 d = |r − v t*|. d &lt; 탄 반경 + (<c>hero_hit_radius</c> ?? 몸 반경) + 10 이면 normalize(r − v t*)(d ≈ 0 이면 v 의 왼쪽 수직) × (1 − t*/0.8) × 2.0 을 더한다.
+    /// 탄이 없으면 0. 묶음 B 의 자동 순간이동도 이 합을 방향으로 쓴다.
+    /// </summary>
+    public static Vector2 Dodge(World world)
+    {
+        var hero = world.Hero;
+        if (hero.Dead) return Vector2.Zero;
+        var sum = Vector2.Zero;
+        foreach (var p in world.Projectiles.Items)
+        {
+            if (p.Removed || p.Faction != Faction.Enemy || p.Motion == MotionKind.Orbit) continue;
+            var r = hero.Pos - p.Pos;
+            if (r.LengthSquared() > DodgeRadius * DodgeRadius) continue;
+            var v = p.Vel;
+            var vv = v.LengthSquared();
+            var vr = Vector2.Dot(v, r);
+            if (vv < 1e-6f || vr <= 0f) continue;
+            var t = Math.Clamp(vr / vv, 0f, DodgeLookahead);
+            var near = r - v * t;
+            var d = near.Length();
+            var hit = p.Radius + (p.Def.HeroHitRadius ?? hero.Radius) + DodgeMargin;
+            if (d >= hit) continue;
+            var away = d > 1e-3f ? near / d : Vector2.Normalize(new Vector2(-v.Y, v.X));
+            sum += away * (1f - t / DodgeLookahead) * DodgeWeight;
+        }
+        return sum;
+    }
+
+    /// <summary>
+    /// 보스 둘레 돌기(v0.9.4, 6.20 ⑪): 방이 생존 단계이고 정의 rank boss 가 들어와 살아 있으면 거리를 [180, 280] 으로 — 180 안이면 멀어지기, 280 밖이면 다가가기(길 방향) × 0.6,
+    /// 그리고 접선 × 0.4(도는 쪽 = 방 가운데 기준점에 가까워지는 쪽). 보스가 없으면 0. 방 들르기 모드(<see cref="AutoplayVisit.Rooms"/>)는 들르기가 목적이라 돌지 않는다.
+    /// </summary>
+    private Vector2 BossOrbit(World world)
+    {
+        if (Visit == AutoplayVisit.Rooms || world.Room is not { Phase: RoomPhase.Survive }) return Vector2.Zero;
+        Enemy? boss = null;
+        foreach (var e in world.Enemies.Items)
+            if (e.IsAlive && e.Life != LifeState.Entering && e.Def.Rank == DefRank.Boss) { boss = e; break; }
+        if (boss is null) return Vector2.Zero;
+        var hero = world.Hero.Pos;
+        var to = hero - boss.Pos;
+        var dist = to.Length();
+        if (dist < 1e-3f) return Vector2.Zero;
+        var radial = to / dist;
+        var move = Vector2.Zero;
+        if (dist < OrbitMin) move += radial * OrbitRadialWeight;
+        else if (dist > OrbitMax) move += PathDir(world, boss.Pos) * OrbitRadialWeight;
+        var tangent = new Vector2(-radial.Y, radial.X);
+        var center = world.Resolved is { } r && r.TryGetAnchor(RoomMapRules.CenterAnchor, out var a) ? a : world.MapSize * 0.5f;
+        if (Vector2.Dot(tangent, center - hero) < 0f) tangent = -tangent;
+        return move + tangent * OrbitTangentWeight;
     }
 
     /// <summary>맵 가장자리(경계까지 80px 안)에서 가운데 쪽으로.</summary>

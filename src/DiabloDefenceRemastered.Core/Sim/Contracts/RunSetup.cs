@@ -22,6 +22,10 @@ public sealed record RunOptions
     public bool FreezeAi { get; init; }
     /// <summary>불변식 계측(--check).</summary>
     public bool Check { get; init; }
+    /// <summary>
+    /// --boss-hp(v0.9.4, 6.20 ⑩ — 계약): 정의 rank 가 miniboss·boss 인 적이 생길 때 체력 = 최대 × 값((0, 1]). 첫 틱의 페이즈 처리가 문턱대로 넘긴다(탄막 확인용).
+    /// </summary>
+    public float? BossHp { get; init; }
 }
 
 /// <summary>개발 옵션 적용. 월드를 만들고 첫 틱 전에 등록 순서대로 부른다.</summary>

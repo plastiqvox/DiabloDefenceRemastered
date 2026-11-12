@@ -28,7 +28,7 @@ public sealed class CombatSpawner(World world) : ICombatSpawner
         p.Radius = def.Radius;
         p.Tint = def.Tint;
         p.Scale = def.Scale;
-        p.RangeLeft = def.Range ?? float.PositiveInfinity;
+        p.RangeLeft = s.Range > 0f ? s.Range : def.Range ?? float.PositiveInfinity;   // 보스 묶음 A 이음새(6.20 ⑥): 생성 사거리(바닥액)
         var life = def.Lifetime ?? float.PositiveInfinity;
         if (float.IsPositiveInfinity(life) && float.IsPositiveInfinity(p.RangeLeft)) life = HeroShots.FallbackLifetime;
         p.TimeLeft = p.Duration = life;

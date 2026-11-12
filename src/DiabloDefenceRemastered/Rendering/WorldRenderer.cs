@@ -707,12 +707,27 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
                 BatchX.Line(batch, prim.Pixel, t.Pos - n, t.End - n, 2f, color);
             }
         }
+        // 판정 점(보스 묶음 A 이음새, 6.20 ⑤): hero_hit_radius 가 있는 적 탄이 주인공 120px 안에 있으면 발 자리에 흰 점(r3)과 엷은 테(r6) — "판정만 작게" 를 읽게
+        if (HitDotVisible(w))
+        {
+            BatchX.Centered(batch, prim.Circle, f.HeroDraw, new Vector2(6f), Rgb.White.ToXna(0.9f));
+            BatchX.Centered(batch, prim.Ring, f.HeroDraw, new Vector2(12f), Rgb.White.ToXna(0.45f));
+        }
         batch.End();
 
         batch.Begin(SpriteSortMode.Deferred, BlendState.Additive, SamplerState.PointClamp, null, null, null, toTarget);
         foreach (var d in _additive) BatchX.Blit(batch, d.Texture, d.Dest, new Rectangle(d.Src.X0, d.Src.Y0, d.Src.Width, d.Src.Height), d.Color.ToXna(d.Alpha));
         foreach (var d in _glows) BatchX.Blit(batch, d.Texture, d.Dest, new Rectangle(d.Src.X0, d.Src.Y0, d.Src.Width, d.Src.Height), d.Color.ToXna(d.Alpha));
         batch.End();
+    }
+
+    /// <summary>판정 점을 그릴까: <c>hero_hit_radius</c> 가 있는 적 탄이 주인공에서 120px 안(6.20 ⑤). 시뮬레이션과 무관.</summary>
+    private static bool HitDotVisible(World w)
+    {
+        if (w.Hero.Dead) return false;
+        foreach (var p in w.Projectiles.Items)
+            if (!p.Removed && p.Faction == Faction.Enemy && p.Def.HeroHitRadius is not null && Vector2.DistanceSquared(p.Pos, w.Hero.Pos) <= 120f * 120f) return true;
+        return false;
     }
 
     private void DrawEffectSprite(SpriteBatch batch, WorldFrame f, EffectDef def, float age, Vector2 pos, float scale, Rgb tint, Vector2 dir, int start)

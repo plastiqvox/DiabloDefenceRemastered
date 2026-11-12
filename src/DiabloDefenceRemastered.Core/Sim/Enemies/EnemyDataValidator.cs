@@ -6,7 +6,9 @@ namespace DiabloDefenceRemastered.Core.Sim.Enemies;
 /// 적·스테이지 검사기 (설계서 6.14, WP4 몫). 정의끼리만 보므로 자원 없이 돈다.
 /// <list type="bullet">
 /// <item>13.5-13 예고: 큰 범위 즉발·돌진은 예고 ≥ <c>min_time</c>(자폭은 <c>fuse</c>), 무거운 근접 단일 대상은 타격 프레임까지 ≥ <c>heavy_melee_windup</c>(오류). 닿는 거리가 넘는 단일 근접은 경고.</item>
-/// <item>13.5-14 크기(경고), 부품 슬롯 &gt; 12·여러 틱 동작이 마지막이 아님·쓰는 클립 없음(오류).</item>
+/// <item>13.5-14 크기(경고), 부품 슬롯 &gt; 12·쓰는 클립 없음(오류).</item>
+/// <item>v0.9.4 보스 탄막(6.20 ②③⑧ — 13.5-13 보탬, 오류): <c>barrage</c> 가 든 패턴의 예고 &lt; <c>telegraph_min</c>, 순서 패턴에 조건 키, 조건 없는 패턴이 그 페이즈 순서에 없음,
+/// 없는 순서 ID, 한 패턴에 <c>wall</c> 둘, <c>dash</c>·<c>teleport</c> 가 마지막이 아니거나 다른 여러 틱 동작과 같이 있음, <c>teleport.appear</c> &lt; <c>telegraph_min</c>.</item>
 /// <item>13.5-15 시야(오류): 스테이지마다 주인공 빛 반경(정의와 <c>light_change</c>) 380 ≤ R ≤ 480, 나오는 <c>kite</c> 적의 띠 최대 + edge + ranged_margin ≤ R.</item>
 /// <item>13.5-17 <c>include_bosses: true</c>(경고), 13.5-18 정예 방 리듬(경고), 13.5-23 ⑥ 방 이벤트 자리(<c>RoomEvents.CheckPlacement</c>).</item>
 /// </list>
@@ -47,11 +49,17 @@ public sealed class EnemyDataValidator : IDataValidator
         var rankMul = def.Rank == DefRank.Normal && def.EliteEligible ? defs.Rules.Ranks?.Unique.Scale ?? 1f : 1f;
         if (def.Scale * rankMul > maxScale + 1e-4f) Warn($"scale {def.Scale} × 등급 {rankMul} > max_scale {maxScale} — 생성 때 잘린다(13.5-14)");
 
+        // 정해진 순서(6.20 ③): 페이즈마다 순서 ID 는 그 페이즈 완성 목록에, 순서 패턴은 조건 없음, 조건 없는 패턴은 그 페이즈 순서에
+        var sequenceOk = CheckSequences(def, Err);
+
         // 슬롯 수(접두사 최대 2개 — 부품을 가진 접두사 중 큰 둘)
         var affixParts = defs.Affixes.All.Select(a => a.Behaviors.Count).OrderByDescending(n => n).Take(2).Sum();
         EnemyKit? kit = null;
-        try { kit = EnemyKit.Build(def, index, []); }
-        catch (InvalidOperationException ex) { Err(ex.Message); }
+        if (sequenceOk)
+        {
+            try { kit = EnemyKit.Build(def, index, []); }
+            catch (InvalidOperationException ex) { Err(ex.Message); }
+        }
         if (kit is not null && kit.Count + (def.Rank == DefRank.Normal ? affixParts : 0) > PartSlots.SlotCount)
             Err($"부품 슬롯 {kit.Count} + 접두사 {affixParts} > {PartSlots.SlotCount}(6.6)");
 
@@ -91,6 +99,7 @@ public sealed class EnemyDataValidator : IDataValidator
                 Err($"{pd.Type} 가 쓰는 클립이 그림 묶음 '{def.Sprites.Id}' 에 없다");
         }
 
+        var barrage = defs.Rules.Enemies?.Barrage ?? new BarrageRulesDef();
         var patternLists = new List<IReadOnlyList<PatternDef>> { def.Patterns };
         foreach (var ph in def.Phases) patternLists.Add(ph.Patterns);
         foreach (var list in patternLists)
@@ -98,10 +107,10 @@ public sealed class EnemyDataValidator : IDataValidator
             {
                 if (set is not null && set.Clips.Get(pattern.Clip ?? ClipKind.Attack) is null)
                     Err($"패턴 '{pattern.Id}' 의 클립 {pattern.Clip ?? ClipKind.Attack} 이 그림 묶음 '{def.Sprites.Id}' 에 없다");
+                CheckBarragePattern(pattern, barrage, Err);
                 for (var a = 0; a < pattern.Actions.Count; a++)
                 {
                     if (pattern.Actions[a].Instance is not IEnemyAction act) continue;
-                    if (act.MultiTick && a != pattern.Actions.Count - 1) Err($"패턴 '{pattern.Id}': 여러 틱 동작 '{pattern.Actions[a].Type}' 은 actions 의 마지막에만");
                     CheckAction(act, pattern, def, rules, Err);
                     if (act is MeleeSlam { Params.Radius: null } ms && Base(ms.Params.Damage, def) >= rules.HeavyMeleeDamage)
                     {
@@ -138,6 +147,78 @@ public sealed class EnemyDataValidator : IDataValidator
     }
 
     private static float Base(float? damage, EnemyDef def) => damage ?? def.Damage;
+
+    /// <summary>
+    /// 패턴 하나의 탄막 규칙(6.20 ②⑧): <c>barrage</c> 가 들면 예고 ≥ <c>telegraph_min</c>(투사체라도 — 기획 12.6 v0.9.5), <c>wall</c> 은 하나만,
+    /// 상태를 쓰는 여러 틱 동작(<c>dash</c>·<c>teleport</c>)은 마지막 하나이고 다른 여러 틱 동작과 같이 못 둠, <c>teleport.appear</c> ≥ <c>telegraph_min</c>.
+    /// </summary>
+    private static void CheckBarragePattern(PatternDef pattern, BarrageRulesDef rules, Action<string> err)
+    {
+        var where = $"패턴 '{pattern.Id}'";
+        var barrages = 0;
+        var walls = 0;
+        var multi = 0;
+        for (var a = 0; a < pattern.Actions.Count; a++)
+        {
+            if (pattern.Actions[a].Instance is not IEnemyAction act) continue;
+            if (act is Barrage b)
+            {
+                barrages++;
+                if (b.Params.Shape == BarrageShape.Wall) walls++;
+            }
+            if (act.MultiTick) multi++;
+            if (act.OwnsState && a != pattern.Actions.Count - 1)
+                err($"{where}: 여러 틱 동작 '{pattern.Actions[a].Type}' 은 actions 의 마지막에만(6.20 ②)");
+            if (act is Teleport tp && tp.Params.Appear < rules.TelegraphMin)
+                err($"{where}: teleport appear {tp.Params.Appear}s < {rules.TelegraphMin}s(나타날 자리 예고 필수, 6.20 ⑧)");
+        }
+        if (pattern.Actions.Count > 0 && pattern.Actions[^1].Instance is IEnemyAction { OwnsState: true } && multi > 1)
+            err($"{where}: '{pattern.Actions[^1].Type}' 는 다른 여러 틱 동작과 같이 둘 수 없다(6.20 ②)");
+        if (walls > 1) err($"{where}: wall 탄막은 한 패턴에 하나만(빈틈 자리를 행동 상태 하나에 둠, 6.20 ①)");
+        if (barrages > 0 && (pattern.Telegraph?.Time ?? 0f) < rules.TelegraphMin)
+            err($"{where}: barrage 예고 {pattern.Telegraph?.Time ?? 0f}s < {rules.TelegraphMin}s(탄막 첫 발 예고 필수, 6.20 ②)");
+    }
+
+    /// <summary>정해진 순서 검사(6.20 ③). 순서 ID 가 목록에 다 있으면 참(그래야 부품 표를 만들 수 있다).</summary>
+    private static bool CheckSequences(EnemyDef def, Action<string> err)
+    {
+        var ok = true;
+        var lists = new List<IReadOnlyList<PatternDef>> { def.Patterns };
+        foreach (var ph in def.Phases) lists.Add(ph.Patterns.Count > 0 || ph.Remove.Count > 0 ? ph.Patterns : lists[^1]);
+        var seqs = new List<SequenceDef?> { def.Sequence };
+        foreach (var ph in def.Phases) seqs.Add(ph.Sequence);
+        for (var p = 0; p < lists.Count; p++)
+        {
+            var where = p == 0 ? "sequence" : $"phases[{p - 1}].sequence";
+            var list = lists[p];
+            var seq = seqs[p];
+            var inSeq = new HashSet<string>(StringComparer.Ordinal);
+            if (seq is not null)
+            {
+                if (seq.Steps.Count == 0) err($"{where}: steps 가 비었다");
+                for (var i = 0; i < seq.Steps.Count; i++)
+                {
+                    var id = seq.Steps[i].Pattern;
+                    inSeq.Add(id);
+                    if (seq.Steps[i].Wait < 0f) err($"{where}.steps[{i}]: wait 은 0 이상이어야 한다");
+                    var found = list.FirstOrDefault(x => string.Equals(x.Id, id, StringComparison.Ordinal));
+                    if (found is null)
+                    {
+                        err($"{where}.steps[{i}]: 패턴 '{id}' 가 그 페이즈 패턴 목록에 없다(6.20 ③)");
+                        ok = false;
+                    }
+                    else if (!PatternAbility.Unconditioned(found))
+                        err($"{where}.steps[{i}]: 순서 패턴 '{id}' 에 조건 키(cooldown·hp_once·range_band·clear_sight)를 두지 않는다(6.20 ③)");
+                }
+            }
+            // 조건 없는 패턴은 그 페이즈 순서에(아니면 쉼 없이 되풀이되거나 쓰이지 않는다). 순서가 하나도 없는 적은 지금 규칙 그대로(조건 없는 패턴 = 늘 시작)
+            if (seqs.TrueForAll(s => s is null)) continue;
+            foreach (var pattern in list)
+                if (PatternAbility.Unconditioned(pattern) && (pattern.Id is null || !inSeq.Contains(pattern.Id)))
+                    err($"{(p == 0 ? "patterns" : $"phases[{p - 1}]")}: 조건 없는 패턴 '{pattern.Id}' 가 그 페이즈 순서에 없다(6.20 ③)");
+        }
+        return ok;
+    }
 
     /// <summary>공격 시작부터 이벤트 프레임까지(초, 배율 전) = (event_frame − 1) × 프레임 시간.</summary>
     private static float Windup(SpriteSetDef? set, ClipKind clip, int? eventFrame)

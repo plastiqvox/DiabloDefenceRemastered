@@ -41,11 +41,18 @@ public sealed record EffectRef
     public float? Scale { get; init; }
 }
 
-/// <summary>예고 <c>{ "effect": …, "time": … }</c>.</summary>
+/// <summary>예고 <c>{ "effect": …, "time": …, "shape": …, "length": … }</c>.</summary>
 public sealed record TelegraphDef
 {
     public required DefRef<EffectDef> Effect { get; init; }
     public float Time { get; init; }
+    /// <summary>
+    /// 패턴 예고 모양(v0.9.4, 6.20 ② — 계약): <c>circle</c>(기본 — 보스 자리, 반경 = 첫 범위 동작 반경 또는 몸 반경 × 2) /
+    /// <c>line</c>(보스 → 그 틱 주인공 쪽, 폭 = 몸 지름, 길이 = <see cref="Length"/> — 마지막 동작이 <c>dash</c> 면 속도 × 시간).
+    /// </summary>
+    public TelegraphShape Shape { get; init; } = TelegraphShape.Circle;
+    /// <summary>줄 예고 길이(px, null = 160 또는 <c>dash</c> 의 속도 × 시간).</summary>
+    public float? Length { get; init; }
 }
 
 /// <summary>화면 흔들림 <c>{ "px": …, "duration": … }</c>.</summary>

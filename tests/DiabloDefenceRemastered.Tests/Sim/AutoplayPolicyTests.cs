@@ -98,4 +98,48 @@ public sealed class AutoplayPolicyTests
         Assert.True(cmd.Move.X < 0f, $"적 반대쪽으로 가지 않았다 ({cmd.Move})");
         Assert.True(cmd.Move.Length() <= 1f + 1e-4f);
     }
+
+    // ── 보스 묶음 A: 탄 피하기(6.20 ⑪, 기획 15절) ───────────────────────
+
+    /// <summary>날고 있는 적 탄 하나(가짜 이웃은 투사체를 움직이지 않는다 — 정책이 읽기만).</summary>
+    private static Projectile Bullet(TestWorld t, Vector2 offset, Vector2 vel)
+    {
+        var p = t.World.Projectiles.Add();
+        p.Def = DiabloDefenceRemastered.Tests.Enemies.BossKit.Orb;
+        p.Faction = Faction.Enemy;
+        p.Radius = 5f;
+        p.Pos = p.PrevPos = t.Hero.Pos + offset;
+        p.Vel = vel;
+        p.Speed = vel.Length();
+        return p;
+    }
+
+    [Fact]
+    public void HeadOnBullet_SidestepsPerpendicular()
+    {
+        // 오른쪽 80px 에서 120px/s 로 날아오는 탄(주인공 3px 위를 지남) — 탄 길에 수직으로, 탄 길 반대쪽(아래)으로 비킨다
+        var t = World(Defs([]));
+        Bullet(t, new Vector2(80f, -3f), new Vector2(-120f, 0f));
+        var dodge = AutoplayPolicy.Dodge(t.World);
+        Assert.True(dodge.Length() > 0.1f);
+        Assert.InRange(Vector2.Dot(Vector2.Normalize(dodge), new Vector2(-1f, 0f)), -0.01f, 0.01f);
+        Assert.True(dodge.Y > 0f);
+        var cmd = new AutoplayPolicy(AutoplayVisit.None).Next(t.World);
+        Assert.True(cmd.Move.Y > 0.1f && MathF.Abs(cmd.Move.X) < 0.05f, $"수직으로 비키지 않았다 ({cmd.Move})");
+    }
+
+    [Fact]
+    public void NoBullets_SameCommandAsBefore()
+    {
+        var t = World(Defs([]));
+        var policy = new AutoplayPolicy(AutoplayVisit.None);
+        var quiet = policy.Next(t.World);
+        Assert.Equal(Vector2.Zero, AutoplayPolicy.Dodge(t.World));
+        // 멀어지는 탄·200px 밖 탄·멀리 지나가는 탄은 셈하지 않는다 — 명령이 탄 없을 때와 같다
+        Bullet(t, new Vector2(80f, 0f), new Vector2(120f, 0f));
+        Bullet(t, new Vector2(260f, 0f), new Vector2(-120f, 0f));
+        Bullet(t, new Vector2(100f, 60f), new Vector2(-120f, 0f));
+        Assert.Equal(Vector2.Zero, AutoplayPolicy.Dodge(t.World));
+        Assert.Equal(quiet, policy.Next(t.World));
+    }
 }

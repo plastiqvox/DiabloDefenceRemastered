@@ -79,7 +79,21 @@ public sealed class DevOptionsTests
     [InlineData("--capture-at", "3")]                                // --capture 없음
     [InlineData("--seed", "1", "--seed", "2")]
     [InlineData("stray")]
+    [InlineData("--boss-hp", "0")]                                   // (0, 1] 밖
+    [InlineData("--boss-hp", "1.5")]
+    [InlineData("--boss-hp", "x")]
     public void Rejects(params string[] args) => Err(args);
+
+    /// <summary>--boss-hp(보스 묶음 A, 6.20 ⑩): (0, 1] 값이 RunOptions.BossHp 로 가고 개발 옵션 실행(저장 보호)이다.</summary>
+    [Fact]
+    public void BossHp_ParsesToRunOptions()
+    {
+        var o = Ok("--boss-hp", "0.39");
+        Assert.Equal(0.39f, o.ToRunOptions().BossHp);
+        Assert.True(o.DevRun);
+        Assert.Equal(1f, Ok("--boss-hp", "1").BossHp);
+        Assert.Null(Ok("--seed", "1").ToRunOptions().BossHp);
+    }
 
     [Fact]
     public void UnknownOption_Suggests()

@@ -42,6 +42,8 @@ public sealed record EnemyDef : IDef
     public IReadOnlyList<PartDef> Behaviors { get; init; } = [];
     public IReadOnlyList<PatternDef> Patterns { get; init; } = [];
     public IReadOnlyList<PhaseDef> Phases { get; init; } = [];
+    /// <summary>첫 페이즈의 정해진 순서(v0.9.4, 6.20 ③ — 계약). 페이즈마다 따로 적는다(<see cref="PhaseDef.Sequence"/>, 물려받지 않음).</summary>
+    public SequenceDef? Sequence { get; init; }
 
     public DeathStyle Death { get; init; } = DeathStyle.Anim;
     public DefRef<DropTableDef>? DropTable { get; init; }
@@ -110,6 +112,10 @@ public sealed record PhaseDef
     public JsonObject? Patch { get; init; }
     public IReadOnlyList<PatternDef> Add { get; init; } = [];
     public IReadOnlyList<string> Remove { get; init; } = [];
+    /// <summary>이 페이즈의 정해진 순서(v0.9.4, 6.20 ③ — 계약). <c>patch</c> 로 물려받지 않는다 — 없으면 그 페이즈는 순서 없음.</summary>
+    public SequenceDef? Sequence { get; init; }
+    /// <summary>전환 틱에 이 적이 쏜 적 투사체를 모두 지운다(v0.9.4, 6.20 ④ — 계약, 해골왕).</summary>
+    public bool ClearProjectiles { get; init; }
 
     /// <summary>
     /// 이 페이즈에서 쓰는 완성된 패턴 목록(로더가 채움, JSON 에 적지 않는다). 정의 <c>patterns</c> 에서 시작해
@@ -117,6 +123,23 @@ public sealed record PhaseDef
     /// </summary>
     [JsonIgnore]
     public IReadOnlyList<PatternDef> Patterns { get; init; } = [];
+}
+
+/// <summary>
+/// 정해진 순서(v0.9.4, 6.20 ③ — 계약, 기획 9.5 "해골왕 탄막 — 3페이즈"): <see cref="Start"/> = 그 페이즈가 시작될 때(등장·전환) 첫 칸까지 쉼(초),
+/// <see cref="Steps"/> = 칸(패턴 ID + 끝나고 쉬는 초). 끝 칸 다음은 첫 칸. 순서 패턴은 조건 키를 두지 않고 슬롯을 쓰지 않는다(시퀀서 하나가 슬롯 하나).
+/// </summary>
+public sealed record SequenceDef
+{
+    public float Start { get; init; }
+    public IReadOnlyList<SequenceStepDef> Steps { get; init; } = [];
+}
+
+/// <summary>순서 한 칸: 패턴 ID(그 페이즈 완성 목록 안) + 끝나고 쉬는 초.</summary>
+public sealed record SequenceStepDef
+{
+    public required string Pattern { get; init; }
+    public float Wait { get; init; }
 }
 
 /// <summary>광폭화. after 는 등장 시각부터 센다.</summary>

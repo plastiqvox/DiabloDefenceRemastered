@@ -4,7 +4,7 @@ using DiabloDefenceRemastered.Core.Sim.Enemies.Parts;
 namespace DiabloDefenceRemastered.Core.Sim.Enemies;
 
 /// <summary>
-/// 적·감독 모듈 (소유 WP4, 설계서 11.1): 부품 등록(일반 12 + 동작 7 — <c>ground_hazard</c> 는 동작으로 한 번, 행동 안에서는 trigger 로 감쌈),
+/// 적·감독 모듈 (소유 WP4, 설계서 11.1): 부품 등록(일반 12 + 동작 9 — <c>ground_hazard</c> 는 동작으로 한 번, 행동 안에서는 trigger 로 감쌈. 보스 묶음 A 가 <c>barrage</c>·<c>teleport</c> 를 더함),
 /// 이벤트 9종(<see cref="PartKind.StageEvent"/>), <c>Director</c>·<c>EnemyThink</c>·<c>DeathHooks</c> 시스템, 검사기(13.5-13·14·15·17·18·23 ⑥), 개발 옵션(<c>--stress</c>).
 /// </summary>
 public sealed class EnemyModule : IGameModule
@@ -51,7 +51,42 @@ public sealed class EnemyModule : IGameModule
         parts.Register<MeleeSlamParams>(A, "melee_slam", p => new MeleeSlam(p));
         parts.Register<ProjectileSpreadParams>(A, "projectile_spread", p => new ProjectileSpread(p), (p, c) => { if (p.Count < 1) c.Error("count", "1 이상이어야 한다"); });
         parts.Register<TelegraphedBlastParams>(A, "telegraphed_blast", p => new TelegraphedBlast(p), (p, c) => Positive(c, "radius", p.Radius));
-        parts.Register<DashParams>(A, "dash", p => new Dash(p), (p, c) => Positive(c, "speed", p.Speed));
+        parts.Register<DashParams>(A, "dash", p => new Dash(p), (p, c) =>
+        {
+            Positive(c, "speed", p.Speed);
+            Positive(c, "time", p.Time);
+            if (p.Chain < 1) c.Error("chain", "1 이상이어야 한다");
+            if (p.Chain > 1 && !(p.ChainPause > 0f)) c.Error("chain_pause", "0 보다 커야 한다");
+            if (p.Tail is { } t) Positive(c, "tail.every", t.Every);
+            if (p.EndSlam is { } s) Positive(c, "end_slam.radius", s.Radius);
+        });
+        parts.Register<BarrageParams>(A, "barrage", p => new Barrage(p), (p, c) =>
+        {
+            if (p.Count < 1) c.Error("count", "1 이상이어야 한다");
+            if (p.Waves < 1) c.Error("waves", "1 이상이어야 한다");
+            if (p.Waves > 1 && !(p.Interval > 0f)) c.Error("interval", "waves > 1 이면 0 보다 커야 한다");
+            if (p.Shape == BarrageShape.Wall)
+            {
+                if (p.Wall is not { } wall) c.Error("wall", "shape: wall 이면 wall 이 있어야 한다");
+                else
+                {
+                    Positive(c, "wall.spacing", wall.Spacing);
+                    Positive(c, "wall.width", wall.Width);
+                    if (wall.Gap < 1) c.Error("wall.gap", "1 이상이어야 한다");
+                    if (wall.GapRange < 0f || wall.GapShift < 0f) c.Error("wall.gap_range", "gap_range·gap_shift 는 0 이상이어야 한다");
+                }
+            }
+            else if (p.Wall is not null) c.Error("wall", "shape: wall 일 때만 쓴다");
+            if (p.RangeToHero is { } rh && (p.Shape != BarrageShape.Fan || rh.Length != 2 || rh[0] <= 0f || rh[0] > rh[1]))
+                c.Error("range_to_hero", "shape: fan 의 [a, b](0 < a ≤ b)여야 한다");
+        });
+        parts.Register<TeleportParams>(A, "teleport", p => new Teleport(p), (p, c) =>
+        {
+            Positive(c, "min", p.Min);
+            if (p.Max < p.Min) c.Error("max", "min 보다 작을 수 없다");
+            if (p.Vanish < 0f) c.Error("vanish", "0 이상이어야 한다");
+            if (p.Tries < 1) c.Error("tries", "1 이상이어야 한다");
+        });
         parts.Register<SummonParams>(A, "summon", p => new Summon(p), (p, c) => { if (p.Spawns.Count == 0) c.Error("spawns", "비었다"); });
         parts.Register<GroundHazardParams>(A, "ground_hazard", p => new GroundHazard(p), (p, c) => { Positive(c, "radius", p.Radius); Positive(c, "duration", p.Duration); });
         parts.Register<BuffAreaParams>(A, "buff_area", p => new BuffArea(p), (p, c) => Positive(c, "radius", p.Radius));

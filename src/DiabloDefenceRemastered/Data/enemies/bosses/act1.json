@@ -4,6 +4,8 @@
 // 액트 보스 드롭 dt_boss(정예 상자 3회 + 금화 100 — 기획 11.7 v0.9)는 그 적만 쓰는 표라 이 파일에 둔다(6.1). 중간 보스는 WP3 드롭 표 dt_miniboss.
 // 타격·발사 프레임: 해골왕은 기획 9.5 첫 값(내려치기 9·특수 8)을 패턴 event_frame 에 둔다(원작 표와 대조하지 못해 그림 묶음에 적지 않음).
 // 로트피스트·블랙애시는 좀비·해골 궁수 묶음 클립 값, 소환(special)은 이벤트 프레임 없이 클립 끝.
+// v0.9.5(보스 묶음 A — 설계서 6.20, 기획 9.4·9.5·38.1·13.7): 해골왕 3페이즈 탄막(정해진 순서 sequence — 순서 패턴은 조건 키가 없고 슬롯을 쓰지 않음),
+// 로트피스트 바닥액·블랙애시 불화살 연사(barrage), 새 탄 넷은 아래 projectiles(이미 가져온 fireba·farrow 를 크기·색조로 — 새 그림 없음, 주인공 판정 hero_hit_radius 6).
 {
   "enemies": [
     // 굶주린 로트피스트(기획 9.4): 좀비 묶음 + 고유 eth ×1.6, 반경 22, HP 1800. 근접 탱커 + 독 웅덩이(클립 없는 쿨 동작) + HP 50% 시체 부르기
@@ -20,10 +22,17 @@
         { "id": "slam", "range_band": [0, 52], "cooldown": 1.6, "clip": "attack",
           "actions": [ { "type": "melee_slam", "damage": 20, "knockback": 30 } ] },
         { "id": "raise", "hp_once": 0.5, "clip": "special",
-          "actions": [ { "type": "summon", "spawns": [ { "enemy": "zombie", "count": 6 } ], "radius": 120, "alive_cap": 30 } ] } ] },
+          "actions": [ { "type": "summon", "spawns": [ { "enemy": "zombie", "count": 6 } ], "radius": 120, "alive_cap": 30 } ] },
+        // 바닥액 뿌리기(기획 9.4 V20 — v0.9.5 첫 값): 또렷이 보임·거리 ≤ 360·6s, 줄 예고 0.5s → 공격 그림 타격 프레임에 독 덩어리 5발 70°, 150px/s, 맞으면 10.
+        // 덩어리마다 날아갈 거리 = 주인공까지 × 0.7·0.85·1.0·1.15·1.3(40~360), 떨어진 자리마다 장판(pj_rot_glob 의 on_end — 묶음 rot_glob 동시 8, 발밑 웅덩이와 따로)
+        { "id": "spit", "range_band": [0, 360], "cooldown": 6.0, "clip": "attack", "clear_sight": true,
+          "telegraph": { "effect": "fx_warning_line", "time": 0.5, "shape": "line" },
+          "actions": [ { "type": "barrage", "shape": "fan", "projectile": "pj_rot_glob", "count": 5, "arc": 70, "speed": 150, "damage": 10,
+                         "range_to_hero": [0.7, 1.3] } ] } ] },
 
     // 불타는 블랙애시(기획 9.4): 해골 궁수 묶음 + 고유 bashtb + 발광 ×1.5, 반경 18, HP 2500. 원거리 — kite 220~320(다가갈 때 A*),
     // 불화살 부채·불비는 또렷이 보일 때만(clear_sight), HP 60%·30% 에 불타는 해골 4 씩. 근접 없음(damage 0 — 몸이 닿아도 피해 없음)
+    // v0.9.5: 패턴 차례 = 일으키기 둘 → 불비 → 연사 → 부채. 블랙애시 불화살은 판정 6 의 pj_ash_arrow(일반 불타는 해골 궁수는 pj_fire_arrow 그대로 — 열린 질문 57)
     { "id": "blackash", "name": "불타는 블랙애시", "tags": ["undead", "fire"], "rank": "miniboss",
       "sprites": "set_skelbow", "variant": "bashtb", "glow": { "color": [255, 120, 40], "alpha": 0.2 }, "scale": 1.5, "radius": 18,
       "hp": 2500, "speed": 62, "damage": 0, "armor": 1, "knockback_resist": 0.9, "xp": 150, "movement": "astar",
@@ -38,11 +47,20 @@
         { "id": "fire_rain", "cooldown": 8.0, "clip": "attack", "clear_sight": true,
           "actions": [ { "type": "telegraphed_blast", "points": { "hero": true, "around": 3, "radius": 110 },
                          "telegraph": { "effect": "fx_warning_circle", "time": 0.8 }, "radius": 55, "damage": 18, "effect": "fx_fire_explosion" } ] },
-        { "id": "fire_fan", "range_band": [0, 340], "cooldown": 2.8, "clip": "attack", "clear_sight": true,
-          "actions": [ { "type": "projectile_spread", "projectile": "pj_fire_arrow", "count": 5, "arc": 60, "aim": "hero", "damage": 10 } ] } ] },
+        // 불화살 연사(V20 — v0.9.5 첫 값): 또렷이 보임·거리 ≤ 340·7s, 줄 예고 0.5s → 발사 프레임부터 3발 24° 를 0.18s 간격 5번, 번마다 다시 노림(15발), 240px/s, 9
+        { "id": "volley", "range_band": [0, 340], "cooldown": 7.0, "clip": "attack", "clear_sight": true,
+          "telegraph": { "effect": "fx_warning_line", "time": 0.5, "shape": "line" },
+          "actions": [ { "type": "barrage", "shape": "fan", "projectile": "pj_ash_arrow", "count": 3, "arc": 24, "speed": 240, "damage": 9,
+                         "waves": 5, "interval": 0.18, "reaim": true } ] },
+        { "id": "fire_fan", "range_band": [0, 340], "cooldown": 3.5, "clip": "attack", "clear_sight": true,
+          "actions": [ { "type": "projectile_spread", "projectile": "pj_ash_arrow", "count": 5, "arc": 60, "aim": "hero", "damage": 10 } ] } ] },
 
-    // 해골왕(기획 9.5): sking + 고유 genrl, 칸 160, 반경 30, HP 10000, 속도 55(2페이즈 70). gate_ne 방 시계 0:03(스테이지 이벤트), 등장 대사(소리 연결 enemies.skeleton_king.voice).
-    // 넉백·둔화 면역, 개별 길찾기, 광폭화 등장 3:00 뒤 피해 ×2·이동 ×1.3(기획 2.2). 2페이즈(HP 50%) = 1s 무적·흔들림 5px·붉은 발광·쿨과 발 수 덮어쓰기
+    // 해골왕(기획 9.5): sking + 고유 genrl, 칸 160, 반경 30, HP 10000, 속도 55(P2 70 · P3 75). gate_ne 방 시계 0:03(스테이지 이벤트), 등장 대사(소리 연결 enemies.skeleton_king.voice).
+    // 넉백·둔화 면역, 개별 길찾기, 광폭화 등장 3:00 뒤 피해 ×2·이동 ×1.3(기획 2.2).
+    // v0.9.5 탄막 3페이즈(기획 9.5 "해골왕 탄막 — 3페이즈", 설계 6.20): 페이즈마다 정해진 순서(sequence — 칸마다 끝나고 쉬는 초 wait, 끝 칸 다음은 처음),
+    // 순서 밖은 내려치기 하나(쉬는 동안만 끼어듦). 전환(70%·40%) = 1.5s 무적·흔들림 5px·발광·이 보스가 쏜 탄 모두 지움·1.5s 쉰 뒤 첫 칸부터. 옛 파이어볼 부채·15초 해골 소환은 없앰.
+    // 작은 탄 pj_sk_orb(판정 6) 14 · 큰 탄 22 · 벽 16 · 꼬리 12 · 돌진 25 · 끝 내려찍기 20. 둘레 탄은 원 예고, 노린 탄·돌진은 주인공 쪽 줄 예고(0.4~0.6s).
+    // 특수 그림 s 12프레임(이벤트 8 — 기획 9.5 첫 값), 공격 그림 a 16프레임(타격 9).
     { "id": "skeleton_king", "name": "해골왕", "tags": ["undead", "boss"], "rank": "boss",
       "sprites": "set_sking", "variant": "genrl", "radius": 30,
       "hp": 10000, "speed": 55, "damage": 30, "armor": 0, "knockback_resist": 1.0, "xp": 0, "movement": "astar",
@@ -50,19 +68,113 @@
       "enrage": { "after": "03:00", "damage_mul": 2, "speed_mul": 1.3 },
       "arrival": { "banner": "해골왕이 깨어났다", "time": 2.5, "shake": { "px": 4, "duration": 0.5 } },
       "patterns": [
-        // 내려치기: 거리 ≤ 90(몸 반경 합 44 + 46), 2.0s, 피해 30 — 단일 대상, 타격 프레임 9 까지 0.4s(heavy_melee_windup 0.35 이상)
+        // 내려치기(순서 밖, 세 페이즈 모두): 거리 ≤ 90(몸 반경 합 44 + 46), 2.0s, 피해 30 — 단일 대상, 타격 프레임 9 까지 0.4s(heavy_melee_windup 0.35 이상)
         { "id": "slam", "range_band": [0, 90], "cooldown": 2.0, "clip": "attack", "event_frame": 9,
           "actions": [ { "type": "melee_slam", "damage": 30, "knockback": 60, "reach": 46, "shake": { "px": 3, "duration": 0.2 } } ] },
-        { "id": "fire_fan", "cooldown": 5.0, "clip": "special", "event_frame": 8,
-          "actions": [ { "id": "spread", "type": "projectile_spread", "projectile": "pj_boss_fireball", "count": 3, "arc": 40, "aim": "hero", "damage": 20 } ] },
-        { "id": "raise", "cooldown": 15.0, "clip": "special", "event_frame": 8,
-          "actions": [ { "id": "summon", "type": "summon", "spawns": [ { "enemy": "skeleton", "count": 8 } ], "radius": 120, "alive_cap": 30 } ] } ],
+        // P1 — 부채5: 줄 0.5s → 5발 60°(주인공 가운데), 150px/s
+        { "id": "fan5", "clip": "special", "event_frame": 8,
+          "telegraph": { "effect": "fx_warning_line", "time": 0.5, "shape": "line" },
+          "actions": [ { "type": "barrage", "shape": "fan", "projectile": "pj_sk_orb", "count": 5, "arc": 60, "speed": 150, "damage": 14 } ] },
+        // P1 — 고리16 빈틈 조준(주인공 쪽이 두 탄 사이 가운데 — 반 칸 11.25° 비킴, 서 있어도 안 맞음): 원 0.6s → 사방 16발 120px/s
+        { "id": "ring16a", "clip": "special", "event_frame": 8,
+          "telegraph": { "effect": "fx_warning_circle", "time": 0.6 },
+          "actions": [ { "type": "barrage", "shape": "ring", "projectile": "pj_sk_orb", "count": 16, "speed": 120, "damage": 14, "offset": 11.25 } ] },
+        // P1 — 고리16 주인공 조준(한 발이 주인공 쪽 — 움직여야 함)
+        { "id": "ring16b", "clip": "special", "event_frame": 8,
+          "telegraph": { "effect": "fx_warning_circle", "time": 0.6 },
+          "actions": [ { "type": "barrage", "shape": "ring", "projectile": "pj_sk_orb", "count": 16, "speed": 120, "damage": 14 } ] },
+        // P1 — 돌진 베기 1번: 줄 0.6s(돌진 길, 몸 지름 폭) + 끝 자리 원 → 공격 그림을 반복하며 420px/s 0.5s(최대 210px), 지나간 길에 닿으면 25, 끝 자리 내려찍기 반경 70·20
+        { "id": "dash1", "clip": "attack", "event_frame": 9,
+          "telegraph": { "effect": "fx_warning_line", "time": 0.6, "shape": "line" },
+          "actions": [ { "type": "dash", "speed": 420, "time": 0.5, "damage": 25,
+                         "end_slam": { "radius": 70, "damage": 20, "effect": { "effect": "fx_fire_explosion", "scale": 0.8 }, "telegraph": "fx_warning_circle" } } ] } ],
+      // P1 순서(약 8.5초): 부채5 → 0.8 → 고리16(빈틈) → 0.8 → 부채5 → 0.8 → 고리16(주인공) → 1.0 → 돌진 베기 1번 → 1.2
+      "sequence": { "start": 1.5, "steps": [
+        { "pattern": "fan5", "wait": 0.8 }, { "pattern": "ring16a", "wait": 0.8 }, { "pattern": "fan5", "wait": 0.8 },
+        { "pattern": "ring16b", "wait": 1.0 }, { "pattern": "dash1", "wait": 1.2 } ] },
       "phases": [
-        { "id": "p2", "hp_below": 0.5, "invulnerable": 1.0, "shake": { "px": 5, "duration": 0.3 },
-          "glow": { "color": [255, 60, 40], "alpha": 0.3 }, "speed": 70,
-          "patch": {
-            "fire_fan": { "cooldown": 3.5, "actions_patch": { "spread": { "count": 5, "arc": 80 } } },
-            "raise":    { "cooldown": 10.0, "actions_patch": { "summon": { "spawns": [ { "enemy": "skeleton", "count": 6 }, { "enemy": "burning_dead", "count": 2 } ] } } } } } ] }
+        // P2(HP 70% 아래, 이동 70, 약 15초): 두 팔 나선 → 0.6 → 3연사 부채7 → 0.8 → 돌진 베기 3연속(꼬리 탄) → 1.0 → 해골 부르기 → 0.6 → 속도 섞기 → 1.2
+        { "id": "p2", "hp_below": 0.7, "invulnerable": 1.5, "shake": { "px": 5, "duration": 0.3 },
+          "glow": { "color": [255, 90, 40], "alpha": 0.25 }, "speed": 70, "clear_projectiles": true,
+          "remove": ["fan5", "ring16a", "ring16b", "dash1"],
+          "add": [
+            // 두 팔 나선: 원 0.6s → 2갈래를 0.2s 마다 15번(3초), 번마다 24° 돎 = 30발, 110px/s
+            { "id": "spiral2", "clip": "special", "event_frame": 8,
+              "telegraph": { "effect": "fx_warning_circle", "time": 0.6 },
+              "actions": [ { "type": "barrage", "shape": "ring", "projectile": "pj_sk_orb", "count": 2, "speed": 110, "damage": 14,
+                             "waves": 15, "interval": 0.2, "turn": 24 } ] },
+            // 3연사 부채7: 줄 0.5s → 7발 70° 를 0.35s 간격 3번, 번마다 주인공을 다시 노림 = 21발, 165px/s
+            { "id": "burst7", "clip": "special", "event_frame": 8,
+              "telegraph": { "effect": "fx_warning_line", "time": 0.5, "shape": "line" },
+              "actions": [ { "type": "barrage", "shape": "fan", "projectile": "pj_sk_orb", "count": 7, "arc": 70, "speed": 165, "damage": 14,
+                             "waves": 3, "interval": 0.35, "reaim": true } ] },
+            // 돌진 베기 3연속: 첫 줄 0.6s, 다음 줄 0.45s(서서) — 440px/s 0.45s, 둘째·셋째는 다시 노림. 꼬리 탄 48px 마다 양옆(70px/s, 사거리 240, 12), 내려찍기는 마지막 끝에만
+            { "id": "dash3", "clip": "attack", "event_frame": 9,
+              "telegraph": { "effect": "fx_warning_line", "time": 0.6, "shape": "line" },
+              "actions": [ { "type": "dash", "speed": 440, "time": 0.45, "damage": 25, "chain": 3, "chain_pause": 0.45, "reaim": true,
+                             "telegraph": { "effect": "fx_warning_line", "time": 0.45 },
+                             "tail": { "projectile": "pj_sk_orb", "every": 48, "speed": 70, "damage": 12, "range": 240 },
+                             "end_slam": { "radius": 70, "damage": 20, "effect": { "effect": "fx_fire_explosion", "scale": 0.8 }, "telegraph": "fx_warning_circle" } } ] },
+            // 해골 부르기: 특수 그림, 해골 4 반경 120(땅에서 일어남 0.4s), 이 보스가 부른 적 동시 8
+            { "id": "raise4", "clip": "special", "event_frame": 8,
+              "actions": [ { "type": "summon", "spawns": [ { "enemy": "skeleton", "count": 4 } ], "radius": 120, "alive_cap": 8 } ] },
+            // 속도 섞기: 원 0.6s → 같은 순간에 큰 탄 고리 10(75px/s, 22) + 작은 탄 고리 20(160px/s, 9° 비킴, 14)
+            { "id": "mix", "clip": "special", "event_frame": 8,
+              "telegraph": { "effect": "fx_warning_circle", "time": 0.6 },
+              "actions": [ { "type": "barrage", "shape": "ring", "projectile": "pj_sk_orb_big", "count": 10, "speed": 75, "damage": 22 },
+                           { "type": "barrage", "shape": "ring", "projectile": "pj_sk_orb", "count": 20, "speed": 160, "damage": 14, "offset": 9 } ] } ],
+          "sequence": { "start": 1.5, "steps": [
+            { "pattern": "spiral2", "wait": 0.6 }, { "pattern": "burst7", "wait": 0.8 }, { "pattern": "dash3", "wait": 1.0 },
+            { "pattern": "raise4", "wait": 0.6 }, { "pattern": "mix", "wait": 1.2 } ] } },
+        // P3(HP 40% 아래, 이동 75, 약 21초): 순간이동 → 0 → 나타남 고리20 → 0.6 → 고리+나선 겹침 → 0.8 → 순간이동 → 0 → 나타남 고리20 → 0.6 → 빈틈 벽 3파도 → 0.8
+        //   → 돌진 베기 3연속 → 1.0 → 속도 섞기 → 1.0
+        { "id": "p3", "hp_below": 0.4, "invulnerable": 1.5, "shake": { "px": 5, "duration": 0.3 },
+          "glow": { "color": [255, 40, 40], "alpha": 0.4 }, "speed": 75, "clear_projectiles": true,
+          "remove": ["spiral2", "burst7", "raise4"],
+          "add": [
+            // 순간이동: 0.25s 흐려지며 사라짐(이때부터 나타날 때까지 맞지 않고 조준되지 않음) → 주인공에게서 150~210px 걸어 닿는 자리에 원 예고 0.6s → 나타남
+            { "id": "blink", "clip": "special", "event_frame": 1,
+              "actions": [ { "type": "teleport", "min": 150, "max": 210, "vanish": 0.25, "appear": 0.6, "tries": 8, "telegraph": "fx_warning_circle",
+                             "effect": { "effect": "fx_spark", "scale": 1.5 } } ] },
+            // 나타남 고리20: 원 0.4s → 사방 20발, 주인공 쪽 반 칸(9°) 비킴, 120px/s
+            { "id": "appear20", "clip": "special", "event_frame": 8,
+              "telegraph": { "effect": "fx_warning_circle", "time": 0.4 },
+              "actions": [ { "type": "barrage", "shape": "ring", "projectile": "pj_sk_orb", "count": 20, "speed": 120, "damage": 14, "offset": 9 } ] },
+            // 고리+나선 겹침: 원 0.6s → 고리 12발을 1.0s 간격 3번(번마다 15° 돎, 125px/s) 과 함께 3갈래 나선을 0.2s 마다 15번(번마다 −20°, 100px/s)
+            { "id": "ring_spiral", "clip": "special", "event_frame": 8,
+              "telegraph": { "effect": "fx_warning_circle", "time": 0.6 },
+              "actions": [ { "type": "barrage", "shape": "ring", "projectile": "pj_sk_orb", "count": 12, "speed": 125, "damage": 14,
+                             "waves": 3, "interval": 1.0, "turn": 15 },
+                           { "type": "barrage", "shape": "ring", "projectile": "pj_sk_orb", "count": 3, "speed": 100, "damage": 14,
+                             "waves": 15, "interval": 0.2, "turn": -20 } ] },
+            // 빈틈 벽 3파도: 원 0.6s → 주인공에서 보스 쪽 260px 에 수직 줄(폭 560, 24px 간격), 빈틈 = 탄 3발 자리(통로 약 74px),
+            // 첫 빈틈 ±160px(방 난수), 다음은 앞 빈틈 ±100px, 85px/s 로 밀려옴, 1.6s 간격 3파도. 벽 칸·맵 밖 자리 탄은 만들지 않음
+            { "id": "wall", "clip": "special", "event_frame": 8,
+              "telegraph": { "effect": "fx_warning_circle", "time": 0.6 },
+              "actions": [ { "type": "barrage", "shape": "wall", "projectile": "pj_sk_orb", "speed": 85, "damage": 16, "waves": 3, "interval": 1.6,
+                             "wall": { "distance": 260, "width": 560, "spacing": 24, "gap": 3, "gap_range": 160, "gap_shift": 100 } } ] } ],
+          "sequence": { "start": 1.5, "steps": [
+            { "pattern": "blink", "wait": 0 }, { "pattern": "appear20", "wait": 0.6 }, { "pattern": "ring_spiral", "wait": 0.8 },
+            { "pattern": "blink", "wait": 0 }, { "pattern": "appear20", "wait": 0.6 }, { "pattern": "wall", "wait": 0.8 },
+            { "pattern": "dash3", "wait": 1.0 }, { "pattern": "mix", "wait": 1.0 } ] } } ] }
+  ],
+  "projectiles": [
+    // 새 탄 넷(기획 13.7 v0.9.5): 이미 가져온 원작 그림을 크기·색조로 나눈다(새 가져오기 없음). 주인공 판정 hero_hit_radius 6(열린 질문 57 — 보스·중간 보스 탄만)
+    // 해골왕 작은 탄(부채·고리·나선·연사·벽·꼬리): 파이어볼 fireba ×0.5, 반경 5, 140px/s(패턴이 덮음), 640px, 장애물 막힘, 맞으면 fx_spark ×0.6
+    { "id": "pj_sk_orb", "sprite": "fireba", "scale": 0.5, "blend": "alpha",
+      "radius": 5, "hero_hit_radius": 6, "speed": 140, "range": 640, "blocked_by_obstacles": true, "pierce": 1,
+      "hit_effect": { "effect": "fx_spark", "scale": 0.6 } },
+    // 해골왕 속도 섞기의 느린 큰 탄: fireba ×1.0, 반경 10, 75px/s, 560px
+    { "id": "pj_sk_orb_big", "sprite": "fireba", "scale": 1.0, "blend": "alpha",
+      "radius": 10, "hero_hit_radius": 6, "speed": 75, "range": 560, "blocked_by_obstacles": true, "pierce": 1, "hit_effect": "fx_spark" },
+    // 블랙애시 불화살(부채·연사): 불화살 farrow ×0.9, 반경 5, 240px/s, 380px — 일반 불타는 해골 궁수의 pj_fire_arrow 와 판정만 달라 따로 둔다(열린 질문 57)
+    { "id": "pj_ash_arrow", "sprite": "farrow", "scale": 0.9, "blend": "alpha",
+      "radius": 5, "hero_hit_radius": 6, "speed": 240, "range": 380, "blocked_by_obstacles": true, "pierce": 1, "hit_effect": "fx_spark" },
+    // 로트피스트 독 덩어리: fireba ×0.6 초록 색조, 반경 6, 150px/s, 사거리는 패턴이 정함(주인공까지 × 0.7~1.3, 40~360).
+    // 끝나면(맞음·사거리 끝·장애물) 장판 fx_poison_pool 반경 40·5s·0.5s 마다 5, 묶음 rot_glob 동시 8(발밑 독 웅덩이 poison 과 따로 — 열린 질문 59)
+    { "id": "pj_rot_glob", "sprite": "fireba", "scale": 0.6, "tint": [120, 230, 90], "blend": "alpha",
+      "radius": 6, "hero_hit_radius": 6, "speed": 150, "range": 360, "blocked_by_obstacles": true, "pierce": 1,
+      "on_end": { "effect": "fx_poison_pool", "radius": 40, "duration": 5.0, "tick": 0.5, "damage": 5, "cap_group": "rot_glob", "cap": 8 } }
   ],
   "drop_tables": [
     // 액트 보스 드롭(기획 11.7 v0.9 금화 경제·9.5): 정예 상자(3회 강화) + 금화 100. 마지막 액트(지금 액트 1)면 승리로 끝나 줍지 않는다 — 계단이 생기는 단계 3 에서 쓰인다

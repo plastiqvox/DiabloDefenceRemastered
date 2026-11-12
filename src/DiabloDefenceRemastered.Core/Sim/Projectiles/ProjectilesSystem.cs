@@ -219,7 +219,8 @@ public sealed class ProjectilesSystem : ISimSystem
     {
         var hero = world.Hero;
         if (hero.Dead || p.Faction == Faction.Hero) return false;
-        if (MathX.DistanceSqToSegment(hero.Pos, from, to) > Sq(p.Radius + hero.Radius)) return false;
+        // 보스 묶음 A 이음새(6.20 ⑤): 탄 정의에 hero_hit_radius 가 있으면 주인공 몸 반경 대신 그 값(보스·중간 보스 탄 6)
+        if (MathX.DistanceSqToSegment(hero.Pos, from, to) > Sq(p.Radius + (p.Def.HeroHitRadius ?? hero.Radius))) return false;
         var dir = FirePatternsDir(p.Vel, hero.Pos - from);
         world.Damage.ToHero(p.Owner, p.Damage, dir, p.Knockback);
         p.Pos = Vector2.Lerp(from, to, Math.Clamp(Vector2.Dot(hero.Pos - from, to - from) / MathF.Max((to - from).LengthSquared(), 1e-6f), 0f, 1f));

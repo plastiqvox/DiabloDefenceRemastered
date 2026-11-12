@@ -40,7 +40,8 @@
         { "from": "07:30", "to": "08:30", "max_alive": 135, "per_second": 3.6, "weights": { "skeleton": 20, "zombie": 15, "skeleton_archer": 10, "burning_dead": 15, "ghoul": 10 } },
         { "from": "08:30", "to": "09:00", "max_alive": 170, "per_second": 4.5, "weights": { "skeleton": 20, "zombie": 10, "skeleton_archer": 5, "burning_dead": 15, "ghoul": 10 } },
         { "from": "09:00", "to": "10:00", "max_alive": 200, "per_second": 5.5, "weights": { "skeleton": 20, "zombie": 10, "burning_dead": 15, "ghoul": 15 } },
-        { "during": "boss", "max_alive": 120, "per_second": 3.0, "weights": { "skeleton": 60, "zombie": 40 } } ],
+        // 보스 중(v0.9.5 — 120/3.0 → 40/1.2): 보스 탄막 공정 장치 ⑤(기획 9.5·10.3) — 경험치는 계속 들어오되 탄 사이를 잡몹이 막지 않게
+        { "during": "boss", "max_alive": 40, "per_second": 1.2, "weights": { "skeleton": 60, "zombie": 40 } } ],
       "events": [
         { "at": "00:00", "type": "banner", "text": "대성당", "duration": 2 },
         { "at": "02:00", "type": "march", "enemy": "skeleton_archer", "count": 5, "at_entry": "gate_ne", "toward": "center", "straight": 15 },
