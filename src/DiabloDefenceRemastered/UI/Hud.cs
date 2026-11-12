@@ -149,7 +149,7 @@ public sealed record HudModel
 /// <summary>
 /// HUD (설계서 8.2, 기획 12.1). <see cref="IWorldBound"/> — 방마다 그 월드에 다시 붙는다(7.11, <c>PlayScene</c> 이 <c>WorldRenderer → FxSystem → Hud → 미니맵 → 소리</c> 순서로).
 /// 그리기 값은 <see cref="HudModel"/>, 그리기는 <c>UiCanvas</c>(WP5).
-/// 단계 2 wp6(기획 12.1 V9·V12): 왼쪽 아래 원작 체력 구슬(<c>ui_panel8</c> 의 구슬 자리 위를 <c>ui_p8bulbs</c> 빈 구슬로 잃은 비율만큼 덮음)·물약 칸 하나(<c>2/3</c>·키 <c>Q</c>),
+/// 단계 2 wp6(기획 12.1 V9·V12): 왼쪽 아래 원작 체력 구슬(<c>ui_panel8</c> 의 구슬을 둥글게 오려 청동 테 — 잃은 비율만큼 위에서 어둡게)·물약 칸 하나(<c>2/3</c>·키 <c>Q</c>),
 /// 왼쪽 위 장비 줄 여섯 칸, 오른쪽 위 지갑 금화(늘면 0.3s 금색). 그림이 없으면 코드 그림. 물약 칸 오른쪽 <see cref="TeleportReserve"/> 에 순간이동 충전 칸(보스 묶음 B — 코드 그림).
 /// </summary>
 public sealed class Hud(AppServices app) : IWorldBound
@@ -192,12 +192,6 @@ public sealed class Hud(AppServices app) : IWorldBound
     /// </summary>
     public const int OrbLiquidTop = 5;
     public const int OrbLiquidBottom = 85;
-    /// <summary>
-    /// 조작판 윗줄(칸 좌표 행 16) — 그 위는 구슬 머리가 판 위로 솟은 부분이다. 빈 구슬 그림의 그 부분은 바둑판 반투명(원작은 뒤 화면이 비침)이라,
-    /// 덮인 동안 그 행에는 가득 찬 구슬을 먼저 깔지 않는다(깔면 붉은 머리가 비쳐 보였다 — <c>--preview ui</c> 캡처).
-    /// </summary>
-    public const int OrbPanelTop = 16;
-
     public void Attach(World world)
     {
         _world = world;
@@ -329,28 +323,43 @@ public sealed class Hud(AppServices app) : IWorldBound
         (int)MathF.Round(OrbLiquidBottom - (OrbLiquidBottom - OrbLiquidTop) * Math.Clamp(ratio, 0f, 1f));
 
     /// <summary>
-    /// 체력 구슬(기획 12.1 V12): 원작 조작판의 가득 찬 구슬 자리를 그리고 그 위를 빈 구슬 1번 프레임으로 <b>위에서</b> 잃은 비율만큼 덮는다(원작 방식).
+    /// 체력 구슬(기획 12.1 V12): 원작 조작판의 가득 찬 구슬을 원 밖은 투명하게 오린 것(<see cref="OrbArt"/>)에 청동 테를 둘러 판 조각 없이 둥글게 그리고,
+    /// <b>위에서</b> 잃은 비율만큼은 같은 구슬을 아주 어둡게(빈 유리) 그린다. 원작 빈 구슬 그림(<c>ui_p8bulbs</c>)은 회색 돌 무늬·판 윗줄·바둑판 머리가 함께 있어
+    /// 판에서 떼어 둔 둥근 구슬에서는 어색해(사용자 관찰) 쓰지 않는다.
     /// 마시는 중이면 지금 수위에서 회복이 끝날 수위까지 가득 찬 구슬을 옅게(맥동) 다시 비춰 차오름 띠. 그림이 없으면 코드 구슬.
     /// </summary>
     public static void DrawOrb(UiCanvas c, AppServices app, float ratio, float healTarget, int stageTick)
     {
         var box = OrbBox;
         var k = box.Height / OrbCell.Height;
-        if (ItemArt.Has(app, "ui_panel8") && ItemArt.Has(app, "ui_p8bulbs"))
+        if (OrbArt.TryGet(app, OrbCell, out var full, out var ms))
         {
+            // 둥글게 오린 구슬(판의 돌 무늬·모서리 없이) 둘레에 그림자 + 청동 테 — 판에서 떼어 HUD 에 단독으로 둔 구슬이라 테로 마감한다
+            var center = new Vector2(box.X0 + OrbArt.Center.X * k, box.Y0 + OrbArt.Center.Y * k);
+            var r = OrbArt.Radius * k;
+            c.Disc(center + new Vector2(0f, 2f), r + 5f, Theme.Black, 0.45f);
+            c.Disc(center, r + 3f, OrbRim);
+            c.Disc(center, r + 1.5f, OrbRimDark);
             var line = OrbLine(ratio);
-            var from = Math.Min(line, OrbPanelTop);
-            ItemArt.Crop(c, app, "ui_panel8", 1, new RectI(OrbCell.X0, from, OrbCell.X1, OrbCell.Y1), new RectF(box.X0, box.Y0 + from * k, box.X1, box.Y1), Rgb.White, 1f);
+            c.Texture(full, new RectI(0, line * ms, OrbCell.Width * ms, OrbCell.Height * ms), new RectF(box.X0, box.Y0 + line * k, box.X1, box.Y1), Rgb.White);
             if (line > 0)
-                ItemArt.Crop(c, app, "ui_p8bulbs", 1, new RectI(0, 0, OrbCell.Width, line), new RectF(box.X0, box.Y0, box.X1, box.Y0 + line * k), Rgb.White, 1f);
+                c.Texture(full, new RectI(0, 0, OrbCell.Width * ms, line * ms), new RectF(box.X0, box.Y0, box.X1, box.Y0 + line * k), OrbEmpty);
+            // 수면: 원 안 너비만큼 밝은 붉은 줄 하나(빈 유리와 액체의 경계를 또렷하게)
+            var surface = box.Y0 + line * k;
+            var dy = surface - center.Y;
+            if (ratio is > 0f and < 1f && MathF.Abs(dy) < r - 1f)
+            {
+                var half = MathF.Sqrt(r * r - dy * dy) - 1f;
+                c.Fill(new RectF(center.X - half, surface - 0.5f, center.X + half, surface + 0.5f), Theme.Red, 0.7f);
+            }
             if (healTarget >= 0f)
             {
                 var target = OrbLine(healTarget);
                 if (target < line)
                 {
                     var pulse = 0.35f + 0.15f * MathF.Sin(stageTick * MathF.Tau / World.TicksPerSecond * 2f);
-                    ItemArt.Crop(c, app, "ui_panel8", 1, new RectI(OrbCell.X0, target, OrbCell.X1, line),
-                                 new RectF(box.X0, box.Y0 + target * k, box.X1, box.Y0 + line * k), Rgb.White, pulse);
+                    c.Texture(full, new RectI(0, target * ms, OrbCell.Width * ms, line * ms),
+                              new RectF(box.X0, box.Y0 + target * k, box.X1, box.Y0 + line * k), Rgb.White, pulse);
                 }
             }
             return;
@@ -463,6 +472,11 @@ public sealed class Hud(AppServices app) : IWorldBound
     private static readonly Rgb OrbStone = new(104, 94, 80);
     private static readonly Rgb OrbStoneDark = new(46, 40, 34);
     private static readonly Rgb OrbGlass = new(14, 8, 8);
+    /// <summary>원작 구슬 둘레 테(청동 + 안쪽 어두운 줄).</summary>
+    private static readonly Rgb OrbRim = new(118, 94, 56);
+    private static readonly Rgb OrbRimDark = new(28, 20, 12);
+    /// <summary>빈 부분 = 같은 구슬에 곱하는 어두운 색(빈 유리).</summary>
+    private static readonly Rgb OrbEmpty = new(46, 36, 40);
 
     private static RectF Shrink(RectF r, float d) => new(r.X0 + d, r.Y0 + d, r.X1 - d, r.Y1 - d);
 }

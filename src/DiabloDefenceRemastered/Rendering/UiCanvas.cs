@@ -115,6 +115,13 @@ public sealed class UiCanvas(AppServices app)
         Batch.Draw(h.Texture, ScreenRect(dest), new Rectangle(source.X0, source.Y0, source.Width, source.Height), tint.ToXna(alpha));
     }
 
+    /// <summary>텍스처 <paramref name="tex"/> 의 <paramref name="source"/> 영역(premultiplied)을 그린다 — 화면 쪽이 구워 둔 텍스처(둥근 체력 구슬 — <c>UI/OrbArt</c>).</summary>
+    public void Texture(Texture2D tex, RectI source, RectF dest, Rgb tint, float alpha = 1f)
+    {
+        if (alpha <= 0f || source.Width <= 0 || source.Height <= 0) return;
+        Batch.Draw(tex, ScreenRect(dest), new Rectangle(source.X0, source.Y0, source.Width, source.Height), tint.ToXna(alpha));
+    }
+
     private Rectangle ScreenRect(RectF rect)
     {
         var a = ToScreen(rect.Min);
