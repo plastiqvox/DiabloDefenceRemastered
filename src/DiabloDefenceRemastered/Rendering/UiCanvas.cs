@@ -88,6 +88,24 @@ public sealed class UiCanvas(AppServices app)
         Batch.Draw(_circle, ScreenRect(dest), new Rectangle(0, top, size, size - top), color.ToXna(alpha));
     }
 
+    /// <summary>
+    /// 부채꼴 채우기(보스 묶음 B 이음새 — HUD 순간이동 충전 칸, 6.20 ⑳). <paramref name="startRad"/> 에서 <paramref name="sweepRad"/> 만큼(화면 좌표계 — 양수 = 시계 방향,
+    /// 위 = −π/2). 중심에서 뻗는 1px 띠를 호 위 간격이 창 픽셀 하나보다 촘촘하게 돌려 그린다(원 텍스처가 없어도 됨). 띠가 중심에서 겹치므로 불투명 채우기에 쓴다.
+    /// </summary>
+    public void Wedge(Vector2 center, float radius, float startRad, float sweepRad, Rgb color, float alpha = 1f)
+    {
+        if (alpha <= 0f || _pixel is null || radius <= 0f || MathF.Abs(sweepRad) < 1e-4f) return;
+        var c = ToScreen(center);
+        var r = radius * Scale;
+        var steps = Math.Max(2, (int)MathF.Ceiling(MathF.Abs(sweepRad) * r / 0.6f));
+        var tint = color.ToXna(alpha);
+        for (var i = 0; i <= steps; i++)
+        {
+            var a = startRad + sweepRad * i / steps;
+            Batch.Draw(_pixel, new XnaVector2(c.X, c.Y), null, tint, a, new XnaVector2(0f, 0.5f), new XnaVector2(r, 1.2f), SpriteEffects.None, 0f);
+        }
+    }
+
     /// <summary>그림 정의 <paramref name="spriteId"/> 의 <paramref name="source"/> 영역(그림 픽셀, 원색 첫 페이지)을 그린다.</summary>
     public void Sprite(string spriteId, RectI source, RectF dest, Rgb tint, float alpha = 1f)
     {

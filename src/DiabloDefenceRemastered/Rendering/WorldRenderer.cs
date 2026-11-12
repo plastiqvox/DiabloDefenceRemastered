@@ -240,8 +240,28 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         DrawUnit(batch, h.Pages[page], src, dest, Rgb.White, 1f);
         var shape = new ShapeDraw(h.Pages[page], new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, f.HeroDraw, 1f, Forced: true, MinLight: !FrontWallCovers(dest), FogShape: false);
         f.Shapes.Add(shape);
-        if (hero.HitFlashTime > 0f) _glows.Add(new GlowDraw(h.Pages[page], src, dest, Rgb.White, 0.8f));
+        // 보스 묶음 B(6.20 ㉑): 순간이동 시전 중·도착 무적 동안 푸른 가산 덧칠 — 피격 번쩍임과 겹치면 덧칠만.
+        // 그림 색조 덧칠은 그림 색에 곱해져 붉은 옷 위에서는 거의 안 보여(캡처) 몸 둘레 푸른 빛(빛 텍스처)을 같은 색·알파로 한 겹 더 깐다(기획 38.2 "주인공에 푸른 빛")
+        if (!hero.Dead && (hero.BlinkCast > 0f || hero.BlinkInvulnTime > 0f))
+        {
+            _glows.Add(new GlowDraw(h.Pages[page], src, dest, BlinkGlow, BlinkGlowAlpha));
+            if (_lightTex is { } light)
+            {
+                var c = dest.Center;
+                var half = MathF.Max(dest.Width, dest.Height) * 0.6f;
+                _additive.Add(new GlowDraw(light, new RectI(0, 0, light.Width, light.Height), new RectF(c.X - half, c.Y - half, c.X + half, c.Y + half), BlinkGlow, BlinkGlowAlpha));
+            }
+        }
+        else if (hero.HitFlashTime > 0f) _glows.Add(new GlowDraw(h.Pages[page], src, dest, Rgb.White, 0.8f));
     }
+
+    /// <summary>순간이동 덧칠 색(150,190,255 — 숙련 아이콘 색조와 같음).</summary>
+    private static readonly Rgb BlinkGlow = new(150, 190, 255);
+    /// <summary>
+    /// 덧칠 알파. 가산 묶음은 미리 곱한 색에 알파를 한 번 더 곱해(SourceAlpha) 실제 세기 ≈ 알파² 다 — 설계 α0.35 를 그대로 넣으면 0.12 라 캡처에서 보이지 않아
+    /// 0.6(실제 ≈ 0.36)으로 둔다.
+    /// </summary>
+    private const float BlinkGlowAlpha = 0.6f;
 
     private void DrawEnemy(SpriteBatch batch, WorldFrame f, Enemy e)
     {

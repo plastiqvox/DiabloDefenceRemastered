@@ -43,6 +43,8 @@ public sealed class PlayScene : IScene
     // ROOM 줄의 RoomRecord 밖 값(RunLog.RoomLogExtra): 방 시작 때 처치·얻은 금화·최대 체력
     private int _killsBase;
     private int _goldBase;
+    private int _blinksBase;
+    private float _damageBase;
     private float _maxHpIn;
 
     private int _transitionTicks;
@@ -64,6 +66,8 @@ public sealed class PlayScene : IScene
         _loggedRooms = session.Run.Rooms.Count;   // 이어 하기면 앞 판의 방 줄은 이미 로그에 있다
         _killsBase = session.Run.Stats.Kills;
         _goldBase = session.Run.Stats.Gold;
+        _blinksBase = session.Run.Stats.Blinks;
+        _damageBase = session.Run.Stats.DamageTaken;
         _maxHpIn = session.World.Hero.MaxHp;
     }
 
@@ -310,9 +314,12 @@ public sealed class PlayScene : IScene
         var stats = _session.Run.Stats;
         for (; _loggedRooms < rooms.Count; _loggedRooms++)
         {
-            _flow.Log.Info(RunLog.Room(rooms[_loggedRooms], new RoomLogExtra(_maxHpIn, stats.Kills - _killsBase, stats.Gold - _goldBase)));
+            _flow.Log.Info(RunLog.Room(rooms[_loggedRooms], new RoomLogExtra(_maxHpIn, stats.Kills - _killsBase, stats.Gold - _goldBase,
+                                                                              stats.Blinks - _blinksBase, stats.DamageTaken - _damageBase)));
             _killsBase = stats.Kills;
             _goldBase = stats.Gold;
+            _blinksBase = stats.Blinks;
+            _damageBase = stats.DamageTaken;
         }
     }
 
