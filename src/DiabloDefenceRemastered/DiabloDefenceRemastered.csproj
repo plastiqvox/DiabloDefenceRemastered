@@ -6,6 +6,8 @@
     <RootNamespace>DiabloDefenceRemastered</RootNamespace>
     <AssemblyName>DiabloDefenceRemastered</AssemblyName>
     <TieredPGO>true</TieredPGO>
+    <!-- 화면 배율 인식(흐린 확대 막기) — app.manifest 주석 -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- 자원 폴더(원작 exe PNG + 가져오기 도구 출력 d1\). 검사·복사가 같이 읽는다.
          게임의 자원 폴더를 바꾸는 길은 이 속성 하나다: -p:DdrAssetDir=<빈 폴더> -p:SkipAssetCheck=true -o <임시 폴더> (1.4) -->
     <DdrAssetDir Condition="'$(DdrAssetDir)' == ''">$(MSBuildProjectDirectory)\Assets</DdrAssetDir>
