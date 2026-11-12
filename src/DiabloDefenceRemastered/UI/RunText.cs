@@ -135,7 +135,7 @@ public static class RunText
         {
             var pct = key is StatKey.MaxHpPct or StatKey.DamagePct or StatKey.CooldownPct or StatKey.MovePct or StatKey.AreaPct;
             var amount = pct ? value * 100f : value;
-            var sign = amount < 0 ? "−" : "+";
+            var sign = amount < 0 ? "-" : "+";   // U+2212 는 화면 글꼴에서 빈칸으로 찍혔다(단계 2 wp6 캡처)
             var name = key switch
             {
                 StatKey.MaxHpPct or StatKey.MaxHp => "최대 체력",

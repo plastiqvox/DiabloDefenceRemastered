@@ -20,11 +20,14 @@ public sealed record HudModel
     public float Hp { get; init; }
     public float MaxHp { get; init; }
     public int Kills { get; init; }
+    /// <summary>지갑(v0.9 — <c>Hero.Gold</c>, 상인에게 쓰는 금화. 얻은 금화 누적 <c>RunStats.Gold</c> 가 아니다 — 기획 12.1).</summary>
     public int Gold { get; init; }
     /// <summary>물약 칸의 물약 수(v0.9.1 — v0.8 의 허리띠 수. 물약 칸 그리기·<c>2/3</c> 는 WP6).</summary>
     public int Potions { get; init; }
     /// <summary>물약 칸 수(<c>rules.hero.potions</c> 의 지금 칸 — 규칙이 없으면 0).</summary>
     public int PotionSlots { get; init; }
+    /// <summary>마시는 중이면 회복이 끝났을 때의 체력 비율(구슬 위 차오름 띠 — 기획 12.1), 아니면 −1.</summary>
+    public float HealTarget { get; init; } = -1f;
     public int WeaponSlotsOpen { get; init; }
     public int PassiveSlotsOpen { get; init; }
     /// <summary><c>대성당 4 / 9</c>(방 없는 월드는 null).</summary>
@@ -66,9 +69,10 @@ public sealed record HudModel
             Hp = hero.Hp,
             MaxHp = hero.MaxHp,
             Kills = world.RunStats.Kills,
-            Gold = world.RunStats.Gold,
+            Gold = hero.Gold,
             Potions = hero.Potions,
             PotionSlots = world.Defs.Rules.Hero?.Potions?.Capacity(hero.PotionSlotsLevel) ?? 0,
+            HealTarget = hero.Heal.Active && hero.MaxHp > 0f ? Math.Clamp((hero.Hp + hero.Heal.Remaining) / hero.MaxHp, 0f, 1f) : -1f,
             WeaponSlotsOpen = Math.Clamp(hero.WeaponSlotsOpen, 0, WeaponSlots.SlotCount),
             PassiveSlotsOpen = Math.Clamp(hero.PassiveSlotsOpen, 0, PassiveSlots.SlotCount),
             RoomLine = roomLine,
@@ -127,6 +131,8 @@ public sealed record HudModel
 /// <summary>
 /// HUD (설계서 8.2, 기획 12.1). <see cref="IWorldBound"/> — 방마다 그 월드에 다시 붙는다(7.11, <c>PlayScene</c> 이 <c>WorldRenderer → FxSystem → Hud → 미니맵 → 소리</c> 순서로).
 /// 그리기 값은 <see cref="HudModel"/>, 그리기는 <c>UiCanvas</c>(WP5).
+/// 단계 2 wp6(기획 12.1 V9·V12): 왼쪽 아래 원작 체력 구슬(<c>ui_panel8</c> 의 구슬 자리 위를 <c>ui_p8bulbs</c> 빈 구슬로 잃은 비율만큼 덮음)·물약 칸 하나(<c>2/3</c>·키 <c>Q</c>),
+/// 왼쪽 위 장비 줄 여섯 칸, 오른쪽 위 지갑 금화(늘면 0.3s 금색). 그림이 없으면 코드 그림. 물약 칸 오른쪽 <see cref="TeleportReserve"/> 는 다음 묶음 순간이동 충전 칸 자리(지금은 비움).
 /// </summary>
 public sealed class Hud(AppServices app) : IWorldBound
 {
@@ -136,28 +142,68 @@ public sealed class Hud(AppServices app) : IWorldBound
 
     public Minimap Minimap { get; } = new(app);
 
-    /// <summary>허리띠 번쩍임 길이(스테이지 틱, 0.3s).</summary>
+    /// <summary>물약 칸·금화 번쩍임 길이(스테이지 틱, 0.3s).</summary>
     public const int BeltFlashTicks = 18;
 
     private int _beltFlashTick = int.MinValue / 2;
+    private int _goldFlashTick = int.MinValue / 2;
+    private int _lastGold;
+
+    // ── 왼쪽 아래 배치(가상 px) ──────────────────────
+    /// <summary>체력 구슬 자리(지름 72 — 기획 12.1 V12, 원본 88×88 을 줄임).</summary>
+    public static readonly RectF OrbBox = new(8, 446, 80, 518);
+    /// <summary>물약 칸(28×28 — 구슬 오른쪽 아래에 맞춤).</summary>
+    public static readonly RectF PotionBox = new(88, 490, 116, 518);
+    /// <summary>
+    /// 다음 묶음 "보스 탄막·순간이동" 의 순간이동 충전 칸 자리(기획 v0.9.4 12.1 V21 — 물약 칸 옆, 작은 원 2~4개 · 22px 간격). 지금은 아무것도 그리지 않는다.
+    /// </summary>
+    public static readonly RectF TeleportReserve = new(122, 494, 214, 518);
+    /// <summary>원작 조작판 칸 좌표: 체력 구슬 (96,0,88,88), 허리띠 칸 0 (205,21,28,28) — 가져오기 표 주석의 자리.</summary>
+    public static readonly RectI OrbCell = new(96, 0, 184, 88);
+    public static readonly RectI BeltCell = new(205, 21, 233, 49);
+    /// <summary>
+    /// 구슬 액체가 차는 줄(칸 좌표 행): 가득 = <see cref="OrbLiquidTop"/>, 빔 = <see cref="OrbLiquidBottom"/>. 원작은 빈 구슬을 위에서 (85 − 80 × 비율) 행까지 덮는다
+    /// (DevilutionX 참고 — 조작판 구슬 높이 80). 그 사이를 비율대로 나눈다.
+    /// </summary>
+    public const int OrbLiquidTop = 5;
+    public const int OrbLiquidBottom = 85;
+    /// <summary>
+    /// 조작판 윗줄(칸 좌표 행 16) — 그 위는 구슬 머리가 판 위로 솟은 부분이다. 빈 구슬 그림의 그 부분은 바둑판 반투명(원작은 뒤 화면이 비침)이라,
+    /// 덮인 동안 그 행에는 가득 찬 구슬을 먼저 깔지 않는다(깔면 붉은 머리가 비쳐 보였다 — <c>--preview ui</c> 캡처).
+    /// </summary>
+    public const int OrbPanelTop = 16;
 
     public void Attach(World world)
     {
         _world = world;
         _warnedBossBars = false;
         _beltFlashTick = int.MinValue / 2;
+        _goldFlashTick = int.MinValue / 2;
+        _lastGold = world.Hero.Gold;
     }
 
     /// <summary>물약을 마심(v0.9.1 <c>CueKind.PotionDrink</c> — v0.8 의 허리띠 저절로 마심을 바꿈. <c>PlayScene</c> 이 표시 이벤트를 소비할 때 알림). 그 신호의 스테이지 틱부터 번쩍임.</summary>
     public void OnPotionDrink(int stageTick) => _beltFlashTick = stageTick;
 
-    /// <summary>허리띠 칸이 번쩍이는 중인가(스테이지 틱 — 멈추면 같이 멈춤).</summary>
+    /// <summary>물약 칸이 번쩍이는 중인가(스테이지 틱 — 멈추면 같이 멈춤).</summary>
     public bool BeltFlashing => _world is { } w && w.Tick - _beltFlashTick < BeltFlashTicks;
 
-    /// <summary>앱 틱마다(<c>PlayScene</c>): 보스 막대가 4줄을 넘으면 로그 경고 한 번(8.2) — 그리지 않는 실행에서도 같게 틱에서 본다.</summary>
+    /// <summary>지갑 금화가 늘어 번쩍이는 중인가(기획 12.1 — 0.3s 금색).</summary>
+    public bool GoldFlashing => _world is { } w && w.Tick - _goldFlashTick < BeltFlashTicks;
+
+    /// <summary>미리보기(<c>--preview ui</c>)가 금화 번쩍임을 켠다.</summary>
+    public void FlashGold() { if (_world is { } w) _goldFlashTick = w.Tick; }
+
+    /// <summary>
+    /// 앱 틱마다(<c>PlayScene</c>): 지갑이 늘었으면 금화 번쩍임, 보스 막대가 4줄을 넘으면 로그 경고 한 번(8.2) — 그리지 않는 실행에서도 같게 틱에서 본다.
+    /// </summary>
     public void Tick()
     {
-        if (_world is not { } world || _warnedBossBars || world.BossBars.Count <= HudModel.MaxBossBars) return;
+        if (_world is not { } world) return;
+        var gold = world.Hero.Gold;
+        if (gold > _lastGold) _goldFlashTick = world.Tick;
+        _lastGold = gold;
+        if (_warnedBossBars || world.BossBars.Count <= HudModel.MaxBossBars) return;
         _warnedBossBars = true;
         app.Log.Warn($"HUD 보스 막대 {world.BossBars.Count}줄 — 최대 {HudModel.MaxBossBars}줄만 그림(8.2)");
     }
@@ -185,6 +231,8 @@ public sealed class Hud(AppServices app) : IWorldBound
             var slot = hero.Passives[i];
             DrawSlot(c, box, slot.Def?.Icon, slot.IsEmpty ? 0 : slot.Level, slot.Def?.MaxLevel ?? 0, false);
         }
+        // 그 아래 장비 줄(v0.9 — 칸 여섯 20×20: 투구·갑옷·방패·지팡이·반지·반지, 마법은 파란 테, 빈 칸은 어두운 실루엣. 보기만)
+        DrawEquipmentRow(c, app, hero.Equipment, 8, 86, 20, 24);
 
         // 위 가운데 방 줄·방 상태
         var y = 12f;
@@ -221,32 +269,19 @@ public sealed class Hud(AppServices app) : IWorldBound
             y += h + 6;
         }
 
-        // 오른쪽 위 처치·금화, 그 아래 미니맵
+        // 오른쪽 위 처치·지갑 금화(GoldIcon + 숫자, 늘면 0.3s 금색 — 기획 12.1), 그 아래 미니맵
         Ui.Right(c, $"처치 {RunText.Number(m.Kills)}", Theme.Width - 8, 30, Theme.BodyText, Theme.Text);
-        Ui.Right(c, $"금화 {RunText.Number(m.Gold)}", Theme.Width - 8, 50, Theme.BodyText, Theme.Gold);
+        var goldText = RunText.Number(m.Gold);
+        var goldWidth = c.MeasureText(goldText, Theme.BodyText).X;
+        Ui.Right(c, goldText, Theme.Width - 8, 50, Theme.BodyText, GoldFlashing ? Theme.Gold : Theme.Text);
+        ItemArt.Gold(c, app, new RectF(Theme.Width - 30 - goldWidth, 50, Theme.Width - 12 - goldWidth, 68));
         Minimap.Draw(c, rc, new Vector2(Theme.Width - 8, 72));
 
-        // 왼쪽 아래 체력 구슬(기획 12.1 — 지름 64 원, 붉은 액체가 비율만큼 아래에서 차오름, 가장자리 돌 테. 코드 그림) + 허리띠 둘
-        var orb = new Vector2(44, Theme.Height - 44);
+        // 왼쪽 아래 체력 구슬 + 물약 칸
         var ratio = m.MaxHp > 0 ? Math.Clamp(m.Hp / m.MaxHp, 0f, 1f) : 0f;
-        c.Disc(orb, OrbRadius, OrbStone);                                  // 돌 테(바깥)
-        c.Disc(orb, OrbRadius - 2f, OrbStoneDark);                         // 돌 테 안쪽 그림자
-        c.Disc(orb, OrbRadius - 4f, OrbGlass, 0.95f);                      // 빈 유리
-        c.Disc(orb, OrbRadius - 4f, Theme.DarkRed, 1f, ratio);             // 액체(어두운 바닥)
-        var liquid = OrbRadius - 4f;
-        var core = liquid - 3f;                                            // 같은 수위의 밝은 속(테 쪽이 어둡게)
-        c.Disc(orb, core, Theme.Red, 0.9f, (core - liquid + 2f * liquid * ratio) / (2f * core));
-        c.Disc(orb + new Vector2(-9f, -11f), 6f, Theme.White, 0.16f);     // 유리 반사
-        c.Text(string.Create(Inv, $"{MathF.Ceiling(m.Hp):0} / {MathF.Ceiling(m.MaxHp):0}"), new Vector2(84, Theme.Height - 30), Theme.BodyText, Theme.Text);
-        // v0.9.1: 허리띠 칸 → 물약 칸 수만큼(물약 칸 하나 + 개수 그리기는 WP6 — 기획 12.1)
-        for (var i = 0; i < m.PotionSlots; i++)
-        {
-            var r = new RectF(84 + i * 28, Theme.Height - 76, 108 + i * 28, Theme.Height - 52);
-            c.Fill(r, Theme.Panel, 0.9f);
-            Ui.Outline(c, r, Theme.PanelEdge);
-            if (i < m.Potions) c.Fill(Shrink(r, 6), Theme.Red, 0.95f);
-            if (BeltFlashing) c.Fill(r, Theme.White, 0.5f);
-        }
+        DrawOrb(c, app, ratio, m.HealTarget, _world.Tick);
+        Ui.Centered(c, string.Create(Inv, $"{MathF.Ceiling(m.Hp):0} / {MathF.Ceiling(m.MaxHp):0}"), OrbBox.Center.X, OrbBox.Y1 + 2, Theme.SmallText, Theme.Text);
+        DrawPotionSlot(c, app, m.Potions, m.PotionSlots, m.HealTarget >= 0f, BeltFlashing, _world.Tick);
 
         // 체력 30% 아래 붉은 가장자리(1초 주기 — 앱 틱이 아니라 스테이지 틱으로, 멈추면 같이 멈춤)
         if (ratio < 0.3f && m.MaxHp > 0)
@@ -263,6 +298,99 @@ public sealed class Hud(AppServices app) : IWorldBound
         if (m.Banner is { } banner) Ui.Centered(c, banner, Theme.Width / 2, 150, 26f, Theme.Gold);
     }
 
+    /// <summary>구슬 칸 행(0..88) — 체력 비율 <paramref name="ratio"/> 일 때 빈 구슬이 덮는 아래 끝.</summary>
+    public static int OrbLine(float ratio) =>
+        (int)MathF.Round(OrbLiquidBottom - (OrbLiquidBottom - OrbLiquidTop) * Math.Clamp(ratio, 0f, 1f));
+
+    /// <summary>
+    /// 체력 구슬(기획 12.1 V12): 원작 조작판의 가득 찬 구슬 자리를 그리고 그 위를 빈 구슬 1번 프레임으로 <b>위에서</b> 잃은 비율만큼 덮는다(원작 방식).
+    /// 마시는 중이면 지금 수위에서 회복이 끝날 수위까지 가득 찬 구슬을 옅게(맥동) 다시 비춰 차오름 띠. 그림이 없으면 코드 구슬.
+    /// </summary>
+    public static void DrawOrb(UiCanvas c, AppServices app, float ratio, float healTarget, int stageTick)
+    {
+        var box = OrbBox;
+        var k = box.Height / OrbCell.Height;
+        if (ItemArt.Has(app, "ui_panel8") && ItemArt.Has(app, "ui_p8bulbs"))
+        {
+            var line = OrbLine(ratio);
+            var from = Math.Min(line, OrbPanelTop);
+            ItemArt.Crop(c, app, "ui_panel8", 1, new RectI(OrbCell.X0, from, OrbCell.X1, OrbCell.Y1), new RectF(box.X0, box.Y0 + from * k, box.X1, box.Y1), Rgb.White, 1f);
+            if (line > 0)
+                ItemArt.Crop(c, app, "ui_p8bulbs", 1, new RectI(0, 0, OrbCell.Width, line), new RectF(box.X0, box.Y0, box.X1, box.Y0 + line * k), Rgb.White, 1f);
+            if (healTarget >= 0f)
+            {
+                var target = OrbLine(healTarget);
+                if (target < line)
+                {
+                    var pulse = 0.35f + 0.15f * MathF.Sin(stageTick * MathF.Tau / World.TicksPerSecond * 2f);
+                    ItemArt.Crop(c, app, "ui_panel8", 1, new RectI(OrbCell.X0, target, OrbCell.X1, line),
+                                 new RectF(box.X0, box.Y0 + target * k, box.X1, box.Y0 + line * k), Rgb.White, pulse);
+                }
+            }
+            return;
+        }
+
+        // 대체: 코드 구슬(붉은 액체 + 돌 테 — v0.9 의 둥근 구슬)
+        var orb = box.Center;
+        const float radius = OrbRadius;
+        c.Disc(orb, radius, OrbStone);
+        c.Disc(orb, radius - 2f, OrbStoneDark);
+        c.Disc(orb, radius - 4f, OrbGlass, 0.95f);
+        if (healTarget > ratio) c.Disc(orb, radius - 4f, Theme.Red, 0.3f, healTarget);
+        c.Disc(orb, radius - 4f, Theme.DarkRed, 1f, ratio);
+        var liquid = radius - 4f;
+        var core = liquid - 3f;
+        c.Disc(orb, core, Theme.Red, 0.9f, (core - liquid + 2f * liquid * ratio) / (2f * core));
+        c.Disc(orb + new Vector2(-9f, -11f), 6f, Theme.White, 0.16f);
+    }
+
+    /// <summary>
+    /// 물약 칸 하나(기획 12.1 V9): 원작 허리띠 칸 그림(없으면 코드 칸) + 물약 그림(비면 흐리게) + 왼쪽 위 키 <c>Q</c> + 오른쪽 아래 <c>2/3</c>(가득이면 금색).
+    /// 마시는 중이면 칸 테가 은은히 맥동, 마신 순간 번쩍.
+    /// </summary>
+    public static void DrawPotionSlot(UiCanvas c, AppServices app, int potions, int slots, bool drinking, bool flash, int stageTick)
+    {
+        var r = PotionBox;
+        if (!ItemArt.Has(app, "ui_panel8") || !ItemArt.Crop(c, app, "ui_panel8", 1, BeltCell, r, Rgb.White, 1f))
+        {
+            c.Fill(r, Theme.Panel, 0.9f);
+            Ui.Outline(c, r, Theme.PanelEdge);
+        }
+        ItemArt.Potion(c, app, Shrink(r, 3), potions > 0 ? 1f : 0.3f);
+        if (drinking)
+        {
+            var pulse = 0.4f + 0.3f * MathF.Sin(stageTick * MathF.Tau / World.TicksPerSecond * 2f);
+            Ui.Outline(c, Shrink(r, -1), Theme.Red, pulse, 2f);
+        }
+        if (flash) c.Fill(r, Theme.White, 0.5f);
+        c.Fill(new RectF(r.X0, r.Y0, r.X0 + 9, r.Y0 + 11), Theme.Black, 0.6f);
+        c.Text("Q", new Vector2(r.X0 + 1, r.Y0), 10f, Theme.Text);
+        var count = string.Create(Inv, $"{potions}/{slots}");
+        var size = c.MeasureText(count, 11f);
+        var at = new Vector2(r.X1 - size.X - 1, r.Y1 - size.Y);
+        c.Fill(new RectF(at.X - 1, at.Y, r.X1, r.Y1), Theme.Black, 0.6f);
+        c.Text(count, at, 11f, slots > 0 && potions >= slots ? Theme.Gold : potions > 0 ? Theme.Text : Theme.TextDim);
+    }
+
+    /// <summary>장비 줄(HUD·결과 — 기획 12.1·12.4): 칸 <paramref name="size"/> px, <paramref name="step"/> 간격으로 여섯. 마법 = 파란 테, 빈 칸 = 어두운 실루엣.</summary>
+    public static void DrawEquipmentRow(UiCanvas c, AppServices app, IReadOnlyList<EquipItem?> equipment, float x, float y, float size, float step)
+    {
+        for (var i = 0; i < equipment.Count && i < 6; i++)
+        {
+            var box = new RectF(x + i * step, y, x + i * step + size, y + size);
+            var item = equipment[i];
+            c.Fill(box, Theme.Panel, 0.85f);
+            if (item is null)
+            {
+                Ui.Outline(c, box, Theme.PanelEdge, 0.6f);
+                ItemArt.Silhouette(c, ItemArt.KindOf((EquipSlot)i), Shrink(box, 2), Theme.PanelEdge, 0.45f);
+                continue;
+            }
+            Ui.Outline(c, box, item.Magic ? ShopWindow.MagicText : Theme.PanelEdge);
+            ItemArt.Item(c, app, item, Shrink(box, 1), 1f, item.Magic ? ShopWindow.MagicText : Theme.Text);
+        }
+    }
+
     private void DrawSlot(UiCanvas c, RectF box, IconDef? icon, int level, int maxLevel, bool evolved)
     {
         c.Fill(box, Theme.Panel, 0.85f);
@@ -273,8 +401,8 @@ public sealed class Hud(AppServices app) : IWorldBound
         Ui.Right(c, max ? "MAX" : level.ToString(Inv), box.X1 - 1, box.Y1 - 13, Theme.SmallText, max ? Theme.Gold : Theme.Text);
     }
 
-    /// <summary>체력 구슬 반지름(가상 px — 기획 12.1 지름 64)과 돌 테·유리 색.</summary>
-    public const float OrbRadius = 32f;
+    /// <summary>코드 구슬(대체) 반지름(가상 px — 지름 72, 기획 12.1 V12)과 돌 테·유리 색.</summary>
+    public const float OrbRadius = 36f;
     private static readonly Rgb OrbStone = new(104, 94, 80);
     private static readonly Rgb OrbStoneDark = new(46, 40, 34);
     private static readonly Rgb OrbGlass = new(14, 8, 8);

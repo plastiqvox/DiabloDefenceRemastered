@@ -237,7 +237,8 @@ public sealed class RunSession
         }
 
         var h = world.Hero;
-        _hpIn = room.HealOnEnter && h.MaxHp > 0f ? h.MaxHp : h.Hp;
+        // 회복 문이면 들어옴 첫 틱에 채운 뒤 값 — RoomFlow 가 채울 때 쓰는 도우미를 그대로 부른다(v0.9.4 V15: 최대 × heal_amount). v0.9 의 "= 최대" 가 남아 hp_in 이 늘 1 로 찍혔다(단계 2 wp6)
+        _hpIn = room.HealOnEnter ? RoomFlow.HpAfterHealOnEnter(h, _rules) : h.Hp;
         _potionsIn = h.Potions;
         _goldSpentIn = Run.Stats.GoldSpent;
         _drunkIn = Run.Stats.PotionsDrunk;
@@ -259,7 +260,7 @@ public sealed class RunSession
 
         CloseRoom(room.ChosenExit);
         Run.NextReward = room.ChosenExitInfo?.Reward;
-        Run.HealOnEnter = Run.NextReward?.Kind == RewardKind.HealNextRoom;   // v0.9 회복 문으로 나감 → 다음 방 첫 틱에 체력 전부
+        Run.HealOnEnter = Run.NextReward?.Kind == RewardKind.HealNextRoom;   // v0.9 회복 문으로 나감 → 다음 방 첫 틱에 회복(v0.9.4 V15: 최대 × heal_amount)
         foreach (var e in room.Exits)
             if (e.Reward?.Kind == RewardKind.Merchant) Run.MerchantShownThisAct = true;   // v0.9 상인 보장 조건(이 액트에 상인 문이 보였음)
 

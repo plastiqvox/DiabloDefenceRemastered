@@ -14,6 +14,31 @@
     { "id": "HealingPotion",         "source": "grid", "file": "HealingPotion.png",         "sheet": [96, 2560],  "frame": [96, 160],  "frames": 16, "origin": [48, 150] },
     { "id": "ManaPotion",            "source": "grid", "file": "ManaPotion.png",            "sheet": [96, 2560],  "frame": [96, 160],  "frames": 16, "origin": [48, 150] },
     // 끌어당김 룬(기획 11.1 — 1프레임만 씀)
-    { "id": "MagicMissileExplosion", "source": "grid", "file": "MagicMissileExplosion.png", "sheet": [126, 882],  "frame": [126, 126], "frames": 7,  "origin": [63, 63] }
+    { "id": "MagicMissileExplosion", "source": "grid", "file": "MagicMissileExplosion.png", "sheet": [126, 882],  "frame": [126, 126], "frames": 7,  "origin": [63, 63] },
+    // ── 원작 조작판·인벤토리 그림(atlas — 가져오기가 만든 d1/ui·d1/inv, 단계 2 wp6). 칸·프레임 수 = 가져오기 메타(Table/missiles.json 의 조작판·인벤토리 줄).
+    // 조작판 전체 640×144 한 장 — HUD 가 체력 구슬 (96,0,88,88)·허리띠 칸 (205,21,28,28) 을 잘라 쓴다(표 주석의 자리, 칸 좌표)
+    { "id": "ui_panel8",  "source": "atlas", "file": "d1/ui/panel8.png",  "frame": [640, 144], "directions": 1, "frames": 1, "origin": [0, 0] },
+    // 빈 구슬 88×88 두 장(1 체력·2 마나) — 구슬 위를 잃은 비율만큼 덮는다(원작 방식)
+    { "id": "ui_p8bulbs", "source": "atlas", "file": "d1/ui/p8bulbs.png", "frame": [88, 88],   "directions": 1, "frames": 2, "origin": [0, 0] },
+    // 인벤토리 그림(objcurs 한 프레임씩 — 기획 11.6 V4·12.8). 이름 = 기본 아이템 ID 에서 eq_ 를 뺀 것, 칸 = 원작 인벤토리 칸 수 × 28
+    { "id": "inv_cap",              "source": "atlas", "file": "d1/inv/cap.png",               "frame": [56, 56], "directions": 1, "frames": 1, "origin": [28, 28] },
+    { "id": "inv_skull_cap",        "source": "atlas", "file": "d1/inv/skull_cap.png",         "frame": [56, 56], "directions": 1, "frames": 1, "origin": [28, 28] },
+    { "id": "inv_helm",             "source": "atlas", "file": "d1/inv/helm.png",              "frame": [56, 56], "directions": 1, "frames": 1, "origin": [28, 28] },
+    { "id": "inv_full_helm",        "source": "atlas", "file": "d1/inv/full_helm.png",         "frame": [56, 56], "directions": 1, "frames": 1, "origin": [28, 28] },
+    { "id": "inv_quilted_armor",    "source": "atlas", "file": "d1/inv/quilted_armor.png",     "frame": [56, 84], "directions": 1, "frames": 1, "origin": [28, 42] },
+    { "id": "inv_leather_armor",    "source": "atlas", "file": "d1/inv/leather_armor.png",     "frame": [56, 84], "directions": 1, "frames": 1, "origin": [28, 42] },
+    { "id": "inv_ring_mail",        "source": "atlas", "file": "d1/inv/ring_mail.png",         "frame": [56, 84], "directions": 1, "frames": 1, "origin": [28, 42] },
+    { "id": "inv_chain_mail",       "source": "atlas", "file": "d1/inv/chain_mail.png",        "frame": [56, 84], "directions": 1, "frames": 1, "origin": [28, 42] },
+    { "id": "inv_breast_plate",     "source": "atlas", "file": "d1/inv/breast_plate.png",      "frame": [56, 84], "directions": 1, "frames": 1, "origin": [28, 42] },
+    { "id": "inv_buckler",          "source": "atlas", "file": "d1/inv/buckler.png",           "frame": [56, 56], "directions": 1, "frames": 1, "origin": [28, 28] },
+    { "id": "inv_small_shield",     "source": "atlas", "file": "d1/inv/small_shield.png",      "frame": [56, 84], "directions": 1, "frames": 1, "origin": [28, 42] },
+    { "id": "inv_large_shield",     "source": "atlas", "file": "d1/inv/large_shield.png",      "frame": [56, 84], "directions": 1, "frames": 1, "origin": [28, 42] },
+    { "id": "inv_kite_shield",      "source": "atlas", "file": "d1/inv/kite_shield.png",       "frame": [56, 84], "directions": 1, "frames": 1, "origin": [28, 42] },
+    { "id": "inv_short_staff",      "source": "atlas", "file": "d1/inv/short_staff.png",       "frame": [56, 84], "directions": 1, "frames": 1, "origin": [28, 42] },
+    { "id": "inv_long_staff",       "source": "atlas", "file": "d1/inv/long_staff.png",        "frame": [56, 84], "directions": 1, "frames": 1, "origin": [28, 42] },
+    { "id": "inv_composite_staff",  "source": "atlas", "file": "d1/inv/composite_staff.png",   "frame": [56, 84], "directions": 1, "frames": 1, "origin": [28, 42] },
+    { "id": "inv_war_staff",        "source": "atlas", "file": "d1/inv/war_staff.png",         "frame": [56, 84], "directions": 1, "frames": 1, "origin": [28, 42] },
+    { "id": "inv_ring",             "source": "atlas", "file": "d1/inv/ring.png",              "frame": [28, 28], "directions": 1, "frames": 1, "origin": [14, 14] },
+    { "id": "inv_potion_healing",   "source": "atlas", "file": "d1/inv/potion_healing.png",    "frame": [28, 28], "directions": 1, "frames": 1, "origin": [14, 14] }
   ]
 }

@@ -3,6 +3,9 @@ using DiabloDefenceRemastered.Core.Sim.Autoplay;
 
 namespace DiabloDefenceRemastered.Scenes;
 
+/// <summary><c>ROOM</c> 줄에 <c>RoomRecord</c> 밖에서 더하는 값(단계 2 wp6): 들어올 때 최대 체력(<c>hp_in</c> 비율), 그 방 처치·얻은 금화.</summary>
+public readonly record struct RoomLogExtra(float MaxHpIn, int Kills, int Gold);
+
 /// <summary>
 /// 판정용 고정 로그 문장 중 화면 쪽(WP6)이 쓰는 것 (설계서 9절): <c>SCENE</c>·<c>RESULT</c>·<c>ROOM</c>·<c>INNER_ROOMS</c>·<c>DOOR_SKIP</c>·<c>REWARD_STALL</c>·<c>VISIT</c>·<c>VISIT_SKIP</c>·<c>VISITS</c>.
 /// 문장 모양만 여기서 만든다(순수 함수) — 언제 쓰는지는 <c>PlayScene</c>·<c>ResultScene</c>.
@@ -18,19 +21,24 @@ public static class RunLog
     public static string Scene(string name, AppTick tick) => $"SCENE {name} app_tick={tick}";
 
     /// <summary>
-    /// <c>RESULT start=&lt;시작 액트 ID&gt; hero=… outcome=victory|defeat depth=&lt;액트&gt;:&lt;순번&gt; run_time=… level=… kills=… seed=…</c>(v0.7).
+    /// <c>RESULT start=&lt;시작 액트 ID&gt; hero=… outcome=victory|defeat depth=&lt;액트&gt;:&lt;순번&gt; run_time=… level=… kills=… gold_spent=… seed=…</c>(v0.7 — 단계 2 wp6: <c>gold_spent</c> = <c>RunStats.GoldSpent</c>).
     /// </summary>
-    public static string Result(RunResult r, ulong seed) =>
-        string.Create(Inv, $"RESULT start={r.StartActId} hero={r.HeroClassId} outcome={(r.Victory ? "victory" : "defeat")} depth={r.Reached} run_time={r.RunTime:0.##} level={r.Level} kills={r.Kills} seed={seed}");
+    public static string Result(RunResult r, ulong seed, int goldSpent = 0) =>
+        string.Create(Inv, $"RESULT start={r.StartActId} hero={r.HeroClassId} outcome={(r.Victory ? "victory" : "defeat")} depth={r.Reached} run_time={r.RunTime:0.##} level={r.Level} kills={r.Kills} gold_spent={goldSpent} seed={seed}");
 
     /// <summary>
-    /// <c>ROOM act=&lt;n&gt; room=&lt;n&gt; map=&lt;원판 id&gt; mirror=&lt;0|1&gt; gate_in=&lt;id&gt; reward=&lt;id|-&gt; door=&lt;id|-&gt; clear_tick=&lt;틱&gt; cleanup_s=&lt;초&gt; collapsed=&lt;0|1&gt; boss_s=&lt;초|-&gt; picks_left=&lt;n|-&gt; level=&lt;n&gt;</c>(v0.8).
+    /// <c>ROOM act=&lt;n&gt; room=&lt;n&gt; map=&lt;원판 id&gt; mirror=&lt;0|1&gt; gate_in=&lt;id&gt; reward=&lt;id|-&gt; door=&lt;id|-&gt; clear_tick=&lt;틱&gt; cleanup_s=&lt;초&gt; collapsed=&lt;0|1&gt; boss_s=&lt;초|-&gt; picks_left=&lt;n|-&gt; level=&lt;n&gt;</c>(v0.8)
+    /// + 단계 2 wp6(기획 15절 v0.9·v0.9.1): <c>hp_in=&lt;0..1|-&gt; kills=&lt;n&gt; gold=&lt;n&gt; gold_spent=&lt;n&gt; shop=&lt;상인 ID|-&gt; potions=&lt;n&gt; drunk=&lt;n&gt;</c>.
+    /// <c>hp_in</c> = <c>RoomRecord.HpIn</c> ÷ 들어올 때 최대 체력(<paramref name="extra"/> — 모르면 <c>-</c>), <c>kills</c>·<c>gold</c> = 그 방 동안 <c>RunStats.Kills</c>·<c>Gold</c>(얻은 금화)의 차이
+    /// (<c>RoomRecord</c> 에 없는 두 값 — <c>PlayScene</c> 이 방마다 센다, 13장 WP6 단계 2 기록의 WP1h 요청), 나머지는 <c>RoomRecord</c> 그대로.
     /// </summary>
-    public static string Room(in RoomRecord r) =>
+    public static string Room(in RoomRecord r, in RoomLogExtra extra = default) =>
         string.Create(Inv,
             $"ROOM act={r.Act} room={r.Number} map={r.MapId} mirror={(r.Mirrored ? 1 : 0)} gate_in={r.GateIn} reward={r.RewardId ?? "-"} door={r.Door ?? "-"} " +
             $"clear_tick={r.ClearTick} cleanup_s={Seconds(r.CleanupTicks)} collapsed={(r.Collapsed ? 1 : 0)} " +
-            $"boss_s={(r.BossClockTicks >= 0 ? Seconds(r.BossClockTicks) : "-")} picks_left={(r.PicksLeft >= 0 ? r.PicksLeft.ToString(Inv) : "-")} level={r.Level}");
+            $"boss_s={(r.BossClockTicks >= 0 ? Seconds(r.BossClockTicks) : "-")} picks_left={(r.PicksLeft >= 0 ? r.PicksLeft.ToString(Inv) : "-")} level={r.Level} " +
+            $"hp_in={(r.HpIn >= 0f && extra.MaxHpIn > 0f ? Math.Clamp(r.HpIn / extra.MaxHpIn, 0f, 1f).ToString("0.##", Inv) : "-")} kills={extra.Kills} gold={extra.Gold} " +
+            $"gold_spent={r.GoldSpent} shop={r.Shop ?? "-"} potions={r.Potions} drunk={r.Drunk}");
 
     /// <summary>
     /// 방이 끝날 때 안쪽 방 기준점마다 한 줄(v0.7.1): <c>INNER_ROOMS act=&lt;n&gt; room=&lt;n&gt; map=&lt;id&gt; anchor=&lt;기준점 ID&gt; doors=… inside_s=… damage=… supplies=…</c>.

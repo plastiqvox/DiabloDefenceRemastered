@@ -22,6 +22,7 @@ public enum UiButtons : uint
     Minimap = 1 << 12,    // Tab
     Fullscreen = 1 << 13, // F11 / Alt+Enter
     Click = 1 << 14,      // 왼쪽 버튼을 이번에 눌렀다
+    Drink = 1 << 15,      // Q — 물약 마시기(v0.9.1 V9, 기획 3절). 판 명령 CommandButtons.Drink 로 간다(단계 2 wp6 — WP1h 요청)
 }
 
 /// <summary>

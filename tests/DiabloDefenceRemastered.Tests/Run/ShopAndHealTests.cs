@@ -229,6 +229,30 @@ public class ShopAndHealTests
         Assert.Equal(100f, w.Hero.Hp);                                                      // 70 + 50 → 최대에서 멈춤
     }
 
+    /// <summary>
+    /// ROOM <c>hp_in</c>(RunSession)과 실제 회복(RoomFlow)이 같은 도우미를 쓴다 — 첫 틱 전에 도우미가 낸 값이 첫 틱 뒤 체력과 같아야 한다.
+    /// 회복 방식이 바뀌어(예: 서서히 회복) 도우미와 어긋나면 여기서 깨진다(단계 2 wp6 검증 지적).
+    /// </summary>
+    [Fact]
+    public void HealDoor_HpAfterHealOnEnter_MatchesFirstTick()
+    {
+        foreach (var (max, hp) in new[] { (100f, 30f), (100f, 70f), (100f, 100f), (80f, 1f) })
+        {
+            var w = Session(WithOnlyReward(TestDefs.RewardPotionId), startIndex: 1).World;
+            Assert.True(w.Room!.HealOnEnter);
+            w.Hero.MaxHp = max;
+            w.Hero.Hp = hp;
+            var predicted = RoomFlow.HpAfterHealOnEnter(w.Hero, w.Defs.Rules.Rooms!);
+            StageStepper.AppTick(w, PlayerCommand.None);
+            Assert.Equal(predicted, w.Hero.Hp);
+        }
+        var world = Session(WithOnlyReward(TestDefs.RewardPotionId), startIndex: 1).World;
+        world.Hero.MaxHp = 100f;
+        world.Hero.Hp = 0f;
+        world.Hero.Dead = true;
+        Assert.Equal(0f, RoomFlow.HpAfterHealOnEnter(world.Hero, world.Defs.Rules.Rooms!));  // 죽었으면 채우지 않음
+    }
+
     [Fact]
     public void HealDoor_ExitThroughIt_NextRoomHealsOnEnter_RecordHasHpIn()
     {
