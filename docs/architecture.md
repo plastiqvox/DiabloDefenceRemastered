@@ -6346,7 +6346,7 @@ WP6(화면·UI·입력 — 11.1 WP6) 코드가 문서와 다르게 또는 더 �
 - 프레임(`--boss-hp 0.39` 단독, `--log-ticks`): `PERF frame_ms p50 6.9 p95 8.1 p99 8.8`(첫 프레임 제외 max 68 — 시작), draw_calls p95 244. `--log-ticks` 의 월드 열(적·투사체 수·단계 ms)은 0 — WP7 기록 "남은 것 3"(판을 가진 씬이 프로파일러를 앱에 보이는 길 없음) 그대로라 탄 수는 Core 시나리오 값을 씀.
 
 **남은 것·확인 못 한 것**
-- **새 탄 넷의 발사 소리**: `audio/bindings.json`(WP8)에 `pj_sk_orb`·`pj_sk_orb_big`·`pj_ash_arrow`·`pj_rot_glob` 의 `fire` 가 없어 무음이다. `--validate-data` 경고 0(소리 없는 탄을 알리는 검사가 없음). **B 또는 메인 세션 요청**: 블랙애시 `pj_ash_arrow` 는 `pj_fire_arrow` 와 같은 `snd_bfire`, 해골왕 탄은 `snd_fbolt`(파도마다 한 번 — 신호를 파도 단위로 냄) 첫 값.
+- **새 탄 넷의 발사 소리**(합치기 전 검증 중간 지적으로 고침): `audio/bindings.json` 에 `pj_ash_arrow` → `snd_bfire`(전의 `pj_fire_arrow` 소리), `pj_sk_orb`·`pj_sk_orb_big` → `snd_fbolt`(전의 `pj_boss_fireball` 소리)를 걸었다. 신호는 파도마다 한 번이고, 나선·연사·꼬리 탄처럼 촘촘한 신호는 믹서의 같은 소리 `min_interval` 0.05s·`same_sound` 3 이 거른다. `pj_rot_glob` 은 걸지 않았다 — 독 던짐에 맞는 원작 소리를 아직 소리 표에 들이지 않았고 열린 질문 59(바닥액)와 함께 정한다. `--validate-data` 에는 소리 없는 탄을 알리는 검사가 없다.
 - 직접 해 보지 못함(난이도·피할 길의 느낌). 자동 조작 결과는 기록용.
 - 빈틈 벽이 맵 끝 근처에서 탄 대부분이 빠지는지는 캡처로 보지 못함(자동 조작이 가운데 쪽으로 돈다). 시험은 마름모 밖·막힌 자리 탄이 빠지는 것만 본다.
 - 중간 보스 장판·연사의 화면 확인은 무리에 묻혀 부분적이다.
