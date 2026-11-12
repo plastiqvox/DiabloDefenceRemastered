@@ -60,11 +60,14 @@ public static class Wp4Data
         var enemies = new List<EnemyDef>();
         var raw = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
         var dropTables = new List<DropTableDef>();
+        var projectiles = new List<ProjectileDef>();
         foreach (var file in Directory.GetFiles(Path.Combine(RealData.Dir, "enemies"), "*.json", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
         {
             var root = RealData.Read(Path.GetRelativePath(RealData.Dir, file));
             // 그 적만 쓰는 드롭 표(6.1 — 액트 보스 dt_boss)는 같은 파일에
             if (root["drop_tables"] is JsonArray dts) dropTables.AddRange(dts.Select(n => n!.Deserialize<DropTableDef>(Options)!));
+            // 한 파일에 적 + 투사체(6.5 — 보스 묶음 A 의 새 탄 넷): 실제 정의를 쓴다(그림은 대역)
+            if (root["projectiles"] is JsonArray pjs) projectiles.AddRange(pjs.Select(n => n!.Deserialize<ProjectileDef>(Options)!));
             foreach (var n in (JsonArray)root["enemies"]!)
             {
                 raw[(string)n!["id"]!] = (JsonObject)n;
@@ -86,8 +89,9 @@ public static class Wp4Data
         var maps = RealData.Maps;
         var linker = new Linker();
         linker.Add(sprites); linker.Add(sets); linker.Add(enemies); linker.Add(affixes); linker.Add(buffs); linker.Add(stages); linker.Add(dropTables);
+        linker.Add(projectiles);
         linker.Add(maps.Maps); linker.Add(maps.Tilesets);
-        foreach (var root in new object[] { rules, sprites, sets, enemies, affixes, buffs, stages, dropTables }) linker.Walk(root);
+        foreach (var root in new object[] { rules, sprites, sets, enemies, affixes, buffs, stages, dropTables, projectiles }) linker.Walk(root);
 
         var defs = new GameDefs
         {
@@ -100,7 +104,7 @@ public static class Wp4Data
             Affixes = new DefTable<AffixDef>(affixes),
             Buffs = new DefTable<BuffDef>(buffs),
             Stages = new DefTable<StageDef>(stages),
-            Projectiles = new DefTable<ProjectileDef>(linker.Stubs<ProjectileDef>()),
+            Projectiles = new DefTable<ProjectileDef>([.. projectiles, .. linker.Stubs<ProjectileDef>()]),
             Effects = new DefTable<EffectDef>(linker.Stubs<EffectDef>()),
             Rewards = new DefTable<RewardDef>(linker.Stubs<RewardDef>()),
             Pickups = new DefTable<PickupDef>([.. linker.Stubs<PickupDef>(), .. linker.Stubs<RewardDef>().Where(r => r.Object is not null).Select(r => r.Object!.Def)]),
@@ -312,6 +316,7 @@ public static class Wp4Data
                 def = new RewardDef { Id = id, Name = id, Kind = kind, Object = DefRef<PickupDef>.To(TestDefs.RewardObject("obj_" + id)) };
             }
             else if (t == typeof(DropTableDef)) def = new DropTableDef { Id = id };   // 드롭 표(WP3)는 빈 표 — 드롭 없이 돈다
+            else if (t == typeof(SpriteDef)) def = TestDefs.Sprite(id);                // 투사체 그림(missiles.json — 읽지 않음)
             else throw new InvalidOperationException($"{t.Name} '{id}' 가 없다(대역을 만들지 않는 종류)");
             s[id] = def;
             StubNames.Add($"{t.Name}:{id}");

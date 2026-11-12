@@ -4,7 +4,8 @@ using System.Text.Json.Serialization;
 
 namespace DiabloDefenceRemastered.Core.Sim.Enemies.Parts;
 
-// 동작 부품(패턴·훅 안쪽, 설계서 6.6 — 레지스트리 종류 EnemyAction): melee_slam, projectile_spread, telegraphed_blast, dash, summon, ground_hazard, buff_area.
+// 동작 부품(패턴·훅 안쪽, 설계서 6.6 — 레지스트리 종류 EnemyAction): melee_slam, projectile_spread, telegraphed_blast, summon, ground_hazard, buff_area.
+// dash 는 DashBody.cs, barrage 는 Barrage.cs, teleport 는 Teleport.cs(보스 묶음 A, 6.20).
 
 // ── melee_slam ─────────────────────────────────────────────────────
 
@@ -167,45 +168,6 @@ public sealed class TelegraphedBlast(TelegraphedBlastParams p) : IEnemyAction, I
         var effect = p.Telegraph is { } t ? new EffectRef { Effect = t.Effect } : null;
         w.Spawner.SpawnTelegraph(new TelegraphSpawn(effect, TelegraphShape.Circle, at, at, p.Radius, p.Telegraph?.Time ?? 0f, Faction.Enemy, ctx.Self.Id,
                                                     new BlastSpec(p.Radius, damage, p.Effect, p.Knockback)));
-    }
-}
-
-// ── dash ───────────────────────────────────────────────────────────
-
-public sealed record DashParams
-{
-    public float Speed { get; init; } = 300f;
-    public float Time { get; init; } = 0.8f;
-    public float? Damage { get; init; }
-    public TelegraphDef? Telegraph { get; init; }
-}
-
-/// <summary>보스 돌진(여러 틱 동작 — <c>actions</c> 의 마지막에만): 직선, 닿으면 한 번 피해, 시간 또는 막힐 때까지.</summary>
-public sealed class Dash(DashParams p) : IEnemyAction, IDamageInfo
-{
-    public DashParams Params => p;
-    public float? BaseDamage => p.Damage;
-    public float? AreaRadius => null;
-    public bool MultiTick => true;
-
-    public void Begin(in EnemyCtx ctx, ref ActionState action)
-    {
-        action.Dir = ctx.DirToHero;
-        action.T = 0f;
-        action.Hit = false;
-    }
-
-    public ActionStatus Tick(in EnemyCtx ctx, ref ActionState action)
-    {
-        var self = ctx.Self;
-        action.T += ctx.Dt;
-        self.Intent = MoveIntent.Straight(action.Dir, p.Speed / MathF.Max(1f, self.MoveSpeed));
-        if (!action.Hit && ctx.DistToHero <= ctx.Contact + 4f)
-        {
-            action.Hit = true;
-            ctx.HitHero(ctx.FinalDamage(p.Damage), action.Dir, 0f);
-        }
-        return action.T >= p.Time || (action.T > 0.1f && self.MoveBlockedTime > 0.05f) ? ActionStatus.Done : ActionStatus.Running;
     }
 }
 

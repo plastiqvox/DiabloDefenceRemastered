@@ -45,6 +45,9 @@ public sealed class RealSpawnGapTests(ITestOutputHelper output)
             w.Command = policy.Next(w);
             w.Simulation!.Step();
             if (w.Outcome is RunOutcome.Victory or RunOutcome.Defeat) break;
+            // 해골왕 처치 뒤 승리 대기(3s — 남은 적은 무너짐)는 판이 끝나는 중이라 틈으로 보지 않는다. 보스 방 "보스 중" 이 40/1.2(v0.9.5 — 기획 10.3)로 줄어
+            // 그 3초 안에 새 무리가 오지 않을 수 있다(보스 묶음 A 에서 드러남 — 씨앗 7 의 2.98s)
+            if (w.Outcome == RunOutcome.VictoryPending) { streak = 0; continue; }
             if (w.Room is { } room && room.SpawningOpen)
             {
                 var alive = SpawnGate.Alive(w);

@@ -4,8 +4,10 @@ namespace DiabloDefenceRemastered.Core.Sim.Enemies;
 
 /// <summary>
 /// 정의 + 접두사 조합 하나의 부품 표 (설계서 6.6 "슬롯 수"·"페이즈"). 처음 쓰일 때 한 번 만들고(<see cref="World.KitFor"/>) 같은 조합의 적이 같이 쓴다.
-/// 슬롯 순서 = 정의 <c>behaviors</c> → 패턴 합집합(정의 <c>patterns</c>, 그다음 페이즈가 더한 ID 순) → 접두사 부품. 12 를 넘으면 예외(로딩 검사가 먼저 막는다).
+/// 슬롯 순서 = 정의 <c>behaviors</c> → 패턴 합집합(정의 <c>patterns</c>, 그다음 페이즈가 더한 ID 순) → 접두사 부품 → 시퀀서(순서가 있으면 하나). 12 를 넘으면 예외(로딩 검사가 먼저 막는다).
 /// 페이즈 전환은 "지금 쓰는 목록 번호"(<see cref="Enemy.PhaseIdx"/>) 하나만 바꾼다 — 슬롯(쿨다운)은 같은 패턴 ID 에 남는다.
+/// v0.9.4(6.20 ③): 어느 페이즈 순서(<c>sequence</c>)에든 든 패턴 ID 는 슬롯·능력 목록에 넣지 않고, 페이즈마다 <see cref="PatternSequence"/> 하나가
+/// 그 페이즈 완성 목록에서 칸 패턴을 찾아 갖는다. 모든 페이즈의 시퀀서가 맨 뒤 슬롯 하나(<see cref="SequencerSlot"/>)를 나눠 쓴다.
 /// </summary>
 public sealed class EnemyKit
 {
@@ -32,6 +34,8 @@ public sealed class EnemyKit
     public float MeleeReachOver { get; private set; }
     /// <summary>정의 페이즈 수 + 1.</summary>
     public int PhaseCount => Phases.Length;
+    /// <summary>시퀀서가 나눠 쓰는 슬롯(−1 = 순서 없음, 6.20 ③).</summary>
+    public int SequencerSlot { get; private set; } = -1;
 
     /// <summary>지금 페이즈의 슬롯 부품.</summary>
     public IEnemyBehavior? Part(int phase, int slot) => Phases[Math.Clamp(phase, 0, Phases.Length - 1)][slot];
@@ -43,14 +47,22 @@ public sealed class EnemyKit
         var fixedParts = new List<IEnemyBehavior>();
         foreach (var pd in def.Behaviors) fixedParts.Add(Wrap(pd));
 
-        // 패턴 합집합: ID 가 없는 패턴은 자기 자리 하나(같은 페이즈 목록 안의 위치로 구별)
+        // 패턴 합집합: ID 가 없는 패턴은 자기 자리 하나(같은 페이즈 목록 안의 위치로 구별). 순서 패턴(어느 페이즈 순서에든 든 ID)은 슬롯을 쓰지 않는다
         var keys = new List<string>();
         var phaseLists = new List<IReadOnlyList<PatternDef>> { def.Patterns };
         // 페이즈 완성 목록은 로더가 채운다(6.5). 비었으면(패턴을 다 지운 페이즈가 아니라 채우지 않은 시험 정의) 앞 페이즈 목록 그대로
         foreach (var ph in def.Phases) phaseLists.Add(ph.Patterns.Count > 0 || ph.Remove.Count > 0 ? ph.Patterns : phaseLists[^1]);
+        var sequences = new List<SequenceDef?> { def.Sequence };
+        foreach (var ph in def.Phases) sequences.Add(ph.Sequence);
+        var sequenced = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var s in sequences)
+            if (s is not null)
+                foreach (var step in s.Steps) sequenced.Add(step.Pattern);
+        var hasSequence = sequences.Exists(s => s is { Steps.Count: > 0 });
         foreach (var list in phaseLists)
             for (var i = 0; i < list.Count; i++)
             {
+                if (list[i].Id is { } id && sequenced.Contains(id)) continue;
                 var key = KeyOf(list[i], i);
                 if (!keys.Contains(key)) keys.Add(key);
             }
@@ -59,10 +71,11 @@ public sealed class EnemyKit
         foreach (var a in affixes)
             foreach (var pd in a.Behaviors) affixParts.Add(Wrap(pd));
 
-        var count = fixedParts.Count + keys.Count + affixParts.Count;
+        var count = fixedParts.Count + keys.Count + affixParts.Count + (hasSequence ? 1 : 0);
         if (count > PartSlots.SlotCount)
             throw new InvalidOperationException($"적 '{def.Id}' 의 부품 슬롯 {count} > {PartSlots.SlotCount}(6.6)");
         kit.Count = count;
+        kit.SequencerSlot = hasSequence ? count - 1 : -1;
 
         var phases = new IEnemyBehavior?[phaseLists.Count][];
         for (var p = 0; p < phaseLists.Count; p++)
@@ -71,8 +84,12 @@ public sealed class EnemyKit
             for (var i = 0; i < fixedParts.Count; i++) row[i] = fixedParts[i];
             var list = phaseLists[p];
             for (var i = 0; i < list.Count; i++)
+            {
+                if (list[i].Id is { } id && sequenced.Contains(id)) continue;
                 row[fixedParts.Count + keys.IndexOf(KeyOf(list[i], i))] = new PatternAbility(list[i]);
+            }
             for (var i = 0; i < affixParts.Count; i++) row[fixedParts.Count + keys.Count + i] = affixParts[i];
+            if (hasSequence && sequences[p] is { Steps.Count: > 0 } seq) row[count - 1] = Sequencer(def, p, seq, list);
             phases[p] = row;
         }
         kit.Phases = phases;
@@ -100,6 +117,23 @@ public sealed class EnemyKit
     }
 
     private static string KeyOf(PatternDef p, int index) => p.Id ?? "#" + index;
+
+    /// <summary>페이즈 하나의 시퀀서: 칸마다 그 페이즈 완성 목록에서 같은 ID 패턴(없으면 예외 — 로딩 검사가 먼저 막는다, 6.20 ③).</summary>
+    private static PatternSequence Sequencer(EnemyDef def, int phase, SequenceDef seq, IReadOnlyList<PatternDef> list)
+    {
+        var steps = new PatternAbility[seq.Steps.Count];
+        for (var i = 0; i < steps.Length; i++)
+        {
+            var id = seq.Steps[i].Pattern;
+            PatternDef? found = null;
+            foreach (var p in list)
+                if (string.Equals(p.Id, id, StringComparison.Ordinal)) { found = p; break; }
+            if (found is null)
+                throw new InvalidOperationException($"적 '{def.Id}' 페이즈 {phase} 순서 칸 {i} 의 패턴 '{id}' 가 그 페이즈 패턴 목록에 없다(6.20 ③)");
+            steps[i] = new PatternAbility(found);
+        }
+        return new PatternSequence(seq, steps);
+    }
 
     private static int[] Indices<T>(IEnemyBehavior?[] row, int count)
     {

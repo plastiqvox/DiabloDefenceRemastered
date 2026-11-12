@@ -43,6 +43,9 @@ public sealed class PartsSmokeTests
         ["summon"] = () => A("summon", new SummonParams { Spawns = [new SummonEntry { Enemy = DefRef<EnemyDef>.To(Minion), Count = 4 }], AliveCap = 6 }),
         ["ground_hazard"] = () => A("ground_hazard", new GroundHazardParams { Radius = 40f, Duration = 2f, Damage = 3f, Cooldown = 1f, CapGroup = "smoke", Cap = 20 }),
         ["buff_area"] = () => A("buff_area", new BuffAreaParams { Buff = CryRef }),
+        // 보스 묶음 A(6.20): 나선 고리·순간이동
+        ["barrage"] = () => A("barrage", new BarrageParams { Shape = BarrageShape.Ring, Projectile = DefRef<ProjectileDef>.To(Arrow), Count = 8, Waves = 3, Interval = 0.3f, Turn = 15f }),
+        ["teleport"] = () => A("teleport", new TeleportParams()),
     };
 
     [Fact]

@@ -71,8 +71,9 @@ public enum TelegraphShape : byte { Circle, Line }
 /// 시야 조건을 지켜야 하는 발사(<c>shoot_projectile</c>, <c>clear_sight</c> 패턴 — v0.5.3). 채우기 WP4, 세기 WP3:
 /// 공정성 <c>unseen_shots</c> 는 보스·중간 보스 발사를 빼고 세지만 이것이 참이면 센다(10.1).
 /// </param>
+/// <param name="Range">0 보다 크면 정의 사거리 대신 이 값(v0.9.4, 6.20 ⑥ — 계약: 로트피스트 바닥액 <c>range_to_hero</c>).</param>
 public readonly record struct EnemyProjectileSpawn(ProjectileDef Def, Vector2 Pos, Vector2 Dir, int Damage, EntityId Owner,
-                                                   EntityId Target = default, float Speed = 0f, bool SightGated = false);
+                                                   EntityId Target = default, float Speed = 0f, bool SightGated = false, float Range = 0f);
 
 /// <summary>장판 하나(독 웅덩이·지옥불 …). CapGroup 별 동시 상한을 넘으면 오래된 것부터 지운다.</summary>
 public readonly record struct HazardSpawn(EffectRef? Effect, Vector2 Pos, float Radius, float Duration, float TickInterval, int TickDamage,

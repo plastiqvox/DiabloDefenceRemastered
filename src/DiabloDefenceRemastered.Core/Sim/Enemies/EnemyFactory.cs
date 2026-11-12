@@ -53,6 +53,8 @@ public static class EnemyFactory
         var timeHp = def.TimeScaling && scaling is not null ? EnemyMath.TimeHpMul(scaling, minutes) : 1f;
         var timeDmg = def.TimeScaling && scaling is not null ? EnemyMath.TimeDmgMul(scaling, minutes) : 1f;
         e.Hp = e.MaxHp = EnemyMath.FinalHp(def.Hp, timeHp, rankDef?.Hp ?? 1f, hpPct);
+        // --boss-hp(6.20 ⑩): 중간 보스·보스는 최대 × 값으로 시작 — 첫 틱의 페이즈 처리가 문턱대로 넘긴다
+        if (world.Options.BossHp is { } bossHp && def.Rank is DefRank.Miniboss or DefRank.Boss) e.Hp = e.MaxHp * Math.Clamp(bossHp, 1e-4f, 1f);
         e.DamageMul = timeDmg * (rankDef?.Damage ?? 1f) * (1f + dmgPct);
         e.Armor = def.Armor + armor;
         var resist = def.KnockbackResist;
@@ -66,6 +68,8 @@ public static class EnemyFactory
         e.MoveSpeed = e.BaseMoveSpeed * (1f + speedPct);
         e.PassThroughObstacles = HasPart<PhaseThrough>(e.Kit);
         e.EnrageAt = def.Enrage is { } enrage ? world.Tick + MathX.SecondsToTicks(enrage.After.Seconds, World.Dt) : -1;
+        // 정해진 순서(6.20 ③): 첫 칸까지 쉼 = 정의 sequence.start(등장 — 들어온 뒤부터 준다)
+        if (e.Kit.SequencerSlot >= 0) e.Parts[e.Kit.SequencerSlot].Cooldown = def.Sequence?.Start ?? 0f;
 
         var set = def.Sprites.IsBound ? def.Sprites.Def : null;
         e.BodyTop = (set?.BodyHeight ?? 0f) * scale;

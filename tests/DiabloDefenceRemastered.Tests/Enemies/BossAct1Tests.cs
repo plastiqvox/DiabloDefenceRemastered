@@ -6,8 +6,8 @@ namespace DiabloDefenceRemastered.Tests.Enemies;
 /// <summary>
 /// 액트 1 중간 보스·보스·해골 대장 (기획 8.2·8.3·9.4·9.5, 설계 6.5·6.6 — 단계 2 wp4): 실제 <c>Data/enemies</c>(<see cref="Wp4Data"/> — 페이즈는 로더와 같은 풀기)를
 /// 가짜 이웃 월드(<see cref="FakeArena"/> — 투사체·장판·예고는 기록만)에서 돌린다.
-/// 해골왕 50% 페이즈 한 번·1s 무적·속도 70, 부른 적 상한 30, 파이어볼 부채 3 → 5발·±20° → ±40°; 로트피스트 독 웅덩이(80·4s·0.5s·6)·HP 50% 좀비 6;
-/// 블랙애시 kite 띠(220~320)·불화살 부채 5발 ±30° 는 또렷이 보일 때만(<c>clear_sight</c>); 해골 대장 지휘 오라가 반경 안 해골(호위 포함)에 걸리고 보스·자신에는 안 걸림.
+/// 해골왕 3페이즈(v0.9.5 — 70%·40%, 1.5s 무적·속도 70·75·순서 처음부터, P2 부르기 상한 8, 슬롯 2); 로트피스트 독 웅덩이(80·4s·0.5s·6)·HP 50% 좀비 6·바닥액 5발;
+/// 블랙애시 kite 띠(220~320)·불화살 부채 5발 ±30°·연사 3발 × 5번은 또렷이 보일 때만(<c>clear_sight</c>, 탄 <c>pj_ash_arrow</c>); 해골 대장 지휘 오라가 반경 안 해골(호위 포함)에 걸리고 보스·자신에는 안 걸림.
 /// </summary>
 public sealed class BossAct1Tests
 {
@@ -26,60 +26,6 @@ public sealed class BossAct1Tests
 
     private static int Summoned(TestWorld t, Enemy by) => t.World.Enemies.Items.ToArray().Count(e => e.IsAlive && e.Summoner == by.Id);
 
-    [Fact]
-    public void Skeleton_king_values_match_design()
-    {
-        var k = Defs.Enemies.Get("skeleton_king");
-        Assert.Equal((10000f, 55f, 30f, DefRank.Boss, false), (k.Hp, k.Speed, k.Radius!.Value, k.Rank, k.TimeScaling));
-        Assert.Contains("knockback", k.Immunities);
-        Assert.Contains("slow", k.Immunities);
-        var p2 = Assert.Single(k.Phases);
-        Assert.Equal((0.5f, 1.0f, 70f), (p2.HpBelow, p2.Invulnerable, p2.Speed!.Value));
-        Assert.Equal(3, p2.Patterns.Count);                                     // 같은 ID 패턴은 자리를 지킴
-        Assert.Equal("dt_boss", k.DropTable!.Id);
-        Assert.Equal(100f, Defs.Enemies.Get("rotfeast").Xp);
-    }
-
-    [Fact]
-    public void Skeleton_king_phase_switches_once_with_one_second_invulnerability()
-    {
-        var t = World();
-        var king = Spawn(t, "skeleton_king", t.Hero.Pos + new Vector2(400f, 0f));
-        t.Step(2);
-        Assert.Equal(0, king.PhaseIdx);
-        king.Hp = king.MaxHp * 0.49f;
-        t.Step();
-        Assert.Equal(1, king.PhaseIdx);
-        var until = king.InvulnUntilTick;
-        Assert.Equal(t.World.Tick - 1 + 60, until);                             // 1s = 60틱
-        Assert.Equal(70f, king.PhaseSpeed);
-        king.Hp = king.MaxHp * 0.2f;
-        t.Step(120);
-        Assert.Equal(1, king.PhaseIdx);                                         // 한 번만
-        Assert.Equal(until, king.InvulnUntilTick);
-    }
-
-    [Fact]
-    public void Skeleton_king_fire_fan_three_then_five()
-    {
-        var t = World();
-        var king = Spawn(t, "skeleton_king", t.Hero.Pos + new Vector2(300f, 0f));
-        var rec = Rec(t);
-        for (var i = 0; i < 240 && rec.Projectiles.Count == 0; i++) t.Step();
-        var first = rec.Projectiles.Where(p => p.Def.Id == "pj_boss_fireball").ToList();
-        Assert.Equal(3, first.Count);
-        Assert.InRange(Spread(first), 39f, 41f);                                // ±20°
-        Assert.All(first, p => Assert.False(p.SightGated));                     // 보스 패턴에는 시야 조건이 없다(기획 9.5)
-
-        king.Hp = king.MaxHp * 0.45f;
-        rec.Projectiles.Clear();
-        for (var i = 0; i < 600 && rec.Projectiles.Count == 0; i++) t.Step();
-        var second = rec.Projectiles.Where(p => p.Def.Id == "pj_boss_fireball").ToList();
-        Assert.Equal(5, second.Count);
-        Assert.InRange(Spread(second), 79f, 81f);                               // ±40°
-
-    }
-
     /// <summary>발사 방향 둘 사이 가장 큰 각(도) — ±180° 경계와 무관.</summary>
     private static float Spread(List<EnemyProjectileSpawn> shots)
     {
@@ -91,19 +37,86 @@ public sealed class BossAct1Tests
     }
 
     [Fact]
-    public void Skeleton_king_summons_stop_at_alive_cap_thirty()
+    public void Skeleton_king_values_match_design()
+    {
+        var k = Defs.Enemies.Get("skeleton_king");
+        Assert.Equal((10000f, 55f, 30f, DefRank.Boss, false), (k.Hp, k.Speed, k.Radius!.Value, k.Rank, k.TimeScaling));
+        Assert.Contains("knockback", k.Immunities);
+        Assert.Contains("slow", k.Immunities);
+        Assert.Equal(2, k.Phases.Count);
+        Assert.Equal((0.7f, 1.5f, 70f, true), (k.Phases[0].HpBelow, k.Phases[0].Invulnerable, k.Phases[0].Speed!.Value, k.Phases[0].ClearProjectiles));
+        Assert.Equal((0.4f, 1.5f, 75f, true), (k.Phases[1].HpBelow, k.Phases[1].Invulnerable, k.Phases[1].Speed!.Value, k.Phases[1].ClearProjectiles));
+        // 순서(기획 9.5): P1 다섯 칸, P2 다섯 칸, P3 여덟 칸
+        Assert.Equal(["fan5", "ring16a", "fan5", "ring16b", "dash1"], k.Sequence!.Steps.Select(s => s.Pattern));
+        Assert.Equal(["spiral2", "burst7", "dash3", "raise4", "mix"], k.Phases[0].Sequence!.Steps.Select(s => s.Pattern));
+        Assert.Equal(["blink", "appear20", "ring_spiral", "blink", "appear20", "wall", "dash3", "mix"], k.Phases[1].Sequence!.Steps.Select(s => s.Pattern));
+        // 옛 파이어볼 부채·15초 해골 소환은 없음, 내려치기는 세 페이즈 모두
+        Assert.All(new[] { k.Patterns, k.Phases[0].Patterns, k.Phases[1].Patterns }, list =>
+        {
+            Assert.DoesNotContain(list, p => p.Id is "fire_fan" or "raise");
+            Assert.Contains(list, p => p.Id == "slam");
+        });
+        var kit = EnemyKit.Build(k, 0, []);
+        Assert.Equal(2, kit.Count);                                             // 내려치기 + 시퀀서(12 안)
+        Assert.Equal("dt_boss", k.DropTable!.Id);
+        Assert.Equal(100f, Defs.Enemies.Get("rotfeast").Xp);
+    }
+
+    [Fact]
+    public void Skeleton_king_phases_at_70_and_40_with_invulnerability_and_restart()
+    {
+        var t = World();
+        var king = Spawn(t, "skeleton_king", t.Hero.Pos + new Vector2(400f, 0f));
+        t.Step(2);
+        Assert.Equal(0, king.PhaseIdx);
+        king.Hp = king.MaxHp * 0.69f;
+        t.Step();
+        Assert.Equal(1, king.PhaseIdx);
+        var until = king.InvulnUntilTick;
+        Assert.Equal(t.World.Tick - 1 + 90, until);                             // 1.5s = 90틱
+        Assert.Equal(70f, king.PhaseSpeed);
+        var slot = king.Parts[king.Kit.SequencerSlot];
+        Assert.Equal(0, slot.Counter);                                          // 순서 처음부터, 1.5s 쉼
+        Assert.InRange(slot.Cooldown, 1.45f, 1.5f);
+        t.Step(100);
+        king.Hp = king.MaxHp * 0.39f;
+        t.Step();
+        Assert.Equal(2, king.PhaseIdx);
+        Assert.Equal(75f, king.PhaseSpeed);
+        king.Hp = king.MaxHp * 0.1f;
+        t.Step(120);
+        Assert.Equal(2, king.PhaseIdx);                                         // 문턱마다 한 번
+    }
+
+    [Fact]
+    public void Skeleton_king_p1_opens_with_five_orb_fan_after_line_telegraph()
+    {
+        var t = World();
+        var king = Spawn(t, "skeleton_king", t.Hero.Pos + new Vector2(300f, 0f));
+        var rec = Rec(t);
+        for (var i = 0; i < 300 && rec.Projectiles.Count == 0; i++) t.Step();
+        var fan = rec.Projectiles.ToList();
+        Assert.Equal(5, fan.Count);
+        Assert.All(fan, p => Assert.Equal(("pj_sk_orb", 14, 150f, false), (p.Def.Id, p.Damage, p.Speed, p.SightGated)));   // 보스 패턴은 시야 조건 없음
+        Assert.InRange(Spread(fan), 59f, 61f);                                  // 5발 60°
+        Assert.Equal(6f, fan[0].Def.HeroHitRadius);
+        var line = Assert.Single(rec.Telegraphs);
+        Assert.Equal((TelegraphShape.Line, 0.5f), (line.Shape, line.Time));
+    }
+
+    [Fact]
+    public void Skeleton_king_p2_summon_stops_at_alive_cap_eight()
     {
         var t = World();
         var king = Spawn(t, "skeleton_king", t.Hero.Pos + new Vector2(500f, 0f));
-        for (var i = 0; i < 25; i++)
+        king.Hp = king.MaxHp * 0.6f;
+        for (var i = 0; i < 6; i++)
         {
-            var s = Spawn(t, "skeleton", king.Pos + MathX.FromAngle(i) * (150f + 4f * i), SpawnSource.Summon);
+            var s = Spawn(t, "skeleton", king.Pos + MathX.FromAngle(i) * (200f + 10f * i), SpawnSource.Summon);
             s.Summoner = king.Id;
         }
-        for (var i = 0; i < 20 * 60 && Summoned(t, king) <= 25; i++) t.Step();
-        Assert.Equal(30, Summoned(t, king));                                    // 8 마리를 부르려다 상한 30 에서 멈춤
-        t.Step(16 * 60);
-        Assert.True(Summoned(t, king) <= 30);
+        for (var i = 0; i < 30 * 60 && Summoned(t, king) <= 6; i++) t.Step();
+        Assert.Equal(8, Summoned(t, king));                                     // 4 마리를 부르려다 동시 8 에서 멈춤
     }
 
     [Fact]
@@ -137,19 +150,31 @@ public sealed class BossAct1Tests
         var up = Spawn(hidden, "blackash", hidden.Hero.Pos + new Vector2(0f, -300f), SpawnSource.Miniboss);
         hidden.Step(60);
         Assert.False(hidden.World.Visibility.IsClearlyVisible(up.Pos, up.BodyTop));
-        Assert.DoesNotContain(Rec(hidden).Projectiles, p => p.Def.Id == "pj_fire_arrow");
+        Assert.DoesNotContain(Rec(hidden).Projectiles, p => p.Def.Id == "pj_ash_arrow");
         Assert.DoesNotContain(Rec(hidden).Telegraphs, _ => true);               // 불비(clear_sight)도 없음
 
         var t = World();
         var ash = Spawn(t, "blackash", t.Hero.Pos + new Vector2(260f, 0f), SpawnSource.Miniboss);
         var rec = Rec(t);
-        // 옆 260px(띠 안, 또렷이 보임) — 부채를 쏜다: 5발 ±30°, 시야 조건 표시
-        for (var i = 0; i < 300 && !rec.Projectiles.Any(p => p.Def.Id == "pj_fire_arrow"); i++) t.Step();
-        var fan = rec.Projectiles.Where(p => p.Def.Id == "pj_fire_arrow").ToList();
-        Assert.Equal(5, fan.Count);
-        Assert.All(fan, p => Assert.True(p.SightGated));
-        Assert.InRange(Spread(fan), 59f, 61f);
-        Assert.Equal(10, fan[0].Damage);
+        // 옆 260px(띠 안, 또렷이 보임) — 차례(일으키기 둘 → 불비 → 연사 → 부채, v0.9.5): 불비 다음 연사(3발 24° × 5번, 9), 그다음 부채(5발 ±30°, 10). 모두 시야 조건 표시
+        var volleys = new List<List<EnemyProjectileSpawn>>();
+        List<EnemyProjectileSpawn>? fan = null;
+        for (var i = 0; i < 900 && fan is null; i++)
+        {
+            var before = rec.Projectiles.Count;
+            t.Step();
+            var added = rec.Projectiles.Skip(before).Where(p => p.Def.Id == "pj_ash_arrow").ToList();
+            if (added.Count == 3) volleys.Add(added);
+            else if (added.Count == 5) fan = added;
+        }
+        Assert.Equal(5, volleys.Count);
+        Assert.All(volleys, v => Assert.InRange(Spread(v), 23.5f, 24.5f));
+        Assert.All(volleys, v => Assert.All(v, p => Assert.Equal((9, 240f, true), (p.Damage, p.Speed, p.SightGated))));
+        Assert.NotNull(fan);
+        Assert.All(fan!, p => Assert.True(p.SightGated));
+        Assert.InRange(Spread(fan!), 59f, 61f);
+        Assert.Equal(10, fan![0].Damage);
+        Assert.Equal(6f, fan[0].Def.HeroHitRadius);                             // 블랙애시 전용 불화살(판정 6, 열린 질문 57)
 
         // 패턴 정의가 겨누는 둘(불비·불화살 부채)에 clear_sight 를 단다 — 시야 조건 자체는 PatternAbility(SightWallTests·EnemyRulesTests 가 본다)
         var def = Defs.Enemies.Get("blackash");

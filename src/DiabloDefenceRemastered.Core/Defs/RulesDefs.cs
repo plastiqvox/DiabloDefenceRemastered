@@ -201,6 +201,19 @@ public sealed record SightRulesDef
 public sealed record EnemyRulesDef
 {
     public TelegraphRequiredDef TelegraphRequired { get; init; } = new();
+    /// <summary>보스 탄막 공통 값(v0.9.4, 6.20 ①④⑨ — 계약, 기획 38.1).</summary>
+    public BarrageRulesDef Barrage { get; init; } = new();
+}
+
+/// <summary>
+/// <c>rules.enemies.barrage</c>(기획 38.1 공정 장치): <see cref="SpawnClear"/> = 주인공 발에서 이 거리 안에는 탄을 만들지 않음(그 탄만 빠짐),
+/// <see cref="TelegraphMin"/> = <c>barrage</c> 가 든 패턴의 예고·<c>teleport.appear</c> 최소(로딩 검사), <see cref="ClearFxMax"/> = 페이즈 탄 지우기의 불꽃 수 상한.
+/// </summary>
+public sealed record BarrageRulesDef
+{
+    public float SpawnClear { get; init; } = 48f;
+    public float TelegraphMin { get; init; } = 0.4f;
+    public int ClearFxMax { get; init; } = 24;
 }
 
 /// <summary>

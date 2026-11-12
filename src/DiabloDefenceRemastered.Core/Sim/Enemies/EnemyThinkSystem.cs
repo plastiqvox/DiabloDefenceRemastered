@@ -144,6 +144,13 @@ public sealed class EnemyThinkSystem : ISimSystem
             }
         }
         if (e.Dead) return;   // 자폭 등이 이번 틱에 끝냄
+        if (e.Life == LifeState.Emerging)
+        {
+            // 보스 순간이동(6.20 ⑧)이 이번 틱에 숨김 — 나타날 때까지 1번이 세워 둔다
+            e.Intent = MoveIntent.Hold;
+            Finish(ctx, moving: false);
+            return;
+        }
 
         // 7 이동 의도
         if (!e.Action.Active)
@@ -296,6 +303,11 @@ public sealed class EnemyThinkSystem : ISimSystem
             v.FlashColor = new Rgb(255, 40, 40);
             v.FlashAlpha = 0.6f;
         }
+        // 보스 순간이동(6.20 ⑧): 사라짐(1 → 0) → 숨음(0) → 깨기 전 0.15s 밝아짐(0 → 1)
+        if (e.FadeOutTicks > 0 && w.Tick >= e.FadeOutTick)
+            v.AlphaMul *= 1f - Math.Clamp((w.Tick - e.FadeOutTick) / (float)e.FadeOutTicks, 0f, 1f);
+        if (e.HiddenUntilTick > 0 && w.Tick < e.WakeTick)
+            v.AlphaMul *= w.Tick < e.HiddenUntilTick ? 0f : Math.Clamp((w.Tick - e.HiddenUntilTick) / (float)Math.Max(1, e.WakeTick - e.HiddenUntilTick), 0f, 1f);
         if (e.PassThroughObstacles && w.Nav is not null && w.Nav.Clearance(e.Pos) < 0f)
             foreach (var s in e.Kit.Positioning)
                 if (e.Kit.Part(0, s) is PhaseThrough pt) v.AlphaMul *= pt.Params.AlphaOver;

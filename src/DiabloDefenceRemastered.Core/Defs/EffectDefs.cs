@@ -71,6 +71,11 @@ public sealed record ProjectileDef : IDef
     public EffectRef? HitEffect { get; init; }
     /// <summary>투사체가 끝날 때(맞음·사거리 끝·장애물) 그 자리에 남기는 장판(산성 침). 피해는 쏜 적의 배율로 발사 순간에 굳힌다(5.2). 처리 WP3.</summary>
     public GroundHazardDef? OnEnd { get; init; }
+    /// <summary>
+    /// 주인공 쪽 맞음 판정 반경(v0.9.4, 6.20 ⑤ — 계약, 기획 38.1 ①·열린 질문 57). 있으면 <c>HitHero</c> 가 주인공 몸 반경 대신 이 값을 쓴다(보스·중간 보스 탄 6).
+    /// 그림·장애물·<c>on_end</c>·적 쪽 판정은 그대로.
+    /// </summary>
+    public float? HeroHitRadius { get; init; }
 }
 
 /// <summary>

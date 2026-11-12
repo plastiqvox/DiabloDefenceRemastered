@@ -99,6 +99,28 @@ public static class EnemyShots
     {
         var w = ctx.World;
         w.Spawner.SpawnProjectile(new EnemyProjectileSpawn(def, ctx.Self.Pos, dir, damage, ctx.Self.Id, EntityId.Hero, speed, sightGated));
+        Cue(ctx, def);
+    }
+
+    /// <summary>
+    /// 생성 금지를 지키는 발사(v0.9.4, 6.20 ① — 기획 38.1 공정 장치 ③): 자리가 주인공 발에서 <c>rules.enemies.barrage.spawn_clear</c> 안이면 그 탄만 만들지 않고 거짓.
+    /// <c>barrage</c>·<c>dash</c> 꼬리 탄이 쓴다. <paramref name="range"/> 0 = 정의 사거리. 신호는 <paramref name="cue"/> 일 때만(탄막은 파도마다 한 번 — <see cref="Cue"/>).
+    /// </summary>
+    public static bool FireClear(in EnemyCtx ctx, ProjectileDef def, Vector2 pos, Vector2 dir, int damage, bool sightGated, float speed = 0f, float range = 0f,
+                                 bool cue = false)
+    {
+        var w = ctx.World;
+        var clear = w.Defs.Rules.Enemies?.Barrage.SpawnClear ?? 48f;
+        if (Vector2.DistanceSquared(pos, w.Hero.Pos) < clear * clear) return false;
+        w.Spawner.SpawnProjectile(new EnemyProjectileSpawn(def, pos, dir, damage, ctx.Self.Id, EntityId.Hero, speed, sightGated, range));
+        if (cue) Cue(ctx, def);
+        return true;
+    }
+
+    /// <summary>신호 <c>EnemyShot</c>(투사체 <c>fire</c> 소리).</summary>
+    public static void Cue(in EnemyCtx ctx, ProjectileDef def)
+    {
+        var w = ctx.World;
         w.Presentation.Cue(new CueEvent(w.Tick, CueKind.EnemyShot, ctx.Self.Pos, def, ctx.Self.Id));
     }
 }
@@ -244,8 +266,8 @@ public sealed record ChargeParams
 }
 
 /// <summary>
-/// 돌진(기획 8.3·6.6): 길 트임·거리 띠·또렷이 보임이면 예고(제자리 붉은 번쩍임 + 바닥 선) → 직선 돌진(시간 또는 막힐 때까지, 닿으면 한 번 피해) → 멍함.
-/// 돌진 중 안 보이게 되어도 끊지 않는다(시작 조건일 뿐).
+/// 돌진(기획 8.3·6.6): 길 트임·거리 띠·또렷이 보임이면 예고(제자리 붉은 번쩍임 + 바닥 선) → 직선 돌진(시간 또는 막힐 때까지) → 멍함.
+/// 돌진 중 안 보이게 되어도 끊지 않는다(시작 조건일 뿐). v0.9.4(V19, 6.20 ⑦): 달리는 동안 공격 클립을 반복하고 지나간 길로 닿음을 본다(<see cref="DashBody"/>, 돌진 하나에 한 번).
 /// </summary>
 public sealed class Charge(ChargeParams p) : IAbilityPart, IDamageInfo
 {
@@ -288,20 +310,18 @@ public sealed class Charge(ChargeParams p) : IAbilityPart, IDamageInfo
                     action.Stage = 1;
                     action.T = 0f;
                     self.ChargeWarn = false;
+                    DashBody.Start(ctx, ref action);
                 }
                 return ActionStatus.Running;
             case 1:
                 self.Intent = MoveIntent.Straight(action.Dir, p.Speed / MathF.Max(1f, self.MoveSpeed));
-                if (!action.Hit && ctx.DistToHero <= ctx.Contact + 4f)
-                {
-                    action.Hit = true;
-                    ctx.HitHero(ctx.FinalDamage(p.Damage), action.Dir, 0f);
-                }
+                DashBody.Step(ctx, ref action, ctx.FinalDamage(p.Damage));
                 if (action.T >= p.Time || (action.T > 0.1f && self.MoveBlockedTime > 0.05f))
                 {
                     action.Stage = 2;
                     action.T = 0f;
                     self.Life = LifeState.Stunned;
+                    self.Anim.Play(ClipKind.Idle, loop: true);
                 }
                 return ActionStatus.Running;
             default:

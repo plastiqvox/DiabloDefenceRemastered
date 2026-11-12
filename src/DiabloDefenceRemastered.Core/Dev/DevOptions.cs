@@ -83,6 +83,8 @@ public sealed record DevOptions
     public IReadOnlyList<LoadoutEntry> Passives { get; init; } = [];
     public StressSpec? Stress { get; init; }
     public bool FreezeAi { get; init; }
+    /// <summary>--boss-hp(v0.9.4, 6.20 ⑩): 중간 보스·보스가 생길 때 체력 비율 (0, 1].</summary>
+    public float? BossHp { get; init; }
     public string? Capture { get; init; }
     /// <summary>앱 시간(초) 목록. 여러 개면 파일 이름 뒤에 <c>_&lt;초&gt;</c>(<see cref="CapturePath"/>).</summary>
     public IReadOnlyList<double> CaptureAt { get; init; } = [];
@@ -111,11 +113,12 @@ public sealed record DevOptions
 
     /// <summary>
     /// 개발 옵션 실행(저장 보호 판정, 9절): <c>--autoplay</c>·<c>--stage</c>·<c>--room</c>·<c>--map</c>·<c>--capture*</c>·<c>--preview</c>·<c>--validate-data</c>·<c>--stress</c>·
-    /// <c>--reveal</c>·<c>--god</c>·<c>--level</c>·<c>--weapons</c>·<c>--passives</c>·<c>--hero</c> 중 하나라도.
+    /// <c>--reveal</c>·<c>--god</c>·<c>--level</c>·<c>--weapons</c>·<c>--passives</c>·<c>--hero</c>·<c>--boss-hp</c>(v0.9.4) 중 하나라도.
     /// </summary>
     public bool DevRun =>
         Autoplay || Stage is not null || Room is not null || Map is not null || Capture is not null || CaptureAt.Count > 0 || CaptureOn is not null
-        || Preview is not null || ValidateData || Stress is not null || Reveal || God || Level is not null || Weapons.Count > 0 || Passives.Count > 0 || Hero is not null;
+        || Preview is not null || ValidateData || Stress is not null || Reveal || God || Level is not null || Weapons.Count > 0 || Passives.Count > 0 || Hero is not null
+        || BossHp is not null;
 
     /// <summary>개발 옵션 실행이고 <c>--save-dir</c> 가 없으면 사용자 저장을 읽지도 쓰지도 않는다(8.3).</summary>
     public bool ProtectUserSave => DevRun && SaveDir is null;
@@ -143,7 +146,7 @@ public sealed record DevOptions
     /// </summary>
     public bool CaptureOnlyRun =>
         (Capture is not null || CaptureAt.Count > 0 || CaptureOn is not null) && !Autoplay && Stage is null && Room is null && Map is null && Preview is null
-        && !ValidateData && Stress is null && !Reveal && !God && Level is null && Weapons.Count == 0 && Passives.Count == 0 && Hero is null;
+        && !ValidateData && Stress is null && !Reveal && !God && Level is null && Weapons.Count == 0 && Passives.Count == 0 && Hero is null && BossHp is null;
 
     /// <summary>캡처 파일 경로 목록(앱 초 → 경로). 시각이 둘 이상이면 이름 뒤에 <c>_&lt;초&gt;</c>.</summary>
     public string CapturePath(double seconds)
@@ -167,6 +170,7 @@ public sealed record DevOptions
         StressProjectiles = Stress?.Projectiles,
         FreezeAi = FreezeAi,
         Check = Check,
+        BossHp = BossHp,
     };
 
     // ── 파싱 ─────────────────────────────────────────────
@@ -221,6 +225,7 @@ public sealed record DevOptions
                     case "--passives": o = Value(name, ParseLoadout, "<id:lv,…>") is { } pa ? o with { Passives = pa } : o; break;
                     case "--stress": o = Value(name, ParseStress, "<적 수>[,<투사체 수>]") is { } st ? o with { Stress = st } : o; break;
                     case "--freeze-ai": o = o with { FreezeAi = true }; break;
+                    case "--boss-hp": o = Value(name, ParseBossHp, "0 보다 크고 1 이하인 수") is { } bh ? o with { BossHp = bh } : o; break;
                     case "--capture": o = o with { Capture = Text(name) }; break;
                     case "--capture-at": o = Value(name, ParseSeconds, "<초[,초…]>") is { } ca ? o with { CaptureAt = ca } : o; break;
                     case "--capture-on":
@@ -340,7 +345,7 @@ public sealed record DevOptions
         private static readonly string[] Known =
         [
             "--seed", "--autoplay", "--autoplay-visit", "--background", "--stage", "--room", "--map", "--hero", "--start-at", "--time-scale", "--god",
-            "--level", "--weapons", "--passives", "--stress", "--freeze-ai", "--capture", "--capture-at", "--capture-on", "--quit-after",
+            "--level", "--weapons", "--passives", "--stress", "--freeze-ai", "--boss-hp", "--capture", "--capture-at", "--capture-on", "--quit-after",
             "--exit-on-result", "--timeout", "--window", "--vsync", "--mute", "--sound", "--sound-device", "--debug-nav", "--reveal", "--preview",
             "--check", "--validate-data", "--log", "--log-ticks", "--log-hash", "--save-dir",
         ];
@@ -363,6 +368,10 @@ public sealed record DevOptions
 
     private static double? PositiveDouble(string s) =>
         double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) && v > 0 && double.IsFinite(v) ? v : null;
+
+    /// <summary>--boss-hp 값: (0, 1].</summary>
+    private static float? ParseBossHp(string s) =>
+        float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) && v > 0f && v <= 1f && float.IsFinite(v) ? v : null;
 
     private static double? NonNegativeDouble(string s) =>
         double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) && v >= 0 && double.IsFinite(v) ? v : null;

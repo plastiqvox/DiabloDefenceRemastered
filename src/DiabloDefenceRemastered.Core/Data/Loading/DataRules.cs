@@ -121,8 +121,14 @@ internal static class DataRules
             for (var k = 0; k < e.Phases.Count; k++)
                 for (var i = 0; i < e.Phases[k].Patterns.Count; i++) PatternClip(e.Phases[k].Patterns[i], $".phases[{k}].patterns[{i}]");
 
-            var slots = e.Behaviors.Count + e.Patterns.Count;
-            foreach (var ph in e.Phases) slots = Math.Max(slots, e.Behaviors.Count + ph.Patterns.Count);
+            // 보스 묶음 A 이음새(6.20 ③): 순서(sequence) 패턴은 슬롯을 쓰지 않고 시퀀서 하나가 슬롯 하나
+            var sequenced = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var s in e.Phases.Select(ph => ph.Sequence).Prepend(e.Sequence))
+                if (s is not null) foreach (var step in s.Steps) sequenced.Add(step.Pattern);
+            var sequencer = sequenced.Count > 0 ? 1 : 0;
+            int Slotted(IReadOnlyList<PatternDef> list) => list.Count(p => p.Id is null || !sequenced.Contains(p.Id));
+            var slots = e.Behaviors.Count + Slotted(e.Patterns) + sequencer;
+            foreach (var ph in e.Phases) slots = Math.Max(slots, e.Behaviors.Count + Slotted(ph.Patterns) + sequencer);
             if (slots > MaxPartSlots) Err("enemies", e.Id, ".behaviors", $"부품 슬롯 {slots} > {MaxPartSlots}");
 
             if (e.Scale < MinScale || e.Scale > MaxScale)

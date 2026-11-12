@@ -12,7 +12,13 @@
     "projectiles": {
       "pj_enemy_arrow": { "fire": "snd_bfire" },
       "pj_fire_arrow":  { "fire": "snd_bfire" },
-      "pj_boss_fireball": { "fire": "snd_fbolt" }
+      "pj_boss_fireball": { "fire": "snd_fbolt" },
+      // 단계 2 보스 묶음 A: 블랙애시 불화살은 전의 pj_fire_arrow 소리, 해골왕 탄막은 전의 pj_boss_fireball 소리를 잇는다.
+      // 탄막은 파도마다 신호 하나 — 나선·연사처럼 촘촘한 파도는 같은 소리 min_interval·same_sound(rules.audio)가 거른다.
+      // pj_rot_glob(로트피스트 독 덩어리)은 걸지 않는다 — 원작 소리 표에 독 던짐 소리를 아직 들이지 않았다(열린 질문 59 와 함께 정함)
+      "pj_ash_arrow":  { "fire": "snd_bfire" },
+      "pj_sk_orb":     { "fire": "snd_fbolt" },
+      "pj_sk_orb_big": { "fire": "snd_fbolt" }
     },
     "effects": {
       "fx_fire_explosion": "snd_firimp",
