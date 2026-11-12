@@ -5,6 +5,8 @@
   "effects": [
     // 기획: 번개 lghning 1~8 ×0.35. 대체: 차지드 볼트 miniltng 8프레임
     { "id": "fx_bolt_hit", "sprite": "miniltng", "frames": [1, 8], "loop": false, "frame_time": 0.04, "scale": 0.5, "blend": "alpha" },
+    // 보스 묶음 B(기획 v0.9.5 3절·열린 질문 58, 설계서 6.20 ㉑): 순간이동 떠난 자리·도착 자리 = 차지드 볼트 miniltng 를 푸르게(원작 순간이동 그림은 다음 가져오기 때)
+    { "id": "fx_blink", "sprite": "miniltng", "frames": [1, 8], "loop": false, "frame_time": 0.03, "scale": 0.9, "tint": [170, 200, 255], "blend": "additive" },
     // 기획: 큰 폭발 bigexp 1~16(칸 160), 반경에 맞춤(그림 반폭 최대 약 68px — 배율 1 일 때 덮는 반경 68), 빛·흔들림
     { "id": "fx_fire_explosion", "sprite": "bigexp", "frames": [1, 16], "loop": false, "frame_time": 0.05,
       "fit_radius": 68, "blend": "alpha",

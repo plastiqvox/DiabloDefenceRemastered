@@ -14,6 +14,9 @@ public sealed class BeginTickSystem : ISimSystem
         var hero = world.Hero;
         hero.PrevPos = hero.Pos;
         hero.InvulnTime = MathF.Max(0f, hero.InvulnTime - World.Dt);
+        // 보스 묶음 B(6.20 ⑱): 순간이동 도착 무적 — 0.2s 가 부동소수 누적으로 13틱이 되지 않게 아주 작은 나머지는 0(HeroBlink.Eps 와 같은 값)
+        var blinkInvuln = hero.BlinkInvulnTime - World.Dt;
+        hero.BlinkInvulnTime = blinkInvuln > 1e-4f ? blinkInvuln : 0f;
         hero.HitFlashTime = MathF.Max(0f, hero.HitFlashTime - World.Dt);
 
         var tick = world.Tick;

@@ -51,7 +51,9 @@
       // potion_denied·shop_denied 는 걸지 않는다 — 기획 11.7 "원작 '못 함' 소리 sfx\items\ 중, 없으면 무음" 인데 sfx\items 에 그런 소리가 없다(cantdoit 없음, 원본 확인)
       "heal_on_enter": "snd_invpot", "shop_buy": "snd_shop_gold", "chest_drop": "snd_flipbook",
       "equip": "snd_invgrab", "equip_head": "snd_invcap", "equip_body": "snd_invlarm", "equip_body_heavy": "snd_invharm",
-      "equip_shield": "snd_invshiel", "equip_staff": "snd_invstaf", "equip_ring": "snd_invring"
+      "equip_shield": "snd_invshiel", "equip_staff": "snd_invstaf", "equip_ring": "snd_invring",
+      // 보스 묶음 B: 순간이동 도착(CueKind.Blink). 못 함(BlinkDenied)은 걸지 않는다 — 원작 "못 함" 소리 없음, HUD 충전 칸만 붉게
+      "blink": "snd_blink"
     },
     "rewards": {
       "reward_tome":  { "collect": "snd_invbook", "open": "snd_readbook" },

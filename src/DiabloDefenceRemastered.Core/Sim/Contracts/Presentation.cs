@@ -69,6 +69,10 @@ public enum CueKind : byte
     ShopDenied,
     /// <summary>v0.9.1 V8 WP3 — 보물 상자가 열려 책이 떨어짐(<c>RewardDef.Drop</c>). Subject = 그 <c>RewardDef</c>, Pos = 책 자리.</summary>
     ChestDrop,
+    /// <summary>v0.9.4 WP3 — 순간이동 도착(6.20 ⑰). Subject 없음, Pos = 도착 자리. 소리 <c>ui.blink</c>(원작 <c>holybolt</c> 빌림 — WP8).</summary>
+    Blink,
+    /// <summary>v0.9.4 WP3 — <c>Blink</c> 를 받았지만 못 함(칸 0·시전 중·그 방향 24px 미만). Subject 없음. 소리 연결 없음(원작 "못 함" 소리 없음 — HUD 충전 칸만 붉게).</summary>
+    BlinkDenied,
 }
 
 /// <summary>

@@ -3,6 +3,7 @@ namespace DiabloDefenceRemastered.Core.Sim.Heroes;
 /// <summary>
 /// 단계 3 HeroControl (WP3, 설계서 3.5): 능력치 다시 계산(바뀌었으면) → 레벨업 밀어내기(창이 닫힌 다음 틱) → 재생·시간 효과·물약 마시기(<c>Drink</c>)·서서히 회복 →
 /// 명령의 이동 벡터 → <c>Hero.Intent</c>·<c>MoveSpeed</c>(무리 끈적임)·바라보는 방향 → 그림 클립(걷기·서기, 시전은 무기가 시작). 위치 적분은 WP2 <c>Locomotion</c>.
+/// 보스 묶음 B(6.20 ⑰): 물약 다음·이동 의도 앞에서 순간이동(<see cref="HeroBlink.Step"/>) — 시전 중·도착 틱은 제자리(이동 입력 무시), 시전 클립.
 /// </summary>
 public sealed class HeroControlSystem : ISimSystem
 {
@@ -23,6 +24,7 @@ public sealed class HeroControlSystem : ISimSystem
         if (hero.Dead)
         {
             hero.Intent = MoveIntent.Hold;
+            hero.BlinkCast = 0f;
             Animate(world, hero, ClipKind.Die, loop: false);
             return;
         }
@@ -33,11 +35,20 @@ public sealed class HeroControlSystem : ISimSystem
         if ((world.Command.Buttons & CommandButtons.Drink) != 0 && world.Outcome == RunOutcome.Running) HeroPotions.Drink(world);
         HeroPotions.StepHeal(world);
 
-        var move = world.Outcome == RunOutcome.Running ? world.Command.Move : Vector2.Zero;
-        var len = move.Length();
         var crowd = world.Defs.Rules.Hero?.CrowdSlow;
         var slow = crowd is not null && hero.TouchingCount >= crowd.Touching ? crowd.Mul : 1f;
         hero.MoveSpeed = HeroStats.MoveSpeed(hero) * slow;
+        if (HeroBlink.Step(world))
+        {
+            // 시전 중: 시전 클립(무기가 다른 시전 클립을 틀고 있으면 그것), 도착 틱: 서기와 같은 규칙
+            var weaponCast = IsCastClip(hero.Anim.Clip) && !hero.Anim.Done;
+            if (hero.BlinkCast > 0f) Animate(world, hero, weaponCast ? hero.Anim.Clip : ClipKind.CastMagic, loop: false);
+            else Animate(world, hero, weaponCast ? hero.Anim.Clip : ClipKind.Idle, loop: !weaponCast);
+            return;
+        }
+
+        var move = world.Outcome == RunOutcome.Running ? world.Command.Move : Vector2.Zero;
+        var len = move.Length();
         if (len > 1e-3f)
         {
             var dir = move / len;
@@ -48,10 +59,12 @@ public sealed class HeroControlSystem : ISimSystem
         else
         {
             hero.Intent = MoveIntent.Hold;
-            var casting = hero.Anim.Clip is ClipKind.CastFire or ClipKind.CastLightning or ClipKind.CastMagic or ClipKind.Attack && !hero.Anim.Done;
+            var casting = IsCastClip(hero.Anim.Clip) && !hero.Anim.Done;
             Animate(world, hero, casting ? hero.Anim.Clip : ClipKind.Idle, loop: !casting);
         }
     }
+
+    private static bool IsCastClip(ClipKind clip) => clip is ClipKind.CastFire or ClipKind.CastLightning or ClipKind.CastMagic or ClipKind.Attack;
 
     /// <summary>클립 고르기·진행. 고른 직업의 그림 묶음이 없으면(시험 월드) 클립 이름만 바꾼다.</summary>
     private static void Animate(World world, Hero hero, ClipKind clip, bool loop)

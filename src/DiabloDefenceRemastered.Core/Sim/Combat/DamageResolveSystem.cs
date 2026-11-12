@@ -70,6 +70,8 @@ public sealed class DamageResolveSystem : ISimSystem
     {
         var hero = world.Hero;
         if (world.Outcome != RunOutcome.Running || hero.Dead || r.From == Faction.Hero) return;
+        // 보스 묶음 B(6.20 ⑱): 순간이동 도착 무적 동안은 피해·넉백을 모두 버린다(장판·몸·폭발 — 탄은 HitHero 가 판정부터 하지 않음). IgnoreInvuln 만 지나간다
+        if (hero.BlinkInvulnTime > 0f && (r.Flags & DamageFlags.IgnoreInvuln) == 0) return;
         var dir = r.KnockbackDir.LengthSquared() > 1e-6f ? Vector2.Normalize(r.KnockbackDir) : Vector2.Zero;
         if ((r.Flags & DamageFlags.NoDamage) == 0)
         {

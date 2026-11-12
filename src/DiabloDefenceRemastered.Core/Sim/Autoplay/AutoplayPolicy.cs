@@ -33,6 +33,7 @@ public readonly record struct RewardStall(int Act, int Room, RoomPhase Phase, in
 /// 문 단계는 문 우선순위로 고른 문의 나가는 자리로. 문 단계가 <c>autoplay_door_skip</c> 을 넘으면 <c>Exit</c> 명령 + <see cref="DoorSkips"/>, 보상 단계가 넘으면 <see cref="RewardStalls"/>.</item>
 /// <item>방마다 판단 상태는 월드가 바뀔 때 비운다(v0.8 — 계단 저장으로 끊고 이은 판이 같게).</item>
 /// <item>보스 탄막(v0.9.4, 6.20 ⑪ — 기획 15절): 다가오는 적 탄을 피해 탄 길에 수직으로 비킴(<see cref="Dodge"/>), 보스와 180~280 을 두고 둘레를 돎(<see cref="BossOrbit"/>). 탄·보스가 없으면 0.</item>
+/// <item>순간이동(보스 묶음 B, 6.20 ㉒ — 기획 15절): <see cref="ShouldBlink"/> 이면 그 틱에 <c>Blink</c> + 이동 = 그 방향(물약 <c>Drink</c> 와 같은 길).</item>
 /// </list>
 /// </summary>
 public sealed class AutoplayPolicy(AutoplayVisit visit)
@@ -90,7 +91,76 @@ public sealed class AutoplayPolicy(AutoplayVisit visit)
         if (!ReferenceEquals(world, _world)) BeginWorld(world);
         if (world.Room?.Shop is { Open: true } open) return ShopCommand(world, open);   // 상인 창 앱 틱(v0.9 — 판 틱이 돌지 않음)
         var command = Decide(world);
-        return ShouldDrink(world) ? command with { Buttons = command.Buttons | CommandButtons.Drink } : command;
+        if (ShouldDrink(world)) command = command with { Buttons = command.Buttons | CommandButtons.Drink };
+        if (ShouldBlink(world, out var blink)) command = command with { Move = blink, Buttons = command.Buttons | CommandButtons.Blink };
+        return command;
+    }
+
+    /// <summary>순간이동 판단(6.20 ㉒): 탄이 닿을 시간(초)·판정 여유(px)·자동 조작이 요구하는 최소 거리(px)·체력 비율·닿은 적 수.</summary>
+    public const float BlinkBulletTime = 0.3f, BlinkBulletMargin = 2f, BlinkMinDistance = 80f, BlinkLowHp = 0.5f;
+    public const int BlinkTouching = 3;
+
+    /// <summary>
+    /// 순간이동(보스 묶음 B — 6.20 ㉒, 기획 15절 v0.9.5, 결정적): 시전 중 아님 ∧ 도착 무적 아님 ∧ 칸 ≥ 1 이고 다음 중 하나면 참 —
+    /// ⓐ 다가오는 적 탄 하나가 0.3초 안에 탄 반경 + 판정(<c>hero_hit_radius</c> ?? 몸 반경) + 2 안으로 옴, ⓑ 주인공이 적 줄 예고(<c>Telegraph</c> Line — 돌진) 띠 안,
+    /// ⓒ 체력 &lt; 50% ∧ 몸이 닿은 적 ≥ 3. 방향 = <see cref="Dodge"/> 합(ⓒ 는 <c>Avoid</c> — 적 무리에서 멀어짐), 0 이면 위협 진행 방향에 수직이고 방 가운데에 가까운 쪽.
+    /// 그 방향으로 80px 도 못 가면(<c>PlacementResolver.Throw</c>) 반대쪽, 그래도 못 가면 쓰지 않는다. 도착 무적 동안은 탄이 지나가므로 쓰지 않는다(칸 아끼기).
+    /// </summary>
+    public static bool ShouldBlink(World world, out Vector2 dir)
+    {
+        dir = Vector2.Zero;
+        var hero = world.Hero;
+        if (world.Defs.Rules.Hero?.Blink is not { } rules || hero.Dead || world.Outcome != RunOutcome.Running) return false;
+        if (hero.BlinkCast > 0f || hero.BlinkInvulnTime > 0f || hero.BlinkCharges < 1) return false;
+
+        Vector2? threat = null;   // 위협의 진행 방향(탄 속도·돌진 줄 방향)
+        foreach (var p in world.Projectiles.Items)
+        {
+            if (p.Removed || p.Faction != Faction.Enemy || p.Motion == MotionKind.Orbit) continue;
+            var r = hero.Pos - p.Pos;
+            var v = p.Vel;
+            var vv = v.LengthSquared();
+            var vr = Vector2.Dot(v, r);
+            if (vv < 1e-6f || vr <= 0f) continue;
+            var t = Math.Clamp(vr / vv, 0f, BlinkBulletTime);
+            var hit = p.Radius + (p.Def.HeroHitRadius ?? hero.Radius) + BlinkBulletMargin;
+            if ((r - v * t).LengthSquared() >= hit * hit) continue;
+            threat = v;
+            break;
+        }
+        if (threat is null)
+            foreach (var tg in world.Telegraphs.Items)
+            {
+                if (tg.Removed || tg.Faction != Faction.Enemy || tg.Shape != TelegraphShape.Line) continue;
+                var band = tg.Size + hero.Radius;
+                if (MathX.DistanceSqToSegment(hero.Pos, tg.Pos, tg.End) > band * band) continue;
+                threat = tg.End - tg.Pos;
+                break;
+            }
+        var crowd = false;
+        if (threat is null)
+        {
+            if (hero.MaxHp <= 0f || hero.Hp >= hero.MaxHp * BlinkLowHp || hero.TouchingCount < BlinkTouching) return false;
+            crowd = true;
+        }
+
+        var want = crowd ? Avoid(world) : Dodge(world);
+        if (want.LengthSquared() < 1e-6f)
+        {
+            var along = MathX.NormalizeOr(threat ?? Vector2.Zero, new Vector2(1, 0));
+            want = new Vector2(-along.Y, along.X);
+            var center = world.Resolved is { } rm && rm.TryGetAnchor(RoomMapRules.CenterAnchor, out var a) ? a : world.MapSize * 0.5f;
+            if (Vector2.Dot(want, center - hero.Pos) < 0f) want = -want;
+        }
+        var d = MathX.NormalizeOr(want, Vector2.Zero);
+        if (d == Vector2.Zero) return false;
+        if (Vector2.Distance(hero.Pos, HeroBlink.Destination(world, hero.Pos, d, rules)) < BlinkMinDistance)
+        {
+            d = -d;
+            if (Vector2.Distance(hero.Pos, HeroBlink.Destination(world, hero.Pos, d, rules)) < BlinkMinDistance) return false;
+        }
+        dir = d;
+        return true;
     }
 
     /// <summary>

@@ -43,6 +43,9 @@
     // 주인공(마법사, 기획 4.0·12.7): 맞음 = 신음 둘 중 무작위, 죽음 = mage71(dead.wav 는 전사 소리라 안 씀). 원작 폴더 철자 sorceror
     { "id": "snd_sorcerer_hurt",  "files": ["d1/sound/sfx/sorceror/mage69.wav", "d1/sound/sfx/sorceror/mage69b.wav"], "category": "hero" },
     { "id": "snd_sorcerer_death", "files": ["d1/sound/sfx/sorceror/mage71.wav"], "category": "hero" },
+    // 순간이동(보스 묶음 B — 기획 v0.9.5 열린 질문 58): 이미 가져온 성스러운 화살 소리를 빌림(원작 순간이동 소리는 다음 가져오기 때).
+    // 설계 6.20 ⑲ 의 높낮이 흔들기 0.05 는 넣지 않는다 — 기획 12.7 "높낮이 흔들기는 맞음 소리만" 규칙(RealAudioDataTests)이 우선
+    { "id": "snd_blink", "files": ["d1/sound/sfx/misc/holybolt.wav"], "category": "hero", "volume": 0.7 },
 
     // 줍기(기획 12.7·11.1): 보석 0.06s 에 한 번·음량 40%
     { "id": "snd_gem",     "files": ["d1/sound/sfx/items/invgrab.wav"], "category": "pickup", "volume": 0.4, "min_interval": 0.06 },

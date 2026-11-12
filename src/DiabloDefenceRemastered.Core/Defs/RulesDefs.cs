@@ -247,6 +247,32 @@ public sealed record HeroRulesDef
     /// 구현 WP3, 수는 <c>Hero.Potions</c>·짐 <c>Potions</c>.
     /// </summary>
     public PotionRulesDef? Potions { get; init; }
+    /// <summary>
+    /// 순간이동(v0.9.4 V21, 6.20 ⑭ — 계약 <c>rules.hero.blink</c>). null 이면 순간이동 없음(<c>Blink</c> 는 늘 "못 함"). 구현 WP3 <c>HeroBlink</c>.
+    /// </summary>
+    public BlinkRulesDef? Blink { get; init; }
+}
+
+/// <summary>
+/// 순간이동 규칙(v0.9.4 V21, 6.20 ⑭ — 기획 v0.9.5 3절 첫 값): 칸 2·한 칸 6초·시전 0.15초·160px·도착 무적 0.2초·24px 미만이면 못 함.
+/// 칸·시전·충전은 능력치 키 <c>blink_charges</c>·<c>blink_cast</c>·<c>blink_recharge_pct</c> 가 더한다(<c>HeroBlink</c>). 모두 필수(<see cref="Effect"/> 만 선택).
+/// </summary>
+public sealed record BlinkRulesDef
+{
+    /// <summary>기본 칸 수(2). 최대 칸 = 이 값 + round(<c>blink_charges</c>), 1 이상.</summary>
+    public required int Charges { get; init; }
+    /// <summary>한 칸 충전 시간(초, 6.0).</summary>
+    public required float Recharge { get; init; }
+    /// <summary>시전 시간(초, 0.15) — 이 동안 제자리(맞음).</summary>
+    public required float Cast { get; init; }
+    /// <summary>거리(px, 160) — 벽·닫힌 문 틈·맵 끝 앞에서 멈춤(<c>PlacementResolver.Throw</c>).</summary>
+    public required float Distance { get; init; }
+    /// <summary>도착 무적(초, 0.2) — 피격 무적과 따로 센다(<c>Hero.BlinkInvulnTime</c>).</summary>
+    public required float Invuln { get; init; }
+    /// <summary>이만큼(px, 24)도 못 가면 칸을 쓰지 않고 "못 함".</summary>
+    public required float MinDistance { get; init; }
+    /// <summary>떠난 자리·도착 자리 이펙트(<c>fx_blink</c> — 묶음 B 가 더함: 코드에 이펙트 ID 를 박지 않게). 없으면 그리지 않는다.</summary>
+    public EffectRef? Effect { get; init; }
 }
 
 /// <summary>

@@ -7,6 +7,10 @@
       "per_level": { "damage_pct": 0.10 } },
     { "id": "field_runner", "name": "질주", "icon": { "sprite": "FieldRunner" }, "max_level": 5,
       "per_level": { "move_pct": 0.08, "pickup_pct": 0.20 } },
+    // 순간이동 숙련(기획 v0.9.5 6절 V21 — 2026-11-12 사용자 결정 순서, 설계서 6.20 ⑯): 레벨마다 다른 효과 levels[k] = Lv(k+1) 에 더함.
+    // 시전 0.10 → 3칸 → 0.05 → 충전 5.28초 → 시전 0초. 아이콘은 질주 그림 푸른 색조(원작 순간이동 아이콘은 다음 가져오기 때 — 열린 질문 58)
+    { "id": "blink_mastery", "name": "순간이동 숙련", "icon": { "sprite": "FieldRunner", "tint": [150, 190, 255] }, "max_level": 5,
+      "levels": [ { "blink_cast": -0.05 }, { "blink_charges": 1 }, { "blink_cast": -0.05 }, { "blink_recharge_pct": -0.12 }, { "blink_cast": -0.05 } ] },
     // 직업 특성(6.16) — 레벨업·상자·--passives 후보에 안 나오고 직업 traits 로만 붙는다(슬롯 밖, 1레벨). MVP 는 HUD 에 아이콘을 그리지 않음
     { "id": "trait_arcane_affinity", "name": "마력 친화", "trait": true, "max_level": 1,
       "per_level": { "cooldown_pct": 0.05 }, "classes": ["sorcerer"] }

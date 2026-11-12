@@ -3,7 +3,7 @@ using DiabloDefenceRemastered.Core.Sim.Combat;
 namespace DiabloDefenceRemastered.Core.Sim.Heroes;
 
 /// <summary>
-/// 주인공 능력치 합 한 곳(기획 4.1 적용 규칙, 설계서 6.10·6.16·6.19): <c>rules.hero.stats</c> → 직업 <c>stats</c> 가 키별로 덮어씀 → 특성(1레벨)·패시브·축복 <c>per_level</c> × 레벨 → 짐 <c>Mods</c>(<c>단련</c>·성소 대가)를 더함
+/// 주인공 능력치 합 한 곳(기획 4.1 적용 규칙, 설계서 6.10·6.16·6.19): <c>rules.hero.stats</c> → 직업 <c>stats</c> 가 키별로 덮어씀 → 특성(1레벨)·패시브·축복 <c>per_level</c> × 레벨(또는 <c>levels</c> 앞 L 개의 합 — 6.20 ⑯) → 짐 <c>Mods</c>(<c>단련</c>·성소 대가)를 더함
 /// → 장비(v0.9 — 출처 <see cref="StatSources.Equipment"/>, <c>EquipStats.Add</c>) → <b>모든 출처를 합친 뒤</b> <c>EquipStats.Clamp</c>(방어 ≤ <c>armor_cap</c>, <c>move_pct</c> ≥ <c>weight_move_floor</c> — <c>rules.equipment</c> 가 있을 때).
 /// 쿨다운 상한은 여기서 자르지 않는다(<c>DamageMath</c> 가 마력 폭주와 함께 자름).
 /// 최대 체력 = round(<c>max_hp</c> × (1 + <c>max_hp_pct</c>)). 비율이 바뀌면 지금 체력도 같은 비율로(v0.8 매혹의 성소), 더하기만 바뀌면 지금 체력은 그대로(회복은 <c>on_acquire</c>·채움 카드가 따로,
@@ -15,6 +15,7 @@ public static class HeroStats
     {
         var hero = world.Hero;
         var s = hero.Stats;
+        var blinkMax = HeroBlink.MaxCharges(world);   // 보스 묶음 B: 최대 칸이 늘면 늘어난 만큼 바로 찬다(6.20 ⑯)
         s.Clear();
         if (world.Defs.Rules.Hero is { } rules)
             foreach (var (k, v) in rules.Stats) s[k] = v;
@@ -41,12 +42,20 @@ public static class HeroStats
         hero.MaxHpFactor = factor;
         hero.MaxHp = max;
         hero.Hp = MathF.Min(hero.Hp, max);
+        HeroBlink.OnMaxChanged(hero, blinkMax, HeroBlink.MaxCharges(world));
         world.Combat.StatsDirty = false;
     }
 
     private static void Add(StatBlock s, PassiveDef def, int level)
     {
         if (level <= 0) return;
+        if (def.Levels is { } levels)
+        {
+            // 레벨별 효과(6.20 ⑯): 앞 L 개의 합
+            for (var i = 0; i < Math.Min(level, levels.Count); i++)
+                foreach (var (k, v) in levels[i]) s[k] += v;
+            return;
+        }
         foreach (var (k, v) in def.PerLevel) s[k] += v * level;
     }
 

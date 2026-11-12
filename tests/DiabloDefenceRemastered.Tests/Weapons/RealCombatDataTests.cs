@@ -65,7 +65,7 @@ public class RealCombatDataTests
     public void RealPassives_Pickups_DropTables_Rewards_Hero_ReferencesResolve()
     {
         var passives = RealData.Kind<PassiveDef>("passives.json", "passives");
-        Assert.Equal(["vitality", "arcane_power", "field_runner", "trait_arcane_affinity"], passives.Select(p => p.Id));
+        Assert.Equal(["vitality", "arcane_power", "field_runner", "blink_mastery", "trait_arcane_affinity"], passives.Select(p => p.Id));   // 보스 묶음 B: 순간이동 숙련
         Assert.DoesNotContain(passives, p => p.Blessing);                                           // v0.8 E — 축복은 MVP 데이터 밖
         var trait = Assert.Single(passives, p => p.Trait);
         Assert.Equal(0.05f, trait.PerLevel[StatKey.CooldownPct], 5);

@@ -219,6 +219,7 @@ public sealed class ProjectilesSystem : ISimSystem
     {
         var hero = world.Hero;
         if (hero.Dead || p.Faction == Faction.Hero) return false;
+        if (hero.BlinkInvulnTime > 0f) return false;   // 보스 묶음 B(6.20 ⑱): 순간이동 도착 무적 — 탄이 몸을 지나간다(지우지 않음)
         // 보스 묶음 A 이음새(6.20 ⑤): 탄 정의에 hero_hit_radius 가 있으면 주인공 몸 반경 대신 그 값(보스·중간 보스 탄 6)
         if (MathX.DistanceSqToSegment(hero.Pos, from, to) > Sq(p.Radius + (p.Def.HeroHitRadius ?? hero.Radius))) return false;
         var dir = FirePatternsDir(p.Vel, hero.Pos - from);

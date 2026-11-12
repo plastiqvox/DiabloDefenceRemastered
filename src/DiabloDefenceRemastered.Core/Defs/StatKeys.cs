@@ -26,6 +26,12 @@ public enum StatKey : byte
     [JsonStringEnumMemberName("gold_pct")] GoldPct,
     /// <summary>최대 체력 비율(v0.8, 6.10 — 매혹의 성소 대가 −10%). 최대 체력 = (기본 + 더하기) × (1 + 합), 지금 체력도 같은 비율로(WP3).</summary>
     [JsonStringEnumMemberName("max_hp_pct")] MaxHpPct,
+    /// <summary>순간이동 칸(v0.9.5 기획 4.1, 6.20 ⑮) — 최대 칸 = <c>rules.hero.blink.charges</c> + round(값). 숙련 Lv2 가 +1.</summary>
+    [JsonStringEnumMemberName("blink_charges")] BlinkCharges,
+    /// <summary>순간이동 시전(초) — 시전 = <c>cast</c> + 값, 0 아래는 0. 숙련 Lv1·3·5 가 −0.05.</summary>
+    [JsonStringEnumMemberName("blink_cast")] BlinkCast,
+    /// <summary>순간이동 충전 비율 — 한 칸 = <c>recharge</c> × (1 + max(−0.5, 값)). 숙련 Lv4 가 −0.12.</summary>
+    [JsonStringEnumMemberName("blink_recharge_pct")] BlinkRechargePct,
 }
 
 /// <summary>
@@ -64,7 +70,7 @@ public enum StatSources : byte
 
 public static class StatKeys
 {
-    public const int Count = 16;
+    public const int Count = 19;
     public const int EnemyCount = 6;
 
     private static readonly Dictionary<string, StatKey> HeroByName = BuildNames<StatKey>();
