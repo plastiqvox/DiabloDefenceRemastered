@@ -6066,7 +6066,7 @@ WP6(화면·UI·입력 — 11.1 WP6) 코드가 문서와 다르게 또는 더 �
 
 **남의 파일 이음새**
 - Core `Dev/DevOptions.cs`(WP7): `PreviewKinds` 에 `ui`. 시험 `Dev/DevOptionsTests.cs` 개발 옵션 판정에 `--preview ui` 한 줄.
-- Core `Sim/Run/RunSession.cs`(WP1g): 회복 문으로 들어온 방의 `_hpIn` 이 v0.9 의 "= 최대" 그대로라 V15(절반) 뒤 `hp_in` 이 늘 1 이었다 → `RoomFlow` 와 같은 식(`min(최대, 체력 + 최대 × heal_amount)`, 죽었거나 가득이면 그대로). 기록 값만 — 시뮬레이션 바뀜 없음(같은 씨앗 `RESULT` 같음). 시험은 시험 짐(`FakeHeroCarry`)이 최대 체력을 지금 체력으로 되살려 절반 회복이 늘 가득이 되므로 가르지 못해 두지 않았다.
+- Core `Sim/Run/RunSession.cs`(WP1g): 회복 문으로 들어온 방의 `_hpIn` 이 v0.9 의 "= 최대" 그대로라 V15(절반) 뒤 `hp_in` 이 늘 1 이었다 → 회복량 식(`min(최대, 체력 + 최대 × heal_amount)`, 죽었거나 가득이면 그대로)을 `RoomFlow.HpAfterHealOnEnter` 하나로 뽑아 `RoomFlow.Step`(실제 회복)과 `RunSession`(기록)이 같이 부른다 — 검증 지적(식 복사 → 회복 방식이 바뀌면 `hp_in` 이 조용히 틀림)에 따른 것. 기록 값만 — 시뮬레이션 바뀜 없음(같은 씨앗 `RESULT` 같음). 시험 `ShopAndHealTests.HealDoor_HpAfterHealOnEnter_MatchesFirstTick` 이 도우미 값과 첫 틱 뒤 체력이 같은지 본다(시험 짐 `FakeHeroCarry` 는 최대 체력을 지금 체력으로 되살려 `RunSession` 을 거치는 시험으로는 가르지 못한다).
 - 게임 `App/Contracts/InputFrame.cs`: `UiButtons.Drink`(아래 WP1h).
 
 **계약 변경(WP1h 요청)**

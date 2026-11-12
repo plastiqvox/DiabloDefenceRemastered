@@ -23,6 +23,16 @@ public sealed class RoomFlowSystem : ISimSystem
 /// </summary>
 public static class RoomFlow
 {
+    /// <summary>
+    /// 회복 문으로 들어온 방의 첫 틱에 채운 뒤의 체력(최대 × heal_amount 만큼, 최대에서 자름. 죽었거나 가득이면 그대로).
+    /// <see cref="Step"/> 과 <c>RunSession</c> 의 ROOM <c>hp_in</c> 기록이 같이 쓴다 — 회복 방식을 바꾸면 이 하나만 고친다(단계 2 wp6).
+    /// </summary>
+    public static float HpAfterHealOnEnter(Hero hero, RoomRulesDef rules)
+    {
+        if (hero.Dead || hero.Hp >= hero.MaxHp) return hero.Hp;
+        return Math.Min(hero.MaxHp, hero.Hp + hero.MaxHp * Math.Clamp(rules.Rewards.HealAmount, 0f, 1f));
+    }
+
     public static void Step(World world)
     {
         var room = world.Room;
@@ -35,8 +45,7 @@ public static class RoomFlow
         {
             room.HealOnEnter = false;
             var hero = world.Hero;
-            var amount = hero.MaxHp * Math.Clamp(rules.Rewards.HealAmount, 0f, 1f);
-            if (!hero.Dead && hero.Hp < hero.MaxHp) hero.Hp = Math.Min(hero.MaxHp, hero.Hp + amount);
+            hero.Hp = HpAfterHealOnEnter(hero, rules);
             world.Presentation.Cue(new CueEvent(world.Tick, CueKind.HealOnEnter, hero.Pos, room.Reward));
         }
 
