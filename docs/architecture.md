@@ -6281,6 +6281,78 @@ WP6(화면·UI·입력 — 11.1 WP6) 코드가 문서와 다르게 또는 더 �
 
 **기획서에 넘기는 것**: 창이 열린 동안 `Esc` = 떠나기(3절 표 "일시정지 Esc" 에 예외 한 줄), 체력 숫자 자리(구슬 아래 12px), 음수 부호 표기(`-`).
 
+### 보스 묶음 A 구현 기록 (wp/s2-boss-a)
+
+보스 묶음 A "적 탄막"(6.20 ①~⑪, 기획 v0.9.5 9.4·9.5·38절)이 이 문서와 다르게·더 정한 것. main `c0c5f99`(설계 문서 커밋) 위에서 했다. 코드가 정본이다.
+새 파일: Core `Sim/Enemies/Parts/Barrage.cs`·`DashBody.cs`(돌진 몸통 + `dash` — `Actions.cs` 에서 옮김)·`Teleport.cs`, `PatternSequence` 는 `Decorators.cs`. 시험 `Enemies/BarrageTests`·`PatternSequenceTests`·`DashBodyTests`·`EnemyTeleportTests`·`BarrageValidatorTests`·`BossKit`(도우미), `Combat/ProjectileHitboxTests`, `Sim/BossRoomScenarioTests`.
+
+| 자리 | 정한 것 | 까닭 |
+|---|---|---|
+| 돌진 지나간 길(⑦) | 선분 = **`ActionState.From`(지난 틱 자리) → 지금 자리**, 판정 뒤 `From = Pos`. `Enemy.PrevPos` 를 쓰지 않음 | `PrevPos` 는 BeginTick(1단계)이 EnemyThink(5단계) 앞에서 지금 자리로 덮어 써, 설계대로면 선분이 점이 된다 |
+| 빈틈 벽 줄 기준(①) | 첫 파도 틱의 주인공 자리를 `ActionState.From` 에 둠(빈틈은 설계대로 `Point.X`) | 행동 상태에 자리 칸이 하나 더 필요했다 — 벽과 돌진은 한 패턴에 같이 못 두므로 `From` 을 나눠 씀 |
+| 첫 돌진 방향 | **줄 예고를 그린 방향(패턴 시작 틱의 주인공 쪽)** — 마지막 동작이 `dash` 인 패턴은 이벤트 프레임에 `Dir` 을 다시 쓰지 않는다. 둘째부터는 설계대로 서서 그때 주인공 쪽 | 6.20 ② 대로면 0.6s 예고 동안 주인공이 걸으면(57px) 보이는 줄과 달리는 길이 어긋나고, 끝 내려찍기 원(줄 예고 시작 때 굳음)과 보스가 서는 자리도 어긋난다 |
+| 끝 내려찍기 예고 시간 | 첫 돌진(돌진 하나)은 패턴 시작 틱에 원 예고, 시간 = max(패턴 예고, 이벤트 프레임 시각) + `time` + 0.15. 마지막 돌진이 둘째 뒤면 `chain_pause` + `time` + 0.15 | "남은 줄 예고" 를 이벤트 프레임이 예고보다 늦는 클립에도 맞게 |
+| 줄 예고 폭 | `TelegraphSpawn.Size` = **몸 반경**(그리기가 `Size` 를 반폭으로 씀 → 폭 = 몸 지름). `charge` 의 옛 줄(`Size` = 몸 지름 — 폭 두 배)은 그대로 | 설계 "폭 = 몸 지름" 을 그리기 규칙에 맞춤. 구울 데이터는 그대로라는 지시대로 `charge` 는 손대지 않음 |
+| `PatternAbility.T` | 예고 단계(이벤트 프레임 앞)에서만 늘린다 | 이벤트 뒤의 `T` 는 `dash`·`teleport` 가 쓰는데 패턴도 늘려 돌진이 두 배로 빨리 끝났다(시험이 잡음) |
+| 여러 틱 동작 끝 | 상태를 쓰는 동작(`dash`·`teleport` — 새 `IEnemyAction.OwnsState`)이면 클립 끝을 기다리지 않고 Done, 반복 클립(돌진 몸통)은 패턴이 돌리지 않음 | 반복 클립은 끝나지 않고, 순간이동 뒤 남은 시전 클립을 나타난 뒤에 이어 틀면 다음 칸(나타남 고리)이 늦는다 |
+| 시퀀서 안쪽 슬롯 | 안쪽 패턴에 **빈 `PartSlot`** 을 넘김(설계 "같은 슬롯") | 순서 패턴은 슬롯 값을 쓰지 않는데, 같은 슬롯을 넘기면 실수로 `Counter`(다음 칸)를 덮을 길이 생긴다 |
+| 순서 검사(13.5-13 보탬) | 조건 없는 패턴은 **그 페이즈의** 순서에 있어야 한다(설계 "어느 순서엔가" 보다 좁게). 순서가 하나도 없는 적은 지금 규칙 그대로(조건 없는 패턴 = 늘 시작 — 합성 시험 정의). 해골왕 데이터는 P2 가 P1 순서 패턴을, P3 가 P2 전용 패턴을 `remove` 로 뺀다 | 페이즈 완성 목록은 앞 페이즈 패턴을 물려받는다 — 그 페이즈 순서에 없는 조건 없는 패턴은 쓰이지 않는 죽은 칸이다 |
+| 없는 순서 ID | 검사기가 먼저 보고(오류 하나), 그때는 부품 표(`EnemyKit.Build` — 같은 경우 예외)를 만들지 않음 | 같은 오류가 두 번 나오지 않게 |
+| 탄 지우기 그림(④) | 지운 탄의 **`hit_effect`**(`pj_sk_orb` = `fx_spark` ×0.6), 앞 24 곳 | 이펙트 ID 를 코드에 박지 않고 탄 정의를 따름 |
+| 시야 조건 탄막 | `clear_sight` 패턴의 `barrage` 는 **둘째 파도부터 그 틱에 다시 보고** 안 보이면 그 파도만 버림(파도 0 은 이벤트 프레임이 이미 봄) | 블랙애시 연사(0.18s × 5)가 주인공이 벽 뒤로 돈 뒤에도 쏴 공정성 `unseen_shots` 3(실제 액트 1 씨앗 3 — 기존 시나리오가 잡음). 6.6 "쏘는 순간" 규칙과 같음 |
+| 순간이동 무적 | `InvulnUntilTick = max(지금 값, 시작 + vanish + appear 틱 + 1)`. 페이즈 전환 무적도 `max` 로(지금 값을 줄이지 않음) | 숨은 마지막 틱까지 덮고, 겹친 무적이 짧아지지 않게 |
+| 순간이동 끝 틱 | 그 틱 EnemyThink 7번(이동 의도)을 건너뛰고 `Hold` | 행동이 끝난 틱에 걷기 의도가 나가 나타날 자리에서 1px 밀렸다 |
+| 사라짐 알파 | `Enemy.FadeOutTick`(시작) + **`FadeOutTicks`(길이)** 둘 — 6.20 ⑧ 의 `FadeOutTick` 에 길이 하나 더(WP4 조각) | 표시 상태(8번)가 `vanish` 를 모른다 |
+| 탄막 신호 | `EnemyShot` 은 파도(꼬리 탄은 한 쌍)마다 한 번 | 고리 20발이 신호 20개를 내지 않게 |
+| 자동 조작 둘레 돌기 | 방 들르기 모드(`--autoplay-visit rooms`)에서는 돌지 않음 | 들르기 판(Stage1 시나리오)이 보스 방 기준점을 다 못 들렀다 — 들르기가 목적인 모드 |
+| 해골왕 P1 `start` | 1.5s(등장 뒤 들어와 첫 칸까지) | 기획 표에 P1 첫 쉼이 없어 전환 쉼과 같게 |
+| 순간이동 패턴 | 특수 클립 `event_frame` 1(누르자마자 흐려짐 시작), 패턴 예고 없음(나타날 자리 원이 예고) | 기획 "0.25s 동안 흐려지며 사라짐" |
+| 끝 내려찍기 그림 | `fx_fire_explosion` ×0.8, 원 예고 그림 `fx_warning_circle`(새 매개변수 `end_slam.telegraph`·`teleport.telegraph`) | 기획에 그림이 없음 — 이미 있는 이펙트 |
+| `range_to_hero` 한 발 | (a + b) / 2 | 식의 i/(n − 1) 이 0 나누기 |
+| `--boss-hp` | 개발 옵션 실행(`DevRun` — 저장 보호)에 넣고 `CaptureOnlyRun` 에서는 뺌 | 9절 "개발 옵션" |
+| 순서 패턴과 내려치기 | 시퀀서가 능력 목록 맨 뒤라 쉼이 끝난 틱에 내려치기도 준비돼 있으면 내려치기가 먼저(그만큼 다음 칸이 늦음) | 설계 그대로 — 패턴 도중에는 끼어들지 않는다(시험 `Slam_OnlyDuringWait`) |
+
+**계약 변경**(13.24 표에 더한 것 — 모두 WP4 소유 형): `ActionState.From`, `IEnemyAction.OwnsState`·`Interrupt(ctx, ref action)`(기본 구현 있음), `Enemy.FadeOutTicks`. 이름: `rules.enemies.barrage` 의 형 = `BarrageRulesDef`, 순서 칸 = `SequenceStepDef { Pattern, Wait }`. 그 밖은 13.24 그대로(`TelegraphDef.Shape`·`Length`, `SequenceDef`, `EnemyDef.Sequence`, `PhaseDef.Sequence`·`ClearProjectiles`, `ProjectileDef.HeroHitRadius`, `EnemyProjectileSpawn.Range`, `RunOptions.BossHp`, `ActionState.BeginTick`·`Count`·`Sub`, `Enemy.FadeOutTick`·`HiddenUntilTick`, 상한 280).
+
+**남의 파일 이음새**
+- WP3 `Sim/Projectiles/ProjectilesSystem.cs`(`HitHero` 판정 한 줄 — `p.Radius + (Def.HeroHitRadius ?? hero.Radius)`), `Sim/Combat/CombatSpawner.cs`(`Range > 0` 이면 `RangeLeft`).
+- WP7 `Data/Loading/DataRules.cs`: 부품 슬롯 검사(`behaviors + 페이즈 패턴 수`)가 순서 패턴을 빼고 시퀀서 하나를 셈 — 옛 셈이면 해골왕 패턴 열넷이 슬롯 12 를 넘어 실제 데이터가 로딩 오류. `Dev/DevOptions.cs` `--boss-hp`(파싱·범위 오류·`ToRunOptions`·`Known` 목록), 시험 `DevOptionsTests` 거절 셋·파싱 하나.
+- WP5 `Rendering/WorldRenderer.cs`: 7층 알파 묶음 끝에 판정 점(흰 점 지름 6 α0.9 + 테 지름 12 α0.45, 주인공 그리는 자리 `HeroDraw`) — `hero_hit_radius` 탄이 120px 안일 때만.
+- 시험 공용이 아닌 자기 폴더: `Sim/Wp4Data.cs` 가 적 파일의 `projectiles` 를 실제 정의로 읽고 모르는 그림은 대역(`missiles.json` 을 읽지 않음). `Sim/RealSpawnGapTests` 는 승리 대기 3초(`VictoryPending`)를 틈으로 세지 않음 — 보스 중 1.2/s 로 그 사이 새 무리가 안 올 수 있다(씨앗 7 의 2.98s).
+- `effects/common.json`·`audio/bindings.json` 은 고치지 않았다 — 새 탄 넷의 `fire` 소리 연결이 없다(아래 남은 것).
+
+**시험**: worktree 기준 main 1160 통과·13 건너뜀(자원 없는 worktree 라 `DefAssetNames…` 하나 더 건너뜀) → **1208 통과·18 건너뜀**(새 시나리오 다섯은 `DDR_RUN=Scenario` 에서만). `DDR_RUN=Scenario` 전체(기존 액트 1 판·틈·들르기 포함) 통과.
+기존 시험이 깨진 것과 까닭: `BossAct1Tests`(옛 해골왕 50% 페이즈·파이어볼 부채·부른 적 30 → 새 3페이즈·P2 부르기 8·P1 첫 부채·블랙애시 연사 차례), `PartsSmokeTests`(등록 목록에 `barrage`·`teleport`), Stage1 들르기 시나리오(둘레 돌기 — 위 표), `RealActScenarioTests` 씨앗 3(연사 시야 — 위 표), `RealSpawnGapTests` 씨앗 7(보스 중 줄임).
+
+**시나리오 숫자**(Core 만, `RunStart(StartRoomIndex 8)` + `--level 25 --weapons magic_missile:8,fireball:8` 자동 조작 — 열린 질문 56 의 첫 자료, 기준 아님)
+
+| 판 | 결과 | `boss_s` | 보스 방 틱 | 최대 페이즈 | 최대 동시 적 탄 | 보스에게 맞음(몸 어림) | 받은 피해 |
+|---|---|---|---|---|---|---|---|
+| `--god` 씨앗 1 | 승리 | 111.3 | 6859 | P3 | 81 | 15(9) | (무적) |
+| `--god` 씨앗 2 | 승리 | 103.5 | 6387 | P3 | 80 | 18(15) | (무적) |
+| `--god --boss-hp 0.39` 씨앗 1 | 승리, 들어온 첫 틱 P3 | 46.5 | 2971 | P3 | 78 | 7(5) | (무적) |
+| 무적 없음 씨앗 1 | 죽음(방 57.1s) | — | 3427 | P2 | 39 | 5(3) | 101(체력 100, 물약 0) |
+| 무적 없음 씨앗 2 | 죽음(방 37.6s) | — | 2258 | P1 | 31 | 5(4) | 109 |
+
+- 공정성 셋(`unseen_shots`·`unseen_charges`·`hidden_hits`) 모두 0, 불변식 통과, 같은 씨앗 두 번 같은 판 해시. 최대 동시 적 탄 81(상한 280·시험 기준 240 안 — 기획 어림 "P3 약 150" 보다 적다: 자동 조작이 보스와 180~280 을 두고 고리 탄이 빨리 지나감).
+- 맞은 것은 대부분 몸(돌진 베기·끝 내려찍기·내려치기 — 맞은 틱 보스가 두 반경 + 70 안). 자동 조작 A 는 탄만 피하고 돌진 줄은 피하지 않는다(돌진 줄 피하기는 묶음 B 의 순간이동 ⓑ). 단계 2 판을 1:9 로 바로 시작하면 물약 0·체력 100 이라 다섯 번에 죽는다 — 실제 판(물약 2병·상자 강화)과 다르다.
+- 실제 액트 1 자동 조작 판(`--god`, `RealActScenarioTests`)의 보스 방 `boss_s`: 씨앗 7 = 93.3, 씨앗 3 = 67.4(목표 90~180 — 처치가 빠른 쪽).
+
+**캡처 판정**(저장소 밖 임시 폴더. 이 worktree 의 표 해시가 메인 `Assets` 와 달라 시작 검사 5 → 지시대로 메인 `Assets` 를 임시 폴더로 복사해 다시 가져옴. 창 1280×720, `--god --level 25 --weapons magic_missile:8,fireball:8 --autoplay --seed 1`, 방 시계 18~34s)
+- P1(`--boss-hp 0.99`): 부채·고리16 이 작은 불덩이(`fireba` ×0.5)로 바닥과 갈림(V16 덧칠·둘레 빛), 돌진 베기 줄 예고(보스 → 주인공, 몸 지름 폭)와 끝 자리 원 예고가 첫 돌진 전에 보이고, 원 자리에서 폭발. 주인공 발에 흰 판정 점.
+- P2(`0.69`): 줄 예고 + 끝 원(3연속의 마지막), 속도 섞기(큰 불덩이 10 + 작은 고리 20)가 크기로 갈림, 꼬리 탄 줄.
+- P3(`0.39`): 나타남 고리20, 빈틈 벽(세로 줄 여러 겹 — 빈틈이 보임), 돌진 줄, 순간이동 자리 원 예고 안에서 보스가 밝아지는 프레임. 빈틈 벽은 자동 조작이 보스와 180~280 을 두므로 줄 가운데(주인공 − 260)가 보스 근처에서 생겨 보스 몸 앞에서 밀려온다.
+- 로트피스트(`--room 1:5`)·블랙애시(`1:7`): 중간 보스가 무리(호위·소환)에 묻혀 바닥액 장판·연사를 따로 가려 보기 어렵다 — 블랙애시 연사 줄 예고(0.5s)는 보임, 로트피스트 장판은 작은 주황 웅덩이 몇 개(반경 40)로 방 바닥을 거의 덮지 않음(열린 질문 59 — 첫 값 그대로 둠).
+- 프레임(`--boss-hp 0.39` 단독, `--log-ticks`): `PERF frame_ms p50 6.9 p95 8.1 p99 8.8`(첫 프레임 제외 max 68 — 시작), draw_calls p95 244. `--log-ticks` 의 월드 열(적·투사체 수·단계 ms)은 0 — WP7 기록 "남은 것 3"(판을 가진 씬이 프로파일러를 앱에 보이는 길 없음) 그대로라 탄 수는 Core 시나리오 값을 씀.
+
+**남은 것·확인 못 한 것**
+- **새 탄 넷의 발사 소리**: `audio/bindings.json`(WP8)에 `pj_sk_orb`·`pj_sk_orb_big`·`pj_ash_arrow`·`pj_rot_glob` 의 `fire` 가 없어 무음이다. `--validate-data` 경고 0(소리 없는 탄을 알리는 검사가 없음). **B 또는 메인 세션 요청**: 블랙애시 `pj_ash_arrow` 는 `pj_fire_arrow` 와 같은 `snd_bfire`, 해골왕 탄은 `snd_fbolt`(파도마다 한 번 — 신호를 파도 단위로 냄) 첫 값.
+- 직접 해 보지 못함(난이도·피할 길의 느낌). 자동 조작 결과는 기록용.
+- 빈틈 벽이 맵 끝 근처에서 탄 대부분이 빠지는지는 캡처로 보지 못함(자동 조작이 가운데 쪽으로 돈다). 시험은 마름모 밖·막힌 자리 탄이 빠지는 것만 본다.
+- 중간 보스 장판·연사의 화면 확인은 무리에 묻혀 부분적이다.
+
+**기획서에 넘기는 것**: 첫 돌진은 줄 예고 방향 그대로(9.5 "돌진 베기" — 예고 동안 비켜도 다시 노리지 않음), 해골왕 P1 첫 쉼 1.5s, 끝 내려찍기 그림 `fx_fire_explosion`, 블랙애시 연사의 뒤 파도는 그때 안 보이면 쏘지 않음, 방 들르기 자동 조작은 보스 둘레를 돌지 않음.
+
 ### 통합 기록 (WP0·WP2~WP8 합침 — 단계 1, 커밋은 `git log --grep 통합`·`git log --grep 합침`)
 
 합친 순서 wp7 → wp2 → wp3 → wp4 → wp0 → wp5 → wp8 → wp6(모두 `--no-ff`). 겹친 파일은 이 문서 하나였고, 13장 끝 구현 기록 소절을 모두 남겼다(합친 순서대로).
