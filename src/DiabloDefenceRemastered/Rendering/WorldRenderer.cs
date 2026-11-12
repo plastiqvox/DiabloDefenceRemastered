@@ -43,6 +43,9 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
     private World? _world;
     private ArenaRenderer? _arena;
     private LightRenderer? _light;
+    /// <summary>셰이더 빛(7.7 — 셰이더 파일을 못 읽으면 null, 빛 텍스처로).</summary>
+    private ShaderLight? _shaderLight;
+    private bool _shaderTried;
     private RenderTarget2D? _worldRT;
     private RenderTarget2D? _upRT;
     private int _scale;
@@ -88,6 +91,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         art.PreloadStage(world.Stage, world.HeroClass);
         _arena = world.Arena is { } grid && world.Map is { } map ? new ArenaRenderer(grid, art.LoadMapArt(map)) : null;
         _light?.Fog.Attach(world);
+        _shaderLight?.Attach(world.Arena);
         // 창살 그림은 액트 맵 풀에서 빌려 오므로 액트마다 한 번(액트 없는 월드는 그 맵만 보고 매번)
         if (!_grateArtBuilt || world.Stage is null || !ReferenceEquals(_grateArtStage, world.Stage))
         {
@@ -134,6 +138,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         _alpha7.Clear();
         _enemiesDrawn = _enemiesHidden = 0;
         _outlines.Clear();
+        _shaderLight?.BeginFrame();
         _arena?.Prepare(f.View.Inflate(64));
 
         var toTarget = Matrix.CreateTranslation(-cam.X, -cam.Y, 0f) * Matrix.CreateScale(s);
@@ -146,15 +151,19 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, toTarget);
         _arena?.DrawFloor(batch, f.View, prim);
         DrawOutsideEnemies(batch, f, back: true);
-        _arena?.DrawGroup(batch, WallGroup.Back, prim);
+        _arena?.DrawGroup(batch, WallGroup.Back, prim, _shaderLight);
         DrawLayer1(batch, f, prim);
         DrawCorpses(batch, f);
         DrawPickups(batch, f, prim);
         DrawLayer4(batch, f, prim);
-        _arena?.DrawGroup(batch, WallGroup.Front, prim);
+        _arena?.DrawGroup(batch, WallGroup.Front, prim, _shaderLight);
         DrawOutsideEnemies(batch, f, back: false);
         DrawGateSeals(batch, f, prim);
         batch.End();
+
+        // ── 셰이더 빛: 벽·유닛이 서 있는 바닥 y 버퍼(위에서 모은 그림을 같은 차례로) ───
+        if (_shaderLight is not null && _arena is not null)
+            _shaderLight.DrawGround(batch, new Int2(_worldRT!.Width, _worldRT.Height), toTarget, cam);
 
         // ── 6층 빛·안개 ─────────────────────────────────────────
         CollectEffectLights(f);
@@ -204,9 +213,18 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             _worldRT = new RenderTarget2D(device, size.X, size.Y, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents);
             _scale = s;
         }
-        if (_light is null)
+        if (!_shaderTried)
         {
-            _light = new LightRenderer(device, prim);
+            _shaderTried = true;
+            _shaderLight = ShaderLight.TryLoad(device, _app.Log);
+            _shaderLight?.Attach(world.Arena);
+        }
+        // 셰이더 빛이면 LightRT 를 WorldRT 크기로(전체 해상도), 아니면 480×270
+        var lightSize = _shaderLight is not null ? new Int2(_worldRT.Width, _worldRT.Height) : new Int2(LightRenderer.Width, LightRenderer.Height);
+        if (_light is null || _light.LightSize != lightSize)
+        {
+            _light?.Dispose();
+            _light = new LightRenderer(device, prim, lightSize, _shaderLight);
             _light.Fog.Attach(world);
         }
     }
@@ -244,6 +262,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         if (!UnitFrame(set, hero.Anim.Clip, hero.Anim, hero.Facing, "", 1f, f.HeroDraw, out var h, out var page, out var src, out var dest)) return;
         _heroRect = dest;
         DrawUnit(batch, h.Pages[page], src, dest, Rgb.White, 1f);
+        _shaderLight?.AddGround(h.Pages[page], new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, f.HeroDraw.Y);
         if (_arena is not null)
             _outlines.Add(h.Pages[page], new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, DrawOrder.UnitSortY(_arena.Table, _arena.Iso, f.HeroDraw), f.View, UnitOutlines.Kind.Hero);
         var shape = new ShapeDraw(h.Pages[page], new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, f.HeroDraw, 1f, Forced: true, MinLight: !FrontWallCovers(dest), FogShape: false);
@@ -283,6 +302,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         _enemiesDrawn++;
         var tex = h.Pages[page];
         DrawUnit(batch, tex, src, dest, def.Tint, a);
+        _shaderLight?.AddGround(tex, new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, draw.Y);
         // 벽 뒤 윤곽(안개에 반 넘게 가린 적·맵 밖 입장 중인 적은 뺌)
         if (_arena is not null && a >= 0.5f && _arena.Iso.IsInsideMap(e.Pos))
             _outlines.Add(tex, new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, DrawOrder.UnitSortY(_arena.Table, _arena.Iso, draw), f.View,
@@ -508,6 +528,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
                 default:
                     // 벽은 늘 불투명(2026-11-13 — 가려진 유닛은 UnitOutlines 윤곽선)
                     _arena!.DrawItem(batch, it.Index, prim, 1f);
+                    if (_shaderLight is not null) _arena.AddGround(_shaderLight, it.Index);
                     break;
             }
         }
@@ -956,6 +977,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         _upRT?.Dispose();
         _light?.Dispose();
         _outlines.Dispose();
+        _shaderLight?.Dispose();
     }
 
     /// <summary>7층 그리기 하나(텍스처·원본·자리·색·알파).</summary>

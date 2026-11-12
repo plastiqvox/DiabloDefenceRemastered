@@ -106,7 +106,7 @@ public sealed class PreviewScene : IScene, IDisposable
         }
     }
 
-    /// <summary><c>--preview fog</c> 캡처의 <c>_light.png</c>(480×270, 7.7 ④ 뒤 <c>LightRT</c>). 캡처 담당(WP7)이 캡처 파일 이름 옆에 쓴다.</summary>
+    /// <summary><c>--preview fog</c> 캡처의 <c>_light.png</c>(셰이더 빛이면 <c>WorldRT</c> 크기, 아니면 480×270 — 7.7 ④ 뒤 <c>LightRT</c>). 캡처 담당(WP7)이 캡처 파일 이름 옆에 쓴다.</summary>
     public bool SaveLightPng(string path)
     {
         if (_renderer?.LightTarget is not { } light) return false;

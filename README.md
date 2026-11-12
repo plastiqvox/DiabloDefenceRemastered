@@ -49,6 +49,7 @@ powershell -ExecutionPolicy Bypass -File tools\import-all.ps1 -Diabdat "<디아�
 - 헬파이어 MPQ(`hellfire.mpq`·`hfmonk.mpq`·`hfmusic.mpq`·`hfvoice.mpq`)는 `diabdat.mpq` 와 같은 폴더에 있으면 저절로 쓴다. 없으면 그 내용만 꺼진다.
   다른 폴더면 `-Hellfire "<폴더>"`, 헬파이어 없이 가져오려면 `-SkipBundles all`.
 - 자세한 옵션·종료 코드는 `docs/architecture.md` 1.4.
+- 빛 셰이더는 빌드 때 저장소 로컬 도구 `dotnet-mgfxc`(`.config/dotnet-tools.json`)로 컴파일한다. 첫 빌드가 `dotnet tool restore` 로 받아 온다(Windows).
 
 ### AI 확대(선택)
 
