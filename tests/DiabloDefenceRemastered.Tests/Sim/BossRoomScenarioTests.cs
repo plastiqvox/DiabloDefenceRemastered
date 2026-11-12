@@ -54,7 +54,7 @@ public sealed class BossRoomScenarioTests(ITestOutputHelper output)
 
     private sealed record Outcome(RunOutcome Result, RunState Run, InvariantReport Invariants, FairnessCounters Fairness, int Ticks, int MaxPhase,
                                   int PeakShots, int BossHits, float Damage, int HeroHits, IReadOnlyList<ulong> Hashes, int FirstActivePhase, float HpLeft,
-                                  int Drunk);
+                                  int Drunk, int BossBodyHits);
 
     private static RunOptions Options(bool god, float? bossHp = null) => new()
     {
@@ -72,7 +72,7 @@ public sealed class BossRoomScenarioTests(ITestOutputHelper output)
         var fairness = new FairnessCounters();
         var hashes = new List<ulong>();
         var limit = MathX.SecondsToTicks(8 * 60f, World.Dt);   // 보스 방 6:00 + 여유
-        int ticks = 0, maxPhase = 0, peak = 0, bossHits = 0, heroHits = 0, firstActive = -1;
+        int ticks = 0, maxPhase = 0, peak = 0, bossHits = 0, heroHits = 0, firstActive = -1, bodyHits = 0;
         var damage = 0f;
         while (true)
         {
@@ -100,7 +100,12 @@ public sealed class BossRoomScenarioTests(ITestOutputHelper output)
             {
                 heroHits++;
                 damage += d.Applied;
-                if (king is not null && d.Attacker == king.Id) bossHits++;
+                if (king is not null && d.Attacker == king.Id)
+                {
+                    bossHits++;
+                    // 몸(내려치기·돌진·끝 내려찍기 반경 70)인지 탄인지 어림: 맞은 틱에 보스가 두 반경 + 70 안이면 몸
+                    if (Vector2.Distance(king.Pos, w.Hero.Pos) <= king.Radius + w.Hero.Radius + 70f) bodyHits++;
+                }
             }
             if (w.Tick % 60 == 0) hashes.Add(ActRunner.Hash(w));
             if (w.Outcome is RunOutcome.Victory or RunOutcome.Defeat)
@@ -110,7 +115,7 @@ public sealed class BossRoomScenarioTests(ITestOutputHelper output)
                 var hp = w.Hero.MaxHp > 0f ? w.Hero.Hp / w.Hero.MaxHp : 0f;
                 var run = session.Conclude();
                 return new Outcome(w.Outcome, run, invariants, fairness, ticks, maxPhase, peak, bossHits, damage, heroHits, hashes, firstActive, hp,
-                                   run.Rooms.Count > 0 ? run.Rooms[^1].Drunk : 0);
+                                   run.Rooms.Count > 0 ? run.Rooms[^1].Drunk : 0, bodyHits);
             }
             if (w.Room is { Phase: RoomPhase.Exit }) session.Advance();
         }
@@ -142,7 +147,7 @@ public sealed class BossRoomScenarioTests(ITestOutputHelper output)
     {
         var room = r.Run.Rooms.Count > 0 ? r.Run.Rooms[^1] : default;
         output.WriteLine($"{label} outcome={r.Result} ticks={r.Ticks} ({r.Ticks * World.Dt:0.0}s) boss_s={(room.BossClockTicks >= 0 ? room.BossClockTicks * World.Dt : -1):0.0} " +
-                         $"max_phase={r.MaxPhase} peak_enemy_shots={r.PeakShots} hero_hits={r.HeroHits} boss_hits={r.BossHits} damage={r.Damage:0} hp_left={r.HpLeft:0.00} drunk={r.Drunk} " +
+                         $"max_phase={r.MaxPhase} peak_enemy_shots={r.PeakShots} hero_hits={r.HeroHits} boss_hits={r.BossHits}(몸 어림 {r.BossBodyHits}) damage={r.Damage:0} hp_left={r.HpLeft:0.00} drunk={r.Drunk} " +
                          $"unseen_shots={r.Fairness.UnseenShots} unseen_charges={r.Fairness.UnseenCharges} hidden_hits={r.Fairness.HiddenHits}");
     }
 
