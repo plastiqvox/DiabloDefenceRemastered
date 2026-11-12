@@ -146,6 +146,11 @@ public sealed class SoundRouter(GameDefs defs)
             case CueKind.ChestDrop:
                 if (cue.Subject is RewardDef) sound = Ui(UiKeys.ChestDrop);
                 break;
+            // 보스 묶음 B(6.20 ⑲): 순간이동 도착 = ui.blink(원작 holybolt 빌림), 자리 없음(UI 소리 — 주인공 소리라 화면 어디서나 같은 크기). BlinkDenied 는 연결하지 않는다(무음 — HUD 만)
+            case CueKind.Blink:
+                sound = Ui(UiKeys.Blink);
+                pos = null;
+                break;
         }
 
         if (sound is null) return false;
@@ -302,6 +307,8 @@ public static class UiKeys
     public const string ShopDenied = "shop_denied";
     /// <summary>보물 상자가 열려 책이 떨어짐(v0.9.1 <c>ChestDrop</c>).</summary>
     public const string ChestDrop = "chest_drop";
+    /// <summary>순간이동 도착(보스 묶음 B <c>CueKind.Blink</c> — 원작 순간이동 소리는 다음 가져오기 때, 지금은 <c>holybolt</c> 빌림).</summary>
+    public const string Blink = "blink";
     /// <summary>장비 끼우기(칸 종류를 모르거나 그 칸 키가 없을 때).</summary>
     public const string EquipOther = "equip";
     public const string EquipHead = "equip_head";
@@ -327,6 +334,6 @@ public static class UiKeys
     public static IReadOnlyList<string> All { get; } =
     [
         MenuMove, MenuSelect, LevelUp, ChestOpen, ElitePack, DoorOpen, RoomClear, PotionDrink,
-        PotionDenied, HealOnEnter, ShopBuy, ShopDenied, ChestDrop, EquipOther, EquipHead, EquipBody, EquipBodyHeavy, EquipShield, EquipStaff, EquipRing,
+        PotionDenied, HealOnEnter, ShopBuy, ShopDenied, ChestDrop, Blink, EquipOther, EquipHead, EquipBody, EquipBodyHeavy, EquipShield, EquipStaff, EquipRing,
     ];
 }

@@ -1,4 +1,5 @@
 using System.Globalization;
+using DiabloDefenceRemastered.Core.Sim.Heroes;
 using DiabloDefenceRemastered.Loading;
 using DiabloDefenceRemastered.Scenes.Overlays;
 using DiabloDefenceRemastered.UI;
@@ -10,15 +11,15 @@ namespace DiabloDefenceRemastered.Scenes;
 /// 화면 확인 씬(<c>--preview ui</c>, 단계 2 wp6 — 소유 WP6). 합성 상태로 HUD·상인 창·일시정지 장비 목록·결과 금화 줄을 쪽마다 1초(60 앱 틱)씩 차례로 그린다.
 /// 쪽 k(1부터)는 앱 시간 k 초에 캡처하면 늘 같은 그림이다(<c>--capture-at 1,2,…</c>). 상인 물건은 실제 데이터로 <c>ShopStock.Create</c>(상인 전용 흐름 — 고정 씨앗)가 정한다.
 /// <list type="number">
-/// <item>HUD — 구슬 100%, 물약 0/2, 장비 줄 빈 것, 지갑 0.</item>
-/// <item>HUD — 구슬 40%, 물약 2/2(가득), 장비 줄 찬 것(보통·마법), 지갑 1,240 번쩍.</item>
-/// <item>HUD — 구슬 40% 마시는 중(차오름 띠 → 80%), 물약 3/5, 물약 칸 번쩍.</item>
+/// <item>HUD — 구슬 100%, 물약 0/2, 장비 줄 빈 것, 지갑 0, 순간이동 2/2(가득).</item>
+/// <item>HUD — 구슬 40%, 물약 2/2(가득), 장비 줄 찬 것(보통·마법), 지갑 1,240 번쩍, 순간이동 1/2(둘째 칸 반쯤 참).</item>
+/// <item>HUD — 구슬 40% 마시는 중(차오름 띠 → 80%), 물약 3/5, 물약 칸 번쩍, 순간이동 0/3(숙련 Lv2 — 첫 칸 30%)·시전 중(쓰는 칸 맥동).</item>
 /// <item>그리스월드(액트 1) — 산 것 하나·금화 모자란 카드.</item>
 /// <item>아드리아(액트 2) — 접사 둘 카드가 나오는 씨앗.</item>
 /// <item>아드리아 — 반지 둘이 찬 채 반지를 고름(<c>RingPending</c> — 바꿀 반지 두 장).</item>
 /// <item>페핀 — 주머니 단계 1(3칸)·빠른 물약 다 올림·채우기 2병, 금화가 주머니 값에 모자람.</item>
 /// <item>페핀 — 주머니 다 올림·칸 가득.</item>
-/// <item>일시정지 빌드·장비 목록.</item>
+/// <item>일시정지 빌드·장비 목록, 순간이동 1/2 "못 함"(칸 테 붉음 — 보스 묶음 B).</item>
 /// <item>결과 화면(<c>얻은 금화 · 쓴 금화</c>·장비 여섯 칸).</item>
 /// </list>
 /// 쪽이 바뀔 때 <c>PREVIEW ui page=&lt;k&gt; …</c> 로그 한 줄.
@@ -57,6 +58,7 @@ public sealed class UiPreviewScene(AppServices app) : IScene
         if (_world is not { } w) return;
         var page = (int)Math.Clamp((_now - 1) / PageTicks, 0, Pages - 1);
         w.Tick = (int)_now;
+        if (page == 8) w.Hero.BlinkDeniedTick = w.Tick;   // 못 함 붉은 테를 쪽 내내 켬(실제로는 0.2s)
         if (page == _page) return;
         _page = page;
         Setup(w, page);
@@ -94,6 +96,11 @@ public sealed class UiPreviewScene(AppServices app) : IScene
         hero.PotionSpeedLevel = 0;
         hero.Gold = 0;
         Array.Clear(hero.Equipment);
+        // 순간이동 충전 칸(보스 묶음 B): 기본 가득, 쪽마다 아래에서 바꿈
+        hero.Stats.Clear();
+        hero.BlinkCharges = HeroBlink.MaxCharges(hero, defs.Rules.Hero?.Blink);
+        hero.BlinkRecharge = hero.BlinkCast = 0f;
+        hero.BlinkDeniedTick = int.MinValue / 2;
         _shop = null;
         _merchant = null;
         _result = null;
@@ -106,6 +113,7 @@ public sealed class UiPreviewScene(AppServices app) : IScene
                 hero.Potions = 2;
                 hero.Gold = 1240;
                 FullEquipment(hero);
+                Blink(hero, charges: 1, fill: 0.5f);
                 break;
             case 2:
                 hero.Hp = 48f;
@@ -114,6 +122,9 @@ public sealed class UiPreviewScene(AppServices app) : IScene
                 hero.PotionSlotsLevel = 3;
                 hero.Gold = 380;
                 FullEquipment(hero);
+                hero.Stats[StatKey.BlinkCharges] = 1;   // 숙련 Lv2 — 3칸
+                Blink(hero, charges: 0, fill: 0.3f);
+                hero.BlinkCast = 0.1f;
                 break;
             case 3:
                 hero.Hp = 90f;
@@ -154,6 +165,7 @@ public sealed class UiPreviewScene(AppServices app) : IScene
             case 8:
                 hero.Hp = 100f;
                 FullEquipment(hero);
+                Blink(hero, charges: 1, fill: 0.1f);
                 break;
             default:
             {
@@ -166,6 +178,13 @@ public sealed class UiPreviewScene(AppServices app) : IScene
                 break;
             }
         }
+    }
+
+    /// <summary>순간이동 칸 견본: 지금 칸·충전 중인 칸 진행(0..1).</summary>
+    private void Blink(Hero hero, int charges, float fill)
+    {
+        hero.BlinkCharges = charges;
+        hero.BlinkRecharge = app.Defs.Rules.Hero?.Blink is { } rules ? HeroBlink.RechargeTime(hero, rules) * fill : 0f;
     }
 
     private void OpenShop(string merchantId, int act, int room, ulong seed)

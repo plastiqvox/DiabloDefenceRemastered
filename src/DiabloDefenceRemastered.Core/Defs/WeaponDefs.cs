@@ -76,6 +76,11 @@ public sealed record PassiveDef : IDef
     public IconDef? Icon { get; init; }
     public int MaxLevel { get; init; }
     public IReadOnlyDictionary<StatKey, float> PerLevel { get; init; } = new Dictionary<StatKey, float>();
+    /// <summary>
+    /// 레벨별 효과(v0.9.4, 6.20 ⑯ — 계약, JSON <c>levels</c>, 선택): <c>Levels[k]</c> = Lv(k+1) 에 더하는 값. 레벨 L 의 효과 = 앞 L 개의 합.
+    /// <see cref="PerLevel"/> 와 함께 쓰면 오류, 길이 ≠ <see cref="MaxLevel"/> 이면 오류(13.5 보탬). 카드 효과 줄 = 다음 레벨의 항목(<c>Build.PassiveLines</c>).
+    /// </summary>
+    public IReadOnlyList<IReadOnlyDictionary<StatKey, float>>? Levels { get; init; }
     public OnAcquireDef? OnAcquire { get; init; }
     /// <summary>
     /// 직업 특성(v0.6.1, 6.16): 참이면 레벨업·상자·<c>--passives</c> 후보에 안 나오고 직업 <c>traits</c> 로만 붙는다(1레벨, 슬롯을 쓰지 않음).

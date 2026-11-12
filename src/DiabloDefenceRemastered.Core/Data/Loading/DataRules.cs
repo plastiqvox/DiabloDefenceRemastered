@@ -47,7 +47,15 @@ internal static class DataRules
             foreach (var e in defs.Enemies.All) Enemy(e);
             foreach (var ev in defs.Evolutions.All) Evolution(ev);
             foreach (var p in defs.Passives.All)
+            {
                 if (p.Blessing && p.Trait) Err("passives", p.Id, ".blessing", $"축복 패시브 {p.Id} 가 trait 이기도 하다(13.5-23 ④)");
+                // 보스 묶음 B(6.20 ⑯ — 13.5 보탬): 레벨별 효과 levels 는 per_level 과 함께 쓰지 않고, 길이 = max_level
+                if (p.Levels is { } levels)
+                {
+                    if (p.PerLevel.Count > 0) Err("passives", p.Id, ".levels", $"패시브 {p.Id} 가 levels 와 per_level 을 함께 쓴다(6.20 ⑯ — 하나만)");
+                    if (levels.Count != p.MaxLevel) Err("passives", p.Id, ".levels", $"패시브 {p.Id} 의 levels 길이 {levels.Count} ≠ max_level {p.MaxLevel}(6.20 ⑯)");
+                }
+            }
             foreach (var h in defs.HeroClasses.All) HeroClass(h);
             foreach (var s in defs.Stages.All) Stage(s);
             Bundles();
@@ -523,6 +531,16 @@ internal static class DataRules
                 if (pot.Durations.Count == 0) RuleErr("hero", ".potions.durations", "회복 시간 단계(durations)가 하나 이상이어야 한다(6.19)");
                 if (pot.Durations.Any(d => d <= 0f)) RuleErr("hero", ".potions.durations", "회복 시간은 0 보다 크다(6.19)");
                 if (pot.Slots < 0 || pot.Slots > pot.SlotsMax) RuleErr("hero", ".potions.slots", $"기본 칸 {pot.Slots} 은 0..slots_max({pot.SlotsMax}) 이다(6.19)");
+            }
+            if (defs.Rules.Hero?.Blink is { } blink)
+            {
+                // 보스 묶음 B(6.20 ⑭): 순간이동 규칙 값 범위
+                if (blink.Charges < 1) RuleErr("hero", ".blink.charges", $"순간이동 칸은 1 이상이다({blink.Charges})");
+                if (blink.Recharge <= 0f) RuleErr("hero", ".blink.recharge", $"충전 시간은 0 보다 크다({blink.Recharge})");
+                if (blink.Cast < 0f) RuleErr("hero", ".blink.cast", $"시전 시간은 0 이상이다({blink.Cast})");
+                if (blink.Invuln < 0f) RuleErr("hero", ".blink.invuln", $"도착 무적은 0 이상이다({blink.Invuln})");
+                if (blink.Distance <= 0f || blink.MinDistance < 0f || blink.MinDistance > blink.Distance)
+                    RuleErr("hero", ".blink.min_distance", $"거리 {blink.Distance}·최소 거리 {blink.MinDistance} 는 0 ≤ min_distance ≤ distance, distance > 0 이다");
             }
             foreach (var h in defs.HeroClasses.All)
             {

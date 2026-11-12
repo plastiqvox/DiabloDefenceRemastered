@@ -58,6 +58,11 @@ public enum CommandButtons : ushort
     /// 상인 창(6.19)은 새 버튼 없이 <see cref="Choice1"/>~<see cref="Choice3"/>·<see cref="Reroll"/>·<see cref="Skip"/> 을 쓴다.
     /// </summary>
     Drink = 1 << 10,
+    /// <summary>
+    /// 순간이동(v0.9.4 V21, 6.20 ⑫ — 사람 <c>Space</c>, 자동 조작 <c>ShouldBlink</c>). 방향 = 같은 명령의 <see cref="PlayerCommand.Move"/>(길이 &gt; 1e-3 이면 정규화) 아니면 <c>Hero.Facing</c>.
+    /// 못 하면(칸 0·시전 중·그 방향 24px 미만) <c>CueKind.BlinkDenied</c>. 한 번짜리 버튼이라 프레임의 첫 틱에만 넣는다(3.2). 사람 입력·자동 조작·재생이 같은 길이다.
+    /// </summary>
+    Blink = 1 << 11,
 }
 
 /// <summary>

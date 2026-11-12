@@ -23,6 +23,7 @@ public enum UiButtons : uint
     Fullscreen = 1 << 13, // F11 / Alt+Enter
     Click = 1 << 14,      // 왼쪽 버튼을 이번에 눌렀다
     Drink = 1 << 15,      // Q — 물약 마시기(v0.9.1 V9, 기획 3절). 판 명령 CommandButtons.Drink 로 간다(단계 2 wp6 — WP1h 요청)
+    Blink = 1 << 16,      // Space — 순간이동(보스 묶음 B, 6.20 ⑳). Confirm 과 함께 눌림 — 창이 열려 있으면 창 고르기, 판에서만 CommandButtons.Blink 로 간다
 }
 
 /// <summary>

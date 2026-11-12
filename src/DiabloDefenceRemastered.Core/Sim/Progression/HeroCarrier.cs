@@ -121,6 +121,7 @@ public sealed class HeroCarrier : IHeroCarry
         HeroStats.Recompute(world);
         hero.Hp = MathF.Min(carry.Hp, hero.MaxHp);
         hero.MoveSpeed = HeroStats.MoveSpeed(hero);
+        HeroBlink.Fill(world);   // 보스 묶음 B: 순간이동 칸은 짐에 없다 — 방마다 가득(기획 3절)
     }
 
     /// <summary>이어 하기 전 확인(v0.8.1 → v0.9): 모르는 정의 ID·시간 효과 ID(마력 폭주·마시던 회복), 진화 짝 어긋남, 칸 수·레벨 범위, 지갑·물약 칸 음수·장비 칸 겹침.</summary>

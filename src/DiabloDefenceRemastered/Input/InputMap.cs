@@ -56,6 +56,7 @@ public sealed class InputMap
         var alt = keys.IsKeyDown(Keys.LeftAlt) || keys.IsKeyDown(Keys.RightAlt);
         if (Hit(Keys.Enter) && alt) pressed |= UiButtons.Fullscreen;
         else if (Hit(Keys.Enter) || Hit(Keys.Space)) pressed |= UiButtons.Confirm;
+        if (Hit(Keys.Space)) pressed |= UiButtons.Blink;   // 보스 묶음 B(6.20 ⑳): Space 는 Confirm 과 Blink 둘 다(Enter 는 Confirm 만) — 창이면 창이, 판이면 순간이동이 받는다
         if (Hit(Keys.F11)) pressed |= UiButtons.Fullscreen;
         if (Hit(Keys.Escape)) pressed |= UiButtons.Pause | UiButtons.Cancel;
         if (Hit(Keys.P)) pressed |= UiButtons.Pause;

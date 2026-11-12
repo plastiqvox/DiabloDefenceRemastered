@@ -120,6 +120,8 @@ public sealed partial class RunStats
     public int GoldSpent { get; set; }
     /// <summary>마신 물약 수(v0.9.1 — 로그 <c>ROOM drunk</c> 의 방 차이, WP3 <c>Drink</c> 가 센다).</summary>
     public int PotionsDrunk { get; set; }
+    /// <summary>순간이동을 쓴 수(보스 묶음 B — 칸을 쓴 누름, 못 함은 세지 않음. 로그 <c>ROOM blinks</c> 의 방 차이·보스 방 시나리오 기록, WP3 <c>HeroBlink</c> 가 센다).</summary>
+    public int Blinks { get; set; }
     public int XpCollected { get; set; }
     public float DamageTaken { get; set; }
     /// <summary>무기 칸별 준 피해 합계(결과 화면). 길이 = <see cref="WeaponSlots.SlotCount"/>(6, v0.8.1 — v0.8 은 4 로 남아 5번째 칸이 범위 밖이었다).</summary>

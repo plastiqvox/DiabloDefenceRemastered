@@ -23,14 +23,16 @@ public sealed record RunSnapshot(int Format, ulong Seed, string StartActId, stri
     /// <summary>
     /// 지금 저장 모양의 판(v0.8.1 → v0.9 WP1g: 2 — 짐에 장비·지갑·물약 칸·만렙 순번, <c>RunStats.GoldSpent</c>·<c>PotionsDrunk</c>, <c>RoomRecord</c> 새 열, <c>MerchantsMet</c>).
     /// 모양 지문 시험의 기대 값(<see cref="ShapeFingerprint"/>)과 함께 올린다. 옛 판 1 의 <c>run.json</c> 은 불일치로 버려진다(8.3 — 단계 1 은 계단 저장을 쓰지 않음).
+    /// 보스 묶음 B(6.20 ⑮): 3 — <c>StatKey</c> 에 순간이동 키 셋(짐 <c>CarriedStat</c> 이 담음)·<c>RunStats.Blinks</c>. 옛 판 2 의 <c>run.json</c> 은 버려진다 —
+    /// 액트 1 보스 방 문 단계의 계단 저장(<c>RunSession.CanSuspend</c> — 다음 액트가 있으면 열림)으로 판 2 저장을 해 둔 사용자는 그 판 하나를 잃는다(8.3, 6.20 ⑮ 가 받아들임).
     /// </summary>
-    public const int CurrentFormat = 2;
+    public const int CurrentFormat = 3;
 
     /// <summary>
     /// <see cref="CurrentFormat"/> 의 모양 지문(v0.8.1, R41) — <see cref="ComputeShapeFingerprint"/> 가 이 값이어야 한다(시험). WP3·WP4 가 <c>RunStats</c> 조각에 멤버를 더하거나
     /// 짐 모양을 바꾸면 계산 값이 달라져 시험이 깨진다 → 고치는 사람이 <see cref="CurrentFormat"/> 을 올리고 이 값을 새 계산 값으로 바꾼다(옛 저장은 버려진다).
     /// </summary>
-    public const string ShapeFingerprint = "4bf0bbef";   // v0.9 WP1g(CurrentFormat 2): 장비·지갑·물약 칸·만렙 순번·GoldSpent·PotionsDrunk·RoomRecord 새 열·MerchantsMet
+    public const string ShapeFingerprint = "505f4283";   // 보스 묶음 B(CurrentFormat 3): StatKey 순간이동 키 셋·RunStats.Blinks (2 = "4bf0bbef" — v0.9 WP1g)
 
     /// <summary>모양 지문에 드는 형(<see cref="RunSnapshot"/> 에서 닿는 형 전부).</summary>
     public static IReadOnlyList<Type> ShapeTypes { get; } =

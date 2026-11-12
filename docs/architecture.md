@@ -3284,7 +3284,7 @@ public int BlinkDeniedTick = int.MinValue / 2;   // 마지막 "못 함" 틱(HUD 
 ⑭ **규칙**(계약 — `rules.hero.blink`, WP3 `rules/hero.json`, `RulesDefs.HeroBlinkRules`): `{ "charges": 2, "recharge": 6.0, "cast": 0.15, "distance": 160, "invuln": 0.2, "min_distance": 24 }`.
   `HeroBlink`(WP3 `Sim/Hero/HeroBlink.cs` static): `MaxCharges = charges + round(Stats[BlinkCharges])`(≥ 1), `CastTime = max(0, cast + Stats[BlinkCast])`, `RechargeTime = recharge × (1 + max(−0.5, Stats[BlinkRechargePct]))`.
 
-⑮ **능력치 키 셋**(계약 — `StatKey` 끝에 `blink_charges`·`blink_cast`·`blink_recharge_pct`, 기획 4.1): `CarriedStat` 이 `StatKey` 를 담아 **모양 지문이 바뀐다** → `RunSnapshot.CurrentFormat` 2 → **3**, `ShapeFingerprint` 새 값(옛 `run.json` 은 불일치로 버려짐 — 단계 2 는 계단 저장을 쓰지 않아 사용자 판 손실 없음, 8.3).
+⑮ **능력치 키 셋**(계약 — `StatKey` 끝에 `blink_charges`·`blink_cast`·`blink_recharge_pct`, 기획 4.1): `CarriedStat` 이 `StatKey` 를 담아 **모양 지문이 바뀐다** → `RunSnapshot.CurrentFormat` 2 → **3**, `ShapeFingerprint` 새 값(옛 `run.json` 은 불일치로 버려짐 — 8.3. 액트 2 데이터가 있어 액트 1 보스 방 문 단계에서 계단 저장(`CanSuspend`)이 열리므로, 판 2 로 계단 저장을 해 둔 사용자는 그 판 하나를 잃는다. 받아들임).
   `rules.level_up.stat_labels` 에 `blink_charges`(`순간이동 칸`)·`blink_cast`(`순간이동 시전`, unit `s`)·`blink_recharge_pct`(`순간이동 충전`, pct).
 
 ⑯ **패시브 레벨별 효과**(계약 — `PassiveDef.Levels`, JSON `levels`, 선택): `IReadOnlyList<IReadOnlyDictionary<StatKey, float>>`, `levels[k]` = Lv(k+1) 에 더하는 값. `HeroStats` 합산 = `per_level × L`(지금) 또는 `levels[0..L−1]` 의 합. 둘 다 적으면 오류, `levels` 길이 ≠ `max_level` 이면 오류(13.5 보탬).
@@ -6352,6 +6352,69 @@ WP6(화면·UI·입력 — 11.1 WP6) 코드가 문서와 다르게 또는 더 �
 - 중간 보스 장판·연사의 화면 확인은 무리에 묻혀 부분적이다.
 
 **기획서에 넘기는 것**: 첫 돌진은 줄 예고 방향 그대로(9.5 "돌진 베기" — 예고 동안 비켜도 다시 노리지 않음), 해골왕 P1 첫 쉼 1.5s, 끝 내려찍기 그림 `fx_fire_explosion`, 블랙애시 연사의 뒤 파도는 그때 안 보이면 쏘지 않음, 방 들르기 자동 조작은 보스 둘레를 돌지 않음.
+
+### 보스 묶음 B 구현 기록 (wp/s2-boss-b)
+
+보스 묶음 B "주인공 순간이동"(6.20 ⑫~㉒, 기획 v0.9.5 3절·4.1·6절·12.1·15절 V21)이 이 문서와 다르게·더 정한 것. main `cb48347`(묶음 A·상인 창 고침을 합친 뒤) 위에서 했다. 코드가 정본이다.
+새 파일: Core `Sim/Hero/HeroBlink.cs`. 시험 `Hero/HeroBlinkTests`·`Hero/BlinkKit`(도우미)·`Progression/PassiveLevelsTests`·`Sim/AutoplayBlinkTests`.
+
+| 자리 | 정한 것 | 까닭 |
+|---|---|---|
+| 시전 시각(⑰-3) | **누른 틱은 시전을 줄이지 않는다** — 다음 틱부터 줄여 도착 = 누른 틱 + 시전 시간(0.15s = 9틱 뒤, 숙련 Lv1 0.10s = 6틱). 시전 0(Lv5)이면 누른 틱에 바로 | 설계대로 누른 틱부터 줄이면 도착이 8틱 뒤(0.133s)가 된다. 기획 "시전 0.15초 뒤" 를 그대로 |
+| 죽음·끝난 판 | `Blink` 를 신호 없이 버린다(설계: 못 함 신호). 시전 중 다시 누름은 못 함(칸 그대로) | 물약 `Drink` 와 같은 길 — 죽은 주인공은 `HeroControl` 이 일찍 끝나고, 끝난 판에 붉은 테가 번쩍일 까닭이 없다 |
+| 도착 자리 | 도착 틱에 **지금 자리**에서 다시 `Throw`(누른 틱 자리 아님). 누른 틱의 `Throw` 는 24px 판정에만 | 시전 중 맞아 밀려났으면 지금 자리에서 그 방향으로 — 벽 안으로 들어가지 않게 |
+| 바라보는 방향 | 누른 틱부터 `Facing = BlinkDir`(시전 클립이 그 방향) | 설계 "시전 중" 을 누른 틱 그림까지 |
+| 칸 채우기(⑬·⑯) | 별도 상태 없이 `HeroStats.Recompute` 가 **다시 계산 전 능력치로 구한 최대 칸**과 새 최대 칸의 차이만큼 더한다(줄면 자름). 주인공 만들기·개발 옵션(`HeroRunSetup`)·짐 `Restore` 끝에서 `HeroBlink.Fill`(가득) | 마지막 최대 칸을 들고 다니는 칸을 늘리지 않음. 숙련 Lv2 카드는 창이 닫힌 다음 판 틱에 반영된다(능력치 재계산 시점 — 그 틱 HUD 에 셋째 칸이 참) |
+| 시간 비교 | 충전·시전 끝·도착 무적 끝에 여유 1e-4s(`HeroBlink.Eps`, BeginTick 은 같은 값). 아주 작은 무적 나머지는 0 | 6s 가 361틱, 0.2s 가 13틱이 되던 부동소수 누적(시험이 잡음) |
+| 닫힌 문 틈·맵 끝(⑰ 끝) | `HeroBlink` 에 따로 판정을 더하지 않았다. WP2 `NavWorld.Clearance` 가 문 틈 끝의 바깥 마름모 경계에서 몸 반경 아래가 되어 `Throw` 가 그 앞에서 멈춘다 | 시험 `ClosedDoor_StaysInsideMap`: 합성 방 맵 문 넷마다 문 틈 안쪽에서 바깥으로 — 도착이 맵 안·clearance ≥ 14 |
+| 자동 조작(㉒) | ⓐ = 다가오는 탄의 0~0.3s 안 가장 가까운 거리 < 탄 반경 + 판정 + 2. ⓒ 의 방향은 `Avoid`(무리에서 멀어짐 — `Dodge` 는 탄이 없으면 0). **도착 무적 동안은 쓰지 않는다**(탄이 지나가므로 칸 아끼기). 순간이동하는 틱의 이동 = 그 방향 | 설계 "Dodge 합(0 이면 위협에 수직)" 은 무리에서는 옆으로 비켜 다시 무리 안에 내린다 |
+| 덧칠(㉑) | 그림 색조 덧칠에 더해 **몸 둘레 푸른 빛**(빛 텍스처, 같은 색)을 한 겹, 알파 0.6(설계 α0.35) | 가산 묶음이 미리 곱한 색에 알파를 한 번 더 곱해(`SourceAlpha`) 실제 세기 ≈ 알파² — 0.35 는 캡처에서 보이지 않았고, 색조 덧칠은 그림 색에 곱해져 붉은 옷 위에서 거의 0. 기획 38.2 "주인공에 푸른 빛" |
+| 소리(⑲) | `snd_blink` 의 높낮이 흔들기 0.05 는 넣지 않음(볼륨 0.7, 분류 `hero`) | 기획 12.7 "높낮이 흔들기는 맞음 소리만" — `RealAudioDataTests` 가 지킴 |
+| HUD(⑳) | `Space` 글자는 첫 칸 **위**(칸 왼쪽 위 바깥, 검은 바탕 — `TeleportReserve` 위로 7px). 칸 그림 = 테 원 + 안 원 + 부채꼴(새 `UiCanvas.Wedge`) + 찬 칸 반짝 점 | 지름 20 원 안에 다섯 글자를 넣으면 원을 가린다 |
+| 로그 | `ROOM` 줄 끝에 `blinks=`(그 방 순간이동 수 — 새 `RunStats.Blinks`)·`damage=`(받은 피해) | 열린 질문 56·58 의 보스 방 자료(기획 38.3 "보스 방 ROOM 의 받은 피해") |
+
+**계약 변경**(13.24 표와 다른 것): 규칙 형 이름은 `BlinkRulesDef`(설계 `HeroBlinkRules` — 다른 규칙 형처럼 `…Def`), 그 안에 **선택 키 `effect`**(이펙트 참조 — 코드에 `fx_blink` ID 를 박지 않게. `rules/hero.json` 은 정의 모양 시험이 로더 없이 읽으므로 객체 꼴 `{ "effect": "fx_blink" }`), **`RunStats.Blinks`**(위 로그 — 모양 지문이 어차피 바뀌는 판이라 함께). 그 밖은 13.24 그대로(`CommandButtons.Blink`, `Hero` 칸 여섯, `StatKey` 셋, `PassiveDef.Levels`, `CueKind.Blink`·`BlinkDenied`, `UiButtons.Blink`(1<<16), `RunSnapshot.CurrentFormat` 3·지문 `505f4283`).
+
+**입력 근거**(게임 쪽 시험 프로젝트가 없음 — 코드로 확인): ① 레벨업·상자·보상·일시정지 오버레이는 `PausesBelow` 이고 `SceneStack.FixedTick` 이 위에서부터 돌다 거기서 멈춘다 — 그 앱 틱에 `PlayScene.FixedTick`(명령을 만드는 곳)이 돌지 않는다. ② 오버레이의 `Pop` 은 그 차례가 끝난 뒤 적용되고, `FrameLoop` 은 프레임의 첫 앱 틱 뒤 눌림을 지운다 — 창을 닫은 `Space` 는 같은 프레임의 다음 앱 틱에도 남지 않는다(앞 프레임 눌림을 넘기는 `carried` 는 앱 틱이 하나도 돌지 않은 프레임뿐). ③ 상인 창은 Core 판 틱이 돌지 않는 창이라 `KeyboardMouseSource` 가 `Blink` 를 넣지 않는다(`Space` 는 `Confirm` 으로 카드 사기). ④ 일시정지는 `Esc`·`P` 로 열리고 그 틱에 `PlayScene` 이 `return` 한다.
+남은 길: 멈춤 틱(`FreezeTicks`)·슬로모션 늘임으로 판 틱이 돌지 않은 첫 앱 틱에 누른 `Space` 는 사라진다 — 물약 `Q` 와 같은 지금 길(한 번짜리 버튼 전부).
+
+**이음새**: WP2 없음. WP4 `AutoplayPolicy`(`ShouldBlink`·`Next`), 시험 `BossRoomScenarioTests`(로그 열 `blinks`, god 판 순간이동 > 0 — 같은 씨앗 두 번 비교가 순간이동을 쓴 판이 됨). WP5 `Rendering/WorldRenderer.cs`(덧칠·빛), `Rendering/UiCanvas.cs`(`Wedge`), `effects/common.json`(`fx_blink`). WP6 `Input/InputMap.cs`·`KeyboardMouseSource.cs`·`App/Contracts/InputFrame.cs`·`UI/Hud.cs`·`Scenes/UiPreviewScene.cs`·`Scenes/PlayScene.cs`·`Scenes/RunLog.cs`. WP7 `Dev/StateHasher.cs`(주인공 줄 칸 다섯), `Data/Loading/DataRules.cs`(`levels` 오류 둘·`rules.hero.blink` 범위), 시험 `ContractV09Tests`(판 3). WP8 `Audio/SoundRouter.cs`(`CueKind.Blink` → `ui.blink`, `UiKeys.Blink`), `audio/sounds.json`·`bindings.json`. WP1 `Sim/Core/BeginTickSystem.cs`(도착 무적 줄이기).
+
+**시험**: worktree 기준 A 합친 main 1208 통과·18 건너뜀(자원 없는 worktree 라 하나 더 건너뜀) → **1235 통과·18 건너뜀**. `DDR_RUN=Scenario` 17/17. `--validate-data` errors=0 warnings=0.
+깨진 기존 시험과 까닭: 모양 지문(판 3)·`ContractV09Tests`(판 값), `RealCombatDataTests`(실제 패시브 목록에 `blink_mastery`), `HeroTests`(정의 모양 읽기가 `effect` 문자열 꼴을 못 읽음 → 데이터를 객체 꼴로), `RealAudioDataTests`(높낮이 흔들기 → 뺌).
+
+**시나리오 숫자**(Core, `RunStart(StartRoomIndex 8)` + `--level 25 --weapons magic_missile:8,fireball:8` 자동 조작 — 열린 질문 56·58 의 첫 자료, 기준 아님. 괄호는 묶음 A 기록)
+
+| 판 | 결과 | `boss_s` | 받은 피해 | 순간이동 | 최대 동시 적 탄 |
+|---|---|---|---|---|---|
+| `--god` 씨앗 1 | 승리 | 113.6 (111.3) | (무적) | 15 | 87 |
+| `--god` 씨앗 2 | 승리 | 112.1 (103.5) | (무적) | 15 | 82 |
+| `--god --boss-hp 0.39` 씨앗 1 | 승리 | 44.8 (46.5) | (무적) | 4 | 78 |
+| 무적 없음 씨앗 1 | **승리**(방 116.6s, 남은 체력 60%, 물약 1) — A 는 57.1s 에 죽음 | 113.6 | 80 (101) | 15 | 87 |
+| 무적 없음 씨앗 2 | 죽음(방 61.9s, P2) — A 는 37.6s·P1 | — | 102 (109) | 8 | 44 |
+
+- 보스에게 맞은 수: 무적 없음 씨앗 1 = 4(몸 어림 2), 씨앗 2 = 5(3). 공정성 셋 0, 불변식 통과.
+- 게임 실행(`--time-scale 8`, 무적 없음 씨앗 1·2)의 `ROOM` 줄이 위 Core 값과 같다: `boss_s=113.62 … drunk=1 blinks=15 damage=80`, `blinks=8 damage=102`(죽음 61.87s) — 배속과 상관없이 같은 판.
+- 실제 액트 1 자동 조작 판(`--god`, `RealActScenarioTests`) 보스 방 `boss_s`: 씨앗 7 = 119.1(A 93.3), 씨앗 3 = 70.7(A 67.4).
+- 자동 조작이 벽 앞에 내린 뒤 다음 탄에 벽 쪽이 막혀 왔던 쪽으로 곧바로 돌아가는 왕복이 있다(씨앗 1 보스 방 첫 두 번, 0.3s 간격) — 정책 규칙대로이고 기록만.
+
+**캡처 판정**(저장소 밖 임시 폴더, 창 1280×720. 이 worktree 의 표 해시가 메인 `Assets` 와 달라 시작 검사 5 → 지시대로 메인 `Assets` 를 임시 폴더로 복사해 다시 가져옴)
+- `--preview ui`: 쪽 1 = 2/2(밝은 파랑 + 흰 테 + 반짝 점), 쪽 2 = 1/2(둘째 칸 위에서 시계 방향 반원), 쪽 3 = 0/3(숙련 Lv2, 첫 칸 30% 부채꼴 + 시전 맥동), 쪽 9 = 일시정지 아래 1/2 붉은 테. 왼쪽 위 `Space` 글자, 물약 칸 `Q` 와 같은 글꼴·검은 바탕. 잘림 없음.
+- 실제 판(`--room 1:9 --boss-hp 0.39 --god … --passives blink_mastery:2 --autoplay --seed 1`, 방 시계 21.3~21.7s): 시전 중 주인공에 푸른 빛, 도착 뒤 0.2s 동안 몸 둘레 푸른 빛, `fx_blink` 가 떠난 자리(160px 뒤)·도착 자리 발밑 두 곳, 도착 자리는 아래쪽 벽 바로 앞(벽 앞에서 멈춤), HUD 2/3(셋째 칸 충전 시작). 21.65s 에 다음 순간이동(왔던 쪽으로 — 위 왕복)의 시전이 시작돼 21.7s 에도 빛이 있다.
+- 고치기 전 캡처에서 덧칠이 보이지 않아(위 표 "덧칠") 빛 한 겹·알파를 바꿨다.
+
+**남은 것**
+- 낮음: 멈춤 틱·늘임 앱 틱에 누른 한 번짜리 버튼이 사라짐(위 입력 근거 — 물약과 같은 지금 길).
+- 낮음: 자동 조작 왕복(위 시나리오).
+- 낮음(묶음 A 지적 2, B 에 넘긴 것): 끝 내려찍기 예고·폭발이 페이즈 전환 뒤 남음 — 적 쪽(`PhaseController`·`Sim/Enemies/**`)이라 B 지시("적 쪽 동작은 고치지 않는다")대로 고치지 않았다.
+- 확인 못 함: 사람이 키보드로 `Space` 를 누르는 것(창 열림 중·창을 닫은 누름·마우스 걷기 방향 + `Space`) — 메인 세션 확인 몫. 소리를 귀로 듣지 못함(개발 실행 `--mute`). 직접 해 본 난이도 느낌. Release 빌드.
+
+**통합 때 고친 것**(검증 지적)
+- 중간: 판 중 `Space`(순간이동)가 `Confirm` 도 겸해서, 연타하다 죽으면 결과 화면이 열리자마자 `다시 하기` 로 넘어가 결과를 못 봄 → `ResultScene` 이 열린 뒤 `rules.level_up.input_lock`(0.4s) 동안 메뉴 입력을 버린다(레벨업 창과 같은 잠금, 자동 조작도 같은 잠금 뒤).
+- 낮음: `SoundRouter` 의 `CueKind.Blink` 주석이 "자리 = 도착 자리" 였으나 코드는 자리 없는 UI 소리 → 주석을 코드에 맞춤.
+- 낮음: 저장 판 3 의 "사용자 판 손실 없음" 문장(⑮·`RunSnapshot`)이 틀림 — 액트 1 보스 방 문 단계 계단 저장은 열려 있어 판 2 저장 하나는 버려진다. 문장만 고침(동작은 6.20 ⑮ 그대로).
+
+**기획서에 넘기는 것**: 시전 = 누른 뒤 0.15초(9틱)에 도착, 죽음·끝난 판의 `Space` 는 못 함 번쩍임 없이 버림, 시전 중 다시 누름 = 못 함, 순간이동 소리에 높낮이 흔들기 없음, 푸른 빛 = 그림 덧칠 + 몸 둘레 빛, HUD `Space` 글자는 칸 위, `ROOM` 줄 `blinks`·`damage`, 자동 조작은 도착 무적 중 순간이동하지 않고 무리(ⓒ)에서는 멀어지는 쪽으로.
 
 ### 통합 기록 (WP0·WP2~WP8 합침 — 단계 1, 커밋은 `git log --grep 통합`·`git log --grep 합침`)
 

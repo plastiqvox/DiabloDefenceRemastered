@@ -32,6 +32,8 @@ public static class StateHasher
         h.Int(hero.WeaponSlotsOpen); h.Int(hero.PassiveSlotsOpen); h.Int(hero.Potions);   // v0.9.1: 허리띠 → 물약 칸
         // v0.9(WP3 이음새): 물약 칸 단계·지갑·마시던 회복·장비(칸마다 기본 ID·접사 ID·굴린 값)
         h.Int(hero.PotionSlotsLevel); h.Int(hero.PotionSpeedLevel); h.Int(hero.Gold); h.Int(hero.Heal.TicksLeft); h.F(hero.Heal.Remaining);
+        // 보스 묶음 B(6.20 ㉒ — WP3 이음새): 순간이동 칸·충전·시전·방향·도착 무적
+        h.Int(hero.BlinkCharges); h.F(hero.BlinkRecharge); h.F(hero.BlinkCast); h.V2(hero.BlinkDir); h.F(hero.BlinkInvulnTime);
         foreach (var item in hero.Equipment)
         {
             h.Str(item?.BaseId);

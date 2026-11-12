@@ -11,7 +11,7 @@ namespace DiabloDefenceRemastered.Tests.Sim;
 /// 해골왕 보스 방(보스 묶음 A — 설계서 6.20, 기획 9.5·38.1): 실제 데이터·실제 모듈(Core 만)로 <c>--room 1:9 --god --level 25 --weapons magic_missile:8,fireball:8</c> 자동 조작.
 /// 엄격 로딩(해골왕 3페이즈·슬롯 ≤ 12·순서 ID 모두 있음)은 늘 돌고, 판(시나리오)은 <c>DDR_RUN=Scenario</c> 일 때만 —
 /// 방 틱 상한 안 해골왕 처치·P2·P3 를 모두 지남·예외 0·공정성 셋 0·보스 방 최대 동시 적 탄 ≤ 240·같은 씨앗 두 번 같은 판 해시, <c>--boss-hp 0.39</c> 면 P3 가 첫 틱에.
-/// <c>--god</c> 없는 판은 기준 없이 결과(살았나·받은 피해·<c>boss_s</c>)만 적는다(열린 질문 56 의 첫 자료).
+/// <c>--god</c> 없는 판은 기준 없이 결과(살았나·받은 피해·<c>boss_s</c>·순간이동 수 — 보스 묶음 B)만 적는다(열린 질문 56·58 의 첫 자료).
 /// </summary>
 public sealed class BossRoomScenarioTests(ITestOutputHelper output)
 {
@@ -147,7 +147,7 @@ public sealed class BossRoomScenarioTests(ITestOutputHelper output)
     {
         var room = r.Run.Rooms.Count > 0 ? r.Run.Rooms[^1] : default;
         output.WriteLine($"{label} outcome={r.Result} ticks={r.Ticks} ({r.Ticks * World.Dt:0.0}s) boss_s={(room.BossClockTicks >= 0 ? room.BossClockTicks * World.Dt : -1):0.0} " +
-                         $"max_phase={r.MaxPhase} peak_enemy_shots={r.PeakShots} hero_hits={r.HeroHits} boss_hits={r.BossHits}(몸 어림 {r.BossBodyHits}) damage={r.Damage:0} hp_left={r.HpLeft:0.00} drunk={r.Drunk} " +
+                         $"max_phase={r.MaxPhase} peak_enemy_shots={r.PeakShots} hero_hits={r.HeroHits} boss_hits={r.BossHits}(몸 어림 {r.BossBodyHits}) damage={r.Damage:0} hp_left={r.HpLeft:0.00} drunk={r.Drunk} blinks={r.Run.Stats.Blinks} " +
                          $"unseen_shots={r.Fairness.UnseenShots} unseen_charges={r.Fairness.UnseenCharges} hidden_hits={r.Fairness.HiddenHits}");
     }
 
@@ -166,9 +166,11 @@ public sealed class BossRoomScenarioTests(ITestOutputHelper output)
         Assert.Equal(0, a.Fairness.UnseenCharges);
         Assert.Equal(0, a.Fairness.HiddenHits);
         Assert.True(a.PeakShots <= 240, $"보스 방 최대 동시 적 탄 {a.PeakShots} > 240");
+        Assert.True(a.Run.Stats.Blinks > 0, "자동 조작이 순간이동을 한 번도 쓰지 않았다");      // 보스 묶음 B: 아래 해시 비교가 순간이동을 쓴 판이 되게
         var b = Run(seed, Options(god: true));
         Assert.Equal(a.Ticks, b.Ticks);
-        Assert.Equal(a.Hashes, b.Hashes);                                         // 같은 씨앗 두 번 = 같은 판
+        Assert.Equal(a.Hashes, b.Hashes);                                         // 같은 씨앗 두 번 = 같은 판(순간이동을 쓴 판)
+        Assert.Equal(a.Run.Stats.Blinks, b.Run.Stats.Blinks);
     }
 
     [Fact, Trait("Category", TestCategories.Scenario)]

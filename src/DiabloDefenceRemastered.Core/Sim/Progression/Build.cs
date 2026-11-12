@@ -151,7 +151,7 @@ internal static class Build
                 var p = defs.Passives.Get(c.Id);
                 var slot = PassiveSlotOf(hero, c.Id);
                 var from = slot >= 0 ? hero.Passives[slot].Level : 0;
-                return new LevelUpCard(c.Kind, p.Id, p.Name, p.Icon, from, from + 1, PassiveLines(world, p));
+                return new LevelUpCard(c.Kind, p.Id, p.Name, p.Icon, from, from + 1, PassiveLines(world, p, from));
             }
             default:
             {
@@ -179,11 +179,14 @@ internal static class Build
         return lines;
     }
 
-    private static IReadOnlyList<string> PassiveLines(World world, PassiveDef p)
+    /// <summary>패시브 카드 줄: <c>per_level</c> 의 키마다 "라벨 +값", <c>levels</c> 가 있으면(6.20 ⑯) <b>다음 레벨</b>(<paramref name="from"/> + 1)의 항목. 최대 두 줄.</summary>
+    private static IReadOnlyList<string> PassiveLines(World world, PassiveDef p, int from)
     {
         var labels = world.Defs.Rules.LevelUp?.StatLabels;
         var lines = new List<string>(2);
-        foreach (var (key, v) in p.PerLevel)
+        var entries = p.Levels is { } levels ? from >= 0 && from < levels.Count ? levels[from] : null : p.PerLevel;
+        if (entries is null) return lines;
+        foreach (var (key, v) in entries)
         {
             if (lines.Count == 2) break;
             var name = StatKeys.JsonName(key);

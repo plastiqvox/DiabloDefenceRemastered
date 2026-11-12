@@ -255,7 +255,7 @@ public class ContractV09Tests
                                   HpIn: 62.5f, GoldSpent: 180, Shop: "smith", Potions: 2, Drunk: 1);
         var snap = new RunSnapshot(RunSnapshot.CurrentFormat, 9ul, "a1", null, "a2", 2, "abcd1234", FullCarry(), stats, new FairnessCounters(), 777,
                                    new RunDepth(1, 6), [room], ["smith", "witch"]);
-        Assert.Equal(2, RunSnapshot.CurrentFormat);
+        Assert.Equal(3, RunSnapshot.CurrentFormat);   // v0.9 WP1g 에서 2, 보스 묶음 B(StatKey 셋)에서 3
         var json = snap.ToJson();
         var back = RunSnapshot.FromJson(json);
         Assert.Equal(json, back.ToJson());

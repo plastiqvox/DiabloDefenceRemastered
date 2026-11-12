@@ -9,6 +9,9 @@ namespace DiabloDefenceRemastered.Input;
 /// <para>단계 2 wp6: <c>Q</c>(<see cref="UiButtons.Drink"/>) → <see cref="CommandButtons.Drink"/>(한 번짜리 버튼이라 프레임의 첫 틱에만 — 3.2. 레벨업·상자·보상 창은 판을 멈추는
 /// 오버레이라 그동안 여기까지 오지 않는다). 상인 창이 열려 있으면(<c>Room.Shop.Open</c>) 이동 없이 <see cref="ShopWindow.Buttons"/> 의 명령 비트
 /// (<c>Choice1~3</c>·<c>Reroll</c>·<c>Skip</c>) — 사기는 Core <c>ShopInput</c> 이 같은 명령 길(자동 조작·재생과 같음)로 한다.</para>
+/// <para>보스 묶음 B(6.20 ⑳): <c>Space</c>(<see cref="UiButtons.Blink"/>) → <see cref="CommandButtons.Blink"/> + 이번 이동(방향). 상인 창이 열려 있으면 넣지 않는다(<c>Space</c> = 창 고르기).
+/// 레벨업·상자·보상·일시정지 오버레이는 <c>PausesBelow</c> 라 그 프레임의 입력을 오버레이가 먹고 <c>PlayScene.FixedTick</c> 이 돌지 않는다 — 창을 닫은 그 누름은
+/// 오버레이의 <c>Pop</c> 이 그 앱 틱 끝에 적용되고 <c>FrameLoop</c> 이 첫 틱 뒤 눌림을 지우므로 여기까지 오지 않는다(13장 보스 묶음 B 기록).</para>
 /// </summary>
 public sealed class KeyboardMouseSource(AppServices app) : IInputSource
 {
@@ -33,11 +36,12 @@ public sealed class KeyboardMouseSource(AppServices app) : IInputSource
         if (Frame is not { } f) return PlayerCommand.None;
         var drink = f.IsPressed(UiButtons.Drink) ? CommandButtons.Drink : CommandButtons.None;
         if (world.Room?.Shop is { Open: true } shop && Shop is { } window)
-            return new PlayerCommand(Vector2.Zero, window.Buttons(f, MouseVirtual?.Invoke(f), shop) | drink);
+            return new PlayerCommand(Vector2.Zero, window.Buttons(f, MouseVirtual?.Invoke(f), shop) | drink);   // 순간이동 없음 — Space 는 창 고르기
         var move = f.Move;
         if (move == Vector2.Zero && f.MouseDown && f.MouseInWindow && ScreenToWorld(f.MouseScreen) is { } target)
             move = Toward(world.Hero.Pos, target);
-        return new PlayerCommand(move, drink);
+        var blink = f.IsPressed(UiButtons.Blink) ? CommandButtons.Blink : CommandButtons.None;
+        return new PlayerCommand(move, drink | blink);
     }
 
     /// <summary>주인공 → 커서 단위 벡터(데드존 안이면 0).</summary>

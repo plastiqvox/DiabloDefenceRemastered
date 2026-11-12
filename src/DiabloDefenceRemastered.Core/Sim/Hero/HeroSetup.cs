@@ -46,6 +46,7 @@ public static class HeroSetup
                     if (world.Run is null || world.Run.Rooms.Count == 0 && world.Run.Carry is null) Wallet.Earn(world, on.Gold);   // v0.9: 지갑과 얻은 금화 둘 다
                 }
         hero.MoveSpeed = HeroStats.MoveSpeed(hero);
+        HeroBlink.Fill(world);   // 보스 묶음 B: 순간이동 칸은 방마다 가득(짐 Restore·개발 옵션도 끝에 다시 채움)
     }
 }
 
@@ -110,6 +111,7 @@ public sealed class HeroRunSetup : IRunSetup
         {
             HeroStats.Recompute(world);
             hero.Hp = hero.MaxHp;
+            HeroBlink.Fill(world);
         }
     }
 }

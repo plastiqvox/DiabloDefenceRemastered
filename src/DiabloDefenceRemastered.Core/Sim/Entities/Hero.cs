@@ -171,6 +171,21 @@ public sealed partial class Hero
     /// </summary>
     public EquipItem?[] Equipment { get; } = new EquipItem?[EquipSlots.Count];
 
+    // 순간이동(v0.9.4 V21, 6.20 ⑬ — 계약): 쓰기 WP3(<c>HeroBlink</c> — 주인공 만들기·<c>HeroControl</c>·<c>HeroStats.Recompute</c>), BeginTick(무적 줄이기),
+    // 읽기 WP4(자동 조작)·WP5(덧칠)·WP6(HUD 충전 칸)·WP7(해시). 방마다 가득으로 시작하고 짐·계단 저장에 넣지 않는다(기획 3절).
+    /// <summary>지금 칸(0..최대 — <c>HeroBlink.MaxCharges</c>).</summary>
+    public int BlinkCharges;
+    /// <summary>다음 칸까지 찬 시간(초). 칸이 가득이면 0.</summary>
+    public float BlinkRecharge;
+    /// <summary>남은 시전(초). 0 = 시전 중 아님.</summary>
+    public float BlinkCast;
+    /// <summary>시전 중 방향(누른 틱에 굳음, 단위 벡터).</summary>
+    public Vector2 BlinkDir;
+    /// <summary>도착 무적 남은 시간(초) — BeginTick 이 피격 무적과 같은 자리에서 줄인다. 이 동안 적 탄이 몸을 지나가고 피해·넉백은 버려진다.</summary>
+    public float BlinkInvulnTime;
+    /// <summary>마지막 "못 함" 틱(HUD 충전 칸 붉은 테 0.2s).</summary>
+    public int BlinkDeniedTick = int.MinValue / 2;
+
     // 쓰기 WP2 / 읽기 WP3
     /// <summary>몸이 닿은 적 수(3 이상이면 다음 틱 이동 ×0.6).</summary>
     public int TouchingCount;
@@ -197,6 +212,10 @@ public sealed partial class Hero
         Heal = default;
         Gold = 0;
         Array.Clear(Equipment);
+        BlinkCharges = 0;
+        BlinkRecharge = BlinkCast = BlinkInvulnTime = 0f;
+        BlinkDir = Vector2.Zero;
+        BlinkDeniedTick = int.MinValue / 2;
         TouchingCount = 0;
         ResetCombat();
     }
