@@ -68,9 +68,12 @@ public static class HeroBlink
         return MathX.NormalizeOr(hero.Facing, new Vector2(0, 1));
     }
 
-    /// <summary><paramref name="from"/> 에서 <paramref name="dir"/> 로 갈 수 있는 자리(내비가 없으면 제자리).</summary>
+    /// <summary>거리 = max(<c>min_distance</c>, <c>distance</c> + <c>blink_distance</c>).</summary>
+    public static float Distance(Hero hero, BlinkRulesDef rules) => MathF.Max(rules.MinDistance, rules.Distance + hero.Stats[StatKey.BlinkDistance]);
+
+    /// <summary><paramref name="from"/> 에서 <paramref name="dir"/> 로 <see cref="Distance"/> 만큼 갈 수 있는 자리(내비가 없으면 제자리).</summary>
     public static Vector2 Destination(World world, Vector2 from, Vector2 dir, BlinkRulesDef rules) =>
-        world.Nav is { } nav ? PlacementResolver.Throw(nav, from, dir, rules.Distance, world.Hero.Radius) : from;
+        world.Nav is { } nav ? PlacementResolver.Throw(nav, from, dir, Distance(world.Hero, rules), world.Hero.Radius) : from;
 
     /// <summary>
     /// <c>HeroControl</c> 차례(물약 다음, 이동 의도 앞). 참이면 이번 틱은 순간이동이 이동을 쥔다(시전 중·도착 틱 — 이동 의도 <c>Hold</c>, 방향 = <c>BlinkDir</c>).

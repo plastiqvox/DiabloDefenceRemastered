@@ -89,20 +89,44 @@ public sealed class UiCanvas(AppServices app)
     }
 
     /// <summary>
-    /// 부채꼴 채우기(보스 묶음 B 이음새 — HUD 순간이동 충전 칸, 6.20 ⑳). <paramref name="startRad"/> 에서 <paramref name="sweepRad"/> 만큼(화면 좌표계 — 양수 = 시계 방향,
-    /// 위 = −π/2). 중심에서 뻗는 1px 띠를 호 위 간격이 창 픽셀 하나보다 촘촘하게 돌려 그린다(원 텍스처가 없어도 됨). 띠가 중심에서 겹치므로 불투명 채우기에 쓴다.
+    /// 쿨타임 덮개(HUD 순간이동 칸, 6.20 ⑳): 사각형 <paramref name="box"/> 가운데에서 12시를 0 으로 시계 방향 각이 2π·<paramref name="from"/> 이상인 부분을 칠한다
+    /// — <paramref name="from"/> 이 0 → 1 로 자라면 덮개가 시계 방향으로 걷힌다. 창 픽셀 줄마다 덮인 가로 구간을 한 번씩 채워 겹치지 않으므로 반투명으로 써도 고르다.
     /// </summary>
-    public void Wedge(Vector2 center, float radius, float startRad, float sweepRad, Rgb color, float alpha = 1f)
+    public void Sweep(RectF box, float from, Rgb color, float alpha = 1f)
     {
-        if (alpha <= 0f || _pixel is null || radius <= 0f || MathF.Abs(sweepRad) < 1e-4f) return;
-        var c = ToScreen(center);
-        var r = radius * Scale;
-        var steps = Math.Max(2, (int)MathF.Ceiling(MathF.Abs(sweepRad) * r / 0.6f));
+        from = Math.Clamp(from, 0f, 1f);
+        if (alpha <= 0f || _pixel is null || from >= 1f) return;
+        var r = ScreenRect(box);
+        if (r.Width <= 0 || r.Height <= 0) return;
         var tint = color.ToXna(alpha);
-        for (var i = 0; i <= steps; i++)
+        if (from <= 0f)
         {
-            var a = startRad + sweepRad * i / steps;
-            Batch.Draw(_pixel, new XnaVector2(c.X, c.Y), null, tint, a, new XnaVector2(0f, 0.5f), new XnaVector2(r, 1.2f), SpriteEffects.None, 0f);
+            Batch.Draw(_pixel, r, tint);
+            return;
+        }
+        var phi = MathF.Tau * from;
+        var cx = r.X + r.Width / 2f;
+        var cy = r.Y + r.Height / 2f;
+        for (var y = r.Y; y < r.Bottom; y++)
+        {
+            var dy = y + 0.5f - cy;
+            var run = -1;
+            for (var x = r.X; x <= r.Right; x++)
+            {
+                var covered = false;
+                if (x < r.Right)
+                {
+                    var a = MathF.Atan2(x + 0.5f - cx, -dy);
+                    if (a < 0f) a += MathF.Tau;
+                    covered = a >= phi;
+                }
+                if (covered && run < 0) run = x;
+                else if (!covered && run >= 0)
+                {
+                    Batch.Draw(_pixel, new Rectangle(run, y, x - run, 1), tint);
+                    run = -1;
+                }
+            }
         }
     }
 

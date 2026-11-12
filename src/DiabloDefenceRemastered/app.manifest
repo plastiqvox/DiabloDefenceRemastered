@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Windows 화면 배율(125%·150% …)을 게임이 직접 안다고 알린다(2026-11-13). 이게 없으면 Windows 가 1280×720 창을 배율만큼 흐리게 늘려
+  (게임 안 정수 확대 → 레터박스로 줄임 → Windows 확대, 두 번 다시 뜸) 타일이 뭉개지고 걸을 때 깨져 보였다.
+  기본 창 크기는 WindowControl 이 배율을 곱해 정한다.
+-->
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+  <assemblyIdentity version="1.0.0.0" name="DiabloDefenceRemastered"/>
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">permonitorv2,permonitor</dpiAwareness>
+    </windowsSettings>
+  </application>
+</assembly>

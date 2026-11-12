@@ -17,6 +17,8 @@
     { "id": "icon_magic_missile", "source": "grid", "file": "d1/icons/magic_missile.png", "sheet": [56, 56], "frame": [56, 56], "color_key": null, "origin": [28, 28] },
     { "id": "icon_fireball",      "source": "grid", "file": "d1/icons/fireball.png",      "sheet": [56, 56], "frame": [56, 56], "color_key": null, "origin": [28, 28] },
     { "id": "icon_arcane_orbit",  "source": "grid", "file": "d1/icons/arcane_orbit.png",  "sheet": [56, 56], "frame": [56, 56], "color_key": null, "origin": [28, 28] },
+    // 주인공 순간이동(HUD 칸·순간이동 숙련 아이콘 — 원작 순간이동 마법 아이콘)
+    { "id": "icon_teleport",      "source": "grid", "file": "d1/icons/teleport.png",      "sheet": [56, 56], "frame": [56, 56], "color_key": null, "origin": [28, 28] },
 
     // 대체 그림(원작 DiabloDefence exe PNG — objects.json 과 같은 방식). 아래 투사체의 원작 그림(arrows, 기획 13.7)은
     // 아직 가져오기 표에 없다 — WP0 이 표에 넣고 WP5 가 effects/common.json 을 그 그림으로 바꾼다.

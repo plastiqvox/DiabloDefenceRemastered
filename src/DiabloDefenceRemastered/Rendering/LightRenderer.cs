@@ -73,6 +73,16 @@ public sealed class LightRenderer : IDisposable
     /// <summary>월드 px → <c>LightRT</c> px(카메라 빼고 반으로).</summary>
     public static Matrix WorldToLight(Vector2 camera) => Matrix.CreateTranslation(-camera.X, -camera.Y, 0f) * Matrix.CreateScale(0.5f);
 
+    /// <summary>
+    /// 모양 찍기(<c>PointClamp</c> — 안개 벽 기둥·대상 모양·가 본 벽)용 <see cref="WorldToLight"/>: 그림을 월드 <see cref="StampNudge"/> px 민다.
+    /// 빛 픽셀 중심은 월드 정수 좌표(카메라 + 2i + 1)라 그대로면 그림 텍셀 경계에 떨어져 어느 텍셀을 집을지 GPU 반올림에 달린다 —
+    /// 벽 반쪽 기둥 이음매에서 투명한 쪽을 집으면 벽 값이 안 찍혀 32px 마다 어두운 세로 줄이 생기고 카메라 x 가 1px 움직일 때마다 깜빡였다.
+    /// 0.25 는 그림 배율 1(텍셀 1px)·2(텍셀 0.5px, 카메라 0.5px 단위) 모두에서 샘플을 텍셀 안쪽에 둔다(0.5 는 배율 2 에서 다시 경계).
+    /// </summary>
+    public static Matrix StampToLight(Vector2 camera) => Matrix.CreateTranslation(StampNudge, StampNudge, 0f) * WorldToLight(camera);
+
+    public const float StampNudge = 0.25f;
+
     public void Build(SpriteBatch batch, WorldFrame f, ArenaRenderer? arena, bool reveal)
     {
         var w = f.World;
@@ -248,7 +258,8 @@ public sealed class FogRenderer(GraphicsDevice device, Primitives prim, RenderTa
         batch.End();
 
         // ③ 벽 기둥은 자기 칸 값 × 칸 중심 흐림, ④ 필요한 대상 모양
-        batch.Begin(SpriteSortMode.Deferred, FogBlend.MaxA, SamplerState.PointClamp, null, null, null, toLight);
+        var stamp = LightRenderer.StampToLight(f.Camera);
+        batch.Begin(SpriteSortMode.Deferred, FogBlend.MaxA, SamplerState.PointClamp, null, null, null, stamp);
         foreach (var i in arena.VisibleWalls)
         {
             var it = arena.Items[i];
@@ -266,7 +277,7 @@ public sealed class FogRenderer(GraphicsDevice device, Primitives prim, RenderTa
         batch.Begin(SpriteSortMode.Deferred, FogBlend.WriteA, SamplerState.LinearClamp, null, null, null, CellToLight(iso, 0, f.Camera));
         batch.Draw(_explored, XnaVector2.Zero, Color.White);
         batch.End();
-        batch.Begin(SpriteSortMode.Deferred, FogBlend.MaxA, SamplerState.PointClamp, null, null, null, toLight);
+        batch.Begin(SpriteSortMode.Deferred, FogBlend.MaxA, SamplerState.PointClamp, null, null, null, stamp);
         foreach (var i in arena.VisibleWalls)
         {
             var it = arena.Items[i];

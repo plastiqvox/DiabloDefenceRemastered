@@ -3286,6 +3286,8 @@ public int BlinkDeniedTick = int.MinValue / 2;   // 마지막 "못 함" 틱(HUD 
 
 ⑮ **능력치 키 셋**(계약 — `StatKey` 끝에 `blink_charges`·`blink_cast`·`blink_recharge_pct`, 기획 4.1): `CarriedStat` 이 `StatKey` 를 담아 **모양 지문이 바뀐다** → `RunSnapshot.CurrentFormat` 2 → **3**, `ShapeFingerprint` 새 값(옛 `run.json` 은 불일치로 버려짐 — 8.3. 액트 2 데이터가 있어 액트 1 보스 방 문 단계에서 계단 저장(`CanSuspend`)이 열리므로, 판 2 로 계단 저장을 해 둔 사용자는 그 판 하나를 잃는다. 받아들임).
   `rules.level_up.stat_labels` 에 `blink_charges`(`순간이동 칸`)·`blink_cast`(`순간이동 시전`, unit `s`)·`blink_recharge_pct`(`순간이동 충전`, pct).
+  (2026-11-13) `blink_distance`(`순간이동 거리`) 를 끝에 더함 — `HeroBlink.Distance` = max(`min_distance`, `distance` + 값). 모양 지문이 다시 바뀌어 `CurrentFormat` 3 → **4**(판 3 계단 저장은 버려짐).
+  규칙 첫 값도 바뀜: `charges` 1·`distance` 96, 숙련 = 거리 +24 · 칸 +1 · 충전 −15% · 거리 +24 · 시전 −0.10(기획 6절).
 
 ⑯ **패시브 레벨별 효과**(계약 — `PassiveDef.Levels`, JSON `levels`, 선택): `IReadOnlyList<IReadOnlyDictionary<StatKey, float>>`, `levels[k]` = Lv(k+1) 에 더하는 값. `HeroStats` 합산 = `per_level × L`(지금) 또는 `levels[0..L−1]` 의 합. 둘 다 적으면 오류, `levels` 길이 ≠ `max_level` 이면 오류(13.5 보탬).
   `Build.PassiveLines`(카드 효과 줄) = `levels` 가 있으면 **다음 레벨의 항목**(`levels[L]`), 없으면 지금 규칙. 데이터: `passives.json` 에 `blink_mastery`(아이콘 `{ "sprite": "FieldRunner", "tint": [150, 190, 255] }`, `max_level` 5, `levels` 기획 6절 표) — WP3.
@@ -3304,6 +3306,8 @@ public int BlinkDeniedTick = int.MinValue / 2;   // 마지막 "못 함" 틱(HUD 
 
 ⑳ **입력·HUD**(WP6): `InputMap` — `Space` 눌림이면 `UiButtons.Confirm` 과 함께 새 `UiButtons.Blink`(Enter 는 Confirm 만). `KeyboardMouseSource.Next` — 상인 창이 열렸거나, 그 프레임 입력을 오버레이(레벨업·상자·보상·일시정지)가 먹었으면(**창을 닫은 그 프레임 포함**) `Blink` 를 넣지 않는다.
   HUD — `Hud.TeleportReserve`(122,494)~(214,518) 안에 칸 수만큼 지름 20 원(22px 간격, 왼쪽부터): 찬 칸 밝은 파랑 + 흰 테, 충전 중인 첫 빈 칸은 위에서 시계 방향 부채꼴(`BlinkRecharge / RechargeTime`), 나머지 빈 칸 어두운 테, 왼쪽 위 `Space`, 시전 중 맥동, `BlinkDeniedTick` 뒤 0.2s 붉은 테. 코드 그림. `--preview ui` 에 2/2·1/2(반쯤)·0/3·시전 중 견본.
+  (2026-11-13 바꿈) `Hud.DrawBlinkSlot` — `TeleportReserve` = (122,490)~(150,518), 물약 칸과 같은 허리띠 칸 그림 + 아이콘 `icon_teleport`(가져오기 표 `icons.json` — `spelicon.cel` 24번).
+  충전 중이면 `UiCanvas.Sweep`(12시부터 시계 방향 각 ≥ 2π·진행인 부분을 창 픽셀 줄마다 한 번씩 채움 — 겹침 없어 반투명 가능, 옛 `Wedge` 를 대신함)으로 검은 덮개(칸 0 이면 0.7, 남으면 0.35). 최대 칸 ≥ 2 이면 오른쪽 아래 `1/2`.
 
 ㉑ **그리기**(WP5): 이펙트 `fx_blink` = `{ "sprite": "miniltng", "frames": [1, 8], "frame_time": 0.03, "scale": 0.9, "tint": [170, 200, 255], "blend": "additive" }`(`effects/common.json` — 새 그림 없음). 시전 중·`BlinkInvulnTime > 0` 동안 주인공에 푸른(150,190,255) 가산 덧칠 α0.35 — 피격 무적의 반투명 깜빡임과 겹치면 덧칠만.
 
@@ -3322,6 +3326,8 @@ public int BlinkDeniedTick = int.MinValue / 2;   // 마지막 "못 함" 틱(HUD 
   1. 정수 배율 k = ceil(min(창W/960, 창H/540)) 로 `WorldRT` 를 점 샘플링(PointClamp)해 960k×540k 중간 타깃에 키운다.
   2. 그것을 선형 샘플링으로 창 안 레터박스 사각형(비율 16:9 유지, 남는 곳 검정)에 줄여 그린다.
   → 정수 배율에서는 그대로 날카롭고, 비정수 배율에서도 번짐이 1px 테두리 정도로 줄어든다(sharp bilinear).
+  (2026-11-13) 실행 파일은 `app.manifest` 로 화면 배율을 직접 다룬다(per-monitor v2). 없으면 Windows 가 창을 배율만큼 다시 흐리게 늘려 위 단계가 소용없었다(150% 에서 1280×720 → 1920×1080).
+  보통 실행의 기본 창 = 1280×720 × 시스템 배율, 화면 90% 안(`WindowControl.DefaultWindow`). 개발 옵션 실행은 1280×720 그대로.
 - **그림 배율 s**(v0.8, 사용자 결정 U — 1.4 "AI 확대"): 시작 검사가 manifest `upscale.status` 가 `done` 이면 s = manifest `upscale.output_scale`, 아니면 1 로 정한다(로그 `ASSETS … art_scale=`).
   v0.8.1: 첫 판은 `output_scale` 이 늘 2 다(표 읽기가 2 만 받음 — 1.4). 시작 검사는 메타·`arena.json` 의 `scale` 이 **{1, s} 안이고 s 를 나누는지**(그리는 배율 s ÷ `scale` 이 정수인지) 본다 — 어기면 시작 검사 ① 과 같은 "자원 형식이 낡았다" 안내. 4배 판(s = 4)은 계약 변경(WP1g — 13.20 열린 질문 2). `WorldRT` 는 **(960·s)×(540·s)**(s = 2 면 1920×1080)이고
   월드 → 타깃 변환에 배율 s 를 곱한다. 카메라·`World.ViewRect`·생성 띠는 그대로 960×540 월드 px 이다 — **시뮬레이션은 s 를 모른다**(같은 씨앗이면 s 와 상관없이 `--log-hash` 가 같다, 10.2).
@@ -3625,6 +3631,8 @@ v0.5 처럼 "벽·대상 모양을 값 g 의 회색으로 최댓값 혼합" 하�
    `MulA` 로 그린다. 띠 사각형은 반경 R + 64(시야 계산 범위)까지 덮는다 — 그보다 먼 칸은 `SightTex` 가 이미 0 이다. → 거리 R − 40 … R 에서 땅이 보이는 밝기에서 기억 밝기로 바뀐다(기획 10.7).
 3. **벽 기둥은 자기 칸 값**: 화면 안 막힌 칸(0b·4·5층 벽 항목, 7.4)의 기둥 그림을 틴트 (255,255,255, `그 칸 CellLevel × 칸 중심의 경계 흐림 값`) 로 `MaxA` 덧그린다.
    벽 그림은 칸 위로 144px 솟아 화면에서 뒤 칸(맵 밖·벽 너머 안 보이는 칸) 자리에 걸치므로, 땅 투영만 쓰면 보이는 뒷벽의 윗부분이 검게 잘린다. 원작도 벽 조각은 그 칸의 빛을 받았다.
+   (2026-11-13) 이 찍기(대상 모양·`MemRT` 가 본 벽 포함)는 `LightRenderer.StampToLight` — 월드 0.25px 밀어 찍는다. 빛 RT 픽셀 중심이 월드 정수 좌표(그림 텍셀 경계)라 그대로면
+   벽 반쪽 기둥 이음매에서 투명한 쪽 텍셀을 집어 32px 마다 어두운 세로 줄이 생기고, 카메라가 1px 움직일 때마다 깜빡였다.
    두 줄 벽(앞 턱·모서리·스테이지 2 협로)의 바깥 줄은 4.11 의 "두 줄 벽은 함께 보인다" 로 안쪽 줄과 같은 값을 받는다 — 벽 하나가 밝은 반·검은 반으로 갈리지 않는다.
 4. **그리는 대상의 모양**(필요한 것만, v0.5.1): 그리는 유닛(안개 알파 > 0)·장판·예고 채움 중 ① 그림 사각형이 시야 원 `R − edge` 밖에 걸치거나 ② 사각형 네 귀퉁이·발의 칸 중 `CellLevel < 1` 인 칸이 있는 것,
    그리고 ③ 늘 그리는 중간 보스·보스·닿은 적·점화 중 자폭 적을, 틴트 (255,255,255, 안개 알파 × 그림 알파 — 장판·예고는 1) 로 `MaxA`.
