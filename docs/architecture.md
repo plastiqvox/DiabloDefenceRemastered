@@ -1,6 +1,6 @@
 # Diablo Defence Remastered — 설계서 (Architecture)
 
-- 상태: v0.9.3 (설계 담당 — v0.7.2 줄은 WP1e 구현 담당, v0.8.2 줄은 WP1f 구현 담당).
+- 상태: v0.9.4 (설계 담당 — v0.7.2 줄은 WP1e 구현 담당, v0.8.2 줄은 WP1f 구현 담당).
   - v0.1: 첫 판.
   - v0.2: 세 리뷰(`docs/reviews/architecture-planner.md`, `architecture-implementer.md`, `architecture-verifier.md`)를 반영했다 — 지적별 처리는 13.1~13.3.
   - v0.3: 기획서 v0.4 의 **디아블로 1 원본 자원 사용**(사용자 요구 10)을 받았다 — 자원 가져오기 도구(1.4), 등각 아레나 좌표·타일 충돌(4.1·4.2),
@@ -64,7 +64,12 @@
     가져오기 표 줄(6.19 표·11.1 WP0), 그리기(11.1 WP5), 데이터(11.1 WP3). "키 입력이 이상함" 은 코드 `4eed9b5` 로 닫혀 WP6 v0.9 줄의 `InputMap` 잠금을 지웠다. 처리는 13.23 표 끝 줄.
   - v0.9.3: 기획서 v0.9.4(37절 — 2026-11-12 플레이 관찰 뒤 사용자 결정)를 받았다 — **회복 문 = 최대 체력 × `heal_amount`(0.5, 최대를 넘지 않음)**(6.19 "회복 문"·`rules.rooms.rewards`), 문 봉인은 wp5 에서 원작 창살로 바꿈(7.11 한 줄).
     보스 탄막·순간이동(기획 37절 5~9)은 다음 묶음이라 11절에 한 줄만 두고 설계는 그 묶음을 시작할 때 한다. 13장은 이 판에서 고치지 않았다(wp5 구현 기록이 맡음).
-  기준 기획서: `docs/gdd.md` v0.9.4(v0.9.3 — 37절 1·3 을 7.11·6.19 가 받음, 5~9 는 다음 묶음. v0.9.2 — 36절 "설계에 넘기는 것" 19 를 13.23 끝 줄이 받음. v0.9.1 — 35절 "설계에 넘기는 것" 16~18 을 13.23 끝 줄이 받음. v0.9 — 33절·34절 "설계에 넘기는 것" 1~15 를 13.23 이 받음. 그 앞: v0.8.4 — 설계에 넘긴 목록은 기획서 28절·29절 끝 — v0.8 에서 모두 받음, 13.20. 기획서 31절 끝 넘긴 것은 v0.8.1 이 받음, 13.21).
+  - v0.9.4: 기획서 v0.9.5(38절 — 사용자가 "보스 탄막·순간이동 묶음까지" 를 승인, 2026-11-12)와 37절 "설계에 넘기는 것" 24 를 받았다. 새 계약은 **6.20**:
+    적 쪽 — 탄막 동작 `barrage`(고리·부채·벽, 파도·돌기·다시 노림, 한 패턴의 여러 `barrage` 를 함께), 정해진 순서 `sequence` 와 `PatternSequence`(순서 패턴은 슬롯을 쓰지 않음), 페이즈 탄 지우기, 패턴 예고 모양 `line`,
+    돌진 몸통(공격 그림 반복·지나간 길 판정 — `charge`·`dash` 공용)과 `dash` 연속·꼬리 탄·끝 내려찍기, 보스 `teleport`, 탄 판정 `ProjectileDef.HeroHitRadius`, 생성 사거리 `EnemyProjectileSpawn.Range`, `ActionState` 세 칸, `rules.enemies.barrage`, 적 투사체 상한 280, `--boss-hp`, 자동 조작 탄 피하기.
+    주인공 쪽 — `CommandButtons.Blink`, `Hero` 순간이동 칸, `rules.hero.blink`, 능력치 키 셋(`StatKey` — 계단 저장 `Format` 2 → 3), 패시브 레벨별 효과 `PassiveDef.Levels`, 도착 무적(탄이 지나감), `CueKind.Blink`·`BlinkDenied`, 입력·HUD·그리기·자동 조작·판 해시.
+    구현은 묶음 **A "적 탄막"**(wp/s2-boss-a) → **B "주인공 순간이동"**(wp/s2-boss-b, A 를 합친 뒤) — 11.1 끝 "보스 묶음 A·B", 소유 11.3, 처리 표 13.24.
+  기준 기획서: `docs/gdd.md` v0.9.5(v0.9.4 — 38절과 37절 24 를 6.20 이 받음, 13.24. v0.9.3 — 37절 1·3 을 7.11·6.19 가 받음, 5~9 는 v0.9.4 가 받음. v0.9.2 — 36절 "설계에 넘기는 것" 19 를 13.23 끝 줄이 받음. v0.9.1 — 35절 "설계에 넘기는 것" 16~18 을 13.23 끝 줄이 받음. v0.9 — 33절·34절 "설계에 넘기는 것" 1~15 를 13.23 이 받음. 그 앞: v0.8.4 — 설계에 넘긴 목록은 기획서 28절·29절 끝 — v0.8 에서 모두 받음, 13.20. 기획서 31절 끝 넘긴 것은 v0.8.1 이 받음, 13.21).
   13.21 끝 "기획서에 넘기는 것" 2~6 과 13.22 의 기획 몫은 기획서 v0.8.4 가 받았다(기획서 32절 — 19.6·2.5·11.4·15절, 설계서 문장 그대로. 11.1 WP0 "시작 전").
   두 문서에 걸친 지적은 설계서 쪽만 고치고 기획서 문장은 13.21 끝 "기획서에 넘기는 것" 으로 넘겼다(13.20 끝 목록도 그대로 유효). 출발점: `docs/brief.md`.
 - 이 문서는 **코드 구조·형식·알고리즘·작업 나누기**를 정한다. 수치·규칙은 기획서가 정하고, 여기서는 그것을 어디에 어떻게 담는지만 정한다.
@@ -3160,6 +3165,153 @@ public sealed class ShopState
 
 - 확인 전·실패 때는 코드 그림 대체(6.3 대체 규칙 — 단계가 그림 때문에 막히지 않는다). 아이콘이 어둡던 문제(통합 뒤 플레이)의 원인은 `IconBaker` 가 미리 곱한 색을 255 로 두 번 나눈 굽기 버그였다(`9128cc9` 에서 고침 — 불투명 칸도 바탕색 가까이 검게 구워짐). 원작 아이콘으로 바꾸면서 그 버그도 고쳤으므로 대체 아이콘을 가산으로 굽는 일은 두지 않는다(v0.9.1).
 
+### 6.20 보스 탄막·순간이동 (v0.9.4, 기획 v0.9.5 38절·9.5·9.4·8.3·3절·6절·12.1·15절 — 사용자 결정 V17~V21)
+
+기획서가 수치·패턴 순서를 정했고(9.5 두 표, 38.1), 이 절은 그것을 담는 계약이다. 묶음 A(적 탄막)가 ①~⑪, 묶음 B(주인공 순간이동)가 ⑫~㉒ 를 구현한다. 계약 형을 바꾸는 줄에는 **계약** 을 붙였다(13.24 목록).
+
+**A. 적 탄막**
+
+① **`barrage` 동작**(`IEnemyAction`, WP4 `Sim/Enemies/Parts/Barrage.cs`, 레지스트리 `EnemyAction`) — 기획 9.5 패턴 종류 다섯은 이 동작 하나의 쓰임이다.
+
+```json
+{ "id": "ring", "type": "barrage", "shape": "ring", "projectile": "pj_sk_orb", "count": 16, "speed": 120, "damage": 14, "aim": "hero", "offset": 11.25 }
+{ "id": "spiral", "type": "barrage", "shape": "ring", "projectile": "pj_sk_orb", "count": 2, "speed": 110, "damage": 14, "waves": 15, "interval": 0.2, "turn": 24 }
+{ "id": "burst", "type": "barrage", "shape": "fan", "projectile": "pj_sk_orb", "count": 7, "arc": 70, "speed": 165, "damage": 14, "waves": 3, "interval": 0.35, "reaim": true }
+{ "id": "wall", "type": "barrage", "shape": "wall", "projectile": "pj_sk_orb", "speed": 85, "damage": 16, "waves": 3, "interval": 1.6,
+  "wall": { "distance": 260, "width": 560, "spacing": 24, "gap": 3, "gap_range": 160, "gap_shift": 100 } }
+{ "id": "glob", "type": "barrage", "shape": "fan", "projectile": "pj_rot_glob", "count": 5, "arc": 70, "speed": 150, "damage": 10, "range_to_hero": [0.7, 1.3] }
+```
+
+| 키 | 기본 | 뜻 |
+|---|---|---|
+| `shape` | (필수) | `ring` 사방 등간격 · `fan` `arc` 안 등간격(1발이면 가운데) · `wall` 아래 벽 |
+| `projectile` | (필수) | 투사체 정의. 탄 판정·그림·사거리는 정의에서 |
+| `count` | 1 | 파도 하나의 발 수(`ring`·`fan`). `wall` 은 폭/간격이 정함 |
+| `arc` | 0 | `fan` 의 전체 퍼짐각(도) |
+| `speed` | 0 | 0 이면 정의 속도 |
+| `damage` | null | 기본 피해(null = 그 적의 `damage`). 최종 = `EnemyCtx.FinalDamage` |
+| `aim` | `hero` | `hero` 주인공 쪽 · `facing` 바라보는 쪽 · `fixed` 화면 남(0°)에서 `angle` |
+| `angle`·`offset` | 0 | 더하는 각(도). `offset` 은 "빈틈 조준"(고리16 = 11.25) 용 이름 |
+| `waves`·`interval` | 1 · 0 | 파도 수·간격(초). `waves > 1` 이면 여러 틱 동작 |
+| `turn` | 0 | 파도 k 에 더하는 각 = k × `turn`(나선) |
+| `reaim` | false | 참이면 파도마다 그 틱의 주인공 쪽을 기준으로(노린 연사) |
+| `range_to_hero` | null | `[a, b]` — `fan` 의 i번째 탄(왼쪽부터) 사거리 = 주인공까지 거리 × (a + (b − a) × i/(n − 1)), [40, 정의 사거리]로 자름(바닥액) |
+| `wall` | null | `shape: wall` 일 때 필수: `distance`(주인공에서 보스 쪽으로 줄까지), `width`, `spacing`, `gap`(빈 탄 수), `gap_range`(첫 빈틈 가운데 ± 범위), `gap_shift`(다음 파도 빈틈 이동 한도) |
+
+- **상태를 들고 다니지 않는다**: 파도 k(0부터)는 `ActionState.BeginTick + round(k × interval / Dt)` 틱에 나간다. `Begin` 이 파도 0 을 내고, `Tick` 은 "BeginTick 부터 지금 틱까지 나갈 차례가 된 파도" 를 낸다(한 틱에 둘 이상이면 차례로). 마지막 파도를 낸 틱에 Done.
+  그래서 한 패턴의 여러 `barrage` 가 같은 `ActionState` 로 **함께** 돈다(고리+나선 겹침 — ② 의 "여러 틱 동작" 규칙).
+- 기준 방향: `reaim` 이 아니면 `ActionState.Dir`(② — 이벤트 프레임에 그 틱 주인공 쪽으로 다시 씀), `reaim` 이면 그 파도 틱의 주인공 쪽. `aim: facing` 은 `Self.Facing`, `fixed` 는 각 그대로. 파도 k 의 각 = 기준 + `angle` + `offset` + k × `turn`.
+- 나오는 자리: `ring`·`fan` = 보스 발 + 방향 × 몸 반경. `wall` = 줄 가운데 C = 주인공(Begin 틱) − 기준 방향 × `distance`, 줄 방향 = 기준에 수직, 탄 j 자리 = C + 수직 × (j × spacing − width/2), 날아가는 방향 = 기준 방향(주인공 쪽).
+  벽의 빈틈: 파도 0 은 `Rng`(=`World.Rng.Ai`) 한 번으로 [−gap_range, gap_range] 에서 고른 가로 자리, 파도 k 는 앞 빈틈 + U(−gap_shift, gap_shift) 를 [−gap_range, gap_range] 로 자름(앞 빈틈은 `ActionState.Point.X` 에 둠 — 한 패턴에 `wall` 은 하나만, 검사). 빈틈 가운데에 가장 가까운 `gap` 발을 뺀다.
+  벽 탄 자리가 맵 밖이거나 C 에서 그 자리까지 투사체 길이 막혔으면(`INavWorld.ProjectileLineClear(C, 자리)` 거짓) 그 탄만 만들지 않는다.
+- **생성 금지**(기획 공정 장치 ③): 어느 모양이든 탄 자리가 주인공 발에서 `rules.enemies.barrage.spawn_clear`(48) 안이면 그 탄만 만들지 않는다. `dash` 꼬리 탄·⑦ 도 같은 도우미(`EnemyShots.FireClear`)를 탄다.
+- 발사는 지금 `EnemyShots.Fire`(`SightGated` = 패턴 `clear_sight`) 그대로, 사거리를 덮을 때만 ⑥ 의 `Range`. 소리는 투사체 `fire` 연결(같은 틱 같은 투사체는 WP8 의 동시 제한이 묶음).
+
+② **`PatternAbility` 바뀜**(WP4 `Decorators.cs`):
+- 이벤트 프레임에서 동작을 `Begin` 하기 **전에** `action.BeginTick = Tick`, `action.Dir = DirToHero`(그 틱 주인공 쪽 — 예고 동안 주인공이 움직였으면 지금 자리를 노린다).
+- **여러 틱 동작 규칙**(6.5 "마지막에만" 을 바꿈): `barrage` 는 몇 개든 함께 돈다(Stage 1 에서 `MultiTick` 인 동작을 모두 `Tick`, 모두 Done 이면 끝). 상태를 쓰는 여러 틱 동작(`dash`·`teleport`)은 목록의 **마지막 하나**이고 그 패턴에 다른 여러 틱 동작이 없어야 한다(로딩 검사).
+- **예고 모양**(계약 — `TelegraphDef`): `{ "effect": "fx_warning_line", "time": 0.5, "shape": "line", "length": 160 }`. `shape` = `circle`(기본 — 지금처럼 보스 자리, 반경 = 첫 범위 동작 반경 또는 몸 반경 × 2) / `line`(보스 → 그 틱 주인공 쪽, 폭 = 몸 지름, 길이 = `length`(기본 160) — 마지막 동작이 `dash` 면 속도 × 시간).
+- **탄막 예고 필수**(13.5-13 보탬): `barrage` 가 든 패턴은 `telegraph.time ≥ rules.enemies.barrage.telegraph_min`(0.4) — 없으면 로딩 오류(투사체라도 — 기획 12.6 v0.9.5).
+
+③ **정해진 순서 `sequence`**(계약 — `EnemyDef.Sequence`·`PhaseDef.Sequence`, 새 형 `SequenceDef`):
+
+```json
+"sequence": { "start": 1.5, "steps": [ { "pattern": "fan5", "wait": 0.8 }, { "pattern": "ring16a", "wait": 0.8 }, { "pattern": "dash1", "wait": 1.2 } ] }
+```
+
+- 정의의 `sequence` = 첫 페이즈, 페이즈의 `sequence` = 그 페이즈(페이즈 `patch` 로 물려받지 않음 — 페이즈마다 새로 적고, 없으면 그 페이즈는 순서 없음). `start` = 그 페이즈가 시작될 때(등장·전환) 첫 칸까지 쉼.
+- 순서가 가리키는 패턴 ID 는 그 페이즈의 완성 목록(`PhaseDef.Patterns`, 정의 `patterns`)에 있어야 한다. **순서 패턴은 조건 키(`cooldown`·`hp_once`·`range_band`·`clear_sight`)를 두지 않는다**(로딩 오류). 조건 키가 하나도 없는 패턴은 어느 순서엔가 들어 있어야 한다(아니면 오류 — 쉼 없이 되풀이되는 일을 막음).
+- **슬롯**: 순서 패턴은 능력 목록(`EnemyKit.Abilities`)에도 슬롯에도 들어가지 않는다. 대신 순서가 있는 페이즈의 능력 목록 **맨 뒤**에 `PatternSequence`(WP4, `IAbilityPart`) 하나가 붙고, 모든 페이즈의 시퀀서가 **슬롯 하나를 나눠 쓴다** → 해골왕 슬롯 = 내려치기 + 시퀀서 = 2(12 안).
+- `PatternSequence`: 슬롯 `Counter` = 다음 칸, `Cooldown` = 남은 쉼. `TryBegin` — 쉼 0 이면 그 칸 패턴의 `TryBegin`(조건이 없어 늘 시작) 을 부르고 참. `Tick` — 안쪽 패턴의 `Tick`(같은 슬롯·같은 `ActionState` — 안쪽 패턴은 슬롯 값을 쓰지 않음), Done 이면 `Cooldown = wait`, `Counter = (Counter + 1) % 칸 수`. `Interrupt` 는 안쪽으로 넘긴다.
+  쉼 동안은 독점 행동이 없으므로 이동(A*)·순서 밖 패턴(내려치기)이 그대로 돈다 — 기획 "내려치기는 쉬는 동안만 끼어든다". 쉼에는 `attack_cooldown_pct` 를 걸지 않는다(정해진 박자).
+
+④ **페이즈 보탬**(계약 — `PhaseDef`): `clear_projectiles`(bool) — 전환 틱에 `Owner == 자신` 인 적 투사체를 모두 지우고(`on_end` 장판 없이), 지운 자리 중 앞 `rules.enemies.barrage.clear_fx_max`(24)곳에 `FxEvent(fx_spark)`. `sequence`(③).
+  `PhaseController` 는 전환 때 시퀀서 슬롯을 지우고 `Cooldown = 새 sequence.start`. 무적은 지금 `invulnerable`(해골왕 1.5).
+
+⑤ **탄 판정**(계약 — `ProjectileDef.HeroHitRadius`, JSON `hero_hit_radius`, 선택): `ProjectilesSystem.HitHero` 의 맞음 = 선분-점 거리 ≤ `p.Radius + (Def.HeroHitRadius ?? hero.Radius)`. 그림·장애물·`on_end`·적 쪽 판정은 그대로. 점은 `hero.Pos`(발 — 시뮬레이션의 주인공 자리, 4.1).
+  **판정 점 그리기**(WP5): `hero_hit_radius` 가 있는 적 탄이 주인공에서 120px 안에 하나라도 있으면 주인공 발 자리에 흰 점(반지름 3, α0.9)과 엷은 테(반지름 6) — "판정만 작게" 를 읽게. 시뮬레이션과 무관.
+
+⑥ **생성 사거리**(계약 — `EnemyProjectileSpawn.Range`, 기본 0 = 정의 사거리): `CombatSpawner.SpawnProjectile` 이 0 보다 크면 `RangeLeft` 를 덮는다(바닥액 `range_to_hero`).
+
+⑦ **돌진 몸통 `DashBody`**(WP4 static 도우미 — `charge`(일반 적)·`dash`(패턴 동작) 공용, 기획 8.3 V19·9.5):
+- 그림: 달리는 단계에 들어갈 때 `Anim.Play(Attack, loop: true, rate = anim_speed)`, 틱마다 `AdvanceClip`(행동 중에는 8번 `Finish` 가 클립을 돌리지 않으므로 이 도우미가 돌린다). 예고(멈춤) 단계는 지금 그대로.
+- 닿음: 틱마다 `MathX.DistanceSqToSegment(hero.Pos, self.PrevPos, self.Pos) ≤ (Contact + 4)²` 이면 한 번(`ActionState.Hit`, 돌진 하나에 한 번) — 지난 틱 이동 선분이라 빠른 돌진(440px/s = 틱 7.3px)이 주인공을 건너뛰어도 맞는다. 원인은 지금처럼 `DamageCause.Body`.
+- `dash` 새 매개변수: `chain`(1), `chain_pause`(0.45 — 둘째부터 이만큼 서서 줄 예고), `reaim`(true — 둘째부터 그때 주인공 쪽), `tail`(선택 `{ "projectile", "every": 48, "speed", "damage", "range" }` — 지난 꼬리 자리(`ActionState.Point`)에서 `every` 이상 움직였으면 양옆 ±90° 한 발씩, 생성 금지 규칙), `end_slam`(선택 `{ "radius", "damage", "effect" }` — **마지막** 돌진의 줄 예고가 시작되는 틱에 끝 자리 = `PlacementResolver.Throw(nav, 자리, 방향, speed × time, 몸 반경)` 에 원 예고 + `BlastSpec`, 예고 시간 = 남은 줄 예고 + `time` + 0.15).
+- 상태: `ActionState.Count`(몇 번째 돌진), `ActionState.Sub`(0 줄 예고 / 1 달림), `T`, `Point`, `Hit`. 둘째부터의 줄 예고는 `TelegraphSpawn(Line)`(① 과 같은 폭·길이). 막힘(0.1s 뒤 `MoveBlockedTime > 0.05`)은 그 돌진만 끝냄.
+- `charge` 는 매개변수를 바꾸지 않는다(데이터 그대로 — 그림·판정만 바뀜).
+
+⑧ **`teleport` 동작**(WP4, 여러 틱, 목록의 마지막):
+
+```json
+{ "type": "teleport", "min": 150, "max": 210, "vanish": 0.25, "appear": 0.6, "tries": 8, "telegraph": "fx_warning_circle", "effect": { "effect": "fx_spark", "scale": 1.5 } }
+```
+
+- `Begin`: 자리 고르기 — `Rng` 각 `tries` 번: 주인공 + 방향 × U(min, max) 를 `PlacementResolver.TryPlace(몸 반경, PlaceReach(주인공, path_detour, FromHero: true))`, 주인공에서 `min` 이상인 첫 자리. 없으면 제자리. 자리 = `ActionState.Point`. `InvulnUntilTick = max(지금 값, Tick + 틱(vanish + appear))`.
+- `vanish` 동안: 제자리 `Hold`, `Enemy.FadeOutTick`(WP4 조각 — 시작 틱)으로 `Visual.AlphaMul` 1 → 0.
+- `vanish` 끝 틱: 떠난 자리에 `effect`, `Pos = PrevPos = 자리`, `Life = Emerging`, `WakeTick = Tick + 틱(appear)`, `Enemy.HiddenUntilTick = WakeTick − 틱(0.15)`(그때까지 `AlphaMul` 0, 남은 0.15s 에 0 → 1), 자리에 원 예고(`TelegraphSpawn` Circle, 반경 = 몸 반경 + 30, `appear` 초, `Blast` 없음) → Done.
+  `Emerging` 은 지금 규칙대로 조준·맞음·분리 대상이 아니고(4.8 `IsTargetable`) EnemyThink 1번에서 깰 때까지 `Hold` — 다음 순서 칸(나타남 고리)은 깬 뒤에 시작한다. 보스 막대·늘 보임은 그대로.
+- 예고 필수: `appear ≥ telegraph_min`(로딩 검사).
+
+⑨ **규칙·데이터**(WP4 데이터): `rules/enemies.json` — `rules.enemies.barrage = { "spawn_clear": 48, "telegraph_min": 0.4, "clear_fx_max": 24 }`(계약 — `RulesDefs`), `rules.caps.enemy_projectiles` 200 → 280.
+  `enemies/bosses/act1.json` — 해골왕 다시 짬(기획 9.5 두 표: `patterns` = 내려치기 + P1 순서 패턴, 페이즈 `p2`(hp_below 0.7)·`p3`(0.4) 의 `add`·`sequence`·`clear_projectiles`·무적 1.5·발광·속도 70·75, 옛 `fire_fan`·`raise` 는 지움),
+  로트피스트 `spit`·블랙애시 `volley`(패턴 차례 = 일으키기 둘 → 불비 → 연사 → 부채)·`fire_fan` 쿨 3.5·탄 `pj_ash_arrow`, 같은 파일 `projectiles` 에 새 탄 넷(기획 13.7). `stages/stage_cathedral.json` "보스 중" 40/1.2. 구울 데이터는 그대로.
+
+⑩ **확인 옵션 `--boss-hp <0~1>`**(계약 — `RunOptions.BossHp` float?, 파싱 WP7 `DevOptions` 이음새): `EnemyFactory.Create` 가 정의 `rank` 가 `miniboss`·`boss` 인 적을 만들 때 `Hp = MaxHp × 값`. 첫 틱의 `PhaseController` 가 문턱대로 페이즈를 넘긴다(전환 연출 포함). 개발 옵션(저장 보호), (0, 1] 밖이면 옵션 오류.
+  확인 길(게임): `--room 1:9 --boss-hp 0.69 --god --level 25 --weapons magic_missile:8,fireball:8 --autoplay --capture <임시>\p2.png --capture-at 8,14,20 --quit-after 24`(Core 시나리오는 같은 옵션을 `RunOptions` 로).
+
+⑪ **자동 조작 탄 피하기**(WP4 `AutoplayPolicy`, 기획 15절 v0.9.5 — 결정적, 난수 없음):
+- `Dodge(world)`: 주인공 200px 안 적 투사체 p 마다 v = p.Vel, r = 주인공 − p.Pos. 다가오면(v·r > 0) t* = clamp(v·r / |v|², 0, 0.8), 가까움 d = |r − v t*|. d < p.Radius + (HeroHitRadius ?? 몸 반경) + 10 이면 비킴 = normalize(r − v t*)(d ≈ 0 이면 v 의 왼쪽 수직) × (1 − t*/0.8) × 2.0 을 더함.
+- `BossOrbit(world)`: 방이 생존 단계이고 `rank: boss` 가 살아 있으면 거리 dist 를 [180, 280] 로 — dist < 180 이면 멀어지기, > 280 이면 다가가기(길 방향) × 0.6, 그리고 접선 × 0.4(도는 쪽 = 방 가운데 기준점에 가까워지는 쪽).
+- `Decide` 의 이동 합에 둘을 더한 뒤 정규화(지금 `Avoid`·보석·정리 쫓기·`EdgePull` 그대로). 탄·보스가 없으면 0 이라 지금 판과 같은 명령이다(기존 자동 조작 시험이 그대로 통과해야 함).
+
+**B. 주인공 순간이동**
+
+⑫ **명령**(계약 — `CommandButtons.Blink = 1 << 11`): 한 번짜리 버튼(프레임의 첫 틱에만, 3.2). 방향 = 같은 명령의 `Move`(길이 > 1e-3 이면 정규화) 아니면 `Hero.Facing`. 사람 입력·자동 조작·재생이 같은 길이다.
+
+⑬ **주인공 상태**(계약 — `Hero` 공통 조각, 쓰기 WP3, 읽기 WP4 자동 조작·WP5 그리기·WP6 HUD·WP7 해시):
+
+```csharp
+public int BlinkCharges;        // 지금 칸(0..최대)
+public float BlinkRecharge;     // 다음 칸까지 찬 시간(초) — 칸이 가득이면 0
+public float BlinkCast;         // 남은 시전(초), 0 = 시전 중 아님
+public Vector2 BlinkDir;        // 시전 중 방향(누른 틱에 굳음)
+public float BlinkInvulnTime;   // 도착 무적 남은 시간(초) — BeginTick 이 피격 무적과 같은 자리에서 줄임
+public int BlinkDeniedTick = int.MinValue / 2;   // 마지막 "못 함" 틱(HUD 붉은 테 0.2s)
+```
+
+- `Reset` 은 모두 0(·`BlinkDeniedTick` 초기값). **주인공 만들기**(WP3 `HeroSetup` — 짐 `Restore`·능력치 다시 계산 뒤)가 `BlinkCharges = HeroBlink.MaxCharges(hero, rules)` — 방마다 가득(기획 3절, 짐·`RunSnapshot` 에 넣지 않음).
+
+⑭ **규칙**(계약 — `rules.hero.blink`, WP3 `rules/hero.json`, `RulesDefs.HeroBlinkRules`): `{ "charges": 2, "recharge": 6.0, "cast": 0.15, "distance": 160, "invuln": 0.2, "min_distance": 24 }`.
+  `HeroBlink`(WP3 `Sim/Hero/HeroBlink.cs` static): `MaxCharges = charges + round(Stats[BlinkCharges])`(≥ 1), `CastTime = max(0, cast + Stats[BlinkCast])`, `RechargeTime = recharge × (1 + max(−0.5, Stats[BlinkRechargePct]))`.
+
+⑮ **능력치 키 셋**(계약 — `StatKey` 끝에 `blink_charges`·`blink_cast`·`blink_recharge_pct`, 기획 4.1): `CarriedStat` 이 `StatKey` 를 담아 **모양 지문이 바뀐다** → `RunSnapshot.CurrentFormat` 2 → **3**, `ShapeFingerprint` 새 값(옛 `run.json` 은 불일치로 버려짐 — 단계 2 는 계단 저장을 쓰지 않아 사용자 판 손실 없음, 8.3).
+  `rules.level_up.stat_labels` 에 `blink_charges`(`순간이동 칸`)·`blink_cast`(`순간이동 시전`, unit `s`)·`blink_recharge_pct`(`순간이동 충전`, pct).
+
+⑯ **패시브 레벨별 효과**(계약 — `PassiveDef.Levels`, JSON `levels`, 선택): `IReadOnlyList<IReadOnlyDictionary<StatKey, float>>`, `levels[k]` = Lv(k+1) 에 더하는 값. `HeroStats` 합산 = `per_level × L`(지금) 또는 `levels[0..L−1]` 의 합. 둘 다 적으면 오류, `levels` 길이 ≠ `max_level` 이면 오류(13.5 보탬).
+  `Build.PassiveLines`(카드 효과 줄) = `levels` 가 있으면 **다음 레벨의 항목**(`levels[L]`), 없으면 지금 규칙. 데이터: `passives.json` 에 `blink_mastery`(아이콘 `{ "sprite": "FieldRunner", "tint": [150, 190, 255] }`, `max_level` 5, `levels` 기획 6절 표) — WP3.
+  최대 칸이 늘면(Lv2) `HeroStats.Recompute` 가 늘어난 만큼 `BlinkCharges` 도 더한다(기획 6절 "얻는 순간 바로 찬다").
+
+⑰ **진행**(WP3 `HeroControlSystem` — 물약 마시기 다음, 이동 의도 앞):
+1. 충전: `BlinkCharges < 최대` 면 `BlinkRecharge += Dt`, `≥ RechargeTime` 이면 칸 +1, `BlinkRecharge −= RechargeTime`(가득이면 0). 판 시간이 멈추면(창·넘김 — 판 틱이 안 돎) 같이 멈춤.
+2. `Blink` 버튼: `Outcome == Running` ∧ 살아 있음 ∧ `BlinkCast == 0` ∧ 칸 ≥ 1 ∧ `Throw` 거리 ≥ `min_distance` → 칸 −1(가득에서 썼으면 `BlinkRecharge = 0` 부터), `BlinkDir` = 방향, `BlinkCast = CastTime`. 아니면 `BlinkDeniedTick = Tick`, `CueKind.BlinkDenied`(소리 연결 없음 — 무음).
+3. 시전 중(`BlinkCast > 0`): `Intent = Hold`, `Facing = BlinkDir`, 클립 = 시전(`CastMagic`, 무기가 다른 시전 클립을 틀면 그것), `BlinkCast −= Dt` → 0 이하면 4. 시전 0 이면 누른 그 틱에 바로 4.
+4. 도착: `to = PlacementResolver.Throw(nav, Pos, BlinkDir, distance, Radius)`(4px 마다 `Clearance ≥ 몸 반경` — 벽·닫힌 문 틈·맵 끝 앞에서 멈춤, 적 몸은 막지 않음), `FxEvent(fx_blink)` 를 떠난 자리·도착 자리에, `Pos = PrevPos = to`, `Vel = 0`, `KnockbackTime = 0`, `BlinkInvulnTime = invuln`, `BlinkCast = 0`, `CueKind.Blink`. 그 틱 이동 의도는 `Hold`.
+- 닫힌 문 틈이 `Clearance` 로 막히는지는 B 가 시험으로 확인한다(막히지 않으면 문 틈 칸도 막힘으로 보는 판정을 `HeroBlink` 에 더함 — 맵 밖으로 나가지 않는 것이 기준).
+
+⑱ **도착 무적**(WP3): `DamageResolve.ToHero` — `BlinkInvulnTime > 0` 이면 피해를 버림(`IgnoreInvuln` 제외 — 피격 무적과 같은 자리, 넉백도 없음). `ProjectilesSystem.HitHero` — `BlinkInvulnTime > 0` 이면 맞음 판정을 하지 않는다(탄이 몸을 지나감, 지우지 않음). 장판·몸·폭발은 `ToHero` 에서 버려진다.
+
+⑲ **신호·소리**(계약 — `CueKind.Blink`·`BlinkDenied`): WP8 소리 연결 `ui.blink` → 새 소리 `snd_blink`(`d1/sound/sfx/misc/holybolt.wav`, 볼륨 0.7, 높낮이 흔들기 0.05 — 이미 가져온 파일, 기획 열린 질문 58). `BlinkDenied` 는 연결하지 않는다(원작 "못 함" 소리 없음 — wp4 기록).
+
+⑳ **입력·HUD**(WP6): `InputMap` — `Space` 눌림이면 `UiButtons.Confirm` 과 함께 새 `UiButtons.Blink`(Enter 는 Confirm 만). `KeyboardMouseSource.Next` — 상인 창이 열렸거나, 그 프레임 입력을 오버레이(레벨업·상자·보상·일시정지)가 먹었으면(**창을 닫은 그 프레임 포함**) `Blink` 를 넣지 않는다.
+  HUD — `Hud.TeleportReserve`(122,494)~(214,518) 안에 칸 수만큼 지름 20 원(22px 간격, 왼쪽부터): 찬 칸 밝은 파랑 + 흰 테, 충전 중인 첫 빈 칸은 위에서 시계 방향 부채꼴(`BlinkRecharge / RechargeTime`), 나머지 빈 칸 어두운 테, 왼쪽 위 `Space`, 시전 중 맥동, `BlinkDeniedTick` 뒤 0.2s 붉은 테. 코드 그림. `--preview ui` 에 2/2·1/2(반쯤)·0/3·시전 중 견본.
+
+㉑ **그리기**(WP5): 이펙트 `fx_blink` = `{ "sprite": "miniltng", "frames": [1, 8], "frame_time": 0.03, "scale": 0.9, "tint": [170, 200, 255], "blend": "additive" }`(`effects/common.json` — 새 그림 없음). 시전 중·`BlinkInvulnTime > 0` 동안 주인공에 푸른(150,190,255) 가산 덧칠 α0.35 — 피격 무적의 반투명 깜빡임과 겹치면 덧칠만.
+
+㉒ **자동 조작·해시**: WP4 `AutoplayPolicy.ShouldBlink`(기획 15절 — ⓐ 다가오는 탄 0.3s 안 탄 반경 + 판정 + 2, ⓑ 적 `Telegraph` Line 띠 안, ⓒ 체력 < 50% ∧ 닿은 적 ≥ 3. 시전 중 아님 ∧ 칸 ≥ 1. 방향 = ⑪ `Dodge` 합(0 이면 위협에 수직·방 가운데 쪽), `Throw` 거리 < 80 이면 반대쪽, 그래도면 쓰지 않음).
+  WP7 `StateHasher` 주인공 줄에 `BlinkCharges`·`BlinkRecharge`·`BlinkCast`·`BlinkDir`·`BlinkInvulnTime`. 같은 씨앗 두 번 = 같은 해시, `--time-scale` 무관(3.4).
+
+- **결정성**: 탄막의 난수는 `World.Rng.Ai`(벽 빈틈·순간이동 자리)뿐이고, 파도 시각은 틱 정수, 순간이동은 시뮬레이션 안이다. 소리·그리기(판정 점·덧칠)는 시뮬레이션을 읽기만 한다.
+
 ---
 
 ## 7. 렌더·소리
@@ -3855,7 +4007,7 @@ WP1 (끝남) ── WP1b (끝남) ── WP1c (끝남) ── WP1d (끝남) ─�
 (v0.9) 단계 1 통합 뒤: 버그 수정·방 맵 합침 ── WP1g(v0.9 계약 — 장비·상인·물약 칸·회복 문 + 단계 1 요청) ── 단계 2(WP0·WP3~WP8 의 v0.9 줄 동시) ── 통합 ── 검증
 ```
 
-- (v0.9.3) **다음 묶음(보스 탄막·순간이동)** — wp5·wp6 다음. 기획 v0.9.4 37절 5~9 참고, 설계는 그 묶음 시작 때.
+- (v0.9.4) **보스 탄막·순간이동** — wp5·wp6 다음. 묶음 A "적 탄막"(wp/s2-boss-a) → main 합침 → 묶음 B "주인공 순간이동"(wp/s2-boss-b). 계약 6.20, 묶음 표는 11.1 끝 "보스 묶음 A·B", 소유 11.3.
 
 ### 11.1 묶음별 맡는 것·계약·완료 기준
 
@@ -4436,6 +4588,23 @@ WP1f 와 같은 까닭으로 형과 구현을 한 작업에서 낸다 — 바뀌
   헬파이어 몬스터와 투사체(`ms_*`·`ex_*`)의 연결은 그때 원본으로 확인한다(기획 8.5).
 - **완료 기준**: 13.5-20 오류 0, `--skip-bundles hellfire` 자원에서 타이틀 한 줄(v0.7 — 스테이지 카드 없음)이 뜨고 `--stage stage_crypt` 가 종료 코드 5, `--skip-bundles hfmusic` 이면 대체 곡으로 돎(`AUDIO music=… fallback=…`), 지하실 10분 `Scenario`.
 
+#### 보스 묶음 A — 적 탄막 (v0.9.4, 기획 v0.9.5 38절, 브랜치 wp/s2-boss-a)
+
+- **하는 것**: 6.20 ①~⑪ — `barrage`·`PatternSequence`·`teleport`·돌진 몸통(`charge`·`dash`)·`PatternAbility`(이벤트 프레임 기준 방향·여러 `barrage`·예고 `line`)·페이즈 탄 지우기, 탄 판정·생성 사거리(WP3 이음새 두 줄), 판정 점 그리기(WP5 이음새),
+  데이터(해골왕 3페이즈·로트피스트 바닥액·블랙애시 연사·새 탄 넷·`rules.enemies.barrage`·상한 280·"보스 중" 40/1.2), 로더·검사(순서·예고·여러 틱 동작), `--boss-hp`, 자동 조작 탄 피하기·보스 둘레 돌기.
+- **완료 기준**: 빌드·시험 통과(지금 main 1161 통과·12 건너뜀에 더함). 새 시험(Core) — `BarrageTests`(고리 등간격·빈틈 조준·나선 파도 시각과 돎·연사 다시 노림·벽 빈틈 폭과 이동 한도·벽 막힌 자리 빠짐·생성 금지 48·여러 `barrage` 함께·바닥액 사거리), `PatternSequenceTests`(차례와 쉼·끝에서 처음으로·내려치기는 쉼에만·순서 패턴 슬롯 0·페이즈 전환 처음부터·탄 지우기),
+  `DashBodyTests`(공격 클립 반복·한 틱에 건너뛴 주인공도 맞음·한 번만·연속 3과 다시 노림·꼬리 탄 간격·끝 내려찍기 예고 뒤 폭발), `EnemyTeleportTests`(자리 150~210·벽 아님·숨은 동안 조준·피해 없음·예고 원 뒤 나타남·자리 없으면 제자리), `ProjectileHitboxTests`(판정 6 탄은 주인공 10px 옆을 지나도 안 맞고 5px 면 맞음·일반 화살은 그대로),
+  검사 시험(탄막 예고 없음·순서 패턴에 조건·조건 없는 패턴이 순서 밖·없는 순서 ID·`wall` 둘·`dash` 뒤 여러 틱 동작 — 각각 오류), 실제 데이터 엄격 로딩(해골왕 슬롯 ≤ 12), `--boss-hp` 옵션 파싱·범위,
+  자동 조작(정면 탄 하나에 옆으로 비킴·탄 없는 방의 명령이 지금과 같음), 시나리오(`--room 1:9 --god --level 25` 자동 조작 씨앗 둘: 방 틱 상한 안에 해골왕 처치·세 페이즈 모두 지남·예외 0·공정성 셋 0·보스 방 최대 동시 적 탄 ≤ 240·같은 씨앗 두 번 같은 해시).
+  화면 캡처(P1·P2·P3 — `--boss-hp`) 판정과 보스 방 `ROOM` 의 받은 피해·`boss_s` 를 13장 기록에.
+
+#### 보스 묶음 B — 주인공 순간이동 (v0.9.4, 기획 v0.9.5 38절, 브랜치 wp/s2-boss-b — A 를 main 에 합친 뒤)
+
+- **하는 것**: 6.20 ⑫~㉒ — 명령 버튼·`Hero` 순간이동 칸·`rules.hero.blink`·`HeroBlink`·능력치 키 셋과 계단 저장 판 3·`PassiveDef.Levels`·`blink_mastery`·도착 무적(탄이 지나감)·신호와 소리·입력(`Space`)·HUD 충전 칸·`fx_blink`·주인공 덧칠·자동 조작 순간이동·판 해시.
+- **완료 기준**: 빌드·시험 통과(A 합친 뒤 수에 더함). 새 시험(Core) — `HeroBlinkTests`(이동 방향·서 있으면 바라보는 쪽·160px·벽 앞에서 멈춤·24px 미만 못 함(칸 그대로)·칸 0 못 함·시전 0.15s 동안 제자리 후 이동(9틱)·시전 중 맞음·도착 무적 동안 피해 0 과 탄 지나감·충전 6s 에 한 칸·방 시작 가득·닫힌 문 틈 밖으로 안 나감·죽음/끝난 판 무시),
+  `PassiveLevelsTests`(레벨 합·`per_level` 와 함께면 오류·길이 다르면 오류·카드 줄 = 다음 레벨·Lv2 얻는 순간 칸 +1·Lv4 충전 5.28·Lv5 누른 틱에 이동), 모양 지문 시험(판 3·새 지문), 자동 조작(정면 탄에 순간이동·칸 0 이면 안 씀·벽 쪽이면 반대쪽), 판 해시(같은 씨앗 두 번·순간이동 쓴 판).
+  게임 쪽 시험 프로젝트가 없으므로 `Space` 입력·HUD·덧칠은 `--preview ui`·실제 판 캡처로 보고 13장 기록에(사람이 키보드로 하는 것은 메인 세션 확인 몫).
+
 ### 11.2 공용 형의 필드와 소유 (partial 조각)
 
 `World`·개체 클래스는 `partial class` 다. 공통 조각(WP1)은 여러 묶음이 **읽거나 쓰는** 필드만 가지고, 한 묶음만 쓰는 상태는 그 묶음 폴더의 조각 파일에 둔다
@@ -4552,6 +4721,9 @@ WP1f 와 같은 까닭으로 형과 구현을 한 작업에서 낸다 — 바뀌
   데이터 파일 소유: `items/`·`merchants/`·`rules/equipment.json` = WP3, `rules.rooms.rewards` = WP4, `rewards.json` 의 새 종류 = WP3, 가져오기 표 새 묶음 = WP0, 주인공 아홉 벌 그림 묶음(`sprites/hero.json`) = WP5.
   짐(`HeroCarry`)·`RunSnapshot` 필드가 또 필요하면 다음 갱신 묶음(**WP1h**)으로 모은다 — WP1g 뒤에도 sealed 계약 record 규칙(11.2)은 그대로다.
 
+- (v0.9.4) **보스 묶음 A·B 소유**(6.20): 두 묶음은 차례로 간다(A 합친 뒤 B) — 같은 파일(`ProjectilesSystem.HitHero`·`AutoplayPolicy`·`Hero.cs`·`effects/common.json`)을 둘 다 고치기 때문이다. 계약 형 변경은 묶음 담당이 직접 하고 13장 자기 기록에 "계약" 으로 적는다(WP1h 를 따로 두지 않음 — 13.24 목록이 정본).
+  A: WP4 파일 전부(부품·적·자동 조작·`enemies/`·`rules/enemies.json`·`stages/`), 이음새 — Defs(`TelegraphDef`·`PatternDef`·`PhaseDef`·`EnemyDef.Sequence`·`SequenceDef`·`ProjectileDef.HeroHitRadius`·`RulesDefs` barrage), Contracts(`EnemyProjectileSpawn.Range`·`RunOptions.BossHp`), WP3 `ProjectilesSystem.HitHero` 한 줄·`CombatSpawner` 사거리, WP7 로더(순서 연결·검사)·`DevOptions`, WP5 판정 점 그리기.
+  B: WP3 파일(주인공·전투·패시브 데이터·`rules/hero.json`), 계약 — `CommandButtons`·`Hero` 공통 조각·`StatKey`·`PassiveDef`·`RulesDefs` blink·`CueKind`·`RunSnapshot`, 이음새 — WP6(`Input/**`·`Hud`·`UiPreviewScene`), WP5(`effects/common.json` 의 `fx_blink`·주인공 덧칠), WP8(`audio/`), WP4(`AutoplayPolicy.ShouldBlink`), WP7(`StateHasher`).
 - 개발 옵션은 WP7 이 파싱만 하고, 적용은 `IRunSetup` 을 등록한 묶음이 한다(WP3: 주인공 쪽, WP4: 시각·부하·AI 멈춤). 소리 옵션(`--mute`·`--sound`)은 `AppOptions.Muted` 로 WP8 이 읽는다.
 
 ### 11.4 WP1 코드가 정한 시그니처 (v0.2 문서에 없거나 다르던 것)
@@ -5586,6 +5758,34 @@ WP1f(형과 순수 로직을 한 번에 — 11.1 WP1f 표 #1~#20) 코드가 문�
 5. 지갑(`HeroCarry.Gold`)과 얻은 금화(`RunStats.Gold`)를 나눴다 — 기획 11.7 "쓴 금화도 얻은 금화에 센다" 와 결과 화면 `얻은 금화 · 쓴 금화` 를 그대로 받는 모양.
 
 **기획서에 넘기는 것**: 위 1~3 — 기획서 v0.9.1 이 같은 날 받았다(11.4 보장의 난수 수, 11.7 상인 전용 흐름, 12.8 카드 셋, 34절 끝). 33-6 의 덱 순서와 3.6 결정 2(바로 앞 쌍 빼기)의 합침은 기획 10.8 v0.9 가 이미 정했다(다 쓰면 다시 섞되 바로 앞 방 맵을 맨 앞에 두지 않음) — WP4 가 그대로 구현.
+
+### 13.24 v0.9.4 — 기획서 v0.9.5(38절, 보스 탄막·순간이동) 받기
+
+기획서 v0.9.5 가 37절 24(V17~V21 — 다음 묶음)를 첫 값으로 풀었다(38절 "설계에 넘기는 것" 25~31). 모두 6.20 이 받았다. 커밋된 코드·데이터는 이 판에서 고치지 않았다(묶음 A·B 가 고침).
+
+| 기획 | 받은 곳 | 계약 변경 |
+|---|---|---|
+| 38-25 탄막 부품·여러 `barrage`·생성 금지·첫 발 예고·탄 판정 | 6.20 ①②⑤ | `TelegraphDef.Shape`·`Length`, `ProjectileDef.HeroHitRadius`, `ActionState.BeginTick`(WP4 소유 형), `rules.enemies.barrage` |
+| 38-26 정해진 순서·페이즈 탄 지우기 | 6.20 ③④ | `SequenceDef`, `EnemyDef.Sequence`, `PhaseDef.Sequence`·`ClearProjectiles` |
+| 38-27 돌진 몸통·`dash` 보탬·보스 `teleport` | 6.20 ⑦⑧ | `ActionState.Count`·`Sub`(WP4 소유 형), `Enemy.FadeOutTick`·`HiddenUntilTick`(WP4 조각) |
+| 38-28 바닥액·연사·새 탄·상한·보스 중·`--boss-hp` | 6.20 ⑥⑨⑩ | `EnemyProjectileSpawn.Range`, `RunOptions.BossHp`, `rules.caps.enemy_projectiles` 값 |
+| 38-29 주인공 순간이동 | 6.20 ⑫⑬⑭⑰⑱⑲⑳㉑ | `CommandButtons.Blink`, `Hero` 순간이동 칸 여섯, `rules.hero.blink`, `CueKind.Blink`·`BlinkDenied`, `UiButtons.Blink`(게임) |
+| 38-30 숙련 레벨별 효과·새 키 | 6.20 ⑮⑯ | `StatKey` 셋, `PassiveDef.Levels`, `RunSnapshot.CurrentFormat` 3·`ShapeFingerprint` |
+| 38-31 자동 조작 | 6.20 ⑪㉒ | 없음(정책 안) |
+
+**다르게 해석·보탠 것**(설계가 정함)
+
+1. 탄막 다섯 종류를 부품 다섯이 아니라 **동작 하나(`barrage`) + 모양 셋**으로 담았다 — 나선 = 파도마다 도는 고리, 노린 연사 = 파도마다 다시 노리는 부채, 속도 섞기 = 한 패턴의 `barrage` 둘. 파도 시각을 `BeginTick` 에서 세어 상태 없이 돌리므로 여러 개가 함께 돈다.
+2. 순서 패턴은 **슬롯을 쓰지 않고** 시퀀서 하나가 모든 페이즈에 슬롯 하나를 나눠 쓴다 — 해골왕 패턴이 열넷이라 슬롯 12 를 넘었다.
+3. 탄 판정 점은 주인공 **발 자리**(`Hero.Pos`)다 — 기획 "몸 가운데" 를 시뮬레이션 평면의 주인공 자리로 읽었다(탄도 발 높이 평면을 난다).
+4. 보스 순간이동의 숨음은 새 생애 상태를 만들지 않고 `Emerging`(조준·맞음·분리 안 됨) + 숨김 틱으로 했다 — 렌더·공간 해시·불변식이 이미 아는 상태.
+5. 끝 내려찍기는 보스 몸이 아니라 **예고 원 자리**에서 터진다(예고 + `BlastSpec` — 막혀 일찍 멈춰도 예고와 다른 곳에서 맞지 않게).
+6. 순간이동 숙련의 새 키 때문에 계단 저장 판이 3 으로 오른다(`CarriedStat` 의 `StatKey`). 단계 2 는 계단 저장을 쓰지 않아 사용자 판 손실은 없다.
+7. 순간이동 방향은 명령의 `Move` 로 받는다(새 명령 칸을 두지 않음) — 시전 중 제자리라 그 틱 `Move` 는 방향에만 쓰인다.
+
+**기획서에 넘기는 것**: 없음(위 1~7 은 기획 문장과 보이는 결과가 같다). 구현 담당이 다르게 정하면 자기 기록 소절의 "기획서에 넘기는 것" 에 적는다.
+
+**구현 기록 자리**: 묶음 A 는 "### WP6 단계 2 구현 기록 (wp/s2-wp6)" 소절 끝("### 통합 기록" 바로 앞)에 **"### 보스 묶음 A 구현 기록 (wp/s2-boss-a)"**, 묶음 B 는 그 바로 뒤에 **"### 보스 묶음 B 구현 기록 (wp/s2-boss-b)"** 을 둔다 — 다르게·더 정한 것, 계약 변경(이 표와 다르면), 캡처 판정, 이음새, 남은 것.
 
 ### WP7 구현 기록
 
