@@ -59,7 +59,7 @@ public sealed record DevOptions
     /// <summary>개발 옵션 실행의 <c>--window</c> 기본값.</summary>
     public static readonly WindowSize DefaultDevWindow = new(1280, 720);
 
-    public static IReadOnlyList<string> PreviewKinds { get; } = ["sprites", "enemies", "effects", "tiles", "blend", "fog"];
+    public static IReadOnlyList<string> PreviewKinds { get; } = ["sprites", "enemies", "effects", "tiles", "blend", "fog", "ui"];   // ui: 단계 2 wp6 — HUD·상인 창 견본(게임 UiPreviewScene)
     public static IReadOnlyList<string> DebugNavLayers { get; } = ["grid", "flow", "astar", "shapes", "entries", "tiles", "sight"];
     public static IReadOnlyList<string> CaptureEvents { get; } = ["levelup", "chest", "boss", "result", "doors", "reward"];
 

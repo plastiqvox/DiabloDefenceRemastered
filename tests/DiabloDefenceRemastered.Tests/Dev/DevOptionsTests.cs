@@ -96,6 +96,7 @@ public sealed class DevOptionsTests
     [InlineData("--hero", "sorcerer")]
     [InlineData("--room", "1:9")]
     [InlineData("--preview", "fog")]
+    [InlineData("--preview", "ui")]
     [InlineData("--autoplay")]
     [InlineData("--stage", "x")]
     [InlineData("--capture", "x.png")]

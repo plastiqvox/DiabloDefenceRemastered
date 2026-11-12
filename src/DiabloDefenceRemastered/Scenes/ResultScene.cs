@@ -7,9 +7,11 @@ public readonly record struct WeaponDamageLine(WeaponDef Weapon, float Damage, f
 
 /// <summary>
 /// 결과 화면이 읽는 것 (설계서 8.1 — v0.7.1: <c>RunSession.Conclude()</c> 뒤의 <see cref="RunState"/> 만). 저장 결과(<see cref="RunResult"/>)·앞 기록·방 줄·무기별 피해.
+/// 단계 2 wp6(기획 12.4 v0.9): <paramref name="GoldSpent"/> = <c>RunStats.GoldSpent</c>(<c>쓴 금화</c>·<c>RESULT gold_spent</c>), <paramref name="Equipment"/> = 판 끝 장비 여섯 칸.
 /// </summary>
 public sealed record ResultSummary(RunResult Result, ulong Seed, StageDef StartAct, HeroClassDef? Hero, StageDef ReachedAct,
-                                   IReadOnlyList<RoomRecord> Rooms, IReadOnlyList<WeaponDamageLine> Weapons, RunRecord? Previous)
+                                   IReadOnlyList<RoomRecord> Rooms, IReadOnlyList<WeaponDamageLine> Weapons, RunRecord? Previous,
+                                   int GoldSpent = 0, IReadOnlyList<EquipItem?>? Equipment = null)
 {
     /// <summary>
     /// 판 끝 정산 뒤 값으로 결과를 만든다(8.3): <c>HeroClassId = World.HeroClass.Id</c>(없으면 <c>rules.hero.class</c>), 깊이 = <c>RunState.Depth</c>·그 액트,
@@ -35,7 +37,8 @@ public sealed record ResultSummary(RunResult Result, ulong Seed, StageDef StartA
             weapons.Add(new WeaponDamageLine(def, d, seconds > 0f ? d / seconds : 0f));
         }
         var previous = heroId.Length > 0 ? flow.App.Save.BestRecord(run.StartAct.Id, heroId) : null;
-        return new ResultSummary(result, run.Seed, run.StartAct, hero, run.Act.Act, [.. run.Rooms], weapons, previous);
+        return new ResultSummary(result, run.Seed, run.StartAct, hero, run.Act.Act, [.. run.Rooms], weapons, previous,
+                                 run.Stats.GoldSpent, [.. lastWorld.Hero.Equipment]);
     }
 
     public bool NewRecord => RunText.IsNewRecord(Previous, Result);
@@ -47,7 +50,7 @@ public sealed record ResultSummary(RunResult Result, ulong Seed, StageDef StartA
 /// </summary>
 public sealed class ResultScene(GameFlow flow, ResultSummary summary) : IScene
 {
-    private readonly MenuList _menu = new(Theme.Width / 2, 440);
+    private readonly MenuList _menu = new(Theme.Width / 2, 456);
     private SceneStack? _stack;
 
     public bool PausesBelow => false;
@@ -60,7 +63,7 @@ public sealed class ResultScene(GameFlow flow, ResultSummary summary) : IScene
         _stack = stack;
         _menu.SetItems([new MenuItem("다시 하기"), new MenuItem("타이틀로")]);
         flow.LogScene("Result");
-        flow.Log.Info(RunLog.Result(summary.Result, summary.Seed));
+        flow.Log.Info(RunLog.Result(summary.Result, summary.Seed, summary.GoldSpent));
         if (summary.Result.HeroClassId.Length > 0) flow.App.Save.RecordResult(summary.Result);
         flow.App.Audio?.PlayMusic("title");
         flow.Signal("result");
@@ -108,7 +111,11 @@ public sealed class ResultScene(GameFlow flow, ResultSummary summary) : IScene
         Row("걸린 시간", RunText.ClockSeconds(r.RunTime));
         Row("레벨", r.Level.ToString(System.Globalization.CultureInfo.InvariantCulture));
         Row("처치", RunText.Number(r.Kills));
-        Row("금화", RunText.Number(r.Gold));
+        Row("금화", $"얻은 금화 {RunText.Number(r.Gold)} · 쓴 금화 {RunText.Number(summary.GoldSpent)}");
+        // 장비 여섯 칸(기획 12.4 v0.9 — HUD 장비 줄과 같은 그림)
+        c.Text("장비", new Vector2(240, y), Theme.BodyText, Theme.TextDim);
+        Hud.DrawEquipmentRow(c, flow.App, summary.Equipment ?? new EquipItem?[6], 400, y, 20, 24);
+        y += 24;
 
         // 방 줄 — 방마다 받은 보상 색
         var x = 240f;
@@ -127,7 +134,7 @@ public sealed class ResultScene(GameFlow flow, ResultSummary summary) : IScene
             c.Text(w.Weapon.Name, new Vector2(272, y + 4), Theme.SmallText, Theme.Text);
             Ui.Right(c, RunText.Number((long)w.Damage), 560, y + 4, Theme.SmallText, Theme.Text);
             Ui.Right(c, $"{RunText.Number((long)w.PerSecond)}/초", 680, y + 4, Theme.SmallText, Theme.TextDim);
-            y += 26;
+            y += 25;
         }
 
         _menu.Draw(c);

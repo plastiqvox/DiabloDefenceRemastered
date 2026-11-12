@@ -17,6 +17,9 @@ namespace DiabloDefenceRemastered.Scenes;
 /// </list>
 /// 표시 이벤트는 스텝마다 <c>FxSystem.Consume → Audio.Consume → Presentation.Clear</c> 순서로 소비한다(3.5·7.9 — 프레임 끝이 아니라 스텝 끝: 그리지 않는 앱 틱·방 이동 앞에서도 빠지지 않게).
 /// 로그: 방이 끝날 때마다 <c>ROOM</c>·<c>INNER_ROOMS</c>, 자동 조작 정책의 새 기록마다 <c>DOOR_SKIP</c>·<c>REWARD_STALL</c>·<c>VISIT</c>·<c>VISIT_SKIP</c>, 판 끝 <c>VISITS</c>(9절).
+/// <para>상인 창(단계 2 wp6, 기획 12.8): <c>Room.Shop.Open</c> 인 동안 이 씬 위에 <see cref="ShopWindow"/> 를 그린다 — 판을 멈추는 오버레이가 아니다(시간 멈춤·사기는
+/// Core <c>StageStepper</c>·<c>ShopInput</c>, 이 씬은 앱 틱마다 명령을 계속 넘김). 창이 열리면 <c>SCENE Shop</c> 한 줄. 창이 열린 동안 <c>Esc</c> 는 떠나기(<c>X</c> 와 같음)이고
+/// 일시정지는 <c>P</c>·창 비활성으로만 연다(13장 WP6 단계 2 기록).</para>
 /// </summary>
 public sealed class PlayScene : IScene
 {
@@ -24,6 +27,7 @@ public sealed class PlayScene : IScene
     private readonly RunSession _session;
     private readonly bool _continued;
     private readonly Hud _hud;
+    private readonly ShopWindow _shop;
     private SceneStack? _stack;
     private WorldRenderer? _renderer;
     private KeyboardMouseSource? _keys;
@@ -36,6 +40,10 @@ public sealed class PlayScene : IScene
     private int _loggedStalls;
     private int _loggedVisits;
     private RoomPhase _lastPhase;
+    // ROOM 줄의 RoomRecord 밖 값(RunLog.RoomLogExtra): 방 시작 때 처치·얻은 금화·최대 체력
+    private int _killsBase;
+    private int _goldBase;
+    private float _maxHpIn;
 
     private int _transitionTicks;
     private int _transitionAge = -1;
@@ -52,7 +60,11 @@ public sealed class PlayScene : IScene
         _continued = continued;
         _input = input;
         _hud = new Hud(flow.App);
+        _shop = new ShopWindow(flow.App);
         _loggedRooms = session.Run.Rooms.Count;   // 이어 하기면 앞 판의 방 줄은 이미 로그에 있다
+        _killsBase = session.Run.Stats.Kills;
+        _goldBase = session.Run.Stats.Gold;
+        _maxHpIn = session.World.Hero.MaxHp;
     }
 
     public bool PausesBelow => false;
@@ -61,6 +73,7 @@ public sealed class PlayScene : IScene
     public RunSession Session => _session;
     public World World => _session.World;
     public Hud Hud => _hud;
+    public ShopWindow Shop => _shop;
     /// <summary>방 이동 어두워짐 중(앱 틱 수, 아니면 −1).</summary>
     public int TransitionAge => _transitionAge;
     /// <summary>판이 끝나 결과 화면으로 넘겼음.</summary>
@@ -74,7 +87,7 @@ public sealed class PlayScene : IScene
         if (_input is null)
         {
             if (_flow.Autoplay is { } bot) _policy = bot.BeginRun();
-            else _keys = new KeyboardMouseSource(app);
+            else _keys = new KeyboardMouseSource(app) { Shop = _shop, MouseVirtual = _flow.MouseVirtual };
         }
         if (app.Art is not null) _renderer = new WorldRenderer(app);
         _hud.Minimap.Visible = app.Save.Settings.ShowMinimap;
@@ -104,7 +117,10 @@ public sealed class PlayScene : IScene
         }
 
         if (input.IsPressed(UiButtons.Minimap)) _hud.Minimap.Visible = !_hud.Minimap.Visible;
-        if (_policy is null && (input.IsPressed(UiButtons.Pause) || _flow.PauseRequested))
+        // 상인 창이 열린 동안 Esc(Pause|Cancel)는 창의 떠나기로 간다 — 일시정지는 P·창 비활성만
+        var shopOpen = World.Room?.Shop is { Open: true };
+        var pause = input.IsPressed(UiButtons.Pause) && !(shopOpen && input.IsPressed(UiButtons.Cancel));
+        if (_policy is null && (pause || _flow.PauseRequested))
         {
             _flow.PauseRequested = false;
             _stack?.Push(new PauseOverlay(_flow, this));
@@ -125,6 +141,7 @@ public sealed class PlayScene : IScene
         if (step == StageStep.Stepped) Consume(world);
         LogPolicy();
         _hud.Tick();
+        if (_shop.Sync(world.Room?.Shop)) _flow.LogScene("Shop");
 
         switch (step)
         {
@@ -228,6 +245,8 @@ public sealed class PlayScene : IScene
         _session.Advance();
         LogRooms();
         var world = World;
+        _maxHpIn = world.Hero.MaxHp;
+        _shop.Sync(null);
         AttachAll(world);
         StartActAudio();
         _lastPhase = world.Room?.Phase ?? RoomPhase.Enter;
@@ -288,7 +307,13 @@ public sealed class PlayScene : IScene
     private void LogRooms()
     {
         var rooms = _session.Run.Rooms;
-        for (; _loggedRooms < rooms.Count; _loggedRooms++) _flow.Log.Info(RunLog.Room(rooms[_loggedRooms]));
+        var stats = _session.Run.Stats;
+        for (; _loggedRooms < rooms.Count; _loggedRooms++)
+        {
+            _flow.Log.Info(RunLog.Room(rooms[_loggedRooms], new RoomLogExtra(_maxHpIn, stats.Kills - _killsBase, stats.Gold - _goldBase)));
+            _killsBase = stats.Kills;
+            _goldBase = stats.Gold;
+        }
     }
 
     private void LogInnerRooms(World world)
@@ -319,6 +344,8 @@ public sealed class PlayScene : IScene
         if (_flow.Canvas is not { } c) return;
         c.Begin(rc);
         _hud.Draw(c, rc, _session.Run);
+        if (world.Room?.Shop is { Open: true } shop)
+            _shop.Draw(c, new ShopView(shop, world.Defs.Merchants.TryGet(shop.MerchantId, out var merchant) ? merchant : null, world.Hero, world.Defs));
         if (_transitionAge >= 0 && _transitionTicks > 0)
         {
             // 어두워짐: 가운데(Advance)에서 가장 어둡다

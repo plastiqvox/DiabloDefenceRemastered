@@ -118,8 +118,11 @@ public sealed class LevelUpOverlay(GameFlow flow, World world, bool reward) : IS
         _stack?.Pop();
     }
 
-    /// <summary>건너뛰기 회복량: 레벨업 = <c>rules.level_up.skip_heal</c>, 보상 = 그 방 보상의 <c>skip.heal</c>(6.18).</summary>
-    private float SkipHeal => reward ? world.Room?.Reward?.Skip?.Heal ?? 0f : world.Defs.Rules.LevelUp?.SkipHeal ?? 0f;
+    /// <summary>
+    /// 건너뛰기 회복량: 레벨업 = <c>rules.level_up.skip_heal</c>, 보상 = 창이 받은 보상 정의(<c>LevelUpOffer.Reward</c> — v0.9, 단계 2 wp6)의 <c>skip.heal</c>,
+    /// 그것이 없으면 그 방 보상의 것(6.18).
+    /// </summary>
+    private float SkipHeal => reward ? (_offer.Reward ?? world.Room?.Reward)?.Skip?.Heal ?? 0f : world.Defs.Rules.LevelUp?.SkipHeal ?? 0f;
 
     private static RectF CardRect(int i, int n)
     {
@@ -160,7 +163,7 @@ public sealed class LevelUpOverlay(GameFlow flow, World world, bool reward) : IS
             Ui.Icon(c, world.Defs, card.Icon, new RectF(r.X0 + 10, r.Y0 + 14, r.X0 + 58, r.Y0 + 62), rise);
             c.Text($"[{i + 1}] {card.Name}", new Vector2(r.X0 + 66, r.Y0 + 16), Theme.BodyText, Theme.Text, rise);
             var level = RunText.CardLevel(card);
-            if (_offer.Source == OfferSource.Shrine && world.Room?.Reward?.Shrine is { } shrine) level = RunText.ShrineLine(shrine);
+            if (_offer.Source == OfferSource.Shrine && (_offer.Reward ?? world.Room?.Reward)?.Shrine is { } shrine) level = RunText.ShrineLine(shrine);
             c.Text(level, new Vector2(r.X0 + 66, r.Y0 + 38), Theme.SmallText, Theme.TextDim, rise);
             var y = r.Y0 + 70;
             foreach (var line in card.Lines)

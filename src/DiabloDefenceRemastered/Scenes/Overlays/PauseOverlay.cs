@@ -1,16 +1,17 @@
 using System.Globalization;
+using DiabloDefenceRemastered.Rendering;
 using DiabloDefenceRemastered.UI;
 
 namespace DiabloDefenceRemastered.Scenes.Overlays;
 
 /// <summary>
 /// 일시정지 (설계서 8.1, 기획 12.3). Esc/P 로 열고 닫는다. 메뉴: <c>이어하기</c> / <c>설정</c> / (계단 저장을 할 수 있을 때만) <c>저장하고 끝내기</c> / <c>포기</c>.
-/// 오른쪽에 지금 빌드(무기·패시브·축복과 레벨, 능력치 요약). 들어오면 <c>Audio.SetPaused(true)</c>, 나가면 false(7.9).
+/// 가운데에 지금 빌드(무기·패시브·축복과 레벨, 능력치 요약), 오른쪽에 장비 여섯 칸(이름 등급 색 + 효과 한 줄 — v0.9, 단계 2 wp6). 들어오면 <c>Audio.SetPaused(true)</c>, 나가면 false(7.9).
 /// <c>저장하고 끝내기</c> 가 <c>Suspend</c> 예외로 실패하면 <c>저장 못 함</c> 한 줄을 보이고 판을 이어 간다(v0.8.2).
 /// </summary>
 public sealed class PauseOverlay(GameFlow flow, PlayScene play) : IScene
 {
-    private readonly MenuList _menu = new(300, 200);
+    private readonly MenuList _menu = new(MenuCenter, 200, 34f, 260f);
     private readonly List<Item> _items = [];
     private SceneStack? _stack;
     private string? _notice;
@@ -93,22 +94,45 @@ public sealed class PauseOverlay(GameFlow flow, PlayScene play) : IScene
     {
         if (flow.Canvas is not { } c) return;
         c.Begin(rc);
-        // 바탕 판: 왼쪽 메뉴(알림 줄 포함)와 오른쪽 빌드 목록을 한 판에 — 아래는 둘 중 긴 쪽
-        var world = play.World;
-        var hero = world.Hero;
+        // 바탕 판: 왼쪽 메뉴(알림 줄 포함)·가운데 빌드 목록·오른쪽 장비 여섯 칸을 한 판에 — 아래는 셋 중 긴 쪽
+        var hero = play.World.Hero;
+        var menuBottom = 200f + (_items.Count + 1) * _menu.Spacing + 10f;
+        Ui.Backdrop(c, new RectF(MenuLeft, 110, PanelRight, MathF.Max(BuildHeight(hero), menuBottom) + 16f));
+        Ui.Centered(c, "일시정지", MenuCenter, 130, Theme.TitleText, Theme.Gold);
+        _menu.Draw(c);
+        if (_notice is { } n) Ui.Centered(c, n, MenuCenter, 200 + _items.Count * _menu.Spacing + 10, Theme.BodyText, Theme.Red);
+        DrawBuild(c, flow.App, hero);
+        c.End();
+    }
+
+    // 배치(가상 px, v0.9 단계 2 wp6 — 장비 칸이 들어갈 셋째 열을 위해 판을 넓힘)
+    public const float MenuLeft = 70f;
+    public const float MenuCenter = 210f;
+    public const float BuildX = 380f;
+    public const float EquipX = 640f;
+    public const float PanelRight = 900f;
+
+    /// <summary>빌드·장비 목록이 차지하는 아래 끝(바탕 판 높이).</summary>
+    public static float BuildHeight(Hero hero)
+    {
         var named = 0;
         for (var i = 0; i < WeaponSlots.SlotCount; i++) if (hero.Weapons[i].Def is not null) named++;
         for (var i = 0; i < PassiveSlots.SlotCount; i++) if (hero.Passives[i].Def is not null) named++;
         for (var i = 0; i < BlessingSlots.SlotCount; i++) if (hero.Blessings[i].Def is not null) named++;
-        var buildBottom = 120f + 32f + named * 20f + 10f + StatLines(hero.MaxHp, hero.Stats).Count() * 16f;
-        var menuBottom = 200f + (_items.Count + 1) * _menu.Spacing + 10f;
-        Ui.Backdrop(c, new RectF(130, 110, 800, MathF.Max(buildBottom, menuBottom) + 16f));
-        Ui.Centered(c, "일시정지", 300, 130, Theme.TitleText, Theme.Gold);
-        _menu.Draw(c);
-        if (_notice is { } n) Ui.Centered(c, n, 300, 200 + _items.Count * _menu.Spacing + 10, Theme.BodyText, Theme.Red);
+        var build = 120f + 32f + named * 20f + 10f + StatLines(hero.MaxHp, hero.Stats).Count() * 16f;
+        var equip = 120f + 32f + EquipSlots.Count * EquipRow;
+        return MathF.Max(build, equip);
+    }
 
-        // 오른쪽 빌드 목록
-        var x = 560f;
+    private const float EquipRow = 36f;
+
+    /// <summary>
+    /// 지금 빌드(기획 12.3): 가운데 열 = 무기·패시브·축복과 레벨, 능력치 요약 / 오른쪽 열 = 장비 여섯 칸의 이름(등급 색 — 보통 흰·마법 파랑)과 효과 한 줄씩(v0.9 —
+    /// 장비를 자세히 보는 곳은 여기와 상인 창뿐). 빈 칸은 칸 이름을 흐리게. <c>--preview ui</c> 도 부른다.
+    /// </summary>
+    public static void DrawBuild(UiCanvas c, AppServices app, Hero hero)
+    {
+        var x = BuildX;
         var y = 120f;
         c.Text("빌드", new Vector2(x, y), Theme.MenuText, Theme.Gold);
         y += 32;
@@ -131,14 +155,49 @@ public sealed class PauseOverlay(GameFlow flow, PlayScene play) : IScene
                 y += 20;
             }
         y += 10;
-        var s = hero.Stats;
-        foreach (var line in StatLines(hero.MaxHp, s))
+        foreach (var line in StatLines(hero.MaxHp, hero.Stats))
         {
             c.Text(line, new Vector2(x, y), Theme.SmallText, Theme.TextDim);
             y += 16;
         }
-        c.End();
+
+        // 장비 여섯 칸
+        var defs = app.Defs;
+        var rules = defs.Rules.Equipment;
+        var ex = EquipX;
+        var ey = 120f;
+        c.Text("장비", new Vector2(ex, ey), Theme.MenuText, Theme.Gold);
+        ey += 32;
+        var width = PanelRight - 10f - (ex + 26f);
+        for (var i = 0; i < EquipSlots.Count; i++)
+        {
+            var item = hero.Equipment[i];
+            var icon = new RectF(ex, ey + 2, ex + 20, ey + 22);
+            c.Fill(icon, Theme.Panel, 0.85f);
+            if (item is null)
+            {
+                ItemArt.Silhouette(c, ItemArt.KindOf((EquipSlot)i), icon, Theme.PanelEdge, 0.45f);
+                c.Text(SlotName((EquipSlot)i), new Vector2(ex + 26, ey), Theme.BodyText, Theme.Grey);
+                ey += EquipRow;
+                continue;
+            }
+            Ui.Outline(c, icon, item.Magic ? ShopWindow.MagicText : Theme.PanelEdge);
+            ItemArt.Item(c, app, item, icon, 1f, item.Magic ? ShopWindow.MagicText : Theme.Text);
+            ShopWindow.FitText(c, ItemText.Name(item, defs), new Vector2(ex + 26, ey), width, 15f, item.Magic ? ShopWindow.MagicText : Theme.White);
+            ShopWindow.FitText(c, ItemText.OneLine(item, defs, rules), new Vector2(ex + 26, ey + 18), width, 11f, Theme.TextDim);
+            ey += EquipRow;
+        }
     }
+
+    /// <summary>빈 칸 이름(투구·갑옷·방패·지팡이·반지).</summary>
+    public static string SlotName(EquipSlot slot) => slot switch
+    {
+        EquipSlot.Head => "투구",
+        EquipSlot.Body => "갑옷",
+        EquipSlot.Shield => "방패",
+        EquipSlot.Staff => "지팡이",
+        _ => "반지",
+    };
 
     /// <summary>능력치 요약(기획 12.3): 최대 체력, 이동, 피해 %, 쿨 %, 치명 %, 방어, 획득 반경.</summary>
     public static IEnumerable<string> StatLines(float maxHp, StatBlock s)

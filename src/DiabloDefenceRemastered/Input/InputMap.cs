@@ -66,6 +66,7 @@ public sealed class InputMap
         if (Hit(Keys.R)) pressed |= UiButtons.Reroll;
         if (Hit(Keys.X)) pressed |= UiButtons.Skip;
         if (Hit(Keys.Tab)) pressed |= UiButtons.Minimap;
+        if (Hit(Keys.Q)) pressed |= UiButtons.Drink;
         if (leftDown && !prevLeftDown && frame.MouseInWindow) pressed |= UiButtons.Click;
         frame.Pressed = pressed;
     }

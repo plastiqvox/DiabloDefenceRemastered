@@ -15,7 +15,7 @@ public static class SceneFactory
     public const string ImportCommand = @"tools\import-all.ps1 -Diabdat <diabdat.mpq> -Exe <DiabloDefence.exe>";
 
     /// <summary>
-    /// 시작 씬: 데이터 오류면 DataError, <c>--preview</c> 면 Preview(WP5), <c>--stage</c>·<c>--room</c> 이면 그 판을 바로(타이틀 없이), 아니면 타이틀.
+    /// 시작 씬: 데이터 오류면 DataError, <c>--preview ui</c> 면 UiPreview(WP6 — 단계 2 wp6), 그 밖의 <c>--preview</c> 면 Preview(WP5), <c>--stage</c>·<c>--room</c> 이면 그 판을 바로(타이틀 없이), 아니면 타이틀.
     /// <paramref name="content"/> = 시작 검사(WP7)가 만든 있는 묶음(꺼진 직업·타이틀 한 줄) — 없으면 모두 있음.
     /// </summary>
     public static IScene CreateStart(AppServices app, ContentAvailability? content = null)
@@ -26,6 +26,7 @@ public static class SceneFactory
         var (master, sfx, music) = flow.Volumes(app.Save.Settings);
         app.Audio?.SetVolumes(master, sfx, music);   // 시작 때 음량(8.3 — 저장에 없으면 rules.audio.defaults)
         if (app.HasDataErrors) return CreateDataError(app);
+        if (app.Options.Preview is "ui") return new UiPreviewScene(app);   // 단계 2 wp6 — HUD·상인 창·일시정지 장비·결과 금화 견본
         if (app.Options.Preview is { } target) return new PreviewScene(app, target);
         if (app.Options.StageId is not null || app.Options.StartRoom is not null)
             return TitleScene.StartRun(flow, flow.ResolveHero());
