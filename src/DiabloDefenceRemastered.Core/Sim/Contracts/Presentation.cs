@@ -59,7 +59,7 @@ public enum CueKind : byte
     PotionDrink,
     /// <summary>v0.9.1 WP3 — <c>Drink</c> 를 받았지만 못 마심(창·회복 중·물약 0·체력 가득). Subject 없음. "못 함" 소리.</summary>
     PotionDenied,
-    /// <summary>v0.9 <c>RoomFlow</c> — 회복 문을 지나 들어온 방의 첫 틱에 체력 전부. Subject = 그 <c>RewardDef</c>, Pos = 주인공.</summary>
+    /// <summary>v0.9 <c>RoomFlow</c> — 회복 문을 지나 들어온 방의 첫 틱에 최대 체력 × <c>rules.rooms.rewards.heal_amount</c>(0.5, 최대를 넘지 않음 — 2026-11-12 사용자 결정, v0.9 는 체력 전부). Subject = 그 <c>RewardDef</c>, Pos = 주인공.</summary>
     HealOnEnter,
     /// <summary>v0.9 WP3 — 상인 창이 열림(상인에 닿음). Subject = <c>MerchantDef</c>. 인사 대사(WP8).</summary>
     ShopOpen,

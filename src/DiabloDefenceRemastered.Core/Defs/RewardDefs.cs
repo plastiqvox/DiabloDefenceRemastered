@@ -3,7 +3,7 @@ namespace DiabloDefenceRemastered.Core.Defs;
 /// <summary>
 /// 문 보상 종류(v0.8 → v0.9 WP1g, 설계서 6.18·6.19). JSON <c>weapon_cards</c> / <c>weapon_bundle</c> / <c>heal_next_room</c> / <c>shrine</c> / <c>merchant</c>.
 /// v0.7 의 <c>blessing_cards</c>·<c>level_up</c>·<c>full_heal</c> 은 없앴다(기획 v0.8.1 11.4 — 레벨업 창과 같거나 위험이 지난 뒤에 오던 것).
-/// v0.9: v0.8 의 <c>belt_potions</c>(허리띠 물약)를 없애고 <see cref="HealNextRoom"/>(회복 문 — 그 문을 지나 다음 방에 들어오는 첫 틱에 체력 전부, 사용자 결정 V1)·
+/// v0.9: v0.8 의 <c>belt_potions</c>(허리띠 물약)를 없애고 <see cref="HealNextRoom"/>(회복 문 — 그 문을 지나 다음 방에 들어오는 첫 틱에 회복, 사용자 결정 V1 — 양은 2026-11-12 사용자 결정으로 체력 전부에서 최대 체력 × <c>rules.rooms.rewards.heal_amount</c>(0.5))·
 /// <see cref="Merchant"/>(상인 방 — 정리 뒤 보상 자리에 상인이 선다, V3·V11)를 더했다.
 /// </summary>
 public enum RewardKind : byte { WeaponCards, WeaponBundle, HealNextRoom, Shrine, Merchant }

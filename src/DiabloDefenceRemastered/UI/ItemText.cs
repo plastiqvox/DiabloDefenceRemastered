@@ -6,7 +6,7 @@ namespace DiabloDefenceRemastered.UI;
 /// 장비·페핀 카드 문구 (기획 11.6·11.7·12.3·12.8 — 단계 2 wp6). 상인 창 카드·일시정지 장비 목록이 같은 모양을 쓴다. 그림과 무관한 순수 함수.
 /// <list type="bullet">
 /// <item>이름: 원작 영어 그대로 <c>접두사 + 기본 이름 + 접미사</c>(<c>Fine Skull Cap of the Fox</c> — 기획 11.6 "이름").</item>
-/// <item>효과 줄: 기본 능력치 한 줄(<c>최대 체력 +15 · 방어 +1</c>) + 굴린 접사마다 한 줄(실제 값). 무게 줄 <c>중갑 · 이동 −5%</c>.</item>
+/// <item>효과 줄: 기본 능력치 한 줄(<c>최대 체력 +15 · 방어 +1</c>) + 굴린 접사마다 한 줄(실제 값 — 기본 능력치와 같은 키면 기본 줄에 합침). 무게 줄 <c>중갑 · 이동 −5%</c>.</item>
 /// <item>차이 줄: 그 칸 지금 장비와 <c>EquipStats.Sum</c> 을 견줌(<c>최대 체력 +10 → +25</c>), 빈 칸이면 <c>빈 칸</c>.</item>
 /// </list>
 /// 음수 부호는 ASCII <c>-</c>(기획 표기는 U+2212 <c>−</c> 지만 화면 글꼴 굽기에서 그 글자가 빈칸으로 찍혔다 — <c>--preview ui</c> 캡처).
@@ -66,37 +66,75 @@ public static class ItemText
     /// <summary><c>최대 체력 +15</c>.</summary>
     public static string Stat(StatKey key, float v) => $"{StatName(key)} {Value(key, v)}";
 
-    /// <summary>기본 능력치 한 줄(<c>최대 체력 +15 · 방어 +1</c>). 없으면(반지) null. 이동(무게)은 무게 줄로 따로.</summary>
-    public static string? BaseLine(ItemBaseDef b)
+    /// <summary>기본 능력치(<see cref="Order"/> 차례, 그 밖의 키는 뒤에). 이동(무게)은 무게 줄로 따로.</summary>
+    private static List<(StatKey Key, float Value)> BaseStats(ItemBaseDef b)
     {
-        var parts = new List<string>();
+        var stats = new List<(StatKey Key, float Value)>();
         foreach (var k in Order)
-            if (b.Stats.TryGetValue(k, out var v) && v != 0f) parts.Add(Stat(k, v));
+            if (b.Stats.TryGetValue(k, out var v) && v != 0f) stats.Add((k, v));
         foreach (var (k, v) in b.Stats)
-            if (Array.IndexOf(Order, k) < 0 && v != 0f) parts.Add(Stat(k, v));
-        return parts.Count == 0 ? null : string.Join(" · ", parts);
+            if (Array.IndexOf(Order, k) < 0 && v != 0f) stats.Add((k, v));
+        return stats;
     }
+
+    /// <summary>기본 능력치 한 줄(<c>최대 체력 +15 · 방어 +1</c>). 없으면(반지) null. 이동(무게)은 무게 줄로 따로.</summary>
+    public static string? BaseLine(ItemBaseDef b) => Join(BaseStats(b));
 
     /// <summary>굴린 접사 한 줄(실제 값 — <c>최대 체력 +11</c>). 정의에 없으면 null.</summary>
     public static string? AffixLine(RolledAffix? rolled, GameDefs defs) =>
-        rolled is { } r && defs.ItemAffixes.TryGet(r.Id, out var a) ? Stat(a.Stat, r.Value) : null;
+        Affix(rolled, defs) is { } a ? Stat(a.Key, a.Value) : null;
 
-    /// <summary>효과 줄: 기본 능력치(있으면) + 접두사 + 접미사 차례.</summary>
+    private static (StatKey Key, float Value)? Affix(RolledAffix? rolled, GameDefs defs) =>
+        rolled is { } r && defs.ItemAffixes.TryGet(r.Id, out var a) ? (a.Stat, r.Value) : null;
+
+    /// <summary>같은 키가 이미 있으면 값을 더하고 참.</summary>
+    private static bool AddTo(List<(StatKey Key, float Value)> stats, StatKey key, float value)
+    {
+        var i = stats.FindIndex(s => s.Key == key);
+        if (i < 0) return false;
+        stats[i] = (key, stats[i].Value + value);
+        return true;
+    }
+
+    private static string? Join(List<(StatKey Key, float Value)> stats) =>
+        stats.Count == 0 ? null : string.Join(" · ", stats.Select(s => Stat(s.Key, s.Value)));
+
+    /// <summary>
+    /// 효과 줄: 기본 능력치(있으면) + 접두사 + 접미사 차례. 같은 키는 한 줄로 합친다 — 접사 키가 기본 능력치에 있으면 기본 줄의 그 값에 더하고
+    /// (<c>Fine Buckler</c> 기본 <c>방어 +1</c> + 접사 <c>방어 +1</c> → <c>방어 +2</c>), 접두사·접미사가 같은 키면 한 줄로.
+    /// </summary>
     public static IReadOnlyList<string> EffectLines(EquipItem item, GameDefs defs)
     {
-        var lines = new List<string>(3);
-        if (defs.ItemBases.TryGet(item.BaseId, out var b) && BaseLine(b) is { } baseLine) lines.Add(baseLine);
-        if (AffixLine(item.Prefix, defs) is { } p) lines.Add(p);
-        if (AffixLine(item.Suffix, defs) is { } s) lines.Add(s);
+        var groups = EffectStats(item, defs);
+        var lines = new List<string>(groups.Count);
+        foreach (var g in groups)
+            if (Join(g) is { } line) lines.Add(line);
         return lines;
     }
 
-    /// <summary>효과를 한 줄로(일시정지 장비 목록 — 기획 12.3 "효과 한 줄씩"). 무게 이동도 붙인다.</summary>
+    /// <summary><see cref="EffectLines"/> 의 줄마다 (키, 합친 값) — 첫 묶음 = 기본 능력치(비어 있을 수 있음), 그 뒤 = 기본에 없는 접사 키 하나씩.</summary>
+    private static List<List<(StatKey Key, float Value)>> EffectStats(EquipItem item, GameDefs defs)
+    {
+        var baseStats = defs.ItemBases.TryGet(item.BaseId, out var b) ? BaseStats(b) : [];
+        List<List<(StatKey Key, float Value)>> groups = [baseStats];
+        foreach (var rolled in (RolledAffix?[])[item.Prefix, item.Suffix])
+        {
+            if (Affix(rolled, defs) is not { } a) continue;
+            if (AddTo(baseStats, a.Key, a.Value)) continue;
+            var merged = false;
+            for (var i = 1; i < groups.Count && !merged; i++) merged = AddTo(groups[i], a.Key, a.Value);
+            if (!merged) groups.Add([(a.Key, a.Value)]);
+        }
+        return groups;
+    }
+
+    /// <summary>효과를 한 줄로(일시정지 장비 목록 — 기획 12.3 "효과 한 줄씩"). 무게 이동도 붙인다(이동 접사가 있으면 합친 값 하나로). 같은 키는 한 번만.</summary>
     public static string OneLine(EquipItem item, GameDefs defs, EquipmentRulesDef? rules)
     {
-        var parts = new List<string>(EffectLines(item, defs));
-        if (defs.ItemBases.TryGet(item.BaseId, out var b) && WeightMove(b, rules) is { } move && move != 0f) parts.Add(Stat(StatKey.MovePct, move));
-        return parts.Count == 0 ? "" : string.Join(" · ", parts);
+        var stats = EffectStats(item, defs).SelectMany(g => g).ToList();
+        if (defs.ItemBases.TryGet(item.BaseId, out var b) && WeightMove(b, rules) is { } move && move != 0f && !AddTo(stats, StatKey.MovePct, move))
+            stats.Add((StatKey.MovePct, move));
+        return Join(stats.Where(s => MathF.Abs(s.Value) > 1e-6f).ToList()) ?? "";
     }
 
     /// <summary>무게 이름(경갑·중갑·판금, 무게 없음 null — 기획 11.6 V6).</summary>
@@ -124,10 +162,17 @@ public static class ItemText
     /// 지금 칸 장비와의 차이 줄(기획 12.8): <paramref name="now"/> 가 null 이면 <c>빈 칸</c>. 아니면 두 장비의 <c>EquipStats.Sum</c>(무게 이동 포함)을
     /// <see cref="Order"/> 차례로 견주어 다른 키를 <c>최대 체력 +10 → +25</c> 꼴로 <see cref="DiffParts"/> 개까지(넘으면 <c>…</c>), 같으면 <c>차이 없음</c>.
     /// </summary>
-    public static string DiffLine(EquipItem? now, EquipItem next, GameDefs defs, EquipmentRulesDef? rules)
+    public static string DiffLine(EquipItem? now, EquipItem next, GameDefs defs, EquipmentRulesDef? rules) =>
+        string.Join(" · ", DiffLines(now, next, defs, rules));
+
+    /// <summary>
+    /// <see cref="DiffLine"/> 을 키마다 한 토막씩(바꿀 반지 카드가 토막마다 한 줄로 그린다 — 한 줄로 이으면 카드 폭 200 에서 잘렸다).
+    /// <paramref name="max"/> 개 키까지(기본 <see cref="DiffParts"/>), 넘친 키가 있으면 마지막 토막 끝에 <c> …</c>.
+    /// </summary>
+    public static IReadOnlyList<string> DiffLines(EquipItem? now, EquipItem next, GameDefs defs, EquipmentRulesDef? rules, int max = DiffParts)
     {
-        if (now is null) return "빈 칸";
-        if (rules is null) return "";
+        if (now is null) return ["빈 칸"];
+        if (rules is null) return [""];
         var a = EquipStats.Sum([now], defs, rules);
         var b = EquipStats.Sum([next], defs, rules);
         var parts = new List<string>();
@@ -135,11 +180,12 @@ public static class ItemText
         foreach (var k in Order)
         {
             if (MathF.Abs(a[k] - b[k]) < 1e-4f) continue;
-            if (parts.Count >= DiffParts) { more = true; break; }
+            if (parts.Count >= max) { more = true; break; }
             parts.Add($"{StatName(k)} {Value(k, a[k])} → {Value(k, b[k])}");
         }
-        if (parts.Count == 0) return "차이 없음";
-        return string.Join(" · ", parts) + (more ? " …" : "");
+        if (parts.Count == 0) return ["차이 없음"];
+        if (more) parts[^1] += " …";
+        return parts;
     }
 
     // ── 페핀 카드(기획 11.7 V11·12.8) ─────────────────────────
