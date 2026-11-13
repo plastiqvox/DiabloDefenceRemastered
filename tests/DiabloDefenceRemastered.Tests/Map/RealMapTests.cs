@@ -103,7 +103,7 @@ public class RealMapTests
         for (var my = oc.Y0; my < oc.Y1; my++)
             for (var mx = oc.X0; mx < oc.X1; mx++)
                 if (grid.MegaTile(mx, my) == RealData.L1.Pieces["pillar"]) pillars++;
-                else Assert.Contains(grid.MegaTile(mx, my), RealData.L1.Floor);
+                else Assert.Contains(grid.MegaTile(mx, my), ArenaLayout.FloorTiles(RealData.L1));   // 바닥 변형 장식판 포함
         Assert.Equal(2, pillars);
     }
 

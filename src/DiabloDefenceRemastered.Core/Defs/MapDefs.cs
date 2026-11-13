@@ -43,6 +43,19 @@ public sealed record TilesetDef : IDef
     /// 짝·자리 짝 검사(13.5-12)는 <c>ArenaLayout.ValidateTileset</c>. <c>LayoutHash</c> 에 넣지 않는다 — 원판 배치·그림을 바꾸지 않는다.
     /// </summary>
     public TilesetMirrorDef? Mirror { get; init; }
+    /// <summary>
+    /// 변형 표(2026-11-13 사용자 요청 "대성당 그림을 더 활용"): 메가타일 → 같은 성질의 장식판(금 간 바닥·잔해, 십자가·조각상·부서진 벽).
+    /// 배치를 다 푼 뒤 문 칸이 아닌 칸마다 좌표 해시로 <see cref="TileAccentDef.Chance"/> 만큼 바꾼다 — 성질이 같아 충돌·길찾기는 그대로, 그림만 달라진다.
+    /// 거울판은 자기 ID 해시로 다시 고른다. 장식판 번호도 이름 붙인 번호다(성질 표에 둔다, 13.5-12).
+    /// </summary>
+    public IReadOnlyDictionary<int, TileAccentDef> Accents { get; init; } = new Dictionary<int, TileAccentDef>();
+}
+
+/// <summary>변형 하나: <see cref="Chance"/>(0..1) 만큼 <see cref="With"/> 중 하나(해시)로 바꾼다. 모두 원래 번호와 성질이 같아야 한다.</summary>
+public sealed record TileAccentDef
+{
+    public float Chance { get; init; }
+    public IReadOnlyList<int> With { get; init; } = [];
 }
 
 /// <summary>

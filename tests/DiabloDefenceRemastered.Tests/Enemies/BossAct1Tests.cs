@@ -123,7 +123,7 @@ public sealed class BossAct1Tests
     public void Rotfeast_leaves_poison_pool_and_raises_six_zombies_at_half_hp()
     {
         var t = World();
-        var rot = Spawn(t, "rotfeast", t.Hero.Pos + new Vector2(400f, 0f), SpawnSource.Miniboss);
+        var rot = Spawn(t, "rotfeast", t.Hero.Pos + new Vector2(300f, 0f), SpawnSource.Miniboss);   // 시야(빛 반경 380 — 2026-11-13) 안: 안 보이는 적은 패턴을 쓰지 않는다
         t.Step(2);
         var pool = Assert.Single(Rec(t).Hazards);
         Assert.Equal(("fx_poison_pool", 80f, 4f, 0.5f), (pool.Effect!.Effect.Id, pool.Radius, pool.Duration, pool.TickInterval));

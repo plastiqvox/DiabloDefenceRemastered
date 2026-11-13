@@ -118,7 +118,12 @@ internal static class ProbeCommand
                     foreach (var p in TilesetSource.SourcePaths(e)) dict[p] = mpq.Read(p) ?? throw new UsageException($"{p} 없음");
                     var ts = TilesetSource.From(e, new SourceBag(dict));
                     output.WriteLine($"타일셋 {id}: 메가타일 {ts.Til.Count}, 하위 타일 {ts.Min.Count}, SOL {ts.Sol.Length}");
-                    var tiles = (o.Get("--tiles") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => int.Parse(s, CultureInfo.InvariantCulture));
+                    var tiles = (o.Get("--tiles") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => int.Parse(s, CultureInfo.InvariantCulture)).ToList();
+                    if (o.Get("--sheet") is { } megaSheet)
+                    {
+                        SaveMegaSheet(megaSheet, ts, tiles.Count > 0 ? tiles : [.. Enumerable.Range(1, ts.Til.Count)], Palette.Read(mpq.Read(e.SourcePath(e.Palettes.Values.First())) ?? throw new UsageException("팔레트 없음")), output);
+                        return 0;
+                    }
                     foreach (var t in tiles)
                     {
                         var subs = Enumerable.Range(0, 4).Select(k => ts.Til.Subtile(t, k)).ToList();
@@ -166,6 +171,58 @@ internal static class ProbeCommand
             sheet.DrawOver(images[i], i % cols * cw + 2, i / cols * ch + 2 + (ch - 4 - images[i].Height));
         File.WriteAllBytes(full, Png.Encode(sheet));
         output.WriteLine($"격자 {full} ({cols}칸 × {(images.Count + cols - 1) / cols}줄)");
+    }
+
+    /// <summary>
+    /// <c>probe tiles --tileset l1 --sheet &lt;png&gt; [--tiles …]</c>: 메가타일을 하위 칸 기둥 넷으로 맞춰 그린 격자(한 줄 10칸, 칸 왼쪽 위에 메가 번호) — 맵 조각 번호를 눈으로 고를 때.
+    /// 원작 그림이 든 파일이라 저장소 밖에만 쓴다(1.4 출력 경로 검사).
+    /// </summary>
+    private static void SaveMegaSheet(string path, TilesetSource ts, IReadOnlyList<int> megas, Palette pal, TextWriter output)
+    {
+        var full = Path.GetFullPath(path);
+        if (RepoPaths.CheckOutput(Path.GetDirectoryName(full)!) is { } bad) throw new UsageException(bad);
+        var hc = ts.Min.PiecesPerSubtile / 2 * 32;
+        int cw = 128 + 8, ch = hc + 32 + 16, cols = Math.Min(10, megas.Count);
+        var sheet = new RgbaImage(cw * cols, ch * ((megas.Count + cols - 1) / cols));
+        for (var y = 0; y < sheet.Height; y++)
+            for (var x = 0; x < sheet.Width; x++)
+            {
+                var edge = x % cw < 2 || y % ch < 2;
+                var v = (byte)(edge ? 90 : 30);
+                sheet.Set(x, y, v, v, (byte)(edge ? 40 : 30), 255);
+            }
+        for (var i = 0; i < megas.Count; i++)
+        {
+            int ox = i % cols * cw + 4, oy = i / cols * ch + 12;
+            // 뒤 → 앞 차례(하위 칸 k = 줄·2 + 열): 칸 가운데 C 의 기둥 왼쪽 위 = (C.x − 32, C.y + 16 − Hc), 메가 위 꼭짓점 칸 C = (64, Hc − 16)
+            foreach (var k in (int[])[0, 1, 2, 3])
+            {
+                int sx = k % 2, sy = k / 2;
+                var col = RgbaImage.FromIndexed(ts.Column(ts.Til.Subtile(megas[i], k), upperOnly: false), pal, null, null);
+                var cx = 64 + (sx - sy) * 32;
+                var cy = hc - 16 + (sx + sy) * 16;
+                sheet.DrawOver(col, ox + cx - 32, oy + cy + 16 - col.Height);
+            }
+            DrawNumber(sheet, megas[i], i % cols * cw + 4, i / cols * ch + 4);
+        }
+        File.WriteAllBytes(full, Png.Encode(sheet));
+        output.WriteLine($"메가 격자 {full} ({cols}칸 × {(megas.Count + cols - 1) / cols}줄, {megas[0]}..{megas[^1]})");
+    }
+
+    /// <summary>3×5 숫자(2배) — 견본 격자 번호.</summary>
+    private static void DrawNumber(RgbaImage img, int n, int x, int y)
+    {
+        string[] glyphs = ["111101101101111", "010110010010111", "111001111100111", "111001111001111", "101101111001001",
+                           "111100111001111", "111100111101111", "111001001001001", "111101111101111", "111101111001111"];
+        foreach (var ch in n.ToString(CultureInfo.InvariantCulture))
+        {
+            var g = glyphs[ch - '0'];
+            for (var p = 0; p < 15; p++)
+                if (g[p] == '1')
+                    for (var d = 0; d < 4; d++)
+                        img.Set(x + p % 3 * 2 + d % 2, y + p / 3 * 2 + d / 2, 255, 230, 120, 255);
+            x += 8;
+        }
     }
 }
 
