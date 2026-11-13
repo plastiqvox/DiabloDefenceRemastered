@@ -353,7 +353,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
                                      ScatterLayout.StartFrame(key, i, frames));
             }
             else DrawEffectSprite(batch, f, def, age, pos, scale, tint, Vector2.Zero, 0);
-            if (def.Light is { } light) f.ShortLights.Add((pos, hz.Radius * light.RadiusMul, light.Color, 1f));
+            if (def.Light is { } light) f.ShortLights.Add(new PointLight(pos, hz.Radius * light.RadiusMul, light.Color, 1f));
             f.Shapes.Add(new ShapeDraw(prim.Circle, new Rectangle(0, 0, prim.Circle.Width, prim.Circle.Height),
                                        new RectF(pos.X - hz.Radius, pos.Y - hz.Radius, pos.X + hz.Radius, pos.Y + hz.Radius), pos, 1f, false, false, FogShape: true));
         }
@@ -677,7 +677,13 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             var duration = light.Duration ?? fx.Life;
             if (age > duration) continue;
             var radius = (fx.Event.Radius > 0f ? fx.Event.Radius : 48f * fx.Scale) * light.RadiusMul;
-            f.ShortLights.Add((fx.Event.Pos, radius, light.Color, 1f - age / Math.Max(0.01f, duration)));
+            f.ShortLights.Add(new PointLight(fx.Event.Pos, radius, light.Color, 1f - age / Math.Max(0.01f, duration)));
+        }
+        // 날아가는 투사체 빛(2026-11-13): 바닥 자리 위 light.height 에 뜬 점 빛 — 셰이더 빛이 3D 거리로 바닥·벽에 비춘다
+        foreach (var p in f.World.Projectiles.Items)
+        {
+            if (p.Removed || p.Def.Light is not { } pl) continue;
+            f.ShortLights.Add(new PointLight(Vector2.Lerp(p.PrevPos, p.Pos, _alphaInterp), pl.Radius * (p.Scale > 0f ? p.Scale : 1f), pl.Color, pl.Intensity, pl.Height));
         }
     }
 

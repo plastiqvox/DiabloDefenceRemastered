@@ -15,6 +15,7 @@
   "projectiles": [
     { "id": "pj_fireball", "sprite": "fireba", "scale": 0.7, "blend": "alpha",
       "radius": 8, "speed": 380, "turn_rate": 0, "range": 450, "blocked_by_obstacles": true, "pierce": 1,
-      "explosion": { "damage_mul": 1.0, "effect": "fx_fire_explosion" } }
+      "explosion": { "damage_mul": 1.0, "effect": "fx_fire_explosion" },
+      "light": { "color": [255, 150, 60], "radius": 170, "intensity": 1.0, "height": 40 } }   // 날아가는 불빛(2026-11-13 — 셰이더 빛이 바닥·벽에 비춤)
   ]
 }

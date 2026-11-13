@@ -16,6 +16,7 @@
   "projectiles": [
     { "id": "pj_magic_missile", "sprite": "miniltng", "scale": 0.8, "blend": "alpha",
       "radius": 6, "turn_rate": 360, "lifetime": 3.0, "blocked_by_obstacles": true, "pierce": 1,
-      "hit_effect": "fx_bolt_hit" }
+      "hit_effect": "fx_bolt_hit",
+      "light": { "color": [140, 170, 255], "radius": 120, "intensity": 0.8, "height": 40 } }   // 푸른 빛(2026-11-13)
   ]
 }

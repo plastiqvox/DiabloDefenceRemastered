@@ -1,7 +1,7 @@
 // 빛 하나 더하기 (설계서 7.7 ② — 2026-11-13 셰이더 빛). 빛 둘레 사각형 하나를 그리며 픽셀마다:
 //  ① 월드 자리 = RectMin + 텍스처 좌표 × RectSize
 //  ② 바닥 자리 = 바닥 y 버퍼에 값이 있으면 (월드 x, 그 y) — 벽·유닛은 서 있는 바닥에서 빛을 받는다, 없으면 월드 자리(바닥)
-//  ③ 감쇠 = smoothstep(1 − 거리/반경) — 예전 빛 텍스처(Primitives.Light)와 같은 곡선
+//  ③ 감쇠 = smoothstep(1 − 거리/반경) — 예전 빛 텍스처(Primitives.Light)와 같은 곡선. 뜬 빛(LightHeight > 0, 투사체)은 픽셀 높이와의 차까지 넣은 3D 거리
 //  ④ 벽 그림자 = 바닥 자리 → 빛 사이 칸 막힘 지도(선형 표본 — 부드러운 가장자리)를 16번 보고 가장 큰 막힘 × ShadowStrength 만큼 어둡게(은은하게)
 // 출력 = 색 × 감쇠 × 그림자 — 더하기 혼합(One, One).
 #if OPENGL
@@ -18,7 +18,8 @@ float2 RectMin;          // 월드 px
 float2 RectSize;
 float2 Camera;           // 월드 px(흔들림 포함)
 float2 ViewSize;         // 월드 px(960×540)
-float2 LightPos;         // 월드 px
+float2 LightPos;         // 월드 px(바닥 자리)
+float LightHeight;       // 바닥에서 뜬 높이(월드 px) — 0 이면 예전처럼 바닥 거리만, 0 보다 크면 3D 거리(날아가는 투사체)
 float LightRadius;
 float3 LightColor;       // 0..1 × 세기
 float4 Iso;              // (32N, H + 16, N, 쓰지 않음)
@@ -80,7 +81,10 @@ float4 MainPS(VSOut input) : COLOR0
 
     float2 d = LightPos - ground;
     float dist = length(d);
-    float v = saturate(1.0 - dist / LightRadius);
+    // 뜬 빛: 픽셀 높이(바닥선에서 위로 — 바닥은 0, 벽·유닛은 그림 위쪽일수록 높다)와 빛 높이의 차를 더한 3D 거리.
+    // 바로 아래 바닥은 높이만큼 덜 세고, 벽은 빛 높이 부근이 가장 밝다
+    float rise = LightHeight > 0.0 ? LightHeight - max(0.0, ground.y - world.y) : 0.0;
+    float v = saturate(1.0 - length(float2(dist, rise)) / LightRadius);
     float fall = v * v * (3.0 - 2.0 * v);
     if (fall <= 0.0)
         return float4(0, 0, 0, 0);

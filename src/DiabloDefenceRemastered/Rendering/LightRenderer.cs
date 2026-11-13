@@ -12,6 +12,12 @@ namespace DiabloDefenceRemastered.Rendering;
 /// </summary>
 public readonly record struct ShapeDraw(Texture2D Texture, Rectangle Source, RectF Dest, Vector2 Foot, float Alpha, bool Forced, bool MinLight, bool FogShape);
 
+/// <summary>
+/// 점 빛 하나: 바닥 자리(월드 px)·반경·색·세기, <see cref="Height"/> = 바닥에서 뜬 높이(월드 px, 2026-11-13 — 날아가는 투사체 빛).
+/// 셰이더 빛은 높이를 3D 거리로 쓴다(바로 아래 바닥이 덜 세고, 벽은 그 높이 부근이 가장 밝다). 예전 빛 텍스처 경로는 높이를 쓰지 않는다.
+/// </summary>
+public readonly record struct PointLight(Vector2 Pos, float Radius, Rgb Color, float Intensity, float Height = 0f);
+
 /// <summary>프레임 하나의 월드 그리기 값(<c>WorldRenderer</c> 가 채움).</summary>
 public sealed class WorldFrame
 {
@@ -24,8 +30,8 @@ public sealed class WorldFrame
     public bool Fog;
     public RectF View;
     public readonly List<ShapeDraw> Shapes = [];
-    /// <summary>짧은 빛(폭발·장판) — 자리·반경·색·세기.</summary>
-    public readonly List<(Vector2 Pos, float Radius, Rgb Color, float Intensity)> ShortLights = [];
+    /// <summary>짧은 빛(폭발·장판·투사체) — 자리·반경·색·세기·높이.</summary>
+    public readonly List<PointLight> ShortLights = [];
 }
 
 /// <summary>
@@ -47,10 +53,10 @@ public sealed class LightRenderer : IDisposable
     private readonly GraphicsDevice _device;
     private readonly Primitives _prim;
     private readonly LightCandidate[] _candidates = new LightCandidate[256];
-    private readonly (Vector2 Pos, float Radius, Rgb Color, float Intensity)[] _lights = new (Vector2, float, Rgb, float)[256];
+    private readonly PointLight[] _lights = new PointLight[256];
     private readonly int[] _picked = new int[LightMath.MaxLights];
     private readonly int[] _scratch = new int[256];
-    private readonly (Vector2 Pos, float Radius, Rgb Color, float Intensity)[] _pickedLights = new (Vector2, float, Rgb, float)[LightMath.MaxLights];
+    private readonly PointLight[] _pickedLights = new PointLight[LightMath.MaxLights];
     private readonly ShaderLight? _shader;
     /// <summary>④ 최소 밝기의 보조 RT(<see cref="LightRT"/> 크기).</summary>
     private readonly RenderTarget2D _minRT;
@@ -112,7 +118,7 @@ public sealed class LightRenderer : IDisposable
         if (lighting.HeroLightRadius > 0f) Put(ref n, LightKind.Hero, f.HeroDraw, lighting.HeroLightRadius, lighting.HeroLightColor, 1f);
         foreach (var p in lighting.Lights)
             Put(ref n, LightKind.Point, p.Pos, p.Radius, p.Color, LightMath.Intensity(w.Seed, p.Id, f.StageTick, p.Flicker, p.PulsePeriod, p.PulseAmount));
-        foreach (var s in f.ShortLights) Put(ref n, LightKind.Short, s.Pos, s.Radius, s.Color, s.Intensity);
+        foreach (var s in f.ShortLights) Put(ref n, LightKind.Short, s.Pos, s.Radius, s.Color, s.Intensity, s.Height);
         LightCount = LightMath.Pick(_candidates.AsSpan(0, n), f.HeroDraw, _picked, _scratch);
         if (_shader is not null && arena is not null)
         {
@@ -125,7 +131,7 @@ public sealed class LightRenderer : IDisposable
             batch.Begin(SpriteSortMode.Deferred, LightAdd, SamplerState.LinearClamp, null, null, null, toLight);
             for (var i = 0; i < LightCount; i++)
             {
-                var (pos, radius, color, k) = _lights[_picked[i]];
+                var (pos, radius, color, k, _) = _lights[_picked[i]];
                 BatchX.Centered(batch, _prim.Light, pos, new Vector2(radius * 2f), new Color(color.R / 255f * k, color.G / 255f * k, color.B / 255f * k, 1f));
             }
             batch.End();
@@ -152,11 +158,11 @@ public sealed class LightRenderer : IDisposable
 
     private static readonly XnaVector2 Vector2Zero = XnaVector2.Zero;
 
-    private void Put(ref int n, LightKind kind, Vector2 pos, float radius, Rgb color, float intensity)
+    private void Put(ref int n, LightKind kind, Vector2 pos, float radius, Rgb color, float intensity, float height = 0f)
     {
         if (n >= _candidates.Length || radius <= 0f || intensity <= 0f) return;
         _candidates[n] = new LightCandidate(kind, pos);
-        _lights[n] = (pos, radius, color, intensity);
+        _lights[n] = new PointLight(pos, radius, color, intensity, height);
         n++;
     }
 
