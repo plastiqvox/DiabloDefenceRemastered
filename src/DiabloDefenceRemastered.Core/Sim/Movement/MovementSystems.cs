@@ -183,6 +183,7 @@ public sealed class CollisionSystem(NavWorld nav, SpatialHash hash) : ISimSystem
             PushOut(ref e.Pos, e.Radius, e.PassThroughObstacles, e.Id);
         }
         PushOut(ref world.Hero.Pos, world.Hero.Radius, false, EntityId.Hero);
+        HeroGateBlock(world);
         UpdateBlocked(enemies);
     }
 
@@ -232,6 +233,36 @@ public sealed class CollisionSystem(NavWorld nav, SpatialHash hash) : ISimSystem
             else e.Pos += n * overlap;
         }
         hero.TouchingCount = touching;
+    }
+
+    /// <summary>
+    /// 닫힌 문 틈은 주인공에게 막힘(2026-11-13 — 나무 문 그림 뒤로 걸어 들어가 문을 통과한 것처럼 보였다, 사용자 지적). 봉인된 문(<c>GateSeals.IsSealed</c>)의
+    /// 문 틈 두 줄 안으로 몸이 들어가지 않게 그 변의 타일 축만 문 틈 안쪽 선으로 되돌린다. 열린 출구 문은 그대로 지나가고(나가는 자리 판정), 적은 지금처럼 드나든다(충돌 격자는 그대로).
+    /// </summary>
+    private static void HeroGateBlock(World world)
+    {
+        if (world.Room is not { } room || world.Arena is not { } grid) return;
+        var hero = world.Hero;
+        var iso = grid.Iso;
+        var n = iso.N;
+        var rt = hero.Radius / 35.8f;   // 몸 반경을 타일 축 길이(√(32² + 16²) px)로
+        foreach (var (id, zone) in world.Gates)
+        {
+            if (zone.Cells.Count == 0 || !Art.GateSeals.IsSealed(room, id)) continue;
+            var t = iso.ToTile(hero.Pos);
+            float tx = t.Tx, ty = t.Ty;
+            int lo, hi;
+            if (zone.Side is GateSide.Nw or GateSide.Se) { lo = zone.Cells.Min(c => c.Y); hi = zone.Cells.Max(c => c.Y); if (ty < lo - 0.5f || ty > hi + 0.5f) continue; }
+            else { lo = zone.Cells.Min(c => c.X); hi = zone.Cells.Max(c => c.X); if (tx < lo - 0.5f || tx > hi + 0.5f) continue; }
+            switch (zone.Side)
+            {
+                case GateSide.Nw: tx = MathF.Max(tx, 1.5f + rt); break;
+                case GateSide.Ne: ty = MathF.Max(ty, 1.5f + rt); break;
+                case GateSide.Se: tx = MathF.Min(tx, n - 2.5f - rt); break;
+                default: ty = MathF.Min(ty, n - 2.5f - rt); break;
+            }
+            if (tx != t.Tx || ty != t.Ty) hero.Pos = iso.ToWorld(new TileCoord(tx, ty));
+        }
     }
 
     /// <summary>원을 걷기 막힘 도형·경계 밖으로(4.7-3·4).</summary>

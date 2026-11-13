@@ -50,6 +50,7 @@ public sealed class GateDoorArt
         foreach (var mega in GateGrates.Megas(zone))
             foreach (var c in cells)
             {
+                // 원작 문 칸 자리 그대로(앞 변에선 안쪽 줄 — 앞 턱 선과 맞음). 문 뒤로 걸어 들어가는 것은 닫힌 문 틈을 주인공에게 막아 없앤다(HeroGateBlock)
                 var tx = mega.X * 2 + c.Dx;
                 var ty = mega.Y * 2 + c.Dy;
                 var tl = DrawOrder.ColumnTopLeft(iso, tx, ty);

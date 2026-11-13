@@ -124,10 +124,27 @@ internal static class ArenaBaker
         foreach (var (side, list) in grid.Tileset.Doors.OrderBy(p => p.Key, StringComparer.Ordinal))
             foreach (var d in list)
             {
-                int Frame(int sub) => AddFrame(Fit(RgbaImage.FromIndexed(ts.Column(sub - 1, upperOnly: false), pal, null, null), hc));
+                RgbaImage Col(int sub) => Fit(RgbaImage.FromIndexed(ts.Column(sub - 1, upperOnly: false), pal, null, null), hc);
+                int Frame(int sub) => AddFrame(Col(sub));
+                // 열린 문: 원작 열린 문짝 하위 칸(393·395)에는 문짝만 있고 문 위 벽이 없어 문 너머(맵 바깥 검정)가 세로 틈으로 비쳤다(사용자 지적 "문이 열리니 벽이 갈라짐") —
+                // 세로 줄(x)마다 열린 그림의 첫 불투명 픽셀보다 위쪽은 닫힌 그림(문 위 벽)을 깔고 그 위에 열린 그림을 덮는다 — 열린 그림이 없는 줄은 닫힌 그림 그대로(틈 막음)
+                int OpenFrame(int closedSub, int openSub)
+                {
+                    var open = Col(openSub);
+                    var closed = Col(closedSub);
+                    var merged = new RgbaImage(open.Width, open.Height);
+                    for (var x = 0; x < open.Width && x < closed.Width; x++)
+                    {
+                        var top = 0;
+                        while (top < open.Height && open.A(x, top) == 0) top++;
+                        if (top > 0) merged.Blit(closed, x, 0, 1, Math.Min(top, closed.Height), x, 0);
+                    }
+                    merged.DrawOver(open, 0, 0);
+                    return AddFrame(merged);
+                }
                 // 열린 문 위 아치 덧그림(원작 L1S 프레임 — 문을 열면 원작이 그 칸에 얹는다)
                 var overlay = d.OpenOverlay is { } of && ts.OverlayFrame(of) is { } oimg ? AddFrame(Fit(RgbaImage.FromIndexed(oimg, pal, null, null), hc)) : 0;
-                doors.Add(new ArenaDoorCell { Side = side, Dx = d.At.X, Dy = d.At.Y, Closed = Frame(d.Closed), Open = Frame(d.Open), OpenOverlay = overlay });
+                doors.Add(new ArenaDoorCell { Side = side, Dx = d.At.X, Dy = d.At.Y, Closed = Frame(d.Closed), Open = OpenFrame(d.Closed, d.Open), OpenOverlay = overlay });
             }
 
         var scale = up is null ? 1 : 2;

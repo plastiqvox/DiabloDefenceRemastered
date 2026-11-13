@@ -117,3 +117,37 @@ public class GateGrateTests
         Assert.Null(GateGrates.FindSource([], "grate_h"));
     }
 }
+
+public class HeroGateBlockTests
+{
+    /// <summary>
+    /// 닫힌 문 틈은 주인공에게 막힘(2026-11-13 — 나무 문 뒤로 걸어 들어가 문을 통과해 보였다): 문 틈 칸 쪽으로 걸어도 문 틈 안쪽 선 앞에서 멈춘다.
+    /// 출구로 열리면 그 문 틈으로 들어갈 수 있다.
+    /// </summary>
+    [Theory]
+    [InlineData("gate_sw")]
+    [InlineData("gate_se")]
+    [InlineData("gate_nw")]
+    [InlineData("gate_ne")]
+    public void Sealed_GateGap_StopsHero_OpenExitLetsThrough(string gate)
+    {
+        var ctx = new ModuleContext();
+        new Core.Nav.NavModule().Register(ctx);   // 충돌 단계(CollisionSystem — HeroGateBlock)
+        var t = new TestWorldBuilder().WithDefs(TestDefs.Basic()).WithRoom(RoomPhase.Survive, gateIn: "gate_se").WithModules(ctx).Build();
+        var w = t.World;
+        var zone = w.Gates[gate];
+        var mid = zone.Cells.Select(c => w.Arena!.Iso.CellCenter(c.X, c.Y)).Aggregate(Vector2.Zero, (a, b) => a + b) / zone.Cells.Count;
+
+        // 문 틈 한가운데로 순간이동시켜도 다음 틱에 문 틈 밖(안쪽 줄 앞)으로 밀려난다
+        t.PlaceHero(mid);
+        t.Step();
+        Assert.False(zone.Contains(w.Arena!.Iso.CellOf(w.Hero.Pos)), $"{gate}: 닫힌 문 틈 안 {w.Arena.Iso.CellOf(w.Hero.Pos)}");
+
+        // 출구로 열리면 들어갈 수 있다
+        w.Room!.Exits = [new RoomExit(gate, null, RoomKind.Normal, null, false, null)];
+        w.Room.EnterPhase(RoomPhase.Doors, w.Tick);
+        t.PlaceHero(mid);
+        t.Step();
+        Assert.True(zone.Contains(w.Arena.Iso.CellOf(w.Hero.Pos)), $"{gate}: 열린 문 틈에 못 들어감");
+    }
+}
