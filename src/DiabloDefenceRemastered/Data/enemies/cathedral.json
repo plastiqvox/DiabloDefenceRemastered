@@ -3,9 +3,10 @@
 // 투사체 pj_enemy_arrow·이펙트 fx_*는 WP5 effects/ 의 정의를 가리킨다(기획 13.7). 드롭은 모두 일반 드롭 표 dt_common(기획 11.1 — 금화 3%(1~5)·물약 등).
 {
   "enemies": [
+    // 피해 5 → 8(2026-11-13 사용자 요청 "해골 병사 피해가 너무 낮다")
     { "id": "skeleton", "name": "해골", "tags": ["skeleton", "undead"],
       "sprites": "set_skelaxe", "variant": "white",
-      "hp": 10, "speed": 70, "damage": 5, "armor": 0, "knockback_resist": 0, "xp": 1, "movement": "flow", "drop_table": "dt_common",
+      "hp": 10, "speed": 70, "damage": 8, "armor": 0, "knockback_resist": 0, "xp": 1, "movement": "flow", "drop_table": "dt_common",
       "behaviors": [ { "id": "melee", "type": "chase_melee", "cooldown": 1.0 } ] },
 
     { "id": "zombie", "name": "좀비", "tags": ["zombie", "undead"],
