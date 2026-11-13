@@ -147,7 +147,9 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         // ── 0~5층 ───────────────────────────────────────────────
         device.SetRenderTarget(_worldRT);
         device.Clear(Color.Black);
-        batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, toTarget);
+        // 셰이더 그림자면 원작 구운 그림자 픽셀을 버리고 그린다(그림자는 빛 지도에서 빛 반대쪽으로 다시 — ShaderLight.DrawShadows)
+        var noShadow = _shaderLight?.NoShadowEffect(toTarget, new Int2(_worldRT!.Width, _worldRT.Height));
+        batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, noShadow, toTarget);
         _arena?.DrawFloor(batch, f.View, prim);
         DrawOutsideEnemies(batch, f, back: true);
         _arena?.DrawGroup(batch, WallGroup.Back, prim, _shaderLight);
@@ -262,7 +264,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         _shaderLight?.AddGround(h.Pages[page], new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, f.HeroDraw.Y);
         if (_arena is not null)
             _outlines.Add(h.Pages[page], new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, DrawOrder.UnitSortY(_arena.Table, _arena.Iso, f.HeroDraw), f.View, UnitOutlines.Kind.Hero);
-        var shape = new ShapeDraw(h.Pages[page], new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, f.HeroDraw, 1f, Forced: true, MinLight: !FrontWallCovers(dest), FogShape: false);
+        var shape = new ShapeDraw(h.Pages[page], new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, f.HeroDraw, 1f, Forced: true, MinLight: !FrontWallCovers(dest), FogShape: false, Caster: !hero.Dead);
         f.Shapes.Add(shape);
         // 보스 묶음 B(6.20 ㉑): 순간이동 시전 중·도착 무적 동안 푸른 가산 덧칠 — 피격 번쩍임과 겹치면 덧칠만.
         // 그림 색조 덧칠은 그림 색에 곱해져 붉은 옷 위에서는 거의 안 보여(캡처) 몸 둘레 푸른 빛(빛 텍스처)을 같은 색·알파로 한 겹 더 깐다(기획 38.2 "주인공에 푸른 빛")
@@ -305,7 +307,8 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             _outlines.Add(tex, new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, DrawOrder.UnitSortY(_arena.Table, _arena.Iso, draw), f.View,
                           def.Rank is DefRank.Miniboss or DefRank.Boss ? UnitOutlines.Kind.Elite : UnitOutlines.Kind.Enemy);
         var forced = fogA >= 1f && f.Fog && (def.Rank is DefRank.Miniboss or DefRank.Boss || e.Visual.ForceShown);
-        f.Shapes.Add(new ShapeDraw(tex, new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, draw, a, forced, !FrontWallCovers(dest), FogShape: true));
+        f.Shapes.Add(new ShapeDraw(tex, new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, draw, a, forced, !FrontWallCovers(dest), FogShape: true,
+                                   Caster: _arena is not null && _arena.Iso.IsInsideMap(e.Pos)));
         if (e.Visual.GlowAlpha > 0f) _glows.Add(new GlowDraw(tex, src, dest, e.Visual.GlowColor, e.Visual.GlowAlpha * fogA));
         if (e.HitFlashTime > 0f) _glows.Add(new GlowDraw(tex, src, dest, Rgb.White, 0.8f * fogA));
         if (e.Visual.FlashAlpha > 0f) _glows.Add(new GlowDraw(tex, src, dest, e.Visual.FlashColor, e.Visual.FlashAlpha * fogA));
@@ -684,6 +687,12 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         {
             if (p.Removed || p.Def.Light is not { } pl) continue;
             f.ShortLights.Add(new PointLight(Vector2.Lerp(p.PrevPos, p.Pos, _alphaInterp), pl.Radius * (p.Scale > 0f ? p.Scale : 1f), pl.Color, pl.Intensity, pl.Height));
+        }
+        // 몸에서 빛을 내는 적(불타는 해골 — 2026-11-13): 어둠 속에서 다가오는 게 바닥·벽에 비쳐 보인다
+        foreach (var e in f.World.Enemies.Items)
+        {
+            if (!e.IsAlive || e.Def.Light is not { } el) continue;
+            f.ShortLights.Add(new PointLight(Vector2.Lerp(e.PrevPos, e.Pos, _alphaInterp), el.Radius, el.Color, el.Intensity, el.Height));
         }
     }
 

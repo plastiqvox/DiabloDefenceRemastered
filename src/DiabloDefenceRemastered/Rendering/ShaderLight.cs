@@ -42,15 +42,19 @@ public sealed class ShaderLight : IDisposable
     private readonly GraphicsDevice _device;
     private readonly Effect _ground;
     private readonly Effect _light;
+    private readonly Effect _noShadow;
+    private readonly Effect _shadow;
     private readonly List<GroundDraw> _draws = new(2048);
     private Texture2D? _occ;
     private ArenaGrid? _occGrid;
 
-    private ShaderLight(GraphicsDevice device, Effect ground, Effect light)
+    private ShaderLight(GraphicsDevice device, Effect ground, Effect light, Effect noShadow, Effect shadow)
     {
         _device = device;
         _ground = ground;
         _light = light;
+        _noShadow = noShadow;
+        _shadow = shadow;
     }
 
     public RenderTarget2D? GroundRT { get; private set; }
@@ -64,7 +68,9 @@ public sealed class ShaderLight : IDisposable
             var ground = new Effect(device, File.ReadAllBytes(Path.Combine(dir, "GroundWrite.mgfxo")));
             var light = new Effect(device, File.ReadAllBytes(Path.Combine(dir, "LightAdd.mgfxo")));
             log.Info("LIGHT shader=on");
-            return new ShaderLight(device, ground, light);
+            var noShadow = new Effect(device, File.ReadAllBytes(Path.Combine(dir, "SpriteNoShadow.mgfxo")));
+            var shadow = new Effect(device, File.ReadAllBytes(Path.Combine(dir, "UnitShadow.mgfxo")));
+            return new ShaderLight(device, ground, light, noShadow, shadow);
         }
         catch (Exception e)
         {
@@ -158,6 +164,162 @@ public sealed class ShaderLight : IDisposable
         batch.End();
     }
 
+    // ── 그림자(2026-11-13 사용자 요청 "그림자도 셰이더로 3D 효과") ─────────────
+
+    /// <summary>그림자 진하기 상한(빛이 발밑에 가장 셀 때).</summary>
+    public const float ShadowMaxAlpha = 0.6f;
+    /// <summary>발밑 접지 그림자 알파(빛과 상관없이 늘).</summary>
+    public const float ContactAlpha = 0.6f;
+    /// <summary>높이 0 인 빛(주인공 빛·맵 점 빛)을 그림자 계산에서 볼 높이(px) — 머리 위 횃불쯤.</summary>
+    public const float FlatLightHeight = 110f;
+    /// <summary>유닛 하나가 그림자를 받는 빛 수 상한.</summary>
+    public const int ShadowLightsPerUnit = 2;
+
+    /// <summary>그림자 혼합: dest × (1 − 알파). 알파 채널은 그대로.</summary>
+    private static readonly BlendState Darken = new()
+    {
+        Name = "ShaderShadow",
+        ColorBlendFunction = BlendFunction.Add, ColorSourceBlend = Blend.Zero, ColorDestinationBlend = Blend.InverseSourceAlpha,
+        AlphaBlendFunction = BlendFunction.Add, AlphaSourceBlend = Blend.Zero, AlphaDestinationBlend = Blend.One,
+    };
+
+    private readonly Dictionary<Texture2D, List<VertexPositionColorTexture>> _shadowQuads = [];
+    private readonly List<VertexPositionColorTexture> _contactQuads = [];
+    private short[] _indices = [];
+    private VertexPositionColorTexture[] _vbuf = new VertexPositionColorTexture[1024];
+
+    /// <summary>0~5층 SpriteBatch 효과: 기본 그리기와 같고 원작 구운 그림자 픽셀만 버린다(<c>SpriteNoShadow.fx</c>).</summary>
+    public Effect NoShadowEffect(Matrix toTarget, Int2 targetSize)
+    {
+        _noShadow.Parameters["MatrixTransform"]?.SetValue(toTarget * Ortho(targetSize));
+        return _noShadow;
+    }
+
+    /// <summary>
+    /// 지금 걸린 <c>LightRT</c> 에 유닛 그림자를 깎는다(<c>UnitShadow.fx</c>): 그림자를 드리우는 모양(<see cref="ShapeDraw.Caster"/>)마다
+    /// ① 발밑 접지 그림자(빛 텍스처, 옅게 늘) ② 발밑에 가장 세게 닿는 빛 <see cref="ShadowLightsPerUnit"/> 개의 반대쪽으로 눕힌 실루엣.
+    /// 실루엣: 그림 픽셀 (x, y) → 발 F + 가로 축 × (x − F.x) + 빛 반대 방향 × (F.y − y) × 길이 배율 — 바닥 공간(세로 ×2)에서 계산해 화면으로 되돌린다.
+    /// 길이 배율 = 바닥 거리 / 빛 높이(0.3~1.5), 진하기 = 발밑 빛 세기(감쇠 × 밝기) × 0.75(상한 <see cref="ShadowMaxAlpha"/>) × 모양 알파.
+    /// </summary>
+    public void DrawShadows(IReadOnlyList<ShapeDraw> shapes, ReadOnlySpan<PointLight> lights, Int2 lightSize, Matrix toLight,
+                            Vector2 camera, Vector2 viewSize, Texture2D soft)
+    {
+        if (GroundRT is null) return;
+        foreach (var list in _shadowQuads.Values) list.Clear();
+        _contactQuads.Clear();
+        Span<(float C, int I)> best = stackalloc (float, int)[ShadowLightsPerUnit];
+        foreach (var s in shapes)
+        {
+            if (!s.Caster || s.Alpha <= 0f) continue;
+            var foot = s.Foot;
+            var cw = Math.Clamp(s.Dest.Width * 0.8f, 24f, 80f);
+            AddQuad(_contactQuads, soft, new Rectangle(0, 0, soft.Width, soft.Height),
+                    new XnaVector2(foot.X - cw * 0.5f, foot.Y - cw * 0.225f), new XnaVector2(cw, 0f), new XnaVector2(0f, cw * 0.45f), ContactAlpha * s.Alpha);
+
+            var n = 0;
+            for (var i = 0; i < lights.Length; i++)
+            {
+                var c = Contribution(lights[i], foot);
+                if (c < 0.06f) continue;
+                if (n < best.Length) best[n++] = (c, i);
+                else
+                {
+                    var min = 0;
+                    for (var k = 1; k < n; k++) if (best[k].C < best[min].C) min = k;
+                    if (c > best[min].C) best[min] = (c, i);
+                }
+            }
+            for (var k = 0; k < n; k++)
+            {
+                var l = lights[best[k].I];
+                var v = foot - l.Pos;
+                var g = new Vector2(v.X, v.Y * 2f);                               // 바닥 공간(아이소 세로 ×2)
+                var dg = g.Length();
+                var dir = g / dg;
+                var perp = new Vector2(-dir.Y, dir.X);
+                if (perp.X < 0f || (perp.X == 0f && perp.Y < 0f)) perp = -perp;
+                // 가로 축: 빛이 앞뒤면 화면 가로 그대로, 옆이면 빛과 직각 쪽으로 — 몸 두께가 남게
+                var w = Vector2.Normalize(new Vector2(MathF.Abs(dir.Y), 0f) + perp * MathF.Abs(dir.X));
+                var len = Math.Clamp(dg / (l.Height > 0f ? l.Height : FlatLightHeight), 0.3f, 1.5f);
+                // 그림 사각형 (x, y) → F + S(w·(x − F.x) + dir·(F.y − y)·len), S = (gx, gy / 2)
+                XnaVector2 Map(float x, float y)
+                {
+                    var p = w * (x - foot.X) + dir * ((foot.Y - y) * len);
+                    return new XnaVector2(foot.X + p.X, foot.Y + p.Y * 0.5f);
+                }
+                var o = Map(s.Dest.X0, s.Dest.Y0);
+                var ax = Map(s.Dest.X1, s.Dest.Y0) - o;
+                var ay = Map(s.Dest.X0, s.Dest.Y1) - o;
+                var a = MathF.Min(ShadowMaxAlpha, best[k].C * 0.75f) * s.Alpha;
+                if (!_shadowQuads.TryGetValue(s.Texture, out var list)) _shadowQuads[s.Texture] = list = new List<VertexPositionColorTexture>(256);
+                AddQuad(list, s.Texture, s.Source, o, ax, ay, a);
+            }
+        }
+
+        var p = _shadow.Parameters;
+        p["MatrixTransform"]?.SetValue(toLight * Ortho(lightSize));
+        p["Camera"]?.SetValue(new XnaVector2(camera.X, camera.Y));
+        p["ViewSize"]?.SetValue(new XnaVector2(viewSize.X, viewSize.Y));
+        p["GroundTexture"]?.SetValue(GroundRT);
+        _device.BlendState = Darken;
+        _device.DepthStencilState = DepthStencilState.None;
+        _device.RasterizerState = RasterizerState.CullNone;
+        p["Soft"]?.SetValue(1f);
+        Flush(soft, _contactQuads, SamplerState.LinearClamp);
+        p["Soft"]?.SetValue(0f);
+        foreach (var (tex, list) in _shadowQuads) Flush(tex, list, SamplerState.PointClamp);
+    }
+
+    /// <summary>빛 하나가 발 자리에 닿는 세기(감쇠 × 밝기 × 세기) — 발과 거의 같은 자리의 빛(자기 빛)은 0.</summary>
+    private static float Contribution(in PointLight l, Vector2 foot)
+    {
+        var d = Vector2.Distance(foot, l.Pos);
+        if (d < 6f || l.Radius <= 0f) return 0f;
+        var v = Math.Clamp(1f - d / l.Radius, 0f, 1f);
+        return v * v * (3f - 2f * v) * l.Intensity * (l.Color.R + l.Color.G + l.Color.B) / (3f * 255f);
+    }
+
+    private static void AddQuad(List<VertexPositionColorTexture> list, Texture2D tex, Rectangle src, XnaVector2 o, XnaVector2 ax, XnaVector2 ay, float alpha)
+    {
+        var u0 = src.X / (float)tex.Width;
+        var v0 = src.Y / (float)tex.Height;
+        var u1 = src.Right / (float)tex.Width;
+        var v1 = src.Bottom / (float)tex.Height;
+        var c = new Color(0f, 0f, 0f, Math.Clamp(alpha, 0f, 1f));
+        list.Add(new VertexPositionColorTexture(new Microsoft.Xna.Framework.Vector3(o, 0f), c, new XnaVector2(u0, v0)));
+        list.Add(new VertexPositionColorTexture(new Microsoft.Xna.Framework.Vector3(o + ax, 0f), c, new XnaVector2(u1, v0)));
+        list.Add(new VertexPositionColorTexture(new Microsoft.Xna.Framework.Vector3(o + ay, 0f), c, new XnaVector2(u0, v1)));
+        list.Add(new VertexPositionColorTexture(new Microsoft.Xna.Framework.Vector3(o + ax + ay, 0f), c, new XnaVector2(u1, v1)));
+    }
+
+    private void Flush(Texture2D tex, List<VertexPositionColorTexture> verts, SamplerState sampler)
+    {
+        if (verts.Count == 0) return;
+        var quads = verts.Count / 4;
+        if (_indices.Length < quads * 6)
+        {
+            var n = Math.Max(quads, _indices.Length / 6 * 2);
+            _indices = new short[n * 6];
+            for (var q = 0; q < n; q++)
+            {
+                var b = (short)(q * 4);
+                _indices[q * 6] = b; _indices[q * 6 + 1] = (short)(b + 1); _indices[q * 6 + 2] = (short)(b + 2);
+                _indices[q * 6 + 3] = (short)(b + 1); _indices[q * 6 + 4] = (short)(b + 3); _indices[q * 6 + 5] = (short)(b + 2);
+            }
+        }
+        if (_vbuf.Length < verts.Count) _vbuf = new VertexPositionColorTexture[Math.Max(verts.Count, _vbuf.Length * 2)];
+        verts.CopyTo(_vbuf);
+        _shadow.Parameters["SpriteTexture"]?.SetValue(tex);
+        _device.SamplerStates[0] = sampler;
+        foreach (var pass in _shadow.CurrentTechnique.Passes)
+        {
+            pass.Apply();
+            _device.Textures[0] = tex;
+            _device.Textures[1] = GroundRT;
+            _device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, _vbuf, 0, verts.Count, _indices, 0, quads * 2);
+        }
+    }
+
     /// <summary>카메라 기준 바닥 y → 정점 색 RG(16비트).</summary>
     public static Color Encode(float relY)
     {
@@ -173,5 +335,7 @@ public sealed class ShaderLight : IDisposable
         _occ?.Dispose();
         _ground.Dispose();
         _light.Dispose();
+        _noShadow.Dispose();
+        _shadow.Dispose();
     }
 }
