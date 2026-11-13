@@ -39,7 +39,7 @@ internal static class ProbeCommand
 {
     public static int Run(Options o, string cwd, TextWriter output)
     {
-        o.Allow("--diabdat", "--tileset", "--tiles", "--groups", "--hellfire", "--width", "--sheet");
+        o.Allow("--diabdat", "--tileset", "--tiles", "--groups", "--hellfire", "--width", "--sheet", "--subs");
         var diabdat = o.Get("--diabdat") ?? ImportCommand.CommonDiabdatPaths().FirstOrDefault(File.Exists)
             ?? throw new UsageException("--diabdat 를 준다");
         var what = o.Positional.FirstOrDefault() ?? throw new UsageException("probe tiles | files | cl2 | cel");
@@ -119,6 +119,16 @@ internal static class ProbeCommand
                     var ts = TilesetSource.From(e, new SourceBag(dict));
                     output.WriteLine($"타일셋 {id}: 메가타일 {ts.Til.Count}, 하위 타일 {ts.Min.Count}, SOL {ts.Sol.Length}");
                     var tiles = (o.Get("--tiles") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => int.Parse(s, CultureInfo.InvariantCulture)).ToList();
+                    if (o.Get("--sheet") is { } subSheet && o.Get("--subs") is { } subRange)
+                    {
+                        // 하위 칸(1 기반) 기둥 그림 격자 — "a-b" 또는 "a,b,c"
+                        var parts = subRange.Split('-');
+                        var subs = parts.Length == 2
+                            ? Enumerable.Range(int.Parse(parts[0], CultureInfo.InvariantCulture), int.Parse(parts[1], CultureInfo.InvariantCulture) - int.Parse(parts[0], CultureInfo.InvariantCulture) + 1).ToList()
+                            : subRange.Split(',').Select(s => int.Parse(s, CultureInfo.InvariantCulture)).ToList();
+                        SaveSubSheet(subSheet, ts, subs, Palette.Read(mpq.Read(e.SourcePath(e.Palettes.Values.First())) ?? throw new UsageException("팔레트 없음")), output);
+                        return 0;
+                    }
                     if (o.Get("--sheet") is { } megaSheet)
                     {
                         SaveMegaSheet(megaSheet, ts, tiles.Count > 0 ? tiles : [.. Enumerable.Range(1, ts.Til.Count)], Palette.Read(mpq.Read(e.SourcePath(e.Palettes.Values.First())) ?? throw new UsageException("팔레트 없음")), output);
@@ -207,6 +217,32 @@ internal static class ProbeCommand
         }
         File.WriteAllBytes(full, Png.Encode(sheet));
         output.WriteLine($"메가 격자 {full} ({cols}칸 × {(megas.Count + cols - 1) / cols}줄, {megas[0]}..{megas[^1]})");
+    }
+
+    /// <summary><c>probe tiles --tileset l1 --sheet &lt;png&gt; --subs a-b</c>: 하위 칸(1 기반) 기둥 그림을 한 줄 10칸 격자로(칸 왼쪽 위에 번호). 저장소 밖에만.</summary>
+    private static void SaveSubSheet(string path, TilesetSource ts, IReadOnlyList<int> subs, Palette pal, TextWriter output)
+    {
+        var full = Path.GetFullPath(path);
+        if (RepoPaths.CheckOutput(Path.GetDirectoryName(full)!) is { } bad) throw new UsageException(bad);
+        var hc = ts.Min.PiecesPerSubtile / 2 * 32;
+        int cw = 64 + 8, ch = hc + 16, cols = Math.Min(10, subs.Count);
+        var sheet = new RgbaImage(cw * cols, ch * ((subs.Count + cols - 1) / cols));
+        for (var y = 0; y < sheet.Height; y++)
+            for (var x = 0; x < sheet.Width; x++)
+            {
+                var edge = x % cw < 2 || y % ch < 2;
+                var v = (byte)(edge ? 90 : 30);
+                sheet.Set(x, y, v, v, (byte)(edge ? 40 : 30), 255);
+            }
+        for (var i = 0; i < subs.Count; i++)
+        {
+            if (subs[i] < 1 || subs[i] > ts.Min.Count) continue;
+            var col = RgbaImage.FromIndexed(ts.Column(subs[i] - 1, upperOnly: false), pal, null, null);
+            sheet.DrawOver(col, i % cols * cw + 4, i / cols * ch + 12);
+            DrawNumber(sheet, subs[i], i % cols * cw + 4, i / cols * ch + 2);
+        }
+        File.WriteAllBytes(full, Png.Encode(sheet));
+        output.WriteLine($"하위 칸 격자 {full} ({subs[0]}..{subs[^1]})");
     }
 
     /// <summary>3×5 숫자(2배) — 견본 격자 번호.</summary>

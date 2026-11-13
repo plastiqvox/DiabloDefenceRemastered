@@ -119,6 +119,17 @@ internal static class ArenaBaker
             }
         cells.Sort((a, b) => a.Ty != b.Ty ? a.Ty.CompareTo(b.Ty) : a.Tx != b.Tx ? a.Tx.CompareTo(b.Tx) : a.Kind.CompareTo(b.Kind));
 
+        // 문 봉인 나무 문(2026-11-13, 타일셋 doors): 닫힌·열린 하위 칸 기둥을 같은 아틀라스에 덤으로 — 열린 문 하위 칸은 어떤 메가타일에도 없다
+        var doors = new List<ArenaDoorCell>();
+        foreach (var (side, list) in grid.Tileset.Doors.OrderBy(p => p.Key, StringComparer.Ordinal))
+            foreach (var d in list)
+            {
+                int Frame(int sub) => AddFrame(Fit(RgbaImage.FromIndexed(ts.Column(sub - 1, upperOnly: false), pal, null, null), hc));
+                // 열린 문 위 아치 덧그림(원작 L1S 프레임 — 문을 열면 원작이 그 칸에 얹는다)
+                var overlay = d.OpenOverlay is { } of && ts.OverlayFrame(of) is { } oimg ? AddFrame(Fit(RgbaImage.FromIndexed(oimg, pal, null, null), hc)) : 0;
+                doors.Add(new ArenaDoorCell { Side = side, Dx = d.At.X, Dy = d.At.Y, Closed = Frame(d.Closed), Open = Frame(d.Open), OpenOverlay = overlay });
+            }
+
         var scale = up is null ? 1 : 2;
         var outputs = new List<(string, byte[], int)>();
         var chunks = ArenaArt.FloorChunks(grid);
@@ -159,7 +170,7 @@ internal static class ArenaBaker
         {
             Format = ArenaArt.CurrentFormat, Map = grid.Map.Id, LayoutHash = grid.LayoutHash, Box = new Int2((int)box.X, (int)box.Y), Scale = scale,
             Floor = [.. chunks.Select(c => new ArenaFloorChunk { File = ArenaArt.FloorChunkFile(c), Pos = ArenaArt.FloorChunkPos(c) })],
-            Columns = "columns", Cells = cells,
+            Columns = "columns", Cells = cells, Doors = doors,
         };
         outputs.Add(($"{art}/{ArenaArt.FileName}", AssetJson.Serialize(arena), scale));
         outputs.Add(($"{art}/{ArenaArt.MinimapFile}", Png.Encode(Minimap(grid)), 1));

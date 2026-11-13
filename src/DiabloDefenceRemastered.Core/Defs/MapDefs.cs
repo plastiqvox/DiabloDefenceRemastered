@@ -49,6 +49,22 @@ public sealed record TilesetDef : IDef
     /// 거울판은 자기 ID 해시로 다시 고른다. 장식판 번호도 이름 붙인 번호다(성질 표에 둔다, 13.5-12).
     /// </summary>
     public IReadOnlyDictionary<int, TileAccentDef> Accents { get; init; } = new Dictionary<int, TileAccentDef>();
+    /// <summary>
+    /// 문 봉인 나무 문(2026-11-13 사용자 요청 "창살 대신 문으로"): 변 방향(<c>v</c> = nw·se 변의 세로 벽, <c>h</c> = ne·sw 변의 가로 벽) → 문 틈 메가 안 하위 칸마다
+    /// 닫힌·열린 하위 타일 번호(1 기반, 원본 MIN). 열린 문 하위 칸은 어떤 메가타일에도 없어 가져오기가 맵 그림 아틀라스에 덤으로 굽는다(<c>arena.json</c> <c>doors</c>).
+    /// 그림만 — 문 틈 걷기·막힘은 문 봉인(<c>GateSeals</c>)이 그대로 정한다.
+    /// </summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<DoorCellDef>> Doors { get; init; } = new Dictionary<string, IReadOnlyList<DoorCellDef>>();
+}
+
+/// <summary>문 칸 하나: 문 틈 메가 안 하위 칸 자리(<see cref="At"/> — [dx, dy] 0..1)와 닫힌·열린 하위 타일 번호(1 기반).</summary>
+public sealed record DoorCellDef
+{
+    public Int2 At { get; init; }
+    public int Closed { get; init; }
+    public int Open { get; init; }
+    /// <summary>열린 문 위 아치 덧그림(원작 L1S 프레임, 1 기반 — 원작은 문을 열 때 이 칸에 dSpecial 로 얹는다). 없으면 덧그림 없음.</summary>
+    public int? OpenOverlay { get; init; }
 }
 
 /// <summary>변형 하나: <see cref="Chance"/>(0..1) 만큼 <see cref="With"/> 중 하나(해시)로 바꾼다. 모두 원래 번호와 성질이 같아야 한다.</summary>
