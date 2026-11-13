@@ -1,0 +1,34 @@
+// 본뜬 원작 방: 없음 — 대성당 작은 방 G "무덤실"(2026-11-13 사용자 요청 "보스전이 아닌 방은 내부가 더 복잡해도 된다"): 가운데에 네 변마다 문 틈이 난 안쪽 방(메가 [5..10]),
+// 바깥 두 귀퉁이에 석관, 나머지 두 귀퉁이에 기둥. 주인공은 안쪽 방 한가운데서 시작하고 무리는 네 문 틈(하위 5칸)으로 밀려 들어온다.
+// 벽 끝: 문 틈 쪽 위·왼쪽 끝은 마감 조각(wall_end_h·wall_end_v), 아래·오른쪽 끝은 작은 기둥(wall_post — L1 에 그 끝 조각이 없다).
+// 안쪽 방은 [5..10]: 더 크면 벽이 문 진입점에서 150px 안(13.5-23)이고, 문 틈은 하위 5칸(13~17 — 오른쪽·아래 벽은 끝을 작은 기둥으로 마감해 한 칸 내림)이라 큰 적(반경 34)이 지난다(13.5-5).
+// 작은 방(설계서 6.11 "방 맵"): 메가 16 = 하위 32×32, 둘레·문은 arch_hall 짜임. 거울판(mirror)은 L1 짝 표로 켠다.
+{
+  "maps": [
+    {
+      "id": "cathedral_room_g", "tileset": "l1", "palette": "l1_1", "size": 16, "mirror": true,
+      "room_kinds": ["normal", "elite"],
+      "layout": {
+        "border": "arch_hall",
+        "gates": [ { "id": "gate_nw", "side": "nw" }, { "id": "gate_ne", "side": "ne" },
+                   { "id": "gate_se", "side": "se" }, { "id": "gate_sw", "side": "sw" } ],
+        "place": [
+          { "id": "g_crypt", "origin": [5, 5],
+            "grid": [ "wall_corner wall_post .  .  wall_end_h wall_v",
+                      "wall_post   .         .  .  .          wall_post",
+                      ".           .         .  .  .          .",
+                      ".           .         .  .  .          .",
+                      "wall_end_v  .         .  .  .          wall_end_v",
+                      "wall_h      wall_post .  .  wall_end_h wall_post" ] },
+          { "id": "g_tombs", "piece": "sarcophagus", "at": [[12, 2], [2, 12]] },   // 안쪽 방(하위 9칸)은 비움 — 벽 토막과 80px(13.5-4)·주인공 시작 여유 38px(13.5-6)를 함께 지킬 자리가 없다
+          { "id": "g_pillars", "piece": "pillar", "at": [[2, 2], [12, 12]] } ] },
+      "entries": [ { "id": "gate_nw", "outside": [-4, 15.5], "inside": [4, 15.5] },
+                   { "id": "gate_ne", "outside": [15.5, -4], "inside": [15.5, 4] },
+                   { "id": "gate_se", "outside": [35, 15.5], "inside": [26, 15.5] },
+                   { "id": "gate_sw", "outside": [15.5, 35], "inside": [15.5, 26] } ],
+      "hero_start": { "tile": [15.5, 15.5], "facing": "south" },
+      "anchors": { "center": [15.5, 15.5] },
+      "art": "d1/maps/cathedral_room_g"
+    }
+  ]
+}

@@ -7,8 +7,8 @@
 {
   "stages": [
     { "id": "stage_cathedral", "name": "대성당",
-      "room_maps": { "normal": ["cathedral_room_a", "cathedral_room_b", "cathedral_room_c", "cathedral_room_d", "cathedral_room_e"],
-                     "elite":  ["cathedral_room_a", "cathedral_room_b", "cathedral_room_c", "cathedral_room_d", "cathedral_room_e"],
+      "room_maps": { "normal": ["cathedral_room_a", "cathedral_room_b", "cathedral_room_c", "cathedral_room_d", "cathedral_room_e", "cathedral_room_f", "cathedral_room_g", "cathedral_room_h"],
+                     "elite":  ["cathedral_room_a", "cathedral_room_b", "cathedral_room_c", "cathedral_room_d", "cathedral_room_e", "cathedral_room_f", "cathedral_room_g", "cathedral_room_h"],
                      "boss": "cathedral_arena" },
       "rooms": [
         { "kind": "normal", "from": "00:00", "to": "01:00", "number": 1, "floor": 1 },

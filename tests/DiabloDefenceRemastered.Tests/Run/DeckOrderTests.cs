@@ -36,7 +36,7 @@ public sealed class DeckOrderTests
     public void No_repeat_before_pool_is_used_up_and_boss_room_keeps_arena()
     {
         var poolSize = Act.RoomMaps.Normal.Select(r => r.Id).Union(Act.RoomMaps.Elite.Select(r => r.Id)).Count();
-        Assert.Equal(5, poolSize);
+        Assert.Equal(8, poolSize);   // 2026-11-13: 방 F·G·H 를 더해 다섯 → 여덟
         for (ulong seed = 1; seed <= 50; seed++)
         {
             var rooms = RunPlanner.PlanAct(Act, 1, seed, Rules).Rooms;
@@ -52,16 +52,17 @@ public sealed class DeckOrderTests
     [Fact]
     public void Reshuffled_first_card_is_not_previous_room_map_and_both_orientations_appear()
     {
-        var act = LongAct(31);   // 다섯 장 덱을 여섯 번 넘게 섞는다
+        var act = LongAct(31);   // 여덟 장 덱을 세 번 넘게 섞는다
+        var deck = act.RoomMaps.Normal.Select(r => r.Id).Union(act.RoomMaps.Elite.Select(r => r.Id)).Count();
         var mirrored = 0;
         var total = 0;
         for (ulong seed = 1; seed <= 40; seed++)
         {
             var rooms = RunPlanner.PlanAct(act, 1, seed, Rules).Rooms;
-            for (var start = 0; start < rooms.Count; start += 5)
+            for (var start = 0; start < rooms.Count; start += deck)
             {
-                var chunk = rooms.Skip(start).Take(5).Select(Base).ToList();
-                if (chunk.Count == 5) Assert.Equal(5, chunk.Distinct().Count());                       // 덱 한 바퀴 = 다섯 맵 모두
+                var chunk = rooms.Skip(start).Take(deck).Select(Base).ToList();
+                if (chunk.Count == deck) Assert.Equal(deck, chunk.Distinct().Count());                 // 덱 한 바퀴 = 풀의 맵 모두
                 if (start > 0) Assert.NotEqual(Base(rooms[start - 1]), chunk[0]);                      // 다시 섞은 첫 장 ≠ 바로 앞 방 맵
             }
             for (var i = 1; i < rooms.Count; i++) Assert.NotEqual(Base(rooms[i - 1]), Base(rooms[i]));  // 연달아 같은 맵 없음

@@ -25,7 +25,8 @@
             "grid": [ "wall_corner . . wall_end_h wall_v",
                       ".           . . .          grate_v",
                       ".           . . .          wall_post" ] },   // [4,13] 같은 마감
-          { "id": "d_pillars", "piece": "pillar", "at": [[6, 6], [9, 9]] } ] },
+          { "id": "d_pillars", "piece": "pillar", "at": [[6, 6], [9, 9]] },
+          { "id": "d_tombs", "piece": "sarcophagus", "at": [[2, 2], [12, 12]] } ] },   // 뒤·앞 귀퉁이 석관(2026-11-13 — 방 내부를 더 채움)
       "open_center": [5, 5, 11, 11],
       "entries": [ { "id": "gate_nw", "outside": [-4, 15.5], "inside": [4, 15.5] },
                    { "id": "gate_ne", "outside": [15.5, -4], "inside": [15.5, 4] },
