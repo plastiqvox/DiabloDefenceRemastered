@@ -20,11 +20,11 @@
                       ".",
                       ".",
                       "wall_end_v",
-                      "wall_h grate_h wall_post ." ] },   // [13,4] 작은 기둥: 창살 열린 오른쪽 끝 마감(2026-11-13 — L1 에 그 끝 조각이 없어 단면이 보였다)
+                      "wall_join_h grate_h wall_cap_h ." ] },   // [13,4] 끝 기둥: 창살 열린 오른쪽 끝 마감(2026-11-13 — L1 에 그 끝 조각이 없어 단면이 보였다)
           { "id": "d_room_west", "origin": [0, 11], "over_border": true,
-            "grid": [ "wall_corner . . wall_end_h wall_v",
+            "grid": [ "wall_corner . . wall_end_h wall_join_v",
                       ".           . . .          grate_v",
-                      ".           . . .          wall_post" ] },   // [4,13] 같은 마감
+                      ".           . . .          wall_cap_v" ] },   // [4,13] 같은 마감
           { "id": "d_pillars", "piece": "pillar", "at": [[6, 6], [9, 9]] },
           { "id": "d_tombs", "piece": "sarcophagus", "at": [[2, 2], [12, 12]] } ] },   // 뒤·앞 귀퉁이 석관(2026-11-13 — 방 내부를 더 채움)
       "open_center": [5, 5, 11, 11],

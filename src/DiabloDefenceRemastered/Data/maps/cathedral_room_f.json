@@ -15,10 +15,10 @@
           { "id": "f_tombs", "piece": "sarcophagus", "at": [[2, 2], [12, 12]] },
           { "id": "f_wall_east", "piece": "wall_corner", "at": [[12, 0]], "over_border": true },   // 뒷벽에서 바로 이어짐(둘레 위 줄 그대로 + 왼쪽 열)
           { "piece": "wall_v", "at": [[12, 1]] },
-          { "piece": "wall_post", "at": [[12, 2]] },
+          { "piece": "wall_cap_v", "at": [[12, 2]] },
           { "id": "f_wall_west", "piece": "wall_corner", "at": [[0, 12]], "over_border": true },
           { "piece": "wall_h", "at": [[1, 12]] },
-          { "piece": "wall_post", "at": [[2, 12]] } ] },
+          { "piece": "wall_cap_h", "at": [[2, 12]] } ] },
       "entries": [ { "id": "gate_nw", "outside": [-4, 15.5], "inside": [4, 15.5] },
                    { "id": "gate_ne", "outside": [15.5, -4], "inside": [15.5, 4] },
                    { "id": "gate_se", "outside": [35, 15.5], "inside": [26, 15.5] },

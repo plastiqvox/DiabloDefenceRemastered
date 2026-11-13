@@ -28,6 +28,8 @@
         "wall_v": 1, "wall_h": 2, "wall_corner": 4,
         "wall_post": 3,                                 // 작은 모서리 기둥(위-왼 칸만) — 가로 벽이 왼쪽에서, 세로 벽(또는 문 틈)이 위에서 와서 만나는 ┘ 자리(기획 10.1 표)
         "wall_end_v": 6, "wall_end_h": 7,               // 위(번호가 작은) 끝이 마감된 벽 — 세로 6 은 위 끝, 가로 7 은 왼쪽 끝
+        "wall_join_v": 10, "wall_join_h": 14,           // 꺾이는 이음(2026-11-13): 14 = 위에서 내려온 세로 벽을 받는 가로 벽 첫 칸(└), 10 = 왼쪽에서 온 가로 벽을 받는 세로 벽 첫 칸(┐) — 6·7 끝 조각이나 1·2 를 붙이면 세로 벽 끝이 가로 벽 위에 얹힌 토막처럼 보였다(사용자 지적)
+        "wall_cap_v": 16, "wall_cap_h": 17,             // 벽 아래·오른쪽 끝 마감 기둥(2026-11-13): 벽 방향 머릿돌을 얹은 기둥 — 세로 벽 끝 16, 가로 벽 끝 17. 3(┘ 모서리)은 두 방향 머리가 V 자라 끝에 홀로 세우면 잘려 보였다
         "grate_h": 36,                                  // 가로 창살(기둥 + 철책)
         "grate_v": 35,                                  // 세로 창살 — 36 의 거울 짝(원본 하위 칸 배치가 36 의 전치, 기둥 칸 = 위-왼)
         "blood_wall_v": 166, "blood_wall_corner": 168, "blood_wall_h": 169,   // 피 묻은 벽(세로·모서리·가로)
@@ -55,7 +57,7 @@
       },
       "marks": { "pillar": [15], "grate": [36, 35], "closed_door": [26, 25] },
       "mirror": {                                       // 거울판 짝 표(6.11 "거울판", 13.5-12 — 짝은 최종 성질이 전치로 같음, self 는 자기 전치와 같음)
-        "pairs": [ ["wall_v", "wall_h"], ["wall_end_v", "wall_end_h"], ["blood_wall_v", "blood_wall_h"],
+        "pairs": [ ["wall_v", "wall_h"], ["wall_end_v", "wall_end_h"], ["wall_cap_v", "wall_cap_h"], ["wall_join_v", "wall_join_h"], ["blood_wall_v", "blood_wall_h"],
                    ["grate_h", "grate_v"], ["door_closed", "door_closed_v"] ],
         "self": [ "pillar", "wall_corner", "wall_post", "blood_floor", "blood_wall_corner", "sarcophagus" ]
       },
@@ -64,7 +66,7 @@
         "1": "X.X.", "6": "X.X.", "166": "X.X.",
         "2": "XX..", "7": "XX..", "169": "XX..", "26": "XX..", "25": "X.X.",
         "4": "XXX.", "168": "XXX.",
-        "3": "X...",
+        "3": "X...", "16": "W...", "17": "W...", "10": "X.X.", "14": "XX..",          // 16·17 끝 기둥: 원본 SOL 11(걷기·시야, 투사체 통과)
         "18": "XXXX", "19": "XXXX", "20": "XXXX", "23": "XXXX", "24": "XXXX",
         "15": "x...",                                   // 기둥: 원본 SOL 13(걷기·투사체, 시야 통과). 시야 보정은 하지 않는다(기획 열린 질문 22 기본값)
         "36": "Xw..",                                   // 출처: DevilutionX 참고(조각 63 보정) — 원본 ww..(기둥 칸도 걷기만), 기둥 칸 X 는 아래 sol_known_diffs
