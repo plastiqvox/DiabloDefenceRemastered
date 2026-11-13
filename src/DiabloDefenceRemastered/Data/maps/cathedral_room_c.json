@@ -21,8 +21,8 @@
                       "wall_v      .      .      .      .",
                       "wall_v      .      .      .      .",
                       "wall_v      .      .      .      wall_end_v",
-                      "wall_corner wall_post .   .      wall_post  " ] },   // [1,4] 벽 끝 칸을 작은 기둥으로 — 열린 오른쪽 끝 마감(2026-11-13, 덧붙이면 큰 적 문이 좁아져 끝 칸을 바꿈)
-          { "id": "c_room_south", "piece": "wall_post", "at": [[11, 11]] },   // 모서리 조각(양쪽 끝이 열려 단면이 보임) 대신 작은 기둥(2026-11-13)
+                      "wall_corner wall_cap_h .  .      wall_cap_v " ] },   // [1,4]·[4,4] 벽 끝 칸을 끝 기둥으로 — 열린 오른쪽 끝 마감(2026-11-13, 덧붙이면 큰 적 문이 좁아져 끝 칸을 바꿈)
+          { "id": "c_room_south", "piece": "wall_cap_v", "at": [[11, 11]] },   // 모서리 조각(양쪽 끝이 열려 단면이 보임) 대신 끝 기둥 하나(2026-11-13)
           { "piece": "wall_end_h", "at": [[14, 11]] },
           { "piece": "wall_end_v", "at": [[11, 14]] },
           { "id": "c_pillars", "piece": "pillar", "at": [[6, 9], [9, 6]] },

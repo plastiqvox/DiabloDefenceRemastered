@@ -21,15 +21,17 @@
           { "piece": "wall_post", "at": [[4, 4]] },
           { "id": "e_wall_east", "piece": "wall_end_v", "at": [[11, 2]] },
           { "piece": "wall_v", "at": [[11, 3]] },
-          { "piece": "wall_h", "line": [[11, 4], [12, 4]] },
-          { "piece": "wall_post", "at": [[13, 4]] },                // 열린 오른쪽 끝 마감(2026-11-13 — L1 에 오른쪽 끝 조각이 없어 단면이 보였다)
+          { "piece": "wall_join_h", "at": [[11, 4]] },              // └ 이음(위에서 내려온 세로 벽을 받음)
+          { "piece": "wall_h", "at": [[12, 4]] },
+          { "piece": "wall_cap_h", "at": [[13, 4]] },               // 열린 오른쪽 끝 마감(끝 기둥)(2026-11-13 — L1 에 오른쪽 끝 조각이 없어 단면이 보였다)
           { "id": "e_wall_south", "piece": "wall_post", "at": [[12, 12]] },
           { "piece": "wall_end_v", "at": [[12, 11]] },
           { "piece": "wall_end_h", "at": [[11, 12]] },
           { "id": "e_wall_west", "piece": "wall_end_h", "at": [[2, 11]] },
           { "piece": "wall_h", "at": [[3, 11]] },
-          { "piece": "wall_v", "line": [[4, 11], [4, 12]] },
-          { "piece": "wall_post", "at": [[4, 13]] },                // 열린 아래 끝 마감(2026-11-13)
+          { "piece": "wall_join_v", "at": [[4, 11]] },              // ┐ 이음(왼쪽에서 온 가로 벽을 받음)
+          { "piece": "wall_v", "at": [[4, 12]] },
+          { "piece": "wall_cap_v", "at": [[4, 13]] },               // 열린 아래 끝 마감(2026-11-13, 끝 기둥)
           { "id": "e_pillars", "piece": "pillar", "at": [[6, 6], [9, 9]] } ] },   // 십자 홀 기둥 둘(2026-11-13 — 방 내부를 더 채움, open_center 기둥 상한 2)
       "open_center": [5, 5, 11, 11],
       "entries": [ { "id": "gate_nw", "outside": [-4, 15.5], "inside": [4, 15.5] },

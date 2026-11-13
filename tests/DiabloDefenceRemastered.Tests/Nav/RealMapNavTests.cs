@@ -65,7 +65,7 @@ public class RealMapNavTests
     [Fact]
     public void RealMap_GrateCells_WalkOnly()
     {
-        // 창살 w 칸: 걷기 도형만(투사체 통과)
+        // 걷기만 막고 투사체는 통과하는 칸: 창살 w(시야 통과)·벽 끝 기둥 W(시야 막힘 — 2026-11-13 wall_cap)
         var nav = Nav.Value;
         var grid = nav.Arena!;
         var walkOnly = nav.Collision.Where(s => s.BlocksWalk && !s.BlocksProjectiles).ToList();
@@ -73,9 +73,9 @@ public class RealMapNavTests
         foreach (var s in walkOnly)
             for (var ty = s.Tiles.Y0; ty < s.Tiles.Y1; ty++)
                 for (var tx = s.Tiles.X0; tx < s.Tiles.X1; tx++)
-                    Assert.Equal('w', grid.Prop(tx, ty));
+                    Assert.Contains(grid.Prop(tx, ty), "wW");
         // 창살 칸 하나를 ty 축으로 가로지르는 선(위·아래 이웃 칸은 바닥): 투사체는 지나고 걷기 길은 막힘(창살 너머 궁수 — 10.1 공정성)
-        var w = walkOnly[0].Tiles;
+        var w = walkOnly.First(s => grid.Prop(s.Tiles.X0, s.Tiles.Y0) == 'w').Tiles;   // 창살 칸
         var (gx, gy) = (w.X0, w.Y0);
         Assert.False(grid.BlocksProjectiles(gx, gy - 1) || grid.BlocksProjectiles(gx, gy + 1));
         var a = grid.Iso.CellCenter(gx, gy - 1);
