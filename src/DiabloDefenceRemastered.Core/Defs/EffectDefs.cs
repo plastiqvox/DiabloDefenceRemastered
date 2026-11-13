@@ -76,6 +76,17 @@ public sealed record ProjectileDef : IDef
     /// 그림·장애물·<c>on_end</c>·적 쪽 판정은 그대로.
     /// </summary>
     public float? HeroHitRadius { get; init; }
+    /// <summary>날아가는 동안 내는 빛(2026-11-13 — 셰이더 빛이 바닥·벽에 비춤). 없으면 빛 없음. 그리기만 바뀐다.</summary>
+    public ProjectileLightDef? Light { get; init; }
+}
+
+/// <summary>투사체 빛: 색·반경(px)·세기·바닥에서 뜬 높이(px — 셰이더 빛의 3D 거리).</summary>
+public sealed record ProjectileLightDef
+{
+    public Rgb Color { get; init; } = Rgb.White;
+    public float Radius { get; init; } = 120f;
+    public float Intensity { get; init; } = 1f;
+    public float Height { get; init; } = 40f;
 }
 
 /// <summary>

@@ -389,4 +389,73 @@ public class ArenaLayoutTests
             [1, 2, 3, 11, 12, 13, 14, 15, 16, 17, 18, 20, 30, 31, 32, 33, 34, 35, 36, 37, 38],
             ArenaLayout.NamedTiles(TestDefs.Tileset()));
     }
+
+    // ── 변형(accents, 2026-11-13) ──────────────────────────────
+
+    private const int CrackedFloor = 60, CrossWall = 61;
+
+    private static TilesetDef AccentTileset(float chance, string crossProps = "X.X.")
+    {
+        var ts = TestDefs.Tileset();
+        var props = new Dictionary<int, string>(ts.Props) { [CrackedFloor] = "....", [CrossWall] = crossProps };
+        return ts with
+        {
+            Props = props,
+            Accents = new Dictionary<int, TileAccentDef>
+            {
+                [TestDefs.Floor1] = new() { Chance = chance, With = [CrackedFloor] },
+                [TestDefs.EdgeNw] = new() { Chance = chance, With = [CrossWall] },
+            },
+        };
+    }
+
+    [Fact]
+    public void Accents_ReplaceTiles_KeepCellFlags()
+    {
+        var plain = ExpandOk(TestDefs.Map(12, place: []));
+        var accented = ExpandOk(TestDefs.Map(12, tileset: AccentTileset(1f), place: []));
+        var changed = 0;
+        for (var my = 0; my < 12; my++)
+            for (var mx = 0; mx < 12; mx++)
+            {
+                var a = plain.MegaTile(mx, my);
+                var b = accented.MegaTile(mx, my);
+                if (a == TestDefs.Floor1) { Assert.Equal(CrackedFloor, b); changed++; }
+                else if (a == TestDefs.EdgeNw) { Assert.Equal(CrossWall, b); changed++; }
+                else Assert.Equal(a, b);   // 문 칸·다른 둘레는 그대로
+            }
+        Assert.True(changed > 10);
+        for (var ty = 0; ty < 24; ty++)
+            for (var tx = 0; tx < 24; tx++)
+                Assert.Equal(plain.Flags(tx, ty), accented.Flags(tx, ty));   // 그림만 바뀌고 충돌은 같다
+        Assert.NotEqual(plain.LayoutHash, accented.LayoutHash);
+    }
+
+    [Fact]
+    public void Accents_ChanceZero_ChangesNothing_AndPartialIsDeterministic()
+    {
+        var none = ExpandOk(TestDefs.Map(12, tileset: AccentTileset(0f), place: []));
+        for (var my = 0; my < 12; my++)
+            for (var mx = 0; mx < 12; mx++)
+                Assert.NotEqual(CrackedFloor, none.MegaTile(mx, my));
+        var a = ExpandOk(TestDefs.Map(12, tileset: AccentTileset(0.3f), place: []));
+        var b = ExpandOk(TestDefs.Map(12, tileset: AccentTileset(0.3f), place: []));
+        Assert.Equal(a.LayoutHash, b.LayoutHash);
+    }
+
+    [Fact]
+    public void Accents_Validate_PropsMustMatch_AndAreNamed()
+    {
+        var ok = new List<LayoutError>();
+        ArenaLayout.ValidateTileset(AccentTileset(0.3f), ok);
+        Assert.Empty(ok);
+        Assert.Contains(CrackedFloor, ArenaLayout.NamedTiles(AccentTileset(0.3f)));
+        Assert.Contains(CrackedFloor, ArenaLayout.FloorTiles(AccentTileset(0.3f)));
+        Assert.Equal(TestDefs.EdgeNw, ArenaLayout.AccentBase(AccentTileset(0.3f), CrossWall));
+
+        var bad = new List<LayoutError>();
+        ArenaLayout.ValidateTileset(AccentTileset(1.5f, crossProps: "XX.."), bad);
+        Assert.Contains(bad, e => e.Path == "$.accents.18.with[0]");   // 성질 다름
+        Assert.Contains(bad, e => e.Path == "$.accents.1.chance");     // 확률 밖
+    }
 }

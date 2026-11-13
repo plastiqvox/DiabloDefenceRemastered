@@ -28,10 +28,12 @@
       "radius": 4, "speed": 260, "range": 350, "blocked_by_obstacles": true, "pierce": 1 },
     // 단계 2(wp4 — 이번에 한해 이 파일은 wp4). 기획 13.7: 불화살 farrow1..16(4프레임) ×0.9, 반경 5, 240px/s, 380px, 장애물 막힘, 맞으면 fx_spark(폭발 피해 없음) — 블랙애시 불화살 부채
     { "id": "pj_fire_arrow", "sprite": "farrow", "scale": 0.9, "blend": "alpha",
-      "radius": 5, "speed": 240, "range": 380, "blocked_by_obstacles": true, "pierce": 1, "hit_effect": "fx_spark" },
+      "radius": 5, "speed": 240, "range": 380, "blocked_by_obstacles": true, "pierce": 1, "hit_effect": "fx_spark",
+      "light": { "color": [255, 150, 70], "radius": 90, "intensity": 0.6, "height": 36 } },   // 불화살 빛(2026-11-13)
     // 기획 13.7: 보스 파이어볼 fireba1..16 ×0.9, 반경 10, 260px/s, 600px, 장애물 막힘, 폭발 반경 50·피해 ×1.0·fx_fire_explosion — 해골왕 파이어볼 부채
     { "id": "pj_boss_fireball", "sprite": "fireba", "scale": 0.9, "blend": "alpha",
       "radius": 10, "speed": 260, "range": 600, "blocked_by_obstacles": true, "pierce": 1,
-      "explosion": { "damage_mul": 1.0, "radius": 50, "effect": "fx_fire_explosion" } }
+      "explosion": { "damage_mul": 1.0, "radius": 50, "effect": "fx_fire_explosion" },
+      "light": { "color": [255, 140, 60], "radius": 170, "intensity": 1.0, "height": 44 } }   // 2026-11-13
   ]
 }

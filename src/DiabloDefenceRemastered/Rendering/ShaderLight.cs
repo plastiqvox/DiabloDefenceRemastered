@@ -130,7 +130,7 @@ public sealed class ShaderLight : IDisposable
     }
 
     /// <summary>빛들을 지금 걸린 <c>LightRT</c>(<paramref name="lightSize"/>)에 더한다. <paramref name="toLight"/> = 월드 → LightRT px.</summary>
-    public void AddLights(SpriteBatch batch, ReadOnlySpan<(Vector2 Pos, float Radius, Rgb Color, float Intensity)> lights, Int2 lightSize, Matrix toLight,
+    public void AddLights(SpriteBatch batch, ReadOnlySpan<PointLight> lights, Int2 lightSize, Matrix toLight,
                           Vector2 camera, Vector2 viewSize, IsoMath iso, Texture2D pixel)
     {
         if (GroundRT is null || _occ is null || lights.Length == 0) return;
@@ -144,12 +144,13 @@ public sealed class ShaderLight : IDisposable
         p["GroundTexture"]?.SetValue(GroundRT);
         p["OccTexture"]?.SetValue(_occ);
         batch.Begin(SpriteSortMode.Immediate, Add, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone, _light);
-        foreach (var (pos, radius, color, k) in lights)
+        foreach (var (pos, radius, color, k, height) in lights)
         {
             var rect = new RectF(pos.X - radius, pos.Y - radius - LiftMargin, pos.X + radius, pos.Y + radius + 8f);
             p["RectMin"]?.SetValue(new XnaVector2(rect.X0, rect.Y0));
             p["RectSize"]?.SetValue(new XnaVector2(rect.Width, rect.Height));
             p["LightPos"]?.SetValue(new XnaVector2(pos.X, pos.Y));
+            p["LightHeight"]?.SetValue(height);
             p["LightRadius"]?.SetValue(radius);
             p["LightColor"]?.SetValue(new Microsoft.Xna.Framework.Vector3(color.R / 255f * k, color.G / 255f * k, color.B / 255f * k));
             BatchX.Blit(batch, pixel, rect, new Rectangle(0, 0, 1, 1), Color.White);

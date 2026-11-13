@@ -49,7 +49,6 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
     private RenderTarget2D? _worldRT;
     private RenderTarget2D? _upRT;
     private int _scale;
-    private RectF _heroRect;
     private int _enemiesDrawn, _enemiesHidden;
     /// <summary>이번 프레임 주인공 그림 묶음(겉모습 — <see cref="HeroLookArt"/>, v0.9.1 V10). 직업이 없으면 null.</summary>
     private SpriteSetDef? _heroSet;
@@ -257,10 +256,8 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
     {
         var w = f.World;
         var hero = w.Hero;
-        _heroRect = new RectF(f.HeroDraw.X - 16, f.HeroDraw.Y - 76, f.HeroDraw.X + 16, f.HeroDraw.Y);
         if (_heroSet is not { } set) return;
         if (!UnitFrame(set, hero.Anim.Clip, hero.Anim, hero.Facing, "", 1f, f.HeroDraw, out var h, out var page, out var src, out var dest)) return;
-        _heroRect = dest;
         DrawUnit(batch, h.Pages[page], src, dest, Rgb.White, 1f);
         _shaderLight?.AddGround(h.Pages[page], new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, f.HeroDraw.Y);
         if (_arena is not null)
@@ -356,7 +353,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
                                      ScatterLayout.StartFrame(key, i, frames));
             }
             else DrawEffectSprite(batch, f, def, age, pos, scale, tint, Vector2.Zero, 0);
-            if (def.Light is { } light) f.ShortLights.Add((pos, hz.Radius * light.RadiusMul, light.Color, 1f));
+            if (def.Light is { } light) f.ShortLights.Add(new PointLight(pos, hz.Radius * light.RadiusMul, light.Color, 1f));
             f.Shapes.Add(new ShapeDraw(prim.Circle, new Rectangle(0, 0, prim.Circle.Width, prim.Circle.Height),
                                        new RectF(pos.X - hz.Radius, pos.Y - hz.Radius, pos.X + hz.Radius, pos.Y + hz.Radius), pos, 1f, false, false, FogShape: true));
         }
@@ -515,8 +512,6 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         CollectGrates(f);
         System.Runtime.InteropServices.CollectionsMarshal.AsSpan(_items).Sort(DrawItem.Comparer.Compare);
 
-        // 주인공 사각형을 먼저 알아야 창살 반투명을 판정한다 — 그림 사각형만 미리 계산
-        PeekHeroRect(f);
         foreach (var it in _items)
         {
             switch (it.Kind)
@@ -524,7 +519,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
                 case DrawKind.Hero: DrawHero(batch, f); break;
                 case DrawKind.Enemy: DrawEnemy(batch, f, enemies[it.Index]); break;
                 case DrawKind.Merchant: DrawMerchant(batch, f, prim); break;
-                case DrawKind.Grate: DrawGrate(batch, f, it); break;
+                case DrawKind.Grate: DrawGrate(batch, it, _grateDraws); break;
                 default:
                     // 벽은 늘 불투명(2026-11-13 — 가려진 유닛은 UnitOutlines 윤곽선)
                     _arena!.DrawItem(batch, it.Index, prim, 1f);
@@ -532,15 +527,6 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
                     break;
             }
         }
-    }
-
-    private void PeekHeroRect(WorldFrame f)
-    {
-        var w = f.World;
-        _heroRect = new RectF(f.HeroDraw.X - 16, f.HeroDraw.Y - 76, f.HeroDraw.X + 16, f.HeroDraw.Y);
-        if (_heroSet is { } set
-            && UnitFrame(set, w.Hero.Anim.Clip, w.Hero.Anim, w.Hero.Facing, "", 1f, f.HeroDraw, out _, out _, out _, out var dest))
-            _heroRect = dest;
     }
 
     /// <summary>앞(화면 아래) 안쪽 벽·앞 턱이 겹친 유닛(7.7 ④ — 최소 밝기·발광을 건너뜀).</summary>
@@ -586,8 +572,8 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         BatchX.Centered(batch, prim.Circle, spot - new Vector2(0f, 52f), new Vector2(16f, 16f), new Rgb(190, 150, 120).ToXna(fogA));
     }
 
-    /// <summary>창살 기둥 하나(이번 프레임 — <see cref="CollectGrates"/>): 원본 그림·자리(내려간 만큼 잘림)·칸 중심·가림 판정용 사각형.</summary>
-    private readonly record struct GrateDraw(Texture2D Page, Rectangle Src, RectF Dest, RectF FullRect, Vector2 CellCenter, bool EnemyPassing);
+    /// <summary>창살 기둥 하나(이번 프레임 — <see cref="CollectGrates"/>): 원본 그림·자리(내려간 만큼 잘림)·적 드나듦.</summary>
+    private readonly record struct GrateDraw(Texture2D Page, Rectangle Src, RectF Dest, bool EnemyPassing);
 
     /// <summary>
     /// 문 봉인 창살(v0.9.4 V13, 7.11)을 4층 정렬 목록에: 문 틈 메가마다 변의 조각(<see cref="GateGrates.PieceName"/>)의 기둥 그림을 그 하위 칸 자리에.
@@ -609,7 +595,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             {
                 var p = _placed[i];
                 if (!WallFade.Overlaps(p.Full, f.View)) continue;
-                _grateDraws.Add(new GrateDraw(p.Page, p.Src, p.Dest, p.Full, iso.CellCenter(p.Tx, p.Ty), passing));
+                _grateDraws.Add(new GrateDraw(p.Page, p.Src, p.Dest, passing));
                 var sortY = DrawOrder.CellSortY(iso, new ArenaCell(p.Tx, p.Ty, p.Kind, 0));
                 _items.Add(new DrawItem(sortY, DrawOrder.CellTiebreak(iso, p.Tx, p.Ty), DrawKind.Grate, _grateDraws.Count - 1));
             }
@@ -618,15 +604,14 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
 
     private readonly List<GateGrateArt.Placed> _placed = new(32);
 
-    /// <summary>창살 기둥 하나 — 안쪽 벽과 같은 가림 규칙(주인공을 가리면 반투명, 7.6 <see cref="WallFade"/>), 적이 드나드는 문이면 같은 알파(<see cref="GateGrates.EnemyPassing"/>).</summary>
-    private void DrawGrate(SpriteBatch batch, WorldFrame f, in DrawItem it)
+    /// <summary>
+    /// 창살 기둥 하나 — 벽처럼 늘 불투명(2026-11-13 사용자 결정, 기획 10.7 — 가려진 유닛은 <see cref="UnitOutlines"/>).
+    /// 적이 드나드는 문만 <see cref="WallFade.Alpha"/> 로 흐리게(<see cref="GateGrates.EnemyPassing"/>).
+    /// </summary>
+    private static void DrawGrate(SpriteBatch batch, in DrawItem it, List<GrateDraw> draws)
     {
-        var g = _grateDraws[it.Index];
-        var w = f.World;
-        var fade = g.EnemyPassing
-                   || w.Map is { } map && WallFade.Fades(false, it.SortY, g.FullRect, g.CellCenter, f.HeroDraw, _heroRect,
-                                                        WallFade.Radius(map.WallFade, w.Lighting.HeroLightRadius), map.WallFade.Mode);
-        var a = fade ? WallFade.Alpha : 1f;
+        var g = draws[it.Index];
+        var a = g.EnemyPassing ? WallFade.Alpha : 1f;
         BatchX.Blit(batch, g.Page, g.Dest, g.Src, new Color(a, a, a, a));
     }
 
@@ -692,7 +677,13 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             var duration = light.Duration ?? fx.Life;
             if (age > duration) continue;
             var radius = (fx.Event.Radius > 0f ? fx.Event.Radius : 48f * fx.Scale) * light.RadiusMul;
-            f.ShortLights.Add((fx.Event.Pos, radius, light.Color, 1f - age / Math.Max(0.01f, duration)));
+            f.ShortLights.Add(new PointLight(fx.Event.Pos, radius, light.Color, 1f - age / Math.Max(0.01f, duration)));
+        }
+        // 날아가는 투사체 빛(2026-11-13): 바닥 자리 위 light.height 에 뜬 점 빛 — 셰이더 빛이 3D 거리로 바닥·벽에 비춘다
+        foreach (var p in f.World.Projectiles.Items)
+        {
+            if (p.Removed || p.Def.Light is not { } pl) continue;
+            f.ShortLights.Add(new PointLight(Vector2.Lerp(p.PrevPos, p.Pos, _alphaInterp), pl.Radius * (p.Scale > 0f ? p.Scale : 1f), pl.Color, pl.Intensity, pl.Height));
         }
     }
 

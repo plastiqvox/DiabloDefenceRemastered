@@ -36,6 +36,9 @@ public static class ArenaLayout
     /// </summary>
     public const string PropChars = ".wLWmxMX";
 
+    /// <summary>변형 해시 소금(바닥 섞기와 다른 무늬).</summary>
+    private const uint AccentSalt = 0xACCE57EDu;
+
     public static ArenaGrid Expand(MapDef map) => Expand(map, map.Tileset.Def);
 
     /// <summary>풀고, 오류가 있으면 모두 담은 <see cref="InvalidDataException"/>. 로더가 이미 검사한 정의에 쓴다.</summary>
@@ -192,6 +195,22 @@ public static class ArenaLayout
             }
         }
 
+        // 4b. 변형(accents): 다 깐 칸을 같은 성질의 장식판으로 — 문 칸은 그대로, 바닥 섞기와 다른 해시
+        if (tileset.Accents.Count > 0)
+        {
+            var accentHash = mapHash ^ AccentSalt;
+            for (var my = 0; my < m; my++)
+                for (var mx = 0; mx < m; mx++)
+                {
+                    var i = my * m + mx;
+                    if (gateCell[i] || !tileset.Accents.TryGetValue(mega[i], out var accent) || accent.With.Count == 0) continue;
+                    var h = StableHash.Of(accentHash, (uint)mx, (uint)my);
+                    if ((h & 0xFFFF) / 65536f >= accent.Chance) continue;
+                    source[i] += $" → accents.{mega[i]}";
+                    mega[i] = accent.With[(int)((h >> 16) % (uint)accent.With.Count)];
+                }
+        }
+
         // 5. 성질 풀기
         var n = m * 2;
         var cellsOut = new CellFlags[n * n];
@@ -272,6 +291,26 @@ public static class ArenaLayout
         }
 
         if (tileset.Mirror is { } mirror) ValidateMirror(tileset, mirror, errors);
+
+        // 변형: 원래 번호는 변형이 아닌 이름 붙인 번호, 확률 0..1, 장식판은 원래 번호와 성질이 같음(그림만 바뀐다)
+        foreach (var (tile, accent) in tileset.Accents.OrderBy(p => p.Key))
+        {
+            var path = $"$.accents.{tile}";
+            if (!NamedTiles(tileset, withAccents: false).Contains(tile))
+                errors.Add(new(path, $"메가타일 {tile} 은 floor·borders·gates·pieces 가 이름 붙인 번호가 아니다"));
+            if (accent.Chance is < 0f or > 1f || float.IsNaN(accent.Chance))
+                errors.Add(new($"{path}.chance", $"확률 {accent.Chance} 는 0..1 이다"));
+            if (accent.With.Count == 0) errors.Add(new($"{path}.with", "장식판이 하나도 없다"));
+            tileset.Props.TryGetValue(tile, out var baseText);
+            for (var k = 0; k < accent.With.Count; k++)
+            {
+                var alt = accent.With[k];
+                if (tileset.Accents.ContainsKey(alt))
+                    errors.Add(new($"{path}.with[{k}]", $"장식판 {alt} 에 다시 변형이 있다"));
+                if (baseText is not null && tileset.Props.TryGetValue(alt, out var altText) && altText != baseText)
+                    errors.Add(new($"{path}.with[{k}]", $"장식판 {alt} 성질 '{altText}' 가 {tile} 의 '{baseText}' 와 다르다(변형은 그림만 바꾼다)"));
+            }
+        }
     }
 
     /// <summary>
@@ -377,7 +416,7 @@ public static class ArenaLayout
                 errors.Add(new("$.open_center", $"open_center {oc} 는 비지 않고 테두리 안(메가 1..{m - 2}, 끝 미포함 {m - 1})이어야 한다"));
             else
             {
-                var floors = new HashSet<int>(ts.Floor);
+                var floors = FloorTiles(ts);
                 var pillars = Marked(ts, TileMark.Pillar);
                 var pillarCount = 0;
                 for (var my = oc.Y0; my < oc.Y1; my++)
@@ -671,10 +710,31 @@ public static class ArenaLayout
         }
     }
 
-    /// <summary>이 타일셋이 이름 붙인 메가타일 번호(floor ∪ borders ∪ gates ∪ pieces).</summary>
-    public static SortedSet<int> NamedTiles(TilesetDef tileset)
+    /// <summary>바닥 번호와 그 변형 장식판(<c>open_center</c>·원작 방 대조가 "바닥" 으로 본다).</summary>
+    public static HashSet<int> FloorTiles(TilesetDef tileset)
+    {
+        var set = new HashSet<int>(tileset.Floor);
+        foreach (var t in tileset.Floor)
+            if (tileset.Accents.TryGetValue(t, out var a)) set.UnionWith(a.With);
+        return set;
+    }
+
+    /// <summary>장식판 → 원래 번호(원작 방 대조가 변형 전 배치로 비교하도록).</summary>
+    public static int AccentBase(TilesetDef tileset, int tile)
+    {
+        foreach (var (key, a) in tileset.Accents)
+            if (a.With.Contains(tile)) return key;
+        return tile;
+    }
+
+    /// <summary>이 타일셋이 이름 붙인 메가타일 번호(floor ∪ borders ∪ gates ∪ pieces ∪ 변형 장식판).</summary>
+    public static SortedSet<int> NamedTiles(TilesetDef tileset) => NamedTiles(tileset, withAccents: true);
+
+    private static SortedSet<int> NamedTiles(TilesetDef tileset, bool withAccents)
     {
         var set = new SortedSet<int>(tileset.Floor);
+        if (withAccents)
+            foreach (var a in tileset.Accents.Values) set.UnionWith(a.With);
         foreach (var b in tileset.Borders.Values)
             foreach (var t in new[] { b.CornerN, b.EdgeNe, b.CornerE, b.EdgeSe, b.CornerS, b.EdgeSw, b.CornerW, b.EdgeNw }) set.Add(t);
         foreach (var gs in tileset.Gates.Values)
@@ -754,6 +814,12 @@ public static class ArenaLayout
             sb.Append(t.ToString(inv)).Append('=').Append(text).Append(';');
         AppendDiffs(sb.Append("|sol_known_diffs="), ts.SolKnownDiffs);
         AppendDiffs(sb.Append("|design_diffs="), ts.DesignDiffs);
+        if (ts.Accents.Count > 0)
+        {
+            sb.Append("|accents=");
+            foreach (var (t, a) in ts.Accents.OrderBy(p => p.Key))
+                sb.Append(t.ToString(inv)).Append(':').Append(a.Chance.ToString("R", inv)).Append('/').AppendJoin(',', a.With.Select(w => w.ToString(inv))).Append(';');
+        }
         return StableHash.Of(sb.ToString()).ToString("x8", inv);
     }
 

@@ -163,18 +163,22 @@
     // 해골왕 작은 탄(부채·고리·나선·연사·벽·꼬리): 파이어볼 fireba ×0.5, 반경 5, 140px/s(패턴이 덮음), 640px, 장애물 막힘, 맞으면 fx_spark ×0.6
     { "id": "pj_sk_orb", "sprite": "fireba", "scale": 0.5, "blend": "alpha",
       "radius": 5, "hero_hit_radius": 6, "speed": 140, "range": 640, "blocked_by_obstacles": true, "pierce": 1,
-      "hit_effect": { "effect": "fx_spark", "scale": 0.6 } },
+      "hit_effect": { "effect": "fx_spark", "scale": 0.6 },
+      "light": { "color": [255, 140, 60], "radius": 90, "intensity": 0.5, "height": 36 } },   // 탄막 빛(2026-11-13 — 많아서 약하게, 64개 상한은 주인공 가까운 순)
     // 해골왕 속도 섞기의 느린 큰 탄: fireba ×1.0, 반경 10, 75px/s, 560px
     { "id": "pj_sk_orb_big", "sprite": "fireba", "scale": 1.0, "blend": "alpha",
-      "radius": 10, "hero_hit_radius": 6, "speed": 75, "range": 560, "blocked_by_obstacles": true, "pierce": 1, "hit_effect": "fx_spark" },
+      "radius": 10, "hero_hit_radius": 6, "speed": 75, "range": 560, "blocked_by_obstacles": true, "pierce": 1, "hit_effect": "fx_spark",
+      "light": { "color": [255, 140, 60], "radius": 150, "intensity": 0.9, "height": 44 } },
     // 블랙애시 불화살(부채·연사): 불화살 farrow ×0.9, 반경 5, 240px/s, 380px — 일반 불타는 해골 궁수의 pj_fire_arrow 와 판정만 달라 따로 둔다(열린 질문 57)
     { "id": "pj_ash_arrow", "sprite": "farrow", "scale": 0.9, "blend": "alpha",
-      "radius": 5, "hero_hit_radius": 6, "speed": 240, "range": 380, "blocked_by_obstacles": true, "pierce": 1, "hit_effect": "fx_spark" },
+      "radius": 5, "hero_hit_radius": 6, "speed": 240, "range": 380, "blocked_by_obstacles": true, "pierce": 1, "hit_effect": "fx_spark",
+      "light": { "color": [255, 150, 70], "radius": 90, "intensity": 0.6, "height": 36 } },
     // 로트피스트 독 덩어리: fireba ×0.6 초록 색조, 반경 6, 150px/s, 사거리는 패턴이 정함(주인공까지 × 0.7~1.3, 40~360).
     // 끝나면(맞음·사거리 끝·장애물) 장판 fx_poison_pool 반경 40·5s·0.5s 마다 5, 묶음 rot_glob 동시 8(발밑 독 웅덩이 poison 과 따로 — 열린 질문 59)
     { "id": "pj_rot_glob", "sprite": "fireba", "scale": 0.6, "tint": [120, 230, 90], "blend": "alpha",
       "radius": 6, "hero_hit_radius": 6, "speed": 150, "range": 360, "blocked_by_obstacles": true, "pierce": 1,
-      "on_end": { "effect": "fx_poison_pool", "radius": 40, "duration": 5.0, "tick": 0.5, "damage": 5, "cap_group": "rot_glob", "cap": 8 } }
+      "on_end": { "effect": "fx_poison_pool", "radius": 40, "duration": 5.0, "tick": 0.5, "damage": 5, "cap_group": "rot_glob", "cap": 8 },
+      "light": { "color": [120, 230, 90], "radius": 100, "intensity": 0.6, "height": 36 } }
   ],
   "drop_tables": [
     // 액트 보스 드롭(기획 11.7 v0.9 금화 경제·9.5): 정예 상자(3회 강화) + 금화 100. 마지막 액트(지금 액트 1)면 승리로 끝나 줍지 않는다 — 계단이 생기는 단계 3 에서 쓰인다

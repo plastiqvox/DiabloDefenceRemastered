@@ -22,8 +22,8 @@
         { "kind": "boss",   "from": "10:00",                "number": 9, "floor": 4, "boss": "skeleton_king" } ],
       "rewards": { "weights": { "reward_tome": 30, "reward_chest": 30, "reward_potion": 15, "reward_smith": 8, "reward_witch": 8, "reward_healer": 6 },
                    "first_room": "reward_tome", "gold_scale": 1.0 },
-      "lighting": { "ambient": [200, 200, 215], "darkness": 0.5,
-                    "hero_light": { "color": [255, 240, 220], "radius": 420 },
+      "lighting": { "ambient": [200, 200, 215], "darkness": 0.72,     // 2026-11-13 사용자 요청 "더 어둡게"·"아직도 환하다" — 0.5 → 0.72(주변 밝기 0.39 → 0.22)
+                    "hero_light": { "color": [255, 240, 220], "radius": 380 },   // 시야 반경(10.7) — 2026-11-13 사용자 요청 "시야를 줄여" 420 → 380(검사 하한 13.5-15 — 원거리 적 kite 띠 + 여유가 빛 안이어야 함)
                     "unit_min_light": 0.6, "lights": [] },
       "scaling": { "hp": [1.0, 0.08], "damage": [1.0, 0.03] },
       "elite_chance": { "from": "02:00", "at": "00:30", "chance": 0.25 },

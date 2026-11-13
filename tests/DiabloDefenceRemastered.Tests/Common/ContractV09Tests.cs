@@ -194,7 +194,7 @@ public class ContractV09Tests
         Assert.Equal(15f, d.Rules.Equipment!.ArmorCap);                                     // v0.9.2 열린 질문 52 답
         Assert.Equal(13f, new[] { "eq_full_helm", "eq_breast_plate", "eq_kite_shield" }.Sum(id => d.ItemBases.Get(id).Stats[StatKey.Armor]));   // 판금 셋 13 ≤ 15
         Assert.Equal((2, 5, 0.40f), (d.Rules.Hero!.Potions!.Slots, d.Rules.Hero.Potions.SlotsMax, d.Rules.Hero.Potions.HealPct));
-        Assert.Equal([3.0f, 2.0f, 1.2f], d.Rules.Hero.Potions.Durations);
+        Assert.Equal([5.0f, 3.5f, 2.0f], d.Rules.Hero.Potions.Durations);   // 2026-11-13 사용자 요청 "회복 속도를 더 늦게"(3·2·1.2 → 5·3.5·2)
         Assert.Equal([4, 5], d.Rules.Rooms!.Rewards.MerchantGuaranteeRoom);
         Assert.Equal(PickupKind.PotionStack, d.Pickups.Get("healing_potion").Kind);
         Assert.Equal(RewardKind.HealNextRoom, d.Rewards.Get("reward_potion").Kind);

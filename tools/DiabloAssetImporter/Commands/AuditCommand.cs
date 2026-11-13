@@ -59,7 +59,7 @@ internal static class AuditCommand
                 {
                     var tilesetDef = data.Tilesets.FirstOrDefault(t => t.Id == e.Id);
                     if (tilesetDef is null) continue;
-                    var floor = tilesetDef.Floor.ToHashSet();
+                    var floor = ArenaLayout.FloorTiles(tilesetDef);
                     foreach (var dunName in e.AuditDun)
                     {
                         if (mpq.Read(e.SourcePath(dunName)) is not { } bytes) { problems.Add($"audit_dun {e.SourcePath(dunName)} 가 원본에 없다"); continue; }
@@ -88,7 +88,8 @@ internal static class AuditCommand
     /// </summary>
     public static IEnumerable<string> CompareDun(ArenaGrid grid, IReadOnlySet<int> floor, DunFile dun, string dunName)
     {
-        int Norm(int v) => v == 0 || floor.Contains(v) ? 0 : v;
+        // 변형 장식판(타일셋 accents)은 원래 번호로 — 변형 전 배치로 비교한다(장식판이 대조를 피하는 길이 되지 않게)
+        int Norm(int v) => v == 0 || floor.Contains(v) ? 0 : ArenaLayout.AccentBase(grid.Tileset, v);
         var m = grid.MegaSize;
         for (var my = 0; my + 4 <= m; my++)
             for (var mx = 0; mx + 4 <= m; mx++)
