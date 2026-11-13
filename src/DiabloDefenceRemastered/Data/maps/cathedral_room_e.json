@@ -29,7 +29,8 @@
           { "id": "e_wall_west", "piece": "wall_end_h", "at": [[2, 11]] },
           { "piece": "wall_h", "at": [[3, 11]] },
           { "piece": "wall_v", "line": [[4, 11], [4, 12]] },
-          { "piece": "wall_post", "at": [[4, 13]] } ] },            // 열린 아래 끝 마감(2026-11-13)
+          { "piece": "wall_post", "at": [[4, 13]] },                // 열린 아래 끝 마감(2026-11-13)
+          { "id": "e_pillars", "piece": "pillar", "at": [[6, 6], [9, 9]] } ] },   // 십자 홀 기둥 둘(2026-11-13 — 방 내부를 더 채움, open_center 기둥 상한 2)
       "open_center": [5, 5, 11, 11],
       "entries": [ { "id": "gate_nw", "outside": [-4, 15.5], "inside": [4, 15.5] },
                    { "id": "gate_ne", "outside": [15.5, -4], "inside": [15.5, 4] },

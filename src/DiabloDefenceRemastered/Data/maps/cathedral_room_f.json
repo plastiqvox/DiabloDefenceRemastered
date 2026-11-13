@@ -1,0 +1,31 @@
+// 본뜬 원작 방: 없음 — 대성당 작은 방 F "열주 회랑"(2026-11-13 사용자 요청 "보스전이 아닌 방은 내부가 더 복잡해도 된다"): 가운데 기둥 넷이 주인공 둘레에 열주를 이루고,
+// 뒤쪽 두 귀퉁이(북·남)에 석관, 오른쪽·왼쪽 뒷벽에서 짧은 벽이 튀어나와 벽감을 만든다(끝은 작은 기둥으로 마감).
+// 작은 방(설계서 6.11 "방 맵"): 메가 16 = 하위 32×32, 둘레·문은 arch_hall 짜임. 거울판(mirror)은 L1 짝 표로 켠다.
+{
+  "maps": [
+    {
+      "id": "cathedral_room_f", "tileset": "l1", "palette": "l1_1", "size": 16, "mirror": true,
+      "room_kinds": ["normal", "elite"],
+      "layout": {
+        "border": "arch_hall",
+        "gates": [ { "id": "gate_nw", "side": "nw" }, { "id": "gate_ne", "side": "ne" },
+                   { "id": "gate_se", "side": "se" }, { "id": "gate_sw", "side": "sw" } ],
+        "place": [
+          { "id": "f_pillars", "piece": "pillar", "at": [[6, 6], [9, 6], [6, 9], [9, 9]] },
+          { "id": "f_tombs", "piece": "sarcophagus", "at": [[2, 2], [12, 12]] },
+          { "id": "f_wall_east", "piece": "wall_corner", "at": [[12, 0]], "over_border": true },   // 뒷벽에서 바로 이어짐(둘레 위 줄 그대로 + 왼쪽 열)
+          { "piece": "wall_v", "at": [[12, 1]] },
+          { "piece": "wall_post", "at": [[12, 2]] },
+          { "id": "f_wall_west", "piece": "wall_corner", "at": [[0, 12]], "over_border": true },
+          { "piece": "wall_h", "at": [[1, 12]] },
+          { "piece": "wall_post", "at": [[2, 12]] } ] },
+      "entries": [ { "id": "gate_nw", "outside": [-4, 15.5], "inside": [4, 15.5] },
+                   { "id": "gate_ne", "outside": [15.5, -4], "inside": [15.5, 4] },
+                   { "id": "gate_se", "outside": [35, 15.5], "inside": [26, 15.5] },
+                   { "id": "gate_sw", "outside": [15.5, 35], "inside": [15.5, 26] } ],
+      "hero_start": { "tile": [15.5, 15.5], "facing": "south" },
+      "anchors": { "center": [15.5, 15.5] },
+      "art": "d1/maps/cathedral_room_f"
+    }
+  ]
+}

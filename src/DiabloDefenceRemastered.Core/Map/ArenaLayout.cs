@@ -814,6 +814,16 @@ public static class ArenaLayout
             sb.Append(t.ToString(inv)).Append('=').Append(text).Append(';');
         AppendDiffs(sb.Append("|sol_known_diffs="), ts.SolKnownDiffs);
         AppendDiffs(sb.Append("|design_diffs="), ts.DesignDiffs);
+        if (ts.Doors.Count > 0)
+        {
+            // 문 그림(덤 기둥)도 맵 그림에 구우므로 바뀌면 그림이 낡는다
+            sb.Append("|doors=");
+            foreach (var (side, cells) in ts.Doors.OrderBy(p => p.Key, StringComparer.Ordinal))
+                foreach (var c in cells)
+                    sb.Append(side).Append(':').Append(c.At.X.ToString(inv)).Append(',').Append(c.At.Y.ToString(inv)).Append('=')
+                      .Append(c.Closed.ToString(inv)).Append('/').Append(c.Open.ToString(inv))
+                      .Append('+').Append(c.OpenOverlay?.ToString(inv) ?? "-").Append(';');
+        }
         if (ts.Accents.Count > 0)
         {
             sb.Append("|accents=");

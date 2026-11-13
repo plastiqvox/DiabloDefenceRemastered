@@ -48,6 +48,11 @@ public sealed record ArenaArt
     public IReadOnlyList<ArenaFloorChunk> Floor { get; init; } = [];
     public string Columns { get; init; } = "columns";
     public IReadOnlyList<ArenaCell> Cells { get; init; } = [];
+    /// <summary>
+    /// 문 봉인 나무 문 기둥(2026-11-13, 타일셋 <c>doors</c>): 변 방향·문 틈 메가 안 하위 칸·닫힌·열린 그림의 기둥 아틀라스 프레임(1부터).
+    /// 예전 그림(없음)이면 게임은 창살로 돌아간다.
+    /// </summary>
+    public IReadOnlyList<ArenaDoorCell> Doors { get; init; } = [];
 
     public static ArenaArt Read(string path) => AssetJson.Read<ArenaArt>(path);
     public static ArenaArt Parse(string json) => AssetJson.Deserialize<ArenaArt>(json);
@@ -133,6 +138,13 @@ public sealed record ArenaArt
             if (c.Frame < 1) errors.Add($"cells[{i}] frame {c.Frame} — 프레임 번호는 1부터");
             if (i > 0 && Compare(Cells[i - 1], c) >= 0) errors.Add($"cells[{i}] 가 (ty, tx, kind) 순이 아니다");
         }
+        for (var i = 0; i < Doors.Count; i++)
+        {
+            var d = Doors[i];
+            if (d.Side is not ("v" or "h")) errors.Add($"doors[{i}] 변 방향 '{d.Side}' 는 v 또는 h");
+            if (d.Dx is < 0 or > 1 || d.Dy is < 0 or > 1) errors.Add($"doors[{i}] 자리 ({d.Dx},{d.Dy}) 는 메가 안(0..1)");
+            if (d.Closed < 1 || d.Open < 1) errors.Add($"doors[{i}] frame — 프레임 번호는 1부터");
+        }
         return errors;
     }
 
@@ -153,6 +165,18 @@ public sealed record ArenaFloorChunk
 /// <summary>칸 그림 하나 <c>[tx, ty, kind, frame]</c>(frame 1부터, 기둥 아틀라스 안 프레임).</summary>
 [JsonConverter(typeof(ArenaCellJsonConverter))]
 public readonly record struct ArenaCell(int Tx, int Ty, ArenaCellKind Kind, int Frame);
+
+/// <summary>문 기둥 하나(<see cref="ArenaArt.Doors"/>): 변 방향(<c>v</c>·<c>h</c>), 문 틈 메가 안 하위 칸(<see cref="Dx"/>·<see cref="Dy"/>), 닫힌·열린 그림 프레임.</summary>
+public sealed record ArenaDoorCell
+{
+    public required string Side { get; init; }
+    public int Dx { get; init; }
+    public int Dy { get; init; }
+    public int Closed { get; init; }
+    public int Open { get; init; }
+    /// <summary>열린 문 위 아치 덧그림 프레임(0 = 없음).</summary>
+    public int OpenOverlay { get; init; }
+}
 
 public sealed class ArenaCellJsonConverter : JsonConverter<ArenaCell>
 {

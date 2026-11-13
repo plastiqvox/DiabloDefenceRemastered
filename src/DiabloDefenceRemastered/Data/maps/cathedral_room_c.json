@@ -25,7 +25,8 @@
           { "id": "c_room_south", "piece": "wall_post", "at": [[11, 11]] },   // 모서리 조각(양쪽 끝이 열려 단면이 보임) 대신 작은 기둥(2026-11-13)
           { "piece": "wall_end_h", "at": [[14, 11]] },
           { "piece": "wall_end_v", "at": [[11, 14]] },
-          { "id": "c_pillars", "piece": "pillar", "at": [[6, 9], [9, 6]] } ] },
+          { "id": "c_pillars", "piece": "pillar", "at": [[6, 9], [9, 6]] },
+          { "id": "c_tombs", "piece": "sarcophagus", "at": [[12, 2], [2, 12]] } ] },   // 오른쪽·왼쪽 귀퉁이 석관(2026-11-13 — 방 내부를 더 채움)
       "open_center": [5, 5, 11, 11],
       "entries": [ { "id": "gate_nw", "outside": [-4, 15.5], "inside": [4, 15.5] },
                    { "id": "gate_ne", "outside": [15.5, -4], "inside": [15.5, 4] },

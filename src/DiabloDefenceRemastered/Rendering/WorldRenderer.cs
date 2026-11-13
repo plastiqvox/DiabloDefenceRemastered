@@ -54,6 +54,8 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
     private SpriteSetDef? _heroSet;
     /// <summary>문 봉인 창살 그림(액트마다 한 번 — <see cref="GateGrateArt.Build"/>). null 이면 모든 문이 코드 그림 봉인.</summary>
     private GateGrateArt? _grateArt;
+    /// <summary>지금 방의 나무 문 그림(2026-11-13 — 있으면 창살 대신). 맵이 바뀔 때마다.</summary>
+    private GateDoorArt? _doorArt;
     private StageDef? _grateArtStage;
     private bool _grateArtBuilt;
     private readonly List<GrateDraw> _grateDraws = new(32);
@@ -92,6 +94,8 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         _light?.Fog.Attach(world);
         _shaderLight?.Attach(world.Arena);
         // 창살 그림은 액트 맵 풀에서 빌려 오므로 액트마다 한 번(액트 없는 월드는 그 맵만 보고 매번)
+        // 나무 문 그림은 그 방 맵 그림에 함께 구워 있으므로 맵마다(없으면 창살)
+        _doorArt = world.Map is { } doorMap ? GateDoorArt.Build(doorMap, art) : null;
         if (!_grateArtBuilt || world.Stage is null || !ReferenceEquals(_grateArtStage, world.Stage))
         {
             _grateArt = GateGrateArt.Build(world, art);
@@ -587,13 +591,17 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         _grateDraws.Clear();
         _placed.Clear();
         var w = f.World;
-        if (_grateArt is null || _arena is null || w.Room is not { } room) return;
+        if ((_grateArt is null && _doorArt is null) || _arena is null || w.Room is not { } room) return;
         var iso = _arena.Iso;
         foreach (var (id, gate) in w.Gates)
         {
             var from = _placed.Count;
-            if (!_grateArt.Place(gate, iso, GateGrates.Sink(room, id, f.StageTick), _placed) || _placed.Count == from) continue;
-            var passing = GateGrates.EnemyPassing(gate, iso, w.Enemies.Items);   // 적이 드나드는 동안 흐리게(창살을 뚫고 지나가 보이지 않게)
+            var sink = GateGrates.Sink(room, id, f.StageTick);
+            var passing = GateGrates.EnemyPassing(gate, iso, w.Enemies.Items);   // 적이 드나드는 동안: 창살은 흐리게, 문은 열림
+            if (_doorArt is not null && _doorArt.Place(gate, iso, open: sink > 0f || passing, _placed))
+                passing = false;   // 나무 문(2026-11-13): 열린 문 그림으로 지나가므로 흐리게 하지 않는다
+            else if (_grateArt is null || !_grateArt.Place(gate, iso, sink, _placed)) continue;
+            if (_placed.Count == from) continue;
             for (var i = from; i < _placed.Count; i++)
             {
                 var p = _placed[i];
@@ -635,6 +643,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         var openFade = room.Phase >= RoomPhase.Doors ? Math.Clamp(1f - (f.StageTick - room.PhaseTick) / 18f, 0f, 1f) : 1f;
         foreach (var (id, gate) in w.Gates)
         {
+            if (_doorArt is not null && _doorArt.Has(gate.Side)) continue;                                      // 원작 나무 문(4층 — CollectGrates)
             if (_grateArt is not null && _grateArt.TryGet(GateGrates.PieceName(gate.Side), out _)) continue;   // 원작 창살(4층 — CollectGrates)
             var sealedNow = GateSeals.IsSealed(room, id);
             var a = pulse * (sealedNow ? 1f : openFade);

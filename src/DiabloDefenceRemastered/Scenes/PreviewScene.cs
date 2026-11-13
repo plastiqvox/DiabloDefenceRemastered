@@ -39,6 +39,7 @@ public sealed class PreviewScene : IScene, IDisposable
     private ArenaRenderer? _arena;
     private RenderTarget2D? _mapRT;
     private GateGrateArt? _tileGrates;
+    private GateDoorArt? _tileDoors;
     private int _scene = -1;
     private readonly BeginTickSystem _begin = new();
 
@@ -475,7 +476,21 @@ public sealed class PreviewScene : IScene, IDisposable
         // 문 봉인 창살(v0.9.4 V13, 단계 2 wp5): 2.5초 주기로 닫힘 1초 → 0.6초 동안 내려감 → 열림. 맵 그림 위에 겹쳐 그린다(정렬 없음 — 문 틈은 둘레라 가릴 것이 앞 턱뿐)
         var grateState = "";
         _tileGrates ??= GateGrateArt.Build(w, Art, _app.Defs.Maps.All.SelectMany(m => m.Mirrored is { } mm ? new[] { m, mm } : [m]));
-        if (_tileGrates is { } grates)
+        _tileDoors ??= GateDoorArt.Build(w.Map!, Art);
+        if (_tileDoors is { } doors)
+        {
+            // 나무 문(2026-11-13 — 게임과 같이 맵 그림에 있으면 창살 대신): 2.5초 주기로 닫힘 1초 → 열림
+            var open = _now % 150 >= 60;
+            grateState = open ? "  문 열림" : "  문 닫힘";
+            var placed = new List<GateGrateArt.Placed>();
+            foreach (var (_, gate) in w.Gates) doors.Place(gate, grid.Iso, open, placed);
+            var scale = _mapRT.Width / (float)bw * fit;
+            rc.Batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, null, null, null,
+                           Matrix.CreateScale(scale) * Matrix.CreateTranslation(ox, oy, 0f));
+            foreach (var p in placed) BatchX.Blit(rc.Batch, p.Page, p.Dest, p.Src, Color.White);
+            rc.Batch.End();
+        }
+        else if (_tileGrates is { } grates)
         {
             var cycle = (int)(_now % 150);
             var sink = Math.Clamp((cycle - 60) / (float)GateGrates.OpenTicks, 0f, 1f);

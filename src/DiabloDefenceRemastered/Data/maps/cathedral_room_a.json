@@ -17,6 +17,7 @@
                    { "id": "gate_se", "side": "se" }, { "id": "gate_sw", "side": "sw" } ],
         "place": [
           { "id": "a_pillars", "piece": "pillar", "at": [[4, 4], [11, 4], [4, 11]] },
+          { "id": "a_tombs", "piece": "sarcophagus", "at": [[12, 2], [2, 12]] },   // 오른쪽·왼쪽 귀퉁이 석관(2026-11-13 — 방 내부를 더 채움)
           { "id": "a_wall_post", "piece": "wall_post", "at": [[12, 12]] },
           { "piece": "wall_end_v", "at": [[12, 11]] },
           { "piece": "wall_end_h", "at": [[11, 12]] } ] },

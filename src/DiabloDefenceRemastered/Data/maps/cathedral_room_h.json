@@ -1,0 +1,35 @@
+// 본뜬 원작 방: 없음 — 대성당 작은 방 H "무너진 예배당"(2026-11-13 사용자 요청 "보스전이 아닌 방은 내부가 더 복잡해도 된다"): 가운데 피 바닥(2×2 메가),
+// 오른쪽·왼쪽 뒷벽에서 긴 벽이 이어지고 가운데에 닫힌 문이 박혀 있다(장식 — decor_why), 뒤·앞 귀퉁이 쪽에 기둥 둘. 벽 끝은 작은 기둥으로 마감.
+// 작은 방(설계서 6.11 "방 맵"): 메가 16 = 하위 32×32, 둘레·문은 arch_hall 짜임. 거울판(mirror)은 L1 짝 표로 켠다.
+{
+  "maps": [
+    {
+      "id": "cathedral_room_h", "tileset": "l1", "palette": "l1_1", "size": 16, "mirror": true,
+      "room_kinds": ["normal", "elite"],
+      "layout": {
+        "border": "arch_hall",
+        "gates": [ { "id": "gate_nw", "side": "nw" }, { "id": "gate_ne", "side": "ne" },
+                   { "id": "gate_se", "side": "se" }, { "id": "gate_sw", "side": "sw" } ],
+        "place": [
+          { "id": "h_blood", "piece": "blood_floor", "at": [[7, 7], [8, 7], [7, 8], [8, 8]] },
+          { "id": "h_pillars", "piece": "pillar", "at": [[4, 4], [11, 11]] },
+          { "id": "h_wall_east", "piece": "wall_corner", "at": [[11, 0]], "over_border": true },   // 뒷벽에서 바로 이어짐(둘레 위 줄 그대로 + 왼쪽 열)
+          { "piece": "wall_v", "at": [[11, 1]] },
+          { "piece": "door_closed_v", "at": [[11, 2]], "decor_why": "닫힌 문은 벽 장식 — 문으로 쓰지 않음(기획 10.1, 무너진 예배당 분위기)" },
+          { "piece": "wall_v", "at": [[11, 3]] },
+          { "piece": "wall_post", "at": [[11, 4]] },
+          { "id": "h_wall_west", "piece": "wall_corner", "at": [[0, 11]], "over_border": true },
+          { "piece": "wall_h", "at": [[1, 11]] },
+          { "piece": "door_closed", "at": [[2, 11]], "decor_why": "닫힌 문은 벽 장식 — 문으로 쓰지 않음(기획 10.1, 무너진 예배당 분위기)" },
+          { "piece": "wall_h", "at": [[3, 11]] },
+          { "piece": "wall_post", "at": [[4, 11]] } ] },
+      "entries": [ { "id": "gate_nw", "outside": [-4, 15.5], "inside": [4, 15.5] },
+                   { "id": "gate_ne", "outside": [15.5, -4], "inside": [15.5, 4] },
+                   { "id": "gate_se", "outside": [35, 15.5], "inside": [26, 15.5] },
+                   { "id": "gate_sw", "outside": [15.5, 35], "inside": [15.5, 26] } ],
+      "hero_start": { "tile": [15.5, 15.5], "facing": "south" },
+      "anchors": { "center": [15.5, 15.5] },
+      "art": "d1/maps/cathedral_room_h"
+    }
+  ]
+}
