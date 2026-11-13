@@ -62,9 +62,8 @@ public class RealMapTests
         // SOL 오류 보정은 창살 기둥 칸 하나(쓰는 글자가 성질 표와 같음 — ValidateTileset)
         var diff = Assert.Single(ts.SolKnownDiffs);
         Assert.Equal((36, 0, "w", "X"), (diff.Tile, diff.Sub, diff.Sol, diff.Use));
-        // 기획 이유로 다르게 둔 칸은 세로 창살 기둥 칸 하나(36 의 기둥 칸과 같게 — 거울판 짝, WP0)
-        var design = Assert.Single(ts.DesignDiffs);
-        Assert.Equal((35, 0, "w", "X"), (design.Tile, design.Sub, design.Sol, design.Use));
+        // 기획 이유로 다르게 둔 칸: 세로 창살 기둥 칸(36 의 기둥 칸과 같게 — 거울판 짝, WP0), 석관 오른쪽 위 칸(2026-11-13 — 거울판 자기 짝 www.)
+        Assert.Equal([(35, 0, "w", "X"), (131, 1, ".", "w")], ts.DesignDiffs.Select(d => (d.Tile, d.Sub, d.Sol, d.Use)));
         Assert.Equal([15], ts.Marks[TileMark.Pillar]);
         Assert.Equal([36, 35], ts.Marks[TileMark.Grate]);
         Assert.Equal([26, 25], ts.Marks[TileMark.ClosedDoor]);   // 98 은 피 튄 아치 벽(문 아님, 설계서 13.16)

@@ -45,6 +45,9 @@ public sealed class ArenaDrawTable
             for (var tx = 0; tx < n; tx++)
             {
                 if (grid.IsWalkable(tx, ty)) continue;
+                // 둘레(테두리·문 끝 조각)가 아닌 막힌 칸은 늘 안쪽 — 2×2 로 다 막힌 안쪽 조각(제단 wwww, 2026-11-13)의 뒤 칸이 "앞 이웃 없음" 으로 앞 턱(5층),
+                // 앞 칸이 "뒤 이웃 없음" 으로 뒷벽(0b 층)에 가 그리는 차례가 뒤집혔다(석관·촛대가 엉켜 보임 — 사용자 지적)
+                if (!grid.IsBoundary(tx, ty)) { groups[ty * n + tx] = WallGroup.Inner; continue; }
                 var back = grid.IsWalkable(tx - 1, ty) || grid.IsWalkable(tx, ty - 1) || grid.IsWalkable(tx - 1, ty - 1);
                 var front = grid.IsWalkable(tx + 1, ty) || grid.IsWalkable(tx, ty + 1) || grid.IsWalkable(tx + 1, ty + 1);
                 groups[ty * n + tx] = (back, front) switch
