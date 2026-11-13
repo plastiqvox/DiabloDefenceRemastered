@@ -26,6 +26,8 @@ public sealed record EnemyDef : IDef
     /// <summary>덧입힘(색조·발광·알파·크기)은 정예·우두머리·접두사 표시와 원작에 없는 변형에 쓴다. 일반 몬스터는 될 수 있으면 TRN 만.</summary>
     public Rgb Tint { get; init; } = Rgb.White;
     public GlowDef? Glow { get; init; }
+    /// <summary>몸에서 내는 빛(2026-11-13 — 불타는 해골 등, 셰이더 빛이 바닥·벽에 비춤). 없으면 빛 없음. 그리기만 바뀐다.</summary>
+    public CarriedLightDef? Light { get; init; }
     public float Scale { get; init; } = 1f;
     public float Alpha { get; init; } = 1f;
     /// <summary>몸 반경. 없으면 round(그림 묶음 base_radius × scale).</summary>

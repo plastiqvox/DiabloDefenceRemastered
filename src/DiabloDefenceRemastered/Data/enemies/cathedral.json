@@ -24,6 +24,7 @@
 
     { "id": "burning_dead", "name": "불타는 해골", "tags": ["skeleton", "undead", "fire"],
       "sprites": "set_skelaxe", "variant": "", "glow": { "color": [255, 120, 40], "alpha": 0.2 },
+      "light": { "color": [255, 110, 40], "radius": 110, "intensity": 0.7, "height": 50 },   // 몸 불빛(2026-11-13 사용자 요청 — 해골과 갈리게, 셰이더 빛이 바닥·벽에 비춤)
       "hp": 8, "speed": 100, "damage": 15, "armor": 0, "knockback_resist": 0, "xp": 1, "movement": "flow", "drop_table": "dt_common",
       "behaviors": [
         { "type": "self_destruct", "trigger_range": 10, "fuse": 0.6, "radius": 60,

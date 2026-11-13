@@ -885,7 +885,7 @@ v0.3 의 역할(무리·돌격·원거리·탱커·분열·지휘)은 그대로 
 | `zombie` | 좀비 (Zombie) | `zombie\zombie` · 원색 | — / 1.0 | 14 | 28 | 40 | 8 | 1 | 0.3 | 2 | 탱커(느린 물량) | 추적·근접 | zombie, undead | S1 1:00 | 1 |
 | `skeleton_archer` | 해골 궁수 (Skeleton, 활) | `skelbow\sklbw` · `white` | — / 1.0 | 12 | 14 | 62 | 6 | 0 | 0 | 2 | 원거리 | 거리 유지·화살 | skeleton, undead, ranged | S1 2:00 | 1 |
 | `fallen` | 폴른 원 (Fallen One, 창) | `falspear\phall` · `fallent` | — / 1.0 | 10 | 7 | 95 | 4 | 0 | 0 | 1 | 무리(빠른 떼, 4~6마리) | 추적·근접, 동료가 죽으면 겁먹음 | fallen, demon | S1 2:30 | 2 |
-| `burning_dead` | 불타는 해골 (Burning Dead) | `skelaxe\sklax` · 원색 | 발광 (255,120,40) α0.2 / 1.0 | 12 | 8 | 100 | 15 | 0 | 0 | 1 | 돌격(자폭) | 돌격·자폭 | skeleton, undead, fire | S1 3:00 | 1 |
+| `burning_dead` | 불타는 해골 (Burning Dead) | `skelaxe\sklax` · 원색 | 발광 (255,120,40) α0.2 + 몸 불빛(셰이더 빛 110px — 2026-11-13) / 1.0 | 12 | 8 | 100 | 15 | 0 | 0 | 1 | 돌격(자폭) | 돌격·자폭 | skeleton, undead, fire | S1 3:00 | 1 |
 | `ghoul` | 구울 (Ghoul) | `zombie\zombie` · `bluered` | — / 1.0 | 14 | 22 | 45 | 10 | 0 | 0.2 | 2 | 돌격(돌진) | 돌진 | zombie, undead | S1 4:00 | 1 |
 | `skeleton_captain` | 해골 대장 (Skeleton Captain) | `skelsd\sklsr` · `white` | 발광 (255,200,90) α0.2 / 1.1 | 13 | 90 | 70 | 10 | 1 | 0.5 | 10 | 지휘(호위를 데려옴) | 지휘 오라 + 호위 | skeleton, undead, leader | S1 5:00 (이벤트) | 2 |
 | `bloated_corpse` | 썩은 시체 (Rotting Carcass) | `zombie\zombie` · `grey` | — / 1.35 | 19 | 70 | 32 | 12 | 1 | 0.6 | 5 | 분열 | 추적·근접, 죽으면 분열 | zombie, undead | S1 6:00 | 2 |

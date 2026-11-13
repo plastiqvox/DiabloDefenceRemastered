@@ -9,8 +9,9 @@ namespace DiabloDefenceRemastered.Rendering;
 /// <summary>
 /// 대상 모양 하나(7.7 ④ 최소 밝기·7.10 ④ 안개 덧그림이 같은 목록을 쓴다). <see cref="Dest"/> 는 월드 px, <see cref="Alpha"/> = 안개 알파 × 그림 알파.
 /// <see cref="Forced"/> = 늘 그리는 대상(중간 보스·보스·닿은 적·점화 중 자폭 적 — 안개 4단계 ③), <see cref="MinLight"/> = 최소 밝기 대상(주인공·적·시체·획득물, 앞 벽이 겹친 유닛은 뺌).
+/// <see cref="Caster"/> = 셰이더 그림자를 드리우는 유닛(주인공·맵 안 적 — 2026-11-13, <see cref="ShaderLight.DrawShadows"/>).
 /// </summary>
-public readonly record struct ShapeDraw(Texture2D Texture, Rectangle Source, RectF Dest, Vector2 Foot, float Alpha, bool Forced, bool MinLight, bool FogShape);
+public readonly record struct ShapeDraw(Texture2D Texture, Rectangle Source, RectF Dest, Vector2 Foot, float Alpha, bool Forced, bool MinLight, bool FogShape, bool Caster = false);
 
 /// <summary>
 /// 점 빛 하나: 바닥 자리(월드 px)·반경·색·세기, <see cref="Height"/> = 바닥에서 뜬 높이(월드 px, 2026-11-13 — 날아가는 투사체 빛).
@@ -125,6 +126,8 @@ public sealed class LightRenderer : IDisposable
             // 셰이더 빛: 바닥 자리 감쇠 + 은은한 벽 그림자(ShaderLight)
             for (var i = 0; i < LightCount; i++) _pickedLights[i] = _lights[_picked[i]];
             _shader.AddLights(batch, _pickedLights.AsSpan(0, LightCount), LightSize, toLight, f.Camera, w.ViewSize, arena.Iso, _prim.Pixel);
+            // 유닛 그림자: 빛 반대쪽 바닥의 빛을 깎는다(벽·유닛 픽셀은 바닥 y 버퍼로 뺌)
+            _shader.DrawShadows(f.Shapes, _pickedLights.AsSpan(0, LightCount), LightSize, toLight, f.Camera, w.ViewSize, _prim.Light);
         }
         else
         {
