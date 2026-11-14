@@ -20,6 +20,8 @@ public enum DamageFlags : byte
     FromHazard = 2,
     /// <summary>피해 없이 밀어내기만(레벨업 밀어내기).</summary>
     NoDamage = 4,
+    /// <summary>맞으면 주인공 냉기 둔화(2026-11-14, 기획 9.3 냉기 강화 — <c>rules.hero.chill</c>). 피해가 실제로 들어갔을 때만.</summary>
+    Chill = 8,
 }
 
 /// <summary>

@@ -173,6 +173,33 @@ public sealed record AffixDef : IDef
     public IReadOnlyList<string> ExcludeTags { get; init; } = [];
     public IReadOnlyList<string> ExcludeParts { get; init; } = [];
 
+    // ── 2026-11-14 디아2식 정예·우두머리(기획 9.1~9.3) ──
+    /// <summary>우두머리 이름 밑 접두사 줄에 쓰는 짧은 이름(없으면 <see cref="Name"/>). 정예는 <see cref="Name"/> 을 종류 이름 앞에 붙인다.</summary>
+    public string Label { get; init; } = "";
+    /// <summary>받을 수 있는 등급: <c>elite</c>(정예 무리 공통 형)·<c>unique</c>(우두머리). 비면 둘 다.</summary>
+    public IReadOnlyList<string> Ranks { get; init; } = [];
+    /// <summary>같은 무리 이름(<c>aura</c>·<c>enchant</c>)끼리는 한 적에 하나만.</summary>
+    public string? Group { get; init; }
+    /// <summary>이 부품 종류 중 하나가 정의 <c>behaviors</c> 에 있어야 붙는다(다중 사격 = <c>shoot_projectile</c>). 비면 조건 없음.</summary>
+    public IReadOnlyList<string> RequireParts { get; init; } = [];
+    /// <summary>몸 알파 배율(유령 0.6). null = 그대로.</summary>
+    public float? Alpha { get; init; }
+    /// <summary>몸에 지닌 빛(불꽃·냉기·번개 강화 — 셰이더 빛, 정의 <c>light</c> 가 없을 때).</summary>
+    public CarriedLightDef? Light { get; init; }
+    /// <summary>주인공을 맞히면 냉기 둔화(<c>DamageFlags.Chill</c>, 근접·이 적의 탄 모두).</summary>
+    public bool Chill { get; init; }
+    /// <summary><c>shoot_projectile</c> 한 번에 더 쏘는 탄 수(다중 사격 — 부채꼴).</summary>
+    public int ExtraShots { get; init; }
+
+    /// <summary>이 등급이 받을 수 있는가(<see cref="Ranks"/> 가 비면 둘 다).</summary>
+    public bool AllowsRank(string rank)
+    {
+        if (Ranks.Count == 0) return true;
+        foreach (var r in Ranks)
+            if (string.Equals(r, rank, StringComparison.Ordinal)) return true;
+        return false;
+    }
+
     [PartKind(PartKind.EnemyBehavior)]
     public IReadOnlyList<PartDef> Behaviors { get; init; } = [];
 }

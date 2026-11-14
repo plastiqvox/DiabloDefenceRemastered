@@ -1,3 +1,4 @@
+using DiabloDefenceRemastered.Core.Sim.Director;
 using DiabloDefenceRemastered.Core.Sim.Enemies.Parts;
 
 namespace DiabloDefenceRemastered.Core.Sim.Enemies;
@@ -27,6 +28,7 @@ public sealed class EnemyDataValidator : IDataValidator
         var heroRadius = defs.Rules.Hero is { } h && h.Class.IsBound ? h.Class.Def.Radius : 14f;
         for (var i = 0; i < defs.Enemies.Count; i++)
             CheckEnemy(defs, defs.Enemies[i], i, rules, heroRadius, ctx);
+        CheckAffixes(defs, ctx);
         for (var i = 0; i < defs.Stages.Count; i++)
         {
             var stage = defs.Stages[i];
@@ -35,6 +37,34 @@ public sealed class EnemyDataValidator : IDataValidator
                 foreach (var e in RoomEvents.CheckPlacement(stage, rooms)) ctx.Add(e);
             CheckRhythm(stage, ctx);
         }
+    }
+
+    /// <summary>
+    /// 접두사(2026-11-14 디아2식, 기획 9.1~9.3, 오류): <c>ranks</c> 값은 elite·unique, <c>alpha</c> 0~1, <c>extra_shots</c> ≥ 0,
+    /// <c>teleport_ability</c> 나타날 자리 예고 ≥ <c>telegraph_min</c>. 접두사가 있는데 정예가 받을 것이 없으면 경고. 우두머리 이름 낱말은 표마다 1024 개까지.
+    /// </summary>
+    private static void CheckAffixes(GameDefs defs, ValidationContext ctx)
+    {
+        var telegraphMin = defs.Rules.Enemies?.Barrage.TelegraphMin ?? 0.4f;
+        var anyElite = false;
+        for (var i = 0; i < defs.Affixes.Count; i++)
+        {
+            var a = defs.Affixes[i];
+            var path = $"$.affixes[{i}]";
+            void Err(string msg) => ctx.Add("", path, $"접두사 '{a.Id}': {msg}");
+            foreach (var r in a.Ranks)
+                if (r is not (DirectorSpawns.AffixRankElite or DirectorSpawns.AffixRankUnique)) Err($"ranks 값 '{r}' 은 elite·unique 가 아니다");
+            if (a.Alpha is < 0f or > 1f) Err($"alpha {a.Alpha} 는 0~1 이어야 한다");
+            if (a.ExtraShots < 0) Err($"extra_shots {a.ExtraShots} 는 0 이상이어야 한다");
+            foreach (var pd in a.Behaviors)
+                if (pd.Instance is TeleportAbility ta && ta.Params.Teleport.Appear < telegraphMin)
+                    Err($"teleport_ability.teleport.appear {ta.Params.Teleport.Appear}s < telegraph_min {telegraphMin}s(6.20 ⑧)");
+            anyElite |= a.AllowsRank(DirectorSpawns.AffixRankElite);
+        }
+        if (defs.Affixes.Count > 0 && !anyElite)
+            ctx.Add("", "$.affixes", "정예(elite)가 받을 접두사가 없다 — 챔피언 무리가 접두사 없이 나온다", DataSeverity.Warning);
+        if (defs.Rules.Ranks?.UniqueNames is { } names && (names.First.Count > 1024 || names.Second.Count > 1024 || names.Title.Count > 1024))
+            ctx.Add("", "$.rules.ranks.unique_names", "낱말 표는 1024 개까지(Enemy.NameRoll 10 비트)");
     }
 
     private static void CheckEnemy(GameDefs defs, EnemyDef def, int index, TelegraphRequiredDef rules, float heroRadius, ValidationContext ctx)

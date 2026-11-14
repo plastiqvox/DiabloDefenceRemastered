@@ -128,6 +128,8 @@ public sealed partial class Hero
     public float MaxHp;
     public bool Dead;
     public float InvulnTime;
+    /// <summary>냉기 둔화 남은 시간(2026-11-14, 기획 9.3 냉기 강화 — <c>DamageFlags.Chill</c> 피해가 들어가면 <c>rules.hero.chill.duration</c> 으로 채움, 이동 × <c>move_mul</c>).</summary>
+    public float ChillTime;
     public float HitFlashTime;
     public MoveIntent Intent;
     public float MoveSpeed;
@@ -198,7 +200,7 @@ public sealed partial class Hero
         Anim = default;
         Hp = MaxHp = 0f;
         Dead = false;
-        InvulnTime = HitFlashTime = 0f;
+        InvulnTime = HitFlashTime = ChillTime = 0f;
         Intent = MoveIntent.Hold;
         MoveSpeed = 0f;
         KnockbackVel = Vector2.Zero;

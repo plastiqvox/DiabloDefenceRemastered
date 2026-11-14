@@ -31,6 +31,10 @@ public sealed class PartsSmokeTests
         ["phase_through"] = () => B("phase_through", new PhaseThroughParams { AlphaOver = 1f }),
         ["heavy_strike"] = () => B("heavy_strike", new HeavyStrikeParams()),
         ["war_cry"] = () => B("war_cry", new WarCryParams { Buff = CryRef, Cooldown = 2f }),
+        // 우두머리 접두사 부품(2026-11-14 디아2식): 번개 튐·흡혈·순간이동
+        ["spark_on_hurt"] = () => B("spark_on_hurt", new SparkOnHurtParams { Projectile = DefRef<ProjectileDef>.To(Arrow), Count = 3, Cooldown = 0.3f }),
+        ["life_steal"] = () => B("life_steal", new LifeStealParams { Pct = 1f }),
+        ["teleport_ability"] = () => B("teleport_ability", new TeleportAbilityParams { Cooldown = 2f, RangeBand = [0f, 900f] }),
     };
 
     /// <summary>동작 type → 시험 동작(패턴 안).</summary>

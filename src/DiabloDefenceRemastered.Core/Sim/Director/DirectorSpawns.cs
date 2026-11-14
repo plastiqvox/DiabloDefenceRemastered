@@ -116,60 +116,83 @@ public static class DirectorSpawns
         return new RingResult(count, placed, minD);
     }
 
-    /// <summary>정예 무리: 생성 띠 한 자리에 모아(대장 기준 길 거리 조건) 정예 n, 확률로 우두머리 하나. 문구·신호 <c>ElitePack</c>.</summary>
+    /// <summary>
+    /// 정예 무리(2026-11-14 디아2식, 기획 9.1·9.2): <paramref name="uniqueChance"/>(없으면 <c>pack.unique_chance</c>)로 우두머리 무리 —
+    /// 우두머리 하나(고유 이름, 접두사 <c>ranks.unique.affixes</c> 개 — <c>unique</c> 가 받을 수 있는 것, 같은 무리 하나) + 졸개(같은 종류 일반 등급, <c>pack.minions</c>).
+    /// 아니면 챔피언 무리 — 정예 n, 모두 같은 접두사 <paramref name="affixCount"/> 개(<c>elite</c> 가 받을 수 있는 것). <paramref name="count"/> 는 대장 포함 전체 수.
+    /// 생성 띠 한 자리에 모은다(대장 기준 길 거리 조건). 문구·신호 <c>ElitePack</c>.
+    /// </summary>
     public static int ElitePack(World world, EnemyDef def, int? count, int affixCount, float? uniqueChance)
     {
         var ranks = world.Defs.Rules.Ranks;
         var rng = world.Rng.Rank;
         var pack = ranks?.Pack ?? new PackDef();
-        var n = count ?? rng.RangeInclusive(pack.PackSize[0], pack.PackSize.Length > 1 ? pack.PackSize[1] : pack.PackSize[0]);
+        var unique = rng.Chance(uniqueChance ?? pack.UniqueChance);
+        var n = count ?? (unique ? 1 + RangeOf(rng, pack.Minions) : RangeOf(rng, pack.PackSize));
         n = SpawnGate.Reserve(world, SpawnSource.ElitePack, n);
         if (n <= 0) return 0;
-        var r = EnemyFactory.BodyRadius(world, def, EnemyRank.Elite);
+        var leadRank = unique ? EnemyRank.Unique : EnemyRank.Elite;
+        var r = EnemyFactory.BodyRadius(world, def, leadRank);
         Vector2 center;
         if (!TryBandPoint(world, r, out center))
         {
             if (FarEntry(world) is not { } entry) return 0;
             center = entry.Inside;
         }
-        var unique = rng.Chance(uniqueChance ?? pack.UniqueChance) ? rng.Index(n) : -1;
         var detour = world.Defs.Rules.Spawn?.PathDetour ?? 1.5f;
         var groupRadius = MathF.Max(30f, world.Defs.Rules.Spawn?.GroupRadius ?? 40f);
+        // 무리 공통 접두사 한 번(챔피언 무리는 모두 같은 형 — 기획 9.1)
         Span<int> affixes = stackalloc int[2];
+        var k = unique ? ranks?.Unique.Affixes ?? 2 : affixCount;
+        var picked = PickAffixes(world, def, unique ? AffixRankUnique : AffixRankElite, Math.Min(k, 2), affixes);
         var made = 0;
         for (var i = 0; i < n; i++)
         {
-            var rank = i == unique ? EnemyRank.Unique : EnemyRank.Elite;
-            var k = rank == EnemyRank.Unique ? ranks?.Unique.Affixes ?? 2 : affixCount;
-            var picked = PickAffixes(world, def, Math.Min(k, 2), affixes);
+            var rank = i == 0 ? leadRank : unique ? EnemyRank.Normal : EnemyRank.Elite;
+            var radius = i == 0 ? r : EnemyFactory.BodyRadius(world, def, rank);
             var wish = center + (i == 0 ? Vector2.Zero : MathX.FromAngle(MathF.Tau * i / n) * groupRadius);
-            if (!EnemyPlacement.TryPlace(world.Nav, center, wish, r, i == 0 ? null : new PlaceReach(center, detour), out var pos)) continue;
-            EnemyFactory.Create(world, def, rank, affixes[..picked], pos, new SpawnContext(SpawnSource.ElitePack, EntityId.None));
+            if (!EnemyPlacement.TryPlace(world.Nav, center, wish, radius, i == 0 ? null : new PlaceReach(center, detour), out var pos)) continue;
+            var e = EnemyFactory.Create(world, def, rank, rank == EnemyRank.Normal ? [] : affixes[..picked], pos, new SpawnContext(SpawnSource.ElitePack, EntityId.None));
+            if (rank == EnemyRank.Unique) e.NameRoll = UniqueNames.Roll(world);
             made++;
         }
         if (made > 0)
         {
-            if (pack.Banner.Length > 0) world.Banner.Show(pack.Banner, world.Tick, pack.BannerTime > 0f ? pack.BannerTime : 1.5f);
+            var banner = unique && pack.UniqueBanner.Length > 0 ? pack.UniqueBanner : pack.Banner;
+            if (banner.Length > 0) world.Banner.Show(banner, world.Tick, pack.BannerTime > 0f ? pack.BannerTime : 1.5f);
             world.Presentation.Cue(new CueEvent(world.Tick, CueKind.ElitePack, center, null));
         }
         return made;
     }
 
-    /// <summary>접두사 고르기: <c>exclude_tags</c>·<c>exclude_parts</c> 에 걸리지 않는 것 중 서로 다른 k 개(정의 표 순서에서 난수로). 보스·중간 보스는 받지 않는다.</summary>
-    public static int PickAffixes(World world, EnemyDef def, int k, Span<int> into)
+    private static int RangeOf(RandomStream rng, int[] range) =>
+        range.Length == 0 ? 0 : rng.RangeInclusive(range[0], range.Length > 1 ? range[1] : range[0]);
+
+    /// <summary>접두사를 받는 등급 이름(<c>AffixDef.ranks</c> 값).</summary>
+    public const string AffixRankElite = "elite", AffixRankUnique = "unique";
+
+    /// <summary>
+    /// 접두사 고르기: <paramref name="rank"/> 가 받을 수 있고(<c>ranks</c>) <c>exclude_tags</c>·<c>exclude_parts</c> 에 걸리지 않으며 <c>require_parts</c> 를 채우는 것 중
+    /// 서로 다른 k 개(정의 표 순서에서 난수로). 하나를 고르면 같은 <c>group</c>(오라·강화)은 후보에서 뺀다. 보스·중간 보스는 받지 않는다.
+    /// </summary>
+    public static int PickAffixes(World world, EnemyDef def, string rank, int k, Span<int> into)
     {
         if (k <= 0 || def.Rank != DefRank.Normal) return 0;
         var all = world.Defs.Affixes;
         Span<int> pool = stackalloc int[Math.Max(1, all.Count)];
         var m = 0;
         for (var i = 0; i < all.Count; i++)
-            if (Allowed(all[i], def)) pool[m++] = i;
+            if (all[i].AllowsRank(rank) && Allowed(all[i], def)) pool[m++] = i;
         var got = 0;
         while (got < k && m > 0)
         {
             var j = world.Rng.Rank.Index(m);
-            into[got++] = pool[j];
+            var idx = pool[j];
+            into[got++] = idx;
             pool[j] = pool[--m];
+            if (all[idx].Group is not { } group) continue;
+            for (var q = m - 1; q >= 0; q--)
+                if (string.Equals(all[pool[q]].Group, group, StringComparison.Ordinal)) pool[q] = pool[--m];
         }
         return got;
     }
@@ -182,7 +205,11 @@ public static class DirectorSpawns
         foreach (var part in a.ExcludeParts)
             foreach (var b in def.Behaviors)
                 if (string.Equals(part, b.Type, StringComparison.Ordinal)) return false;
-        return true;
+        if (a.RequireParts.Count == 0) return true;
+        foreach (var part in a.RequireParts)
+            foreach (var b in def.Behaviors)
+                if (string.Equals(part, b.Type, StringComparison.Ordinal)) return true;
+        return false;
     }
 
     /// <summary>지금 구간 가중치에서 정예 대상(<c>elite_eligible</c>, rank normal)만 가중으로 하나.</summary>

@@ -47,6 +47,21 @@ public sealed class EnemyModule : IGameModule
         });
         parts.Register<HeavyStrikeParams>(B, "heavy_strike", p => new HeavyStrike(p));
         parts.Register<WarCryParams>(B, "war_cry", p => new WarCry(p), (p, c) => { Positive(c, "radius", p.Radius); Positive(c, "cooldown", p.Cooldown); });
+        // 우두머리 접두사 부품(2026-11-14 디아2식, 기획 9.3)
+        parts.Register<SparkOnHurtParams>(B, "spark_on_hurt", p => new SparkOnHurt(p), (p, c) =>
+        {
+            if (p.Count < 1) c.Error("count", "1 이상이어야 한다");
+            Positive(c, "cooldown", p.Cooldown);
+        });
+        parts.Register<LifeStealParams>(B, "life_steal", p => new LifeSteal(p), (p, c) => Positive(c, "pct", p.Pct));
+        parts.Register<TeleportAbilityParams>(B, "teleport_ability", p => new TeleportAbility(p), (p, c) =>
+        {
+            Positive(c, "cooldown", p.Cooldown);
+            Band(c, p.RangeBand);
+            Positive(c, "teleport.min", p.Teleport.Min);
+            if (p.Teleport.Max < p.Teleport.Min) c.Error("teleport.max", "min 보다 작을 수 없다");
+            if (p.Teleport.Tries < 1) c.Error("teleport.tries", "1 이상이어야 한다");
+        });
 
         parts.Register<MeleeSlamParams>(A, "melee_slam", p => new MeleeSlam(p));
         parts.Register<ProjectileSpreadParams>(A, "projectile_spread", p => new ProjectileSpread(p), (p, c) => { if (p.Count < 1) c.Error("count", "1 이상이어야 한다"); });

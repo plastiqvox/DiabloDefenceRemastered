@@ -33,7 +33,7 @@ public readonly struct EnemyCtx(World world, Enemy self)
     /// <summary>주인공에게 피해 요청(나가는 피해 고치기 부품을 거친다). 원인은 적 본체(<c>DamageCause.Body</c> — 근접·자폭·돌진·내려치기, WP1g 가 넘긴 것: 공정성 <c>hidden_hits</c> 가 원인으로 셈).</summary>
     public void HitHero(int amount, Vector2 knockDir = default, float knockDist = 0f)
     {
-        var request = new DamageRequest(EntityId.Hero, self.Id, Faction.Enemy, amount, 0f, 0f, -1, knockDir, knockDist, DamageFlags.None, DamageCause.Body);
+        var request = new DamageRequest(EntityId.Hero, self.Id, Faction.Enemy, amount, 0f, 0f, -1, knockDir, knockDist, self.HitFlags, DamageCause.Body);
         var kit = self.Kit;
         foreach (var s in kit.HitModifiers)
             if (kit.Part(self.PhaseIdx, s) is IHitModifierPart m) m.ModifyOutgoing(this, ref request);

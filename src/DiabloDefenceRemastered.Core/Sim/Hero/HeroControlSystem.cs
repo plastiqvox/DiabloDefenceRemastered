@@ -37,6 +37,7 @@ public sealed class HeroControlSystem : ISimSystem
 
         var crowd = world.Defs.Rules.Hero?.CrowdSlow;
         var slow = crowd is not null && hero.TouchingCount >= crowd.Touching ? crowd.Mul : 1f;
+        if (hero.ChillTime > 0f && world.Defs.Rules.Hero?.Chill is { } chill) slow *= chill.MoveMul;   // 냉기 둔화(기획 9.3) — 붐빔 둔화와 곱
         hero.MoveSpeed = HeroStats.MoveSpeed(hero) * slow;
         if (HeroBlink.Step(world))
         {

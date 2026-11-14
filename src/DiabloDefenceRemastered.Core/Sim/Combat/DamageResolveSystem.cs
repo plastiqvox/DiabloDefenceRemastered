@@ -40,7 +40,9 @@ public sealed class DamageResolveSystem : ISimSystem
         if ((r.Flags & DamageFlags.NoDamage) == 0)
         {
             var crit = r.CritChance > 0f && world.Rng.Weapon.Chance(r.CritChance);
-            var applied = DamageMath.HeroToEnemy(r.Amount, r.DamagePct, crit, DamageMath.Round(e.Armor));
+            // 버프 방어(우두머리 저항의 오라 armor — 2026-11-14)는 맞는 순간 더한다
+            var armor = world.Defs.Buffs.Count == 0 ? e.Armor : e.Armor + e.Buffs.Sum(EnemyStatKey.Armor, world.Defs.Buffs);
+            var applied = DamageMath.HeroToEnemy(r.Amount, r.DamagePct, crit, DamageMath.Round(armor));
             e.Hp -= applied;
             e.HitFlashTime = HitFlash;
             world.Events.Current.HitLanded.Add(new HitLanded(r.Attacker, e.Id, applied));
@@ -80,6 +82,8 @@ public sealed class DamageResolveSystem : ISimSystem
             hero.Hp -= applied;
             hero.InvulnTime = world.Defs.Rules.Hero?.InvulnAfterHit ?? 0.25f;
             hero.HitFlashTime = HitFlash;
+            // 냉기 강화(2026-11-14, 기획 9.3): 들어간 피해에만 — 피격 무적으로 버린 요청은 둔화도 없다
+            if ((r.Flags & DamageFlags.Chill) != 0 && world.Defs.Rules.Hero?.Chill is { } chill) hero.ChillTime = MathF.Max(hero.ChillTime, chill.Duration);
             world.RunStats.DamageTaken += applied;
             world.Events.Current.HeroDamaged.Add(new HeroDamaged(r.Attacker, applied, (int)MathF.Ceiling(MathF.Max(0f, hero.Hp))));
             world.Events.Current.HitLanded.Add(new HitLanded(r.Attacker, EntityId.Hero, applied));

@@ -23,6 +23,8 @@ public sealed partial class Projectile
     public float DamagePct;
     public float CritChance;
     public float Knockback;
+    /// <summary>적 탄: 쏜 적의 <c>Enemy.HitFlags</c>(생성 때 복사 — 냉기 강화 탄이 쏜 적이 죽은 뒤에도 둔화를 건다).</summary>
+    public DamageFlags HitFlags;
     /// <summary>남은 관통 수(맞을 때마다 1 줄고 0 이면 끝). 궤도 구체는 무한.</summary>
     public int PierceLeft;
     /// <summary>유도·튕김 대상.</summary>
@@ -71,6 +73,7 @@ public sealed partial class Projectile
     {
         Motion = MotionKind.Straight;
         Damage = DamagePct = CritChance = Knockback = 0f;
+        HitFlags = DamageFlags.None;
         PierceLeft = 0;
         Target = EntityId.None;
         TurnRate = 0f;
