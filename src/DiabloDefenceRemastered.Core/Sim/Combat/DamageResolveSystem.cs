@@ -45,6 +45,7 @@ public sealed class DamageResolveSystem : ISimSystem
             var applied = DamageMath.HeroToEnemy(r.Amount, r.DamagePct, crit, DamageMath.Round(armor));
             e.Hp -= applied;
             e.HitFlashTime = HitFlash;
+            e.LastHurtTick = world.Tick;
             world.Events.Current.HitLanded.Add(new HitLanded(r.Attacker, e.Id, applied));
             world.Presentation.Damage(new DamageNumber(world.Tick, e.Id, e.Pos, applied, crit, false));
             world.Presentation.Cue(new CueEvent(world.Tick, CueKind.EnemyHit, e.Pos, e.Def, e.Id));

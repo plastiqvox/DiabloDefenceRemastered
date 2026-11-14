@@ -1,8 +1,10 @@
 // 전장의 안개 값 (설계서 6.10, 기획 10.7·23절 "정한 수치"). 첫 판 WP0a, 그 뒤 소유 WP5.
 // 원본 유래 값이 아니다. 시뮬레이션 값(edge·view_inset·refresh_ticks·ranged_margin)은 WP4 와 합의해 바꾼다(11.3).
+// paint_fog(2026-11-14 사용자 결정 "그림자는 광원 효과에 맡기고 전장안개를 없애자"): 거짓 — 안 보이는 곳 검은 칠을 끄고 어둠은 셰이더 빛이 맡는다.
+// 벽 뒤 적 숨김 같은 시야 규칙은 그대로(공정성 — 기획 10.7)
 {
   "rules": {
     "sight": { "edge": 40, "memory_ratio": 0.5, "fade": 0.15, "refresh_ticks": 6,
-               "view_inset": 16, "touch_margin": 16, "ranged_margin": 20 }
+               "view_inset": 16, "touch_margin": 16, "ranged_margin": 20, "paint_fog": false }
   }
 }

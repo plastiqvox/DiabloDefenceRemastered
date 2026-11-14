@@ -18,6 +18,7 @@ public sealed class RealDataLoadTests
         Assert.True(r.Defs.Maps.TryGet("cathedral_arena", out var map));
         Assert.Same(r.Defs.Tilesets.Get("l1"), map.Tileset.Def);
         Assert.NotNull(r.Defs.Rules.Sight);
+        Assert.False(r.Defs.Rules.Sight!.PaintFog);   // 2026-11-14 사용자 결정: 검은 안개 칠 없음(어둠은 셰이더 빛)
         Assert.True(r.Defs.SpriteSets.TryGet("set_sorcerer", out var set));
         Assert.Same(r.Defs.Sprites.Get("slt_idle"), set.Clips.Idle!.Sprite.Def);
     }

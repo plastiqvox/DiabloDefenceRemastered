@@ -2077,6 +2077,8 @@ public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public
   - `DirectorSpawns.ElitePack` 은 먼저 `unique_chance` 를 굴려 **우두머리 무리**(우두머리 1 + 같은 종류 일반 등급 졸개 `pack.minions`)와 **챔피언 무리**(정예 n)를 가른다.
     예전처럼 정예 무리 안에 우두머리 하나가 섞이지 않는다. 이벤트 `count` 는 대장을 포함한 전체 수다. 문구는 우두머리 무리면 `pack.unique_banner`.
   - 접두사는 무리마다 한 번 고른다(`PickAffixes(world, def, rank, k, into)`) — 챔피언 무리는 모두 같은 형, 졸개는 접두사 없음.
+    우두머리 k = 스테이지 `unique_affixes`(1~3, 뒤쪽 액트 3) → `rules.ranks.unique.affixes`. `Enemy.AffixIdx` 는 세 칸(`AffixSlots.MaxAffixes`), 부품 표 캐시 키도 세 접두사.
+  - 정예 이름판은 맞은 뒤 3초만(`Enemy.LastHurtTick` — DamageResolve 가 피해가 들어간 틱을 적음, `UniqueNames.PlateAlpha`), 우두머리는 늘.
     후보 조건: 접두사 `ranks`(`elite`·`unique`, 비면 둘 다)에 그 등급이 있고, `exclude_tags`·`exclude_parts` 에 걸리지 않고, `require_parts` 가 있으면 그중 하나를 정의 `behaviors` 에 가짐.
     하나를 고르면 같은 `group`(`aura`·`enchant`)은 후보에서 뺀다 — 우두머리는 오라 하나·강화 하나까지.
   - 우두머리 고유 이름: `rules.ranks.unique_names` 의 `first`·`second`·`title` 을 `World.Rng.Rank` 로 굴려 `Enemy.NameRoll`(10 비트씩)에 담는다. 글자는 그리기만 만든다(`UniqueNames.Plate`).
@@ -3499,6 +3501,12 @@ v0.2 의 `ObstacleBaker`(맵 질감으로 장애물 몸체·옆면·그림자를
 
 ### 7.7 조명
 
+- **(2026-11-14 사용자 결정) 검은 안개 칠 끔**: `rules.sight.paint_fog: false` 면 ③ 안개 합치기를 건너뛴다 — 안 보이는 곳도 셰이더 빛의 어둠(주변 밝기)으로만 보이고 문·벽에 검은 안개가 끼지 않는다.
+  시야(`VisibilityField`)·적 숨김(`FogMath.EnemyAlpha`)·공정성·미니맵은 그대로라 `f.Fog` 도 참으로 둔다. 기본값은 참(예전 그림 — 시험 월드).
+- **(2026-11-14 사용자 요청) 블룸 ⑦b**: 7층 발광 뒤·디버그 겹침·8층 화면 효과 앞에 `Rendering/BloomRenderer` 가 `WorldRT` 를 받아
+  ① `BloomExtract.fx` 로 ½ 크기 밝은 부분(RGB 최댓값 − 문턱 0.62, 부드러운 무릎 0.2 — 색 비율은 그대로) → ② ¼ 로 줄여 `BloomBlur.fx` 가로·세로(9탭 가우스를 선형 표본 5번)
+  → ③ ⅛ 로 한 번 더 줄여 흐림 → ④ ¼ ×0.55·⅛ ×0.45 를 `WorldRT` 에 가산. 빛을 곱한 뒤라 어두운 던전 바닥은 문턱 아래고 불덩이·폭발·번개·발광만 번진다.
+  셰이더를 못 읽으면 블룸 없음(로그 `BLOOM shader=off`). 화면 UI(9층)는 번지지 않는다.
 - **(2026-11-13 사용자 결정 — 셰이더 빛, 벽 그림자는 은은하게)** 셰이더 파일(`Shaders\GroundWrite.mgfxo`·`LightAdd.mgfxo`)을 읽으면 `Rendering/ShaderLight` 가 아래 ② 를 대신하고 `LightRT` 는 `WorldRT` 크기(전체 해상도)다.
   MGCB 없이 저장소 로컬 도구 `dotnet-mgfxc`(3.8.6.1, `.config/dotnet-tools.json`)가 빌드 때 `Shaders\*.fx` 를 OpenGL 용으로 컴파일한다(`CompileShaders` 대상 — 바뀐 것만). 못 읽으면 로그 `LIGHT shader=off reason=…` 뒤 아래 480×270 방식 그대로.
   ① 바닥 y 버퍼(`GroundRT`): 0~5층 그림 중 벽 항목·주인공·적을 같은 차례로 다시 찍어 픽셀마다 "서 있는 바닥 y"(카메라 기준 (y + 512) × 16 을 16비트 RG)를 쓴다. 유닛 = 발 y,
