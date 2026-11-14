@@ -2069,7 +2069,7 @@ public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public
   오라처럼 범위 안에 있는 동안만 붙는 효과는 매 틱 2틱짜리로 다시 붙이고, 시간제(함성 6s)는 그 시간으로 붙인다. 칸이 모자라면 가장 먼저 끝나는 것을 바꾼다.
   `debuff` 가 있는 버프는 정의 `immunities` 에 같은 이름이 있으면 붙지 않는다(`slow` 면역 = 보스·중간 보스). 버프 붙이기 도우미는 WP1 공통 코드라 WP3(장판 둔화)·WP4(오라·함성)가 같이 쓴다.
   → "새 오라를 가진 적" 이 정의(버프 1개 + 오라 부품 매개변수)만으로 늘어난다.
-- 정예·우두머리 배율(HP ×3.5/×8, 피해 ×1.4/×1.6, 이동 ×1.1, 경험치 ×4/×10, 크기 ×1.15/×1.3 — 최종 크기 상한 `max_scale` 1.6(6.5), 넉백 저항, 발광, 드롭)과
+- 정예·우두머리 배율(HP ×8/×20 — 2026-11-14 ×3.5/×8 에서, 피해 ×1.4/×1.6, 이동 ×1.1, 경험치 ×4/×10, 크기 ×1.15/×1.3 — 최종 크기 상한 `max_scale` 1.6(6.5), 넉백 저항, 발광, 드롭)과
   정예 무리 기본값(`pack_size: [3,5]`, `unique_chance: 0.3`, `minions: [3,5]`, `banner: "정예 무리가 나타났다"`, `unique_banner`, `banner_time: 1.5`)은 `rules.ranks` 의 `elite`·`unique`·`pack` 에, 우두머리 이름 낱말은 `rules.ranks.unique_names` 에 둔다(`rules/enemies.json`, 6.10).
 - `EnemyFactory.Create(def, rank, affixes, minutes, in SpawnContext)` 가 정의 + 등급 + 접두사를 합쳐 인스턴스를 만든다(데코레이터 방식: 정의는 그대로, 인스턴스가 합친 값을 가짐).
   접두사 부품은 정의 부품 뒤 슬롯에 붙는다. 분열체는 `rank` 를 물려받지 않는다(부품 매개변수 `inherit_rank: false` 기본). 생성 직후 `ISpawnHookPart` 들을 부른다.
