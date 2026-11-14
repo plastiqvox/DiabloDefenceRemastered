@@ -1,7 +1,49 @@
-// 접두사 (설계서 6.7, 기획 9.3). 소유 WP4. 불타는(fire_enchanted)은 이펙트(WP5 fx_warning_circle·fx_fire_explosion)와 함께 단계 2 에 넣는다.
+// 접두사 (설계서 6.7, 기획 9.3). 소유 WP4.
+// 2026-11-14 디아2식 정예·우두머리(사용자 요청 "정예와 유니크가 차별성이 없다"): 정예 무리는 무리 공통 형 하나(ranks 에 elite — 수치형만),
+// 우두머리는 기능형 접두사 2개(ranks 에 unique, group 이 같은 것끼리는 하나 — 오라 하나·강화 하나). name = 정예 이름 앞말, label = 우두머리 접두사 줄.
+// glow 는 등급이 없는 적(시험)에게만 — 정예·우두머리는 등급 발광이 이긴다. light = 몸 빛(셰이더).
 {
   "affixes": [
-    { "id": "berserk", "name": "광폭한", "stats": { "speed_pct": 0.35, "attack_cooldown_pct": -0.30 }, "glow": [255, 60, 60] },
-    { "id": "ironskin", "name": "강철 피부의", "stats": { "armor": 3, "hp_pct": 0.5 }, "immunities": ["knockback"], "glow": [170, 170, 180] }
+    // ── 정예·우두머리 공통(수치형) ──
+    { "id": "berserk", "name": "광폭한", "label": "광폭", "stats": { "speed_pct": 0.35, "attack_cooldown_pct": -0.30 }, "glow": [255, 60, 60] },
+    { "id": "ironskin", "name": "강철 피부의", "label": "강철 피부", "stats": { "armor": 3, "hp_pct": 0.5 }, "immunities": ["knockback"], "glow": [170, 170, 180] },
+    // 유령: 장애물 통과·반투명(옛 phasing E 안). 원거리(kite)는 벽 너머에서 쏘게 되어 뺀다
+    { "id": "ghostly", "name": "유령 같은", "label": "유령", "alpha": 0.6, "exclude_parts": ["kite", "charge"], "glow": [200, 220, 255],
+      "behaviors_add": [ { "type": "phase_through", "alpha_over": 0.4 } ] },
+
+    // ── 우두머리 전용: 강화(enchant — 하나만) ──
+    // 불꽃 강화: 피해 +20%, 죽을 때 0.5s 예고 원 → 반경 70 폭발 12(옛 fire_enchanted M 안)
+    { "id": "fire_enchanted", "name": "불타는", "label": "불꽃 강화", "ranks": ["unique"], "group": "enchant", "exclude_tags": ["fire"],
+      "stats": { "damage_pct": 0.2 }, "glow": [255, 140, 40], "light": { "color": [255, 120, 40], "radius": 120, "intensity": 0.8, "height": 50 },
+      "behaviors_add": [ { "type": "telegraphed_blast", "trigger": "on_death", "points": "self",
+                           "telegraph": { "effect": "fx_warning_circle", "time": 0.5 }, "radius": 70, "damage": 12, "effect": "fx_fire_explosion" } ] },
+    // 냉기 강화: 맞히면 주인공 둔화(rules.hero.chill — 근접·이 적의 탄 모두), 죽을 때 서리 조각 8방향(맞으면 둔화)
+    { "id": "cold_enchanted", "name": "얼어붙은", "label": "냉기 강화", "ranks": ["unique"], "group": "enchant", "chill": true,
+      "glow": [120, 180, 255], "light": { "color": [110, 170, 255], "radius": 120, "intensity": 0.8, "height": 50 },
+      "behaviors_add": [ { "type": "projectile_spread", "trigger": "on_death", "projectile": "pj_frost_shard", "count": 8, "arc": 360, "damage": 6 } ] },
+    // 번개 강화: 맞을 때(0.5s 마다) 사방 전기 탄 3
+    { "id": "lightning_enchanted", "name": "번개 치는", "label": "번개 강화", "ranks": ["unique"], "group": "enchant",
+      "glow": [200, 220, 255], "light": { "color": [190, 210, 255], "radius": 110, "intensity": 0.8, "height": 50 },
+      "behaviors_add": [ { "type": "spark_on_hurt", "projectile": "pj_spark", "count": 3, "cooldown": 0.5, "damage": 5 } ] },
+
+    // ── 우두머리 전용: 오라(aura — 하나만). 반경 안 일반 정의 적(졸개·정예·자기)에게 버프, 발밑 고리 = 버프 foot_ring ──
+    { "id": "aura_might", "name": "힘의", "label": "힘의 오라", "ranks": ["unique"], "group": "aura", "glow": [255, 90, 70],
+      "behaviors_add": [ { "type": "command_aura", "radius": 220, "buff": "aura_might", "include_self": true } ] },
+    { "id": "aura_fanatic", "name": "광신의", "label": "광신의 오라", "ranks": ["unique"], "group": "aura", "glow": [255, 210, 90],
+      "behaviors_add": [ { "type": "command_aura", "radius": 220, "buff": "aura_fanatic", "include_self": true } ] },
+    { "id": "aura_defiance", "name": "저항의", "label": "저항의 오라", "ranks": ["unique"], "group": "aura", "glow": [120, 200, 255],
+      "behaviors_add": [ { "type": "command_aura", "radius": 220, "buff": "aura_defiance", "include_self": true } ] },
+
+    // ── 우두머리 전용: 그 밖 ──
+    // 순간이동: 주인공이 200~900px 이면 7s 마다 주인공 둘레 150~210 에 예고 원 0.6s 뒤 나타남
+    { "id": "teleporting", "name": "순간이동하는", "label": "순간이동", "ranks": ["unique"], "glow": [170, 120, 255],
+      "behaviors_add": [ { "type": "teleport_ability", "cooldown": 7.0, "range_band": [200, 900],
+                           "teleport": { "min": 150, "max": 210, "vanish": 0.25, "appear": 0.6, "effect": "fx_blink" } } ] },
+    // 다중 사격: 쏘는 적만(shoot_projectile), 한 번에 +2발(12° 부채)
+    { "id": "multishot", "name": "연발하는", "label": "다중 사격", "ranks": ["unique"], "require_parts": ["shoot_projectile"], "extra_shots": 2,
+      "glow": [255, 230, 150] },
+    // 흡혈: 주인공에게 들어간 피해만큼 회복
+    { "id": "vampiric", "name": "흡혈의", "label": "흡혈", "ranks": ["unique"], "glow": [200, 30, 60],
+      "behaviors_add": [ { "type": "life_steal", "pct": 1.0 } ] }
   ]
 }

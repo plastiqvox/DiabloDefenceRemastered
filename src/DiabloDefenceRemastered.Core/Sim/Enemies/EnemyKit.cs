@@ -30,6 +30,8 @@ public sealed class EnemyKit
     public int[] SpawnHooks { get; private set; } = [];
     public int[] DeathHooks { get; private set; } = [];
     public int[] HitModifiers { get; private set; } = [];
+    /// <summary>맞음 훅 슬롯(번개 강화, 2026-11-14).</summary>
+    public int[] HurtHooks { get; private set; } = [];
     /// <summary>단일 대상 근접 능력의 가장 긴 사거리 여분(두 반경 위, px). 없으면 0 — <c>TouchReach</c>.</summary>
     public float MeleeReachOver { get; private set; }
     /// <summary>정의 페이즈 수 + 1.</summary>
@@ -108,6 +110,7 @@ public sealed class EnemyKit
         kit.SpawnHooks = Indices<ISpawnHookPart>(phases[0], count);
         kit.DeathHooks = Indices<IDeathHookPart>(phases[0], count);
         kit.HitModifiers = Indices<IHitModifierPart>(phases[0], count);
+        kit.HurtHooks = Indices<IHurtHookPart>(phases[0], count);
 
         var reach = 0f;
         foreach (var part in phases[0])

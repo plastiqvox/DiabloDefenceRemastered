@@ -34,6 +34,8 @@ public static class EnemyFactory
         e.Radius = BodyRadius(world, def, rank);
 
         float hpPct = 0f, dmgPct = 0f, armor = 0f, kb = 0f, speedPct = 0f, cdPct = 0f;
+        var hitFlags = DamageFlags.None;
+        var extraShots = 0;
         var immunities = Immunities.FromNames(def.Immunities);
         foreach (var ai in affixes)
         {
@@ -46,7 +48,11 @@ public static class EnemyFactory
             speedPct += Stat(a.Stats, EnemyStatKey.SpeedPct);
             cdPct += Stat(a.Stats, EnemyStatKey.AttackCooldownPct);
             immunities |= Immunities.FromNames(a.Immunities);
+            if (a.Chill) hitFlags |= DamageFlags.Chill;
+            extraShots += Math.Max(0, a.ExtraShots);
         }
+        e.HitFlags = hitFlags;
+        e.ExtraShots = extraShots;
 
         var minutes = world.DifficultyMinutes;
         var scaling = world.Stage?.Scaling;

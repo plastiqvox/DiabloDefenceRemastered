@@ -55,6 +55,15 @@ public sealed partial class Enemy
     /// <summary>입장·등장 끝에 생성 훅을 부를 생성 맥락(호위 데려오기는 들어온 뒤).</summary>
     public SpawnContext PendingSpawn;
     public bool SpawnHooksPending;
+    /// <summary>
+    /// 우두머리 고유 이름 굴림(2026-11-14, 기획 9.2 — <c>rules.ranks.unique_names</c> 의 first·second·title 번호를 10 비트씩, −1 = 없음).
+    /// 그리기만 읽는다(<see cref="UniqueNames"/>).
+    /// </summary>
+    public int NameRoll;
+    /// <summary>접두사가 이 적의 주인공 피해 요청에 얹는 표시(<c>hit_flags</c> — 냉기 강화 <see cref="DamageFlags.Chill"/>). 근접·이 적이 쏜 탄 모두.</summary>
+    public DamageFlags HitFlags;
+    /// <summary>접두사 <c>extra_shots</c> 합(다중 사격 — <c>shoot_projectile</c> 한 번에 더 쏘는 탄 수).</summary>
+    public int ExtraShots;
 
     partial void ResetBehavior()
     {
@@ -81,5 +90,8 @@ public sealed partial class Enemy
         PendingSpawn = default;
         SpawnHooksPending = false;
         FadeOutTick = FadeOutTicks = HiddenUntilTick = 0;
+        NameRoll = -1;
+        HitFlags = DamageFlags.None;
+        ExtraShots = 0;
     }
 }

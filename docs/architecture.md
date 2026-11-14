@@ -2062,17 +2062,34 @@ public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public
 
 - **적 능력치 키 `EnemyStatKey`**: `hp_pct`, `armor`, `speed_pct`, `damage_pct`, `attack_cooldown_pct`, `knockback_resist`. 접두사 `stats` 와 버프 `stats` 가 같은 키를 쓰고,
   목록에 없는 키는 로딩 오류다(주인공 쪽 `StatKey`·13.5-9 와 같은 장치).
-  - 적용: `hp_pct`·`armor`·`knockback_resist` 는 생성 때 한 번(접두사만). `speed_pct`·`damage_pct` 는 매 틱(버프 포함) 더해서 곱한다(기획 4.2 "버프%는 더함").
+  - 적용: `hp_pct`·`armor`·`knockback_resist` 는 생성 때 한 번(접두사만 — 단 버프 `armor` 는 맞는 순간 더함, 아래 디아2식 항목). `speed_pct`·`damage_pct` 는 매 틱(버프 포함) 더해서 곱한다(기획 4.2 "버프%는 더함").
     `attack_cooldown_pct` 는 **모든 능력 부품과 패턴의 `cooldown` 매개변수**에 × (1 + 합)(최소 ×0.3). 보스·중간 보스는 접두사를 받지 않는다.
 - 접두사 `exclude_tags`·`exclude_parts`: 이 태그나 부품을 가진 적에게는 붙지 않는다(예: `fire_enchanted` 는 `burning_dead` 에 안 붙음, E `phasing` 은 `phase_through` 를 가진 핀드에 안 붙음).
 - **버프**: 부품은 버프 ID 와 시간만 넘긴다(`"buff": "command"`). 적마다 `BuffSlots`(인라인 6칸: 버프 정의 번호, 끝 틱, 값 배율). **같은 버프는 큰 값 하나만 남고**(기획 4.2), 다른 버프는 더한다.
   오라처럼 범위 안에 있는 동안만 붙는 효과는 매 틱 2틱짜리로 다시 붙이고, 시간제(함성 6s)는 그 시간으로 붙인다. 칸이 모자라면 가장 먼저 끝나는 것을 바꾼다.
   `debuff` 가 있는 버프는 정의 `immunities` 에 같은 이름이 있으면 붙지 않는다(`slow` 면역 = 보스·중간 보스). 버프 붙이기 도우미는 WP1 공통 코드라 WP3(장판 둔화)·WP4(오라·함성)가 같이 쓴다.
   → "새 오라를 가진 적" 이 정의(버프 1개 + 오라 부품 매개변수)만으로 늘어난다.
-- 정예·우두머리 배율(HP ×3.5/×8, 피해 ×1.4/×1.6, 이동 ×1.1, 경험치 ×4/×10, 크기 ×1.15/×1.3 — 최종 크기 상한 `max_scale` 1.6(6.5), 넉백 저항, 발광, 드롭)과
-  정예 무리 기본값(`pack_size: [3,5]`, `unique_chance: 0.3`, `banner: "정예 무리가 나타났다"`, `banner_time: 1.5`)은 `rules.ranks` 의 `elite`·`unique`·`pack` 에 둔다(`rules/enemies.json`, 6.10).
+- 정예·우두머리 배율(HP ×8/×20 — 2026-11-14 ×3.5/×8 에서, 피해 ×1.4/×1.6, 이동 ×1.1, 경험치 ×4/×10, 크기 ×1.15/×1.3 — 최종 크기 상한 `max_scale` 1.6(6.5), 넉백 저항, 발광, 드롭)과
+  정예 무리 기본값(`pack_size: [3,5]`, `unique_chance: 0.3`, `minions: [3,5]`, `banner: "정예 무리가 나타났다"`, `unique_banner`, `banner_time: 1.5`)은 `rules.ranks` 의 `elite`·`unique`·`pack` 에, 우두머리 이름 낱말은 `rules.ranks.unique_names` 에 둔다(`rules/enemies.json`, 6.10).
 - `EnemyFactory.Create(def, rank, affixes, minutes, in SpawnContext)` 가 정의 + 등급 + 접두사를 합쳐 인스턴스를 만든다(데코레이터 방식: 정의는 그대로, 인스턴스가 합친 값을 가짐).
   접두사 부품은 정의 부품 뒤 슬롯에 붙는다. 분열체는 `rank` 를 물려받지 않는다(부품 매개변수 `inherit_rank: false` 기본). 생성 직후 `ISpawnHookPart` 들을 부른다.
+- **디아2식 정예·우두머리(2026-11-14, 기획 9.1~9.3 — 사용자 지적 "정예와 유니크가 차별성이 없다")**:
+  - `DirectorSpawns.ElitePack` 은 먼저 `unique_chance` 를 굴려 **우두머리 무리**(우두머리 1 + 같은 종류 일반 등급 졸개 `pack.minions`)와 **챔피언 무리**(정예 n)를 가른다.
+    예전처럼 정예 무리 안에 우두머리 하나가 섞이지 않는다. 이벤트 `count` 는 대장을 포함한 전체 수다. 문구는 우두머리 무리면 `pack.unique_banner`.
+  - 접두사는 무리마다 한 번 고른다(`PickAffixes(world, def, rank, k, into)`) — 챔피언 무리는 모두 같은 형, 졸개는 접두사 없음.
+    후보 조건: 접두사 `ranks`(`elite`·`unique`, 비면 둘 다)에 그 등급이 있고, `exclude_tags`·`exclude_parts` 에 걸리지 않고, `require_parts` 가 있으면 그중 하나를 정의 `behaviors` 에 가짐.
+    하나를 고르면 같은 `group`(`aura`·`enchant`)은 후보에서 뺀다 — 우두머리는 오라 하나·강화 하나까지.
+  - 우두머리 고유 이름: `rules.ranks.unique_names` 의 `first`·`second`·`title` 을 `World.Rng.Rank` 로 굴려 `Enemy.NameRoll`(10 비트씩)에 담는다. 글자는 그리기만 만든다(`UniqueNames.Plate`).
+    이름판 = 정예 파란 "`name` + 종류 이름", 우두머리 금색 고유 이름 + 밑 줄 "종류 · `label` · `label`".
+  - 등급 발광(정예 파랑 맥동·우두머리 금)이 접두사 `glow` 에 덮이지 않는다. 접두사 `glow` 는 등급이 없는 적에게만, `alpha` 는 몸 알파에 곱한다(유령).
+    접두사 `light` 는 정의 `light` 가 없을 때 몸 빛(셰이더 점 빛)이다.
+  - 새 접두사 키: `label`, `ranks`, `group`, `require_parts`, `alpha`, `light`, `chill`(→ `Enemy.HitFlags` 의 `DamageFlags.Chill`), `extra_shots`(→ `Enemy.ExtraShots`, `shoot_projectile` 이 1 + n 발을 12° 부채로).
+  - 새 부품(EnemyBehavior): `spark_on_hurt`(번개 강화 — 새 계약 `IHurtHookPart`: 지난 틱 자기가 맞은 `HitLanded` 마다 다음 틱 EnemyThink 2b 가 부름, 슬롯 쿨로 간격, `EnemyShots.FireClear` 로 생성 금지 지킴),
+    `life_steal`(흡혈 — `IHitModifierPart.OnHitLanded`), `teleport_ability`(순간이동 — 보스 `teleport` 동작을 클립 없는 독점 능력으로 감쌈, 거리 띠·쿨).
+    `command_aura` 에 `include_self`(오라를 우두머리 자신도 받음 — 발밑 고리가 보임).
+  - 냉기 둔화: `DamageFlags.Chill` 이 붙은 주인공 피해가 **실제로 들어가면**(피격 무적으로 버린 요청은 아님) `Hero.ChillTime = rules.hero.chill.duration`, 그동안 이동 × `move_mul`(붐빔 둔화와 곱).
+    근접은 `EnemyCtx.HitHero` 가, 적 탄은 생성 때 쏜 적의 `HitFlags` 를 `Projectile.HitFlags` 로 복사해 싣는다 — 쏜 적이 죽은 뒤(죽음 서리 고리)에도 둔화가 걸린다.
+  - 버프 `armor`(저항의 오라)는 DamageResolve 가 맞는 순간 `Enemy.Armor` 에 더한다(접두사 `armor` 는 그대로 생성 때 한 번).
 
 ### 6.8 무기 `weapons`, 진화 무기
 

@@ -64,6 +64,7 @@ public static class Wp4Defs
                               Pulse = new RankPulseDef { Period = 1.2f, Alpha = [0.25f, 0.45f] } },
         Unique = new RankDef { Hp = 8f, Damage = 1.6f, Speed = 1.1f, Xp = 10, Scale = 1.3f, KnockbackResist = 0.8f, Affixes = 2, Glow = new Rgb(255, 200, 80) },
         Pack = new PackDef { PackSize = [3, 5], UniqueChance = 0.3f, Banner = "정예 무리가 나타났다", BannerTime = 1.5f },
+        UniqueNames = new UniqueNamesDef { First = ["썩은", "검은"], Second = ["이빨", "손"], Title = ["도살자", "파수꾼"] },   // 2026-11-14 디아2식 우두머리 이름
         MaxScale = 1.6f,
     };
 

@@ -45,6 +45,7 @@ public sealed class CombatSpawner(World world) : ICombatSpawner
             p.TurnRate = def.TurnRate * (MathF.PI / 180f);
         }
         world.Enemies.TryGet(s.Owner, out var owner);
+        p.HitFlags = owner?.HitFlags ?? DamageFlags.None;
         if (def.OnEnd is { } onEnd)
             p.OnEndDamage = owner is null
                 ? DamageMath.Round(onEnd.Damage)

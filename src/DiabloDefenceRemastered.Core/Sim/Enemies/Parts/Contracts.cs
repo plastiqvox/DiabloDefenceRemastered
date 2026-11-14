@@ -54,6 +54,15 @@ public interface IHitModifierPart : IEnemyBehavior
     void OnHitLanded(in EnemyCtx ctx, in HitLanded hit) { }
 }
 
+/// <summary>
+/// 맞음 훅(2026-11-14 번개 강화, 기획 9.3): 지난 틱 이 적이 실제로 맞은 피해(<see cref="HitLanded"/> Target == 자기)마다 다음 틱 EnemyThink 가 부른다.
+/// 주인공 무기는 초당 여러 번 맞히므로 부품이 슬롯 쿨로 간격을 둔다.
+/// </summary>
+public interface IHurtHookPart : IEnemyBehavior
+{
+    void OnHurt(in EnemyCtx ctx, ref PartSlot slot, in HitLanded hit);
+}
+
 /// <summary>동작(패턴·훅 안쪽). 이벤트 프레임(또는 훅 순간)에 한 번 <see cref="Begin"/>, 여러 틱 동작만 <see cref="Tick"/>.</summary>
 public interface IEnemyAction
 {

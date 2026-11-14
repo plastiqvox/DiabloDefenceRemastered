@@ -242,6 +242,8 @@ public sealed record HeroRulesDef
     /// <summary>모든 직업의 기본 능력치(기획 4.1 표). 직업 <c>stats</c> 가 키별로 덮어쓴다.</summary>
     public IReadOnlyDictionary<StatKey, float> Stats { get; init; } = new Dictionary<StatKey, float>();
     public CrowdSlowDef? CrowdSlow { get; init; }
+    /// <summary>냉기 둔화(2026-11-14, 기획 9.3 냉기 강화). null 이면 둔화 없음.</summary>
+    public ChillDef? Chill { get; init; }
     /// <summary>
     /// 물약 칸(v0.9.1 V9, 6.19 — v0.8 의 <c>belt</c>(저절로 마심)를 바꿈, 옛 키는 모르는 속성 오류). null 이면 물약 칸 없음(체력 물약을 줍지 않음).
     /// 구현 WP3, 수는 <c>Hero.Potions</c>·짐 <c>Potions</c>.
@@ -297,6 +299,14 @@ public sealed record PotionRulesDef
 
     /// <summary>빠른 물약 단계 <paramref name="speedLevel"/> 의 회복 시간(초 — 범위 밖이면 끝 값).</summary>
     public float Duration(int speedLevel) => Durations.Count == 0 ? 0f : Durations[Math.Clamp(speedLevel, 0, Durations.Count - 1)];
+}
+
+/// <summary>냉기 둔화: 맞은 뒤 duration 초 동안 이동 × move_mul, 주인공에 tint 빛.</summary>
+public sealed record ChillDef
+{
+    public float MoveMul { get; init; } = 0.6f;
+    public float Duration { get; init; } = 2f;
+    public Rgb Tint { get; init; } = new(120, 180, 255);
 }
 
 public sealed record CrowdSlowDef
@@ -378,6 +388,8 @@ public sealed record RanksDef
     public required RankDef Elite { get; init; }
     public required RankDef Unique { get; init; }
     public required PackDef Pack { get; init; }
+    /// <summary>우두머리 고유 이름 낱말(2026-11-14, 기획 9.2 — <c>first</c>+<c>second</c> 붙여 쓰고 띄어 <c>title</c>). null 이면 종류 이름.</summary>
+    public UniqueNamesDef? UniqueNames { get; init; }
     /// <summary>생성 때 최종 크기(정의 scale × 등급 배율)의 상한(기획 8.1). 넘으면 자르고 몸 반경도 자른 크기로 센다(6.5).</summary>
     public float MaxScale { get; init; } = 1.6f;
 }
@@ -411,9 +423,24 @@ public sealed record PackDef
 {
     /// <summary>[최소, 최대]</summary>
     public int[] PackSize { get; init; } = [3, 5];
+    /// <summary>
+    /// 정예 무리 대신 우두머리 무리가 나올 확률(2026-11-14 디아2식 — 우두머리 하나 + 졸개 <see cref="Minions"/>, 정예 대장이 섞이던 것을 갈랐다).
+    /// </summary>
     public float UniqueChance { get; init; }
+    /// <summary>우두머리 졸개 [최소, 최대](같은 종류, 일반 등급).</summary>
+    public int[] Minions { get; init; } = [3, 5];
+    /// <summary>우두머리 무리 문구(비면 <see cref="Banner"/>).</summary>
+    public string UniqueBanner { get; init; } = "";
     public string Banner { get; init; } = "";
     public float BannerTime { get; init; }
+}
+
+/// <summary>우두머리 고유 이름 낱말 표(각 1024 개까지 — <c>Enemy.NameRoll</c> 10 비트씩).</summary>
+public sealed record UniqueNamesDef
+{
+    public IReadOnlyList<string> First { get; init; } = [];
+    public IReadOnlyList<string> Second { get; init; } = [];
+    public IReadOnlyList<string> Title { get; init; } = [];
 }
 
 public sealed record CapsDef

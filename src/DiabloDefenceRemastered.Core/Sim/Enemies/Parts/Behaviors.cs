@@ -66,6 +66,9 @@ public sealed record ShootProjectileParams
 /// </summary>
 public sealed class ShootProjectile(ShootProjectileParams p) : IAbilityPart, IDamageInfo
 {
+    /// <summary>다중 사격 탄 사이 각(라디안, 12°).</summary>
+    public const float MultiShotStep = 12f * MathF.PI / 180f;
+
     public ShootProjectileParams Params => p;
     public float? BaseDamage => p.Damage;
     public float? AreaRadius => null;
@@ -87,7 +90,19 @@ public sealed class ShootProjectile(ShootProjectileParams p) : IAbilityPart, IDa
     {
         var step = ctx.AdvanceClip(p.EventFrame ?? 0);
         if ((step & AnimStep.EventFrame) != 0 && ctx.SeenClearly && ctx.World.Nav.ProjectileLineClear(ctx.Self.Pos, ctx.HeroPos))
-            EnemyShots.Fire(ctx, p.Projectile.Def, ctx.DirToHero, ctx.FinalDamage(p.Damage), sightGated: true);
+        {
+            // 다중 사격 접두사(2026-11-14, 기획 9.3): 1 + extra_shots 발을 주인공 쪽 가운데로 MultiShotStep 간격 부채꼴
+            var n = 1 + ctx.Self.ExtraShots;
+            var dir = ctx.DirToHero;
+            var damage = ctx.FinalDamage(p.Damage);
+            if (n == 1) EnemyShots.Fire(ctx, p.Projectile.Def, dir, damage, sightGated: true);
+            else
+            {
+                var baseAngle = MathF.Atan2(dir.Y, dir.X);
+                for (var i = 0; i < n; i++)
+                    EnemyShots.Fire(ctx, p.Projectile.Def, MathX.FromAngle(baseAngle + (i - (n - 1) * 0.5f) * MultiShotStep), damage, sightGated: true);
+            }
+        }
         return (step & AnimStep.Finished) != 0 ? ActionStatus.Done : ActionStatus.Running;
     }
 }
@@ -348,15 +363,17 @@ public sealed record CommandAuraParams
     public required DefRef<BuffDef> Buff { get; init; }
     /// <summary>참이면 정의 rank miniboss·boss 에게도 건다(기본 거짓 — 6.5, MVP 데이터에 참 없음).</summary>
     public bool IncludeBosses { get; init; }
+    /// <summary>참이면 자기에게도 건다(우두머리 오라 접두사 — 디아2 오라처럼 우두머리도 받고 발밑 고리가 보임, 2026-11-14).</summary>
+    public bool IncludeSelf { get; init; }
 }
 
-/// <summary>지휘 오라: 반경 안 태그 적(자신 제외)에게 2틱짜리 버프를 매 틱 다시 붙인다 — 벗어나면 저절로 사라짐.</summary>
+/// <summary>지휘 오라: 반경 안 태그 적(<c>include_self</c> 가 아니면 자신 제외)에게 2틱짜리 버프를 매 틱 다시 붙인다 — 벗어나면 저절로 사라짐.</summary>
 public sealed class CommandAura(CommandAuraParams p) : IAuraPart
 {
     public CommandAuraParams Params => p;
 
     public void Tick(in EnemyCtx ctx, ref PartSlot slot) =>
-        EnemyBuffs.ApplyArea(ctx, p.Radius, p.TargetTag, p.Buff, 2, p.IncludeBosses, includeSelf: false);
+        EnemyBuffs.ApplyArea(ctx, p.Radius, p.TargetTag, p.Buff, 2, p.IncludeBosses, includeSelf: p.IncludeSelf);
 }
 
 /// <summary>범위 버프 한 곳(오라·함성·buff_area). include_bosses 거짓이면 정의 rank miniboss·boss 를 건너뛴다.</summary>

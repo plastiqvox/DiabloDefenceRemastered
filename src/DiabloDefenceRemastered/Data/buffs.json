@@ -2,6 +2,10 @@
 {
   "buffs": [
     { "id": "command", "stats": { "speed_pct": 0.25, "damage_pct": 0.25 }, "foot_ring": [255, 210, 90] },
-    { "id": "war_cry", "stats": { "damage_pct": 0.30 }, "foot_ring": [255, 80, 60] }
+    { "id": "war_cry", "stats": { "damage_pct": 0.30 }, "foot_ring": [255, 80, 60] },
+    // 우두머리 오라(2026-11-14 디아2식, 기획 9.3): 힘(피해)·광신(이동·공격 빠름)·저항(방어 — DamageResolve 가 버프 armor 를 더함)
+    { "id": "aura_might", "stats": { "damage_pct": 0.35 }, "foot_ring": [255, 90, 70] },
+    { "id": "aura_fanatic", "stats": { "speed_pct": 0.25, "attack_cooldown_pct": -0.25 }, "foot_ring": [255, 210, 90] },
+    { "id": "aura_defiance", "stats": { "armor": 3 }, "foot_ring": [120, 200, 255] }
   ]
 }

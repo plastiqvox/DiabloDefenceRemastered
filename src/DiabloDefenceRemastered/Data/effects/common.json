@@ -34,6 +34,15 @@
     { "id": "pj_boss_fireball", "sprite": "fireba", "scale": 0.9, "blend": "alpha",
       "radius": 10, "speed": 260, "range": 600, "blocked_by_obstacles": true, "pierce": 1,
       "explosion": { "damage_mul": 1.0, "radius": 50, "effect": "fx_fire_explosion" },
-      "light": { "color": [255, 140, 60], "radius": 170, "intensity": 1.0, "height": 44 } }   // 2026-11-13
+      "light": { "color": [255, 140, 60], "radius": 170, "intensity": 1.0, "height": 44 } },   // 2026-11-13
+    // 우두머리 접두사 탄(2026-11-14 디아2식, 기획 9.3). 주인공 무기 그림(매직 미사일 miniltng·비전 구체 holy)과 갈리게 색조를 넣고 작게
+    // 번개 강화 전기 튐: miniltng ×0.6 노란 색조, 반경 5, 170px/s, 230px, 장애물 막힘
+    { "id": "pj_spark", "sprite": "miniltng", "scale": 0.6, "tint": [255, 225, 110], "blend": "alpha",
+      "radius": 5, "speed": 170, "range": 230, "blocked_by_obstacles": true, "pierce": 1, "hit_effect": "fx_bolt_hit",
+      "light": { "color": [255, 230, 140], "radius": 70, "intensity": 0.6, "height": 30 } },
+    // 냉기 강화 죽음 서리 조각: holy ×0.45 하늘색, 반경 5, 150px/s, 260px — 쏜 적의 hit_flags(냉기)를 이어받아 맞으면 둔화
+    { "id": "pj_frost_shard", "sprite": "holy", "scale": 0.45, "tint": [130, 200, 255], "blend": "alpha",
+      "radius": 5, "speed": 150, "range": 260, "blocked_by_obstacles": true, "pierce": 1,
+      "light": { "color": [120, 180, 255], "radius": 80, "intensity": 0.6, "height": 30 } }
   ]
 }

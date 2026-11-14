@@ -283,7 +283,22 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             }
         }
         else if (hero.HitFlashTime > 0f) _glows.Add(new GlowDraw(h.Pages[page], src, dest, Rgb.White, 0.8f));
+        // 냉기 둔화(2026-11-14, 기획 9.3): 둔화 동안 몸에 하늘색 덧칠 + 둘레 빛(순간이동 덧칠과 같은 방식 — 붉은 옷 위에서도 보이게)
+        else if (!hero.Dead && hero.ChillTime > 0f && f.World.Defs.Rules.Hero?.Chill is { } chill)
+        {
+            _glows.Add(new GlowDraw(h.Pages[page], src, dest, chill.Tint, ChillGlowAlpha));
+            if (_lightTex is { } light)
+            {
+                var c = dest.Center;
+                var half = MathF.Max(dest.Width, dest.Height) * 0.55f;
+                _additive.Add(new GlowDraw(light, new RectI(0, 0, light.Width, light.Height), new RectF(c.X - half, c.Y - half, c.X + half, c.Y + half), chill.Tint, ChillGlowAlpha));
+            }
+        }
     }
+
+    private const float ChillGlowAlpha = 0.45f;
+    /// <summary>우두머리 이름판 둘째 줄(종류·접두사) 색.</summary>
+    private static readonly Rgb NamePlateAffixColor = new(215, 210, 195);
 
     /// <summary>순간이동 덧칠 색(150,190,255 — 숙련 아이콘 색조와 같음).</summary>
     private static readonly Rgb BlinkGlow = new(150, 190, 255);
@@ -698,11 +713,19 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             f.ShortLights.Add(new PointLight(Vector2.Lerp(p.PrevPos, p.Pos, _alphaInterp), pl.Radius * (p.Scale > 0f ? p.Scale : 1f), pl.Color, pl.Intensity, pl.Height));
         }
         // 몸에서 빛을 내는 적(불타는 해골 — 2026-11-13): 어둠 속에서 다가오는 게 바닥·벽에 비쳐 보인다
+        // 우두머리 불꽃·냉기·번개 강화(2026-11-14)는 접두사 light — 정의 빛이 없을 때
         foreach (var e in f.World.Enemies.Items)
         {
-            if (!e.IsAlive || e.Def.Light is not { } el) continue;
+            if (!e.IsAlive || (e.Def.Light ?? AffixLight(f.World, e)) is not { } el) continue;
             f.ShortLights.Add(new PointLight(Vector2.Lerp(e.PrevPos, e.Pos, _alphaInterp), el.Radius, el.Color, el.Intensity, el.Height));
         }
+    }
+
+    private static CarriedLightDef? AffixLight(World w, Enemy e)
+    {
+        for (var i = 0; i < 2; i++)
+            if (e.AffixIdx[i] >= 0 && w.Defs.Affixes[e.AffixIdx[i]].Light is { } light) return light;
+        return null;
     }
 
     private void DrawLayer7(SpriteBatch batch, WorldFrame f, Primitives prim, Matrix toTarget)
@@ -886,10 +909,17 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             var draw = Vector2.Lerp(e.PrevPos, e.Pos, _alphaInterp);
             var a = f.Fog ? FogMath.EnemyAlpha(w, e, f.StageTick, f.HeroDraw, draw) : 1f;
             if (a <= 0f) continue;
-            var name = e.Def.Name;
+            // 디아2식 이름판(2026-11-14, 기획 9.1·9.2): 정예 = 파란 "<접두사> <종류>", 우두머리 = 금색 고유 이름 + 밑에 접두사 줄
+            var (name, line2) = Core.Sim.Enemies.UniqueNames.Plate(w, e);
             if (string.IsNullOrEmpty(name)) continue;
             var color = e.Rank == EnemyRank.Unique ? new Rgb(230, 190, 80) : new Rgb(110, 150, 255);
             var p = draw - f.Camera - new Vector2(0, e.BodyTop > 0 ? e.BodyTop + 8 : 84);
+            if (line2 is not null)
+            {
+                p.Y -= 12f;
+                var m2 = _ui.MeasureText(line2, 10f);
+                _ui.Text(line2, new Vector2(p.X - m2.X * 0.5f, p.Y + 14f), 10f, NamePlateAffixColor, a);
+            }
             var m = _ui.MeasureText(name, 12f);
             _ui.Text(name, new Vector2(p.X - m.X * 0.5f, p.Y), 12f, color, a);
         }

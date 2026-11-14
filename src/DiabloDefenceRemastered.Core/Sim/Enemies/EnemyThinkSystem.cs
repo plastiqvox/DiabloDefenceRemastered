@@ -83,6 +83,14 @@ public sealed class EnemyThinkSystem : ISimSystem
                 foreach (var s in kit.HitModifiers)
                     if (kit.Part(e.PhaseIdx, s) is IHitModifierPart m) m.OnHitLanded(ctx, hit);
             }
+        // 2b 지난 틱 자기가 맞은 것(번개 강화 튐 — 2026-11-14)
+        if (kit.HurtHooks.Length > 0)
+            foreach (ref readonly var hit in world.Events.Previous.HitLanded.AsSpan())
+            {
+                if (hit.Target != e.Id) continue;
+                foreach (var s in kit.HurtHooks)
+                    if (kit.Part(e.PhaseIdx, s) is IHurtHookPart h) h.OnHurt(ctx, ref e.Parts[s], hit);
+            }
 
         // 3 페이즈·광폭화·지속 효과·쿨다운
         PhaseController.Step(ctx);
@@ -284,11 +292,18 @@ public sealed class EnemyThinkSystem : ISimSystem
             }
             else v.GlowAlpha = MathF.Max(v.GlowAlpha, 0.35f);
         }
-        var affix0 = e.AffixIdx[0];
-        if (affix0 >= 0 && w.Defs.Affixes[affix0].Glow is { } ag)
+        // 접두사: 등급 발광(정예 파랑·우두머리 금)을 덮지 않는다 — 덮어서 둘이 같아 보였다(2026-11-14 사용자 지적). 접두사 색은 등급이 없을 때만, 알파는 곱함(유령)
+        for (var i = 0; i < 2; i++)
         {
-            v.GlowColor = ag;
-            if (v.GlowAlpha <= 0f) v.GlowAlpha = 0.35f;
+            var ai = e.AffixIdx[i];
+            if (ai < 0) continue;
+            var a = w.Defs.Affixes[ai];
+            if (rank is null && i == 0 && a.Glow is { } ag)
+            {
+                v.GlowColor = ag;
+                if (v.GlowAlpha <= 0f) v.GlowAlpha = 0.35f;
+            }
+            if (a.Alpha is { } alpha) v.AlphaMul *= Math.Clamp(alpha, 0f, 1f);
         }
         if (e.PhaseGlow is { } pg) { v.GlowColor = pg.Color; v.GlowAlpha = pg.Alpha; }
 
