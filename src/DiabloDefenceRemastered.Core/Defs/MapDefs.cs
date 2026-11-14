@@ -50,14 +50,47 @@ public sealed record TilesetDef : IDef
     /// </summary>
     public IReadOnlyDictionary<int, TileAccentDef> Accents { get; init; } = new Dictionary<int, TileAccentDef>();
     /// <summary>
-    /// 문 봉인 나무 문(2026-11-13 사용자 요청 "창살 대신 문으로"): 변 방향(<c>v</c> = nw·se 변의 세로 벽, <c>h</c> = ne·sw 변의 가로 벽) → 문 틈 메가 안 하위 칸마다
-    /// 닫힌·열린 하위 타일 번호(1 기반, 원본 MIN). 열린 문 하위 칸은 어떤 메가타일에도 없어 가져오기가 맵 그림 아틀라스에 덤으로 굽는다(<c>arena.json</c> <c>doors</c>).
+    /// 문 봉인 나무 문(2026-11-13 사용자 요청 "창살 대신 문으로" → 2026-11-15 "문 한 짝씩만"): 변(<c>nw</c>·<c>ne</c>·<c>se</c>·<c>sw</c>) → 문 틈 하위 칸마다
+    /// 닫힌·열린 하위 타일 번호(1 기반, 원본 MIN, 0 = 그리지 않음). 자리는 문 틈 첫 메가(변 위 번호가 작은 쪽)의 하위 칸 원점 기준 — 벽 줄 하위 4칸에 한 짝 + 문틀. 열린 문 하위 칸은 어떤 메가타일에도 없어 가져오기가 맵 그림 아틀라스에 덤으로 굽는다(<c>arena.json</c> <c>doors</c>).
     /// 그림만 — 문 틈 걷기·막힘은 문 봉인(<c>GateSeals</c>)이 그대로 정한다.
     /// </summary>
     public IReadOnlyDictionary<string, IReadOnlyList<DoorCellDef>> Doors { get; init; } = new Dictionary<string, IReadOnlyList<DoorCellDef>>();
+    /// <summary>
+    /// 변 규칙(2026-11-15 사용자 요청 "타일 규칙을 먼저 만들고 지도를", 설계서 6.11 "변 규칙"): 메가타일 종류마다 네 변(ne·se·sw·nw)에 걸친 것.
+    /// 이웃 둘의 맞닿은 변이 맞아야 하고(벽이 잘린 단면·바닥과 흙이 턱 없이 만남을 잡음), 맵 바깥에 닿는 변은 <c>x</c>(벽 뒤) 또는 <see cref="TileJoinsDef.Fade"/>.
+    /// null 이면 검사하지 않는다. 검사는 <c>TileJoins.Validate</c>. <c>LayoutHash</c> 에 넣지 않는다 — 그림을 바꾸지 않는다.
+    /// </summary>
+    public TileJoinsDef? Joins { get; init; }
+    /// <summary>
+    /// 별칭 번호(2026-11-15, 설계서 6.11 "변 규칙"): 별칭 → 그림 메가타일. 그림은 원본 메가타일 것을 쓰고 성질·변 규칙은 별칭 번호 것을 쓴다 —
+    /// 앞 문 틈을 흙 턱 그림(18·19) 그대로 두되 걸을 수 있게(바닥이 턱 밖으로 혀처럼 튀어나오지 않게). 별칭 번호는 1000 이상, 그림 번호는 별칭이 아니다.
+    /// <c>LayoutHash</c> 에 들어간다(그림이 바뀜).
+    /// </summary>
+    public IReadOnlyDictionary<int, int> Aliases { get; init; } = new Dictionary<int, int>();
+
+    /// <summary>그림 메가타일 번호(별칭이면 그 그림, 아니면 그대로).</summary>
+    public int ArtTile(int tile) => Aliases.TryGetValue(tile, out var art) ? art : tile;
 }
 
-/// <summary>문 칸 하나: 문 틈 메가 안 하위 칸 자리(<see cref="At"/> — [dx, dy] 0..1)와 닫힌·열린 하위 타일 번호(1 기반).</summary>
+/// <summary>
+/// 변 규칙 표(설계서 6.11 "변 규칙"). 종류 이름 → 메가타일 번호들과 네 변 표시. 표시 글자: <c>f</c> 바닥, <c>d</c> 흙, <c>x</c> 벽 뒤(무엇과도 맞음),
+/// <c>wv</c>·<c>wh</c> 세로·가로 벽이 이 변을 넘어 이어짐, <c>ly</c>·<c>lx</c> 흙 턱이 y·x 방향으로 이어짐. <c>a|b</c> 는 둘 중 하나와 맞음.
+/// </summary>
+public sealed record TileJoinsDef
+{
+    public IReadOnlyDictionary<string, TileJoinKindDef> Kinds { get; init; } = new Dictionary<string, TileJoinKindDef>();
+    /// <summary>맵 바깥에 닿아도 되는 표시 중 그리기가 어둠으로 흐리게 하는 것(앞 흙 띠·문 틈 바닥 — <c>x</c> 는 늘 됨).</summary>
+    public IReadOnlyList<string> Fade { get; init; } = [];
+}
+
+/// <summary>변 규칙 종류 하나: 메가타일 번호들과 <see cref="Sides"/> = "ne se sw nw" 네 표시(공백으로 나눔).</summary>
+public sealed record TileJoinKindDef
+{
+    public IReadOnlyList<int> Tiles { get; init; } = [];
+    public required string Sides { get; init; }
+}
+
+/// <summary>문 칸 하나: 문 틈 첫 메가 원점 기준 하위 칸 자리(<see cref="At"/> — [dx, dy])와 닫힌·열린 하위 타일 번호(1 기반, 0 = 그리지 않음).</summary>
 public sealed record DoorCellDef
 {
     public Int2 At { get; init; }
@@ -65,6 +98,11 @@ public sealed record DoorCellDef
     public int Open { get; init; }
     /// <summary>열린 문 위 아치 덧그림(원작 L1S 프레임, 1 기반 — 원작은 문을 열 때 이 칸에 dSpecial 로 얹는다). 없으면 덧그림 없음.</summary>
     public int? OpenOverlay { get; init; }
+    /// <summary>
+    /// 열린 그림 위쪽 빈 줄을 닫힌 그림으로 채움(사용자 지적 "문이 열리니 벽이 갈라짐" — 원작 열린 문짝 하위 칸에는 문 위 벽이 없다).
+    /// 문짝 칸에만 켠다 — 문틀 기둥처럼 닫힌·열린 그림이 다른 칸에 켜면 닫힌 벽이 기둥 옆에 남는다(2026-11-15).
+    /// </summary>
+    public bool OpenKeepTop { get; init; }
 }
 
 /// <summary>변형 하나: <see cref="Chance"/>(0..1) 만큼 <see cref="With"/> 중 하나(해시)로 바꾼다. 모두 원래 번호와 성질이 같아야 한다.</summary>

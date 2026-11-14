@@ -28,8 +28,8 @@ public enum ArenaCellKind : byte
 /// </summary>
 public sealed record ArenaArt
 {
-    /// <summary>형식 번호. 2(v0.8 — <c>scale</c>, 사용자 결정 U).</summary>
-    public const int CurrentFormat = 2;
+    /// <summary>형식 번호. 2(v0.8 — <c>scale</c>, 사용자 결정 U), 3(2026-11-15 — <c>doors</c> 를 변 nw·ne·se·sw 와 문 틈 첫 메가 기준 자리로).</summary>
+    public const int CurrentFormat = 3;
     /// <summary>바닥 조각 한 변(월드 px — 그림 픽셀은 × <see cref="Scale"/>).</summary>
     public const int ChunkSize = 512;
     public const string FileName = "arena.json";
@@ -141,9 +141,9 @@ public sealed record ArenaArt
         for (var i = 0; i < Doors.Count; i++)
         {
             var d = Doors[i];
-            if (d.Side is not ("v" or "h")) errors.Add($"doors[{i}] 변 방향 '{d.Side}' 는 v 또는 h");
-            if (d.Dx is < 0 or > 1 || d.Dy is < 0 or > 1) errors.Add($"doors[{i}] 자리 ({d.Dx},{d.Dy}) 는 메가 안(0..1)");
-            if (d.Closed < 1 || d.Open < 1) errors.Add($"doors[{i}] frame — 프레임 번호는 1부터");
+            if (d.Side is not ("nw" or "ne" or "se" or "sw")) errors.Add($"doors[{i}] 변 '{d.Side}' 는 nw·ne·se·sw");
+            if (d.Dx is < -2 or > 3 || d.Dy is < -2 or > 3) errors.Add($"doors[{i}] 자리 ({d.Dx},{d.Dy}) 는 문 틈 첫 메가 원점 기준 −2..3");
+            if (d.Closed < 0 || d.Open < 0 || d.Closed + d.Open == 0) errors.Add($"doors[{i}] frame — 프레임 번호는 1부터(0 = 그 상태에서 안 그림, 둘 다 0 은 안 됨)");
         }
         return errors;
     }
@@ -166,7 +166,7 @@ public sealed record ArenaFloorChunk
 [JsonConverter(typeof(ArenaCellJsonConverter))]
 public readonly record struct ArenaCell(int Tx, int Ty, ArenaCellKind Kind, int Frame);
 
-/// <summary>문 기둥 하나(<see cref="ArenaArt.Doors"/>): 변 방향(<c>v</c>·<c>h</c>), 문 틈 메가 안 하위 칸(<see cref="Dx"/>·<see cref="Dy"/>), 닫힌·열린 그림 프레임.</summary>
+/// <summary>문 기둥 하나(<see cref="ArenaArt.Doors"/>): 변(<c>nw</c>·<c>ne</c>·<c>se</c>·<c>sw</c>, 2026-11-15), 문 틈 첫 메가 원점 기준 하위 칸(<see cref="Dx"/>·<see cref="Dy"/>), 닫힌·열린 그림 프레임.</summary>
 public sealed record ArenaDoorCell
 {
     public required string Side { get; init; }
