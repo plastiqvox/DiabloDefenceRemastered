@@ -166,6 +166,7 @@ public static class MapDataReader
         {
             layoutErrors.Clear();
             ArenaLayout.ValidateTileset(def, layoutErrors);
+            TileJoins.ValidateTileset(def, layoutErrors);
             Report(src);
         }
 
@@ -200,6 +201,7 @@ public static class MapDataReader
             // 안쪽 방(13.5-19, v0.6 — open_center·문 표시·방 기준점·하위 칸 검사 ①②). 펼친 격자로 늘 돈다
             layoutErrors.Clear();
             ArenaLayout.ValidateRooms(def, grid, layoutErrors);
+            TileJoins.Validate(grid, layoutErrors);
             Report(src);
 
             // (v0.8) 거울판: 짝 표로 만들고 원판과 같은 검사(배치 풀기·13.5-19·23 ③)를 돈다. 정의 표에는 넣지 않고 원판 Mirrored 에 둔다
@@ -210,7 +212,7 @@ public static class MapDataReader
             if (mirror is null) continue;
             layoutErrors.Clear();
             var mirrorGrid = ArenaLayout.TryExpand(mirror, ts, layoutErrors);
-            if (mirrorGrid is not null) ArenaLayout.ValidateRooms(mirror, mirrorGrid, layoutErrors);
+            if (mirrorGrid is not null) { ArenaLayout.ValidateRooms(mirror, mirrorGrid, layoutErrors); TileJoins.Validate(mirrorGrid, layoutErrors); }
             ReportMirror(src);
             maps[mi] = (def with { Mirrored = mirror }, src);
         }

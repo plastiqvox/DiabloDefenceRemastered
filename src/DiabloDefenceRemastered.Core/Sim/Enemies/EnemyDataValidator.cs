@@ -36,7 +36,12 @@ public sealed class EnemyDataValidator : IDataValidator
             if (defs.Rules.Rooms is { } rooms)
                 foreach (var e in RoomEvents.CheckPlacement(stage, rooms)) ctx.Add(e);
             CheckRhythm(stage, ctx);
+            if (stage.UniqueAffixes is < 1 or > AffixSlots.MaxAffixes)
+                ctx.Add("", $"$.stages[{i}].unique_affixes", $"스테이지 '{stage.Id}': unique_affixes {stage.UniqueAffixes} 는 1~{AffixSlots.MaxAffixes} 이어야 한다");
         }
+        var uniqueAffixes = defs.Rules.Ranks?.Unique.Affixes ?? 0;
+        if (uniqueAffixes > AffixSlots.MaxAffixes || defs.Rules.Ranks?.Elite.Affixes > AffixSlots.MaxAffixes)
+            ctx.Add("", "$.rules.ranks", $"등급 affixes 는 {AffixSlots.MaxAffixes} 까지(Enemy.AffixIdx 칸 수)");
     }
 
     /// <summary>
@@ -82,8 +87,8 @@ public sealed class EnemyDataValidator : IDataValidator
         // 정해진 순서(6.20 ③): 페이즈마다 순서 ID 는 그 페이즈 완성 목록에, 순서 패턴은 조건 없음, 조건 없는 패턴은 그 페이즈 순서에
         var sequenceOk = CheckSequences(def, Err);
 
-        // 슬롯 수(접두사 최대 2개 — 부품을 가진 접두사 중 큰 둘)
-        var affixParts = defs.Affixes.All.Select(a => a.Behaviors.Count).OrderByDescending(n => n).Take(2).Sum();
+        // 슬롯 수(접두사 최대 3개 — 부품을 가진 접두사 중 큰 셋)
+        var affixParts = defs.Affixes.All.Select(a => a.Behaviors.Count).OrderByDescending(n => n).Take(AffixSlots.MaxAffixes).Sum();
         EnemyKit? kit = null;
         if (sequenceOk)
         {

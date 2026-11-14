@@ -38,11 +38,25 @@ public static class UniqueNames
                 if (unique is not null) parts.Add(e.Def.Name);
                 if (Label(0) is { } l0) parts.Add(l0);
                 if (Label(1) is { } l1) parts.Add(l1);
+                if (Label(2) is { } l2) parts.Add(l2);
                 return (unique ?? e.Def.Name, parts.Count > 0 ? string.Join(" · ", parts) : null);
             }
             default:
                 return (e.Def.Name, null);
         }
+    }
+
+    /// <summary>정예 이름판이 맞은 뒤 보이는 시간(초)·끝에서 흐려지는 시간(초) — 기획 9.1(무리가 많으면 시끄러움).</summary>
+    public const float EliteShowSeconds = 3f, EliteFadeSeconds = 0.5f;
+
+    /// <summary>이름판 알파: 우두머리는 늘 1, 정예는 맞은 뒤 <see cref="EliteShowSeconds"/> 동안(끝 <see cref="EliteFadeSeconds"/> 흐려짐), 일반은 0.</summary>
+    public static float PlateAlpha(Enemy e, int tick)
+    {
+        if (e.Rank == EnemyRank.Unique) return 1f;
+        if (e.Rank != EnemyRank.Elite || e.LastHurtTick < 0) return 0f;
+        var age = (tick - e.LastHurtTick) * World.Dt;
+        if (age < 0f || age >= EliteShowSeconds) return 0f;
+        return Math.Clamp((EliteShowSeconds - age) / EliteFadeSeconds, 0f, 1f);
     }
 
     /// <summary>굴림 → "썩은이빨 도살자". 굴림이 없거나 표가 바뀌어 번호가 넘치면 null.</summary>

@@ -196,6 +196,11 @@ public sealed record SightRulesDef
     public required float TouchMargin { get; init; }
     /// <summary>13.5-15 의 여유(빛 반경 ≥ 원거리 최대 + edge + 이 값).</summary>
     public required float RangedMargin { get; init; }
+    /// <summary>
+    /// 안 보이는 곳을 화면에 검게 칠하는가(빛 지도 ③ 안개 합치기, 그림만). 2026-11-14 사용자 결정: 거짓 — 어둠은 셰이더 빛에 맡기고 검은 칠(문·벽에 끼던 안개)은 없앤다.
+    /// 시야 규칙(벽 뒤 적 숨김·또렷이 보임·쏘기 조건)은 그대로다.
+    /// </summary>
+    public bool PaintFog { get; init; } = true;
 }
 
 public sealed record EnemyRulesDef

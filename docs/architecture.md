@@ -2077,6 +2077,8 @@ public struct EnemyVisual { public Rgb GlowColor; public float GlowAlpha; public
   - `DirectorSpawns.ElitePack` 은 먼저 `unique_chance` 를 굴려 **우두머리 무리**(우두머리 1 + 같은 종류 일반 등급 졸개 `pack.minions`)와 **챔피언 무리**(정예 n)를 가른다.
     예전처럼 정예 무리 안에 우두머리 하나가 섞이지 않는다. 이벤트 `count` 는 대장을 포함한 전체 수다. 문구는 우두머리 무리면 `pack.unique_banner`.
   - 접두사는 무리마다 한 번 고른다(`PickAffixes(world, def, rank, k, into)`) — 챔피언 무리는 모두 같은 형, 졸개는 접두사 없음.
+    우두머리 k = 스테이지 `unique_affixes`(1~3, 뒤쪽 액트 3) → `rules.ranks.unique.affixes`. `Enemy.AffixIdx` 는 세 칸(`AffixSlots.MaxAffixes`), 부품 표 캐시 키도 세 접두사.
+  - 정예 이름판은 맞은 뒤 3초만(`Enemy.LastHurtTick` — DamageResolve 가 피해가 들어간 틱을 적음, `UniqueNames.PlateAlpha`), 우두머리는 늘.
     후보 조건: 접두사 `ranks`(`elite`·`unique`, 비면 둘 다)에 그 등급이 있고, `exclude_tags`·`exclude_parts` 에 걸리지 않고, `require_parts` 가 있으면 그중 하나를 정의 `behaviors` 에 가짐.
     하나를 고르면 같은 `group`(`aura`·`enchant`)은 후보에서 뺀다 — 우두머리는 오라 하나·강화 하나까지.
   - 우두머리 고유 이름: `rules.ranks.unique_names` 의 `first`·`second`·`title` 을 `World.Rng.Rank` 로 굴려 `Enemy.NameRoll`(10 비트씩)에 담는다. 글자는 그리기만 만든다(`UniqueNames.Plate`).
@@ -2529,6 +2531,24 @@ v0.2 의 `maps`(배경 그림 `Dungeon1` + 손 좌표 충돌)와 `obstacle_kinds
 - **쓰는 곳**: `RunPlanner` ① 의 (맵, 방향) 뽑기(3.6), `ROOM` 로그 `map=<원판 ID> mirror=1`, `--map <id>@m`(미리보기 — 9절), 가져오기 굽기 목록(원판 + `mirror: true` 인 맵의 거울판), 시작 검사 ③·13.5-10 의 맵 그림 이름(거울판 `art` 포함), 넓이 배율(`AreaScaleOf` — 거울판은 원판 값).
   점 빛 `[tx,ty]` 는 거울판에서 엉뚱한 자리가 되므로 거울판을 쓰는 액트도 점 빛은 기준점 ID 만 쓴다(13.5-23 ⑤ — "방 맵이 둘 이상" 조건에 "거울판이 있는 맵이 하나라도" 를 더함).
 - `cathedral_arena` 는 L1 짝 표가 그 맵의 조각(창살 `grate_h`·닫힌 문 `door_closed` 포함)을 다 덮은 뒤에 `mirror: true` 를 단다(WP0 이 짝 조각 번호·성질을 확인 → WP5). 그 전의 단계 1 은 들어오는 문만 바뀐다.
+
+
+#### 6.11 변 규칙 `joins`·별칭 `aliases`·맵 끝 흐림 (2026-11-15)
+
+사용자 지적 "끝에 있으면 안 되는 타일이 끝에 있어 잘려 보임" → 타일 규칙을 먼저 정하고 맵을 그 규칙으로 검사한다(이후 무작위 맵도 같은 규칙).
+
+- **변 규칙** `tilesets[].joins.kinds`: 종류 이름 → `tiles`(메가타일 번호들)·`sides`("ne se sw nw" 네 표시 — ne = 메가 −y, se = +x, sw = +y, nw = −x).
+  표시: `f` 바닥, `d` 흙, `x` 벽 뒤(무엇과도 맞음), `wv`·`wh` 세로(왼쪽 열)·가로(위 줄) 벽이 그 변을 넘어 이어짐, `ly`·`lx` 흙 턱이 y·x 로 이어짐, `a|b` 둘 중 하나.
+  종류 나눔은 원작 대성당 생성기의 기본 종류(DevilutionX `drlg_l1.cpp` `BaseTypes`)와 끝 조각 고치기(`FixTilesPatterns`)를 참고했다.
+- **검사** `Core/Map/TileJoins.Validate`(로더가 원판·거울판마다, 오류): ① 이웃 둘의 맞닿은 변이 맞음(같은 표시이거나 한쪽 `x`) — 벽이 틈·바닥에서 그냥 끝나 단면이 보이거나 바닥과 흙이 턱 없이 만나면 걸린다,
+  ② 맵 바깥에 닿는 변은 `x` 또는 `joins.fade`(`d`·`f`). 타일셋 검사 `TileJoins.ValidateTileset`: 성질 표 번호마다 종류 하나, 표시 넷.
+  처음 돌렸을 때 걸린 자리: 둘레에 겹친 모서리 조각의 매달린 세로 벽 토막(방 C [4,0]·방 D [11,0]·[0,11] → 둘레 벽 그대로), 틈 위 세로 벽 끝(큰 방 [5,2]·[13,2] → 끝 기둥 16),
+  위로 벽이 없는 ┘ 기둥(큰 방 [5,5] 3 → 17), 벽이 앞 흙 턱에 닿는 자리(큰 방 [19,6]·방 C [15,11]·[11,15] → 원작 `DirtHwallEnd` 23·`DirtVwallEnd` 24, 조각 `dirt_h_end`·`dirt_v_end`).
+- **별칭** `tilesets[].aliases`(번호 ≥ 1000 → 그림 메가타일): 그림은 원본 번호, 성질·변 규칙은 별칭 번호. 문 틈 열린 칸(1001~1004 → 바닥 13)이 변마다 다른 변 규칙(변 따라 `x`, 바깥 `f`)을 갖게 쓴다.
+  `ArenaGrid.MegaTile` 은 별칭 번호 그대로, 그림 굽기만 `TilesetDef.ArtTile` 로 바꾼다. 성질 대조(가져오기)는 별칭을 건너뛴다. `LayoutHash` 에 들어간다.
+  원작 흙 턱(18·19)은 흙이 바닥보다 64px 솟아 그려지고 아래 칸이 비어 있어(MIN 아래 단 없음) 걷는 칸 그림으로 쓰지 못한다.
+- **맵 끝 흐림**(가져오기 `ArenaBaker.EdgeFade`): 테두리 메가의 바깥 변 표시가 `fade` 이면 그 변을 따라 그림을 어둠으로 흐린다 — 바닥 단은 바깥 경계에서 1.5..2칸, 기둥 그림(솟은 흙)은 2..4칸.
+  앞 흙 띠가 맵 끝에서 칼처럼 끊기지 않고 턱 선 너머 문 틈 바닥은 어둠이 된다. 그림만 바뀌므로 `LayoutHash` 는 그대로 — 흐림 값을 바꾸면 `import --force` 로 다시 굽는다.
 
 ### 6.12 스테이지 `stages` — v0.7: 스테이지 = 액트
 
@@ -3499,6 +3519,12 @@ v0.2 의 `ObstacleBaker`(맵 질감으로 장애물 몸체·옆면·그림자를
 
 ### 7.7 조명
 
+- **(2026-11-14 사용자 결정) 검은 안개 칠 끔**: `rules.sight.paint_fog: false` 면 ③ 안개 합치기를 건너뛴다 — 안 보이는 곳도 셰이더 빛의 어둠(주변 밝기)으로만 보이고 문·벽에 검은 안개가 끼지 않는다.
+  시야(`VisibilityField`)·적 숨김(`FogMath.EnemyAlpha`)·공정성·미니맵은 그대로라 `f.Fog` 도 참으로 둔다. 기본값은 참(예전 그림 — 시험 월드).
+- **(2026-11-14 사용자 요청) 블룸 ⑦b**: 7층 발광 뒤·디버그 겹침·8층 화면 효과 앞에 `Rendering/BloomRenderer` 가 `WorldRT` 를 받아
+  ① `BloomExtract.fx` 로 ½ 크기 밝은 부분(RGB 최댓값 − 문턱 0.62, 부드러운 무릎 0.2 — 색 비율은 그대로) → ② ¼ 로 줄여 `BloomBlur.fx` 가로·세로(9탭 가우스를 선형 표본 5번)
+  → ③ ⅛ 로 한 번 더 줄여 흐림 → ④ ¼ ×0.55·⅛ ×0.45 를 `WorldRT` 에 가산. 빛을 곱한 뒤라 어두운 던전 바닥은 문턱 아래고 불덩이·폭발·번개·발광만 번진다.
+  셰이더를 못 읽으면 블룸 없음(로그 `BLOOM shader=off`). 화면 UI(9층)는 번지지 않는다.
 - **(2026-11-13 사용자 결정 — 셰이더 빛, 벽 그림자는 은은하게)** 셰이더 파일(`Shaders\GroundWrite.mgfxo`·`LightAdd.mgfxo`)을 읽으면 `Rendering/ShaderLight` 가 아래 ② 를 대신하고 `LightRT` 는 `WorldRT` 크기(전체 해상도)다.
   MGCB 없이 저장소 로컬 도구 `dotnet-mgfxc`(3.8.6.1, `.config/dotnet-tools.json`)가 빌드 때 `Shaders\*.fx` 를 OpenGL 용으로 컴파일한다(`CompileShaders` 대상 — 바뀐 것만). 못 읽으면 로그 `LIGHT shader=off reason=…` 뒤 아래 480×270 방식 그대로.
   ① 바닥 y 버퍼(`GroundRT`): 0~5층 그림 중 벽 항목·주인공·적을 같은 차례로 다시 찍어 픽셀마다 "서 있는 바닥 y"(카메라 기준 (y + 512) × 16 을 16비트 RG)를 쓴다. 유닛 = 발 y,
@@ -3737,6 +3763,7 @@ v0.5 처럼 "벽·대상 모양을 값 g 의 회색으로 최댓값 혼합" 하�
   (v0.9.3) wp5 에서 원작 창살로 바꿈(기획 v0.9.4 10.8 "봉인 표시" — L1 창살 `grate_h` 36·`grate_v` 35 를 벽 높이로 문 틈에, 열리는 출구 문은 창살이 0.6초 동안 바닥 아래로 내려감. 열린 질문 32 의 봉인 부분은 닫힘). 위 코드 그림 문장은 wp5 전의 기록이다.
   **(2026-11-13 나무 문)** 타일셋 `doors`(`TilesetDef.Doors` — 변 방향 `v`·`h` → 문 틈 메가 안 하위 칸마다 닫힌·열린 하위 타일 번호, 열린 문 칸의 아치 덧그림 L1S 프레임)를 가져오기가 방마다 맵 그림 기둥 아틀라스에 덤으로 굽고 `arena.json` `doors`(`ArenaDoorCell` — 프레임 번호)에 적는다. 열린 문 하위 칸(392~395)은 어떤 메가타일에도 없어서다. 문 정의는 `LayoutHash` 에 들어간다(바뀌면 그림이 낡음).
   `Rendering/GateDoorArt` 가 지금 방 맵 그림에서 읽어(방마다 `Attach`) `CollectGrates` 가 창살 대신 4층 정렬 목록에 넣는다: 출구로 열림(`GateGrates.Sink` > 0) 또는 적이 드나드는 동안(`EnemyPassing`) 열린 그림 + 아치 덧그림, 아니면 닫힌 그림. 흐리게 하지 않는다. 문 그림이 없으면(예전 그림) 창살 → 코드 그림 순으로 돌아간다. `--preview tiles` 는 2.5초 주기로 문 닫힘·열림을 보인다.
+  **(2026-11-15 한 짝 문)** 사용자 지적 "문 한 짝씩만": `doors` 키를 변(`nw`·`ne`·`se`·`sw`)으로, 자리를 문 틈 첫 메가(변 위 번호가 작은 쪽) 원점 기준 하위 칸으로 바꿨다(`ArenaArt` 형식 3). 벽 줄 하위 4칸에 원작 문 한 짝 — 뒤 벽 = 문틀·문짝·벽·벽(열면 옆 벽 두 칸이 비어 통로), 앞 흙 턱 = 위 끝 마감 벽·문틀·문짝·끝 기둥. 원작처럼 열 때 문짝 칸만 바꾼다(392·394 문틀을 쓰면 갈라져 보였다), 가로 열린 문짝의 아치 덧그림은 원작 오른쪽 문의 8. 하위 번호 0 = 그 상태에서 안 그림, `open_keep_top` = 열린 문짝 위 빈 줄을 닫힌 그림으로(세로 문만).
   문 칸은 원작 자리 그대로(앞 두 변은 안쪽 줄 — 앞 턱 선과 맞음, 바깥 줄로 옮기면 턱 밖으로 떠 보였다). 주인공이 문 뒤 바깥 줄로 들어가 문을 통과해 보이던 것은 **닫힌 문 틈을 주인공에게 막아** 없앤다(`CollisionSystem.HeroGateBlock` — 봉인된 문(`GateSeals.IsSealed`)의 문 틈 두 줄 안쪽 선에서 그 변의 타일 축만 되돌림, 몸 반경만큼 앞. 열린 출구 문은 지나가고, 적·충돌 격자는 그대로). 열린 그림은 굽을 때 세로 줄마다 열린 그림 첫 불투명 픽셀 위쪽을 닫힌 그림으로 채운다(원작 열린 문짝 칸에 문 위 벽이 없어 맵 밖 검정이 세로 틈으로 비쳤다).
 - **보상 물체**: `kind: reward` 획득물이라 보통 획득물 그리기(시체·보석과 같은 층, 안개 알파 — 7.10)를 그대로 탄다. 정리 끝에 보상 자리(v0.8 — 주인공 앞, 3.6 "보상 자리". v0.7 은 `center`)에 놓이고 가 본 곳이 아니어도 미니맵에 금색 점(8.2).
 - **방 이동 어두워짐**: `PlayScene` 이 `rules.rooms.transition`(0.5s — v0.8: 고른 출구의 `NextFloor` 가 0 이 아니면 `transition_floor` 1.0s) 동안 앱 틱으로 검정 덮개를 0 → 1 → 0(가운데에서 `RunSession.Advance`, 새 `World` 의 첫 프레임은 덮개 1). 시뮬레이션은 돌지 않는다. 캡처 시각은 앱 틱이라 그대로 재현된다.

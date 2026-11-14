@@ -292,6 +292,15 @@ public static class ArenaLayout
 
         if (tileset.Mirror is { } mirror) ValidateMirror(tileset, mirror, errors);
 
+        // 별칭(2026-11-15): 번호 1000 이상(원본 번호와 섞이지 않게), 그림 번호는 별칭이 아니고 1 이상, 별칭은 이름 붙인 번호(성질 표에 있음)
+        foreach (var (alias, art) in tileset.Aliases.OrderBy(p => p.Key))
+        {
+            var path = $"$.aliases.{alias}";
+            if (alias < 1000) errors.Add(new(path, $"별칭 번호 {alias} 는 1000 이상이다(원본 메가타일 번호와 섞이지 않게)"));
+            if (art < 1 || tileset.Aliases.ContainsKey(art)) errors.Add(new(path, $"그림 번호 {art} 는 1 이상이고 별칭이 아니어야 한다"));
+            if (!named.Contains(alias)) errors.Add(new(path, $"별칭 {alias} 을 floor·borders·gates·pieces 가 쓰지 않는다"));
+        }
+
         // 변형: 원래 번호는 변형이 아닌 이름 붙인 번호, 확률 0..1, 장식판은 원래 번호와 성질이 같음(그림만 바뀐다)
         foreach (var (tile, accent) in tileset.Accents.OrderBy(p => p.Key))
         {
@@ -822,7 +831,14 @@ public static class ArenaLayout
                 foreach (var c in cells)
                     sb.Append(side).Append(':').Append(c.At.X.ToString(inv)).Append(',').Append(c.At.Y.ToString(inv)).Append('=')
                       .Append(c.Closed.ToString(inv)).Append('/').Append(c.Open.ToString(inv))
-                      .Append('+').Append(c.OpenOverlay?.ToString(inv) ?? "-").Append(';');
+                      .Append('+').Append(c.OpenOverlay?.ToString(inv) ?? "-").Append(c.OpenKeepTop ? "^" : "").Append(';');
+        }
+        if (ts.Aliases.Count > 0)
+        {
+            // 별칭(2026-11-15): 그림 번호가 바뀌면 그림이 낡는다
+            sb.Append("|aliases=");
+            foreach (var (t, art) in ts.Aliases.OrderBy(p => p.Key))
+                sb.Append(t.ToString(inv)).Append('>').Append(art.ToString(inv)).Append(';');
         }
         if (ts.Accents.Count > 0)
         {

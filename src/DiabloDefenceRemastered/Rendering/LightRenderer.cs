@@ -141,7 +141,7 @@ public sealed class LightRenderer : IDisposable
         }
 
         // ③ 안개 합치기
-        if (f.Fog && !reveal && arena is not null)
+        if (f.Fog && !reveal && arena is not null && w.Defs.Rules.Sight?.PaintFog != false)   // paint_fog 거짓이면 검은 칠 없음(2026-11-14)
         {
             Fog.Build(batch, f, arena);
             var m = LightMath.Memory(lighting.Ambient, lighting.Darkness, w.Defs.Rules.Sight?.MemoryRatio ?? 0f);

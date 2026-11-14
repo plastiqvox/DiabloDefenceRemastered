@@ -35,6 +35,8 @@ public sealed record StageDef : IDef
     public LightingDef Lighting { get; init; } = new();
     public StageScaling Scaling { get; init; } = new();
     public EliteChanceDef? EliteChance { get; init; }
+    /// <summary>이 액트 우두머리의 접두사 수(2026-11-14 — 뒤쪽 액트는 3, 1~3). 없으면 <c>rules.ranks.unique.affixes</c>.</summary>
+    public int? UniqueAffixes { get; init; }
     public IReadOnlyList<SpawnIntervalDef> SpawnIntervals { get; init; } = [];
 
     /// <summary>

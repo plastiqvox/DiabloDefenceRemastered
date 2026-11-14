@@ -17,7 +17,7 @@
                    { "id": "gate_se", "side": "se" }, { "id": "gate_sw", "side": "sw" } ],
         "place": [
           { "id": "c_room_north", "origin": [0, 0], "over_border": true,
-            "grid": [ "wall_corner wall_h wall_h wall_h wall_corner",
+            "grid": [ "wall_corner wall_h wall_h wall_h wall_h",
                       "wall_v      .      .      .      .",
                       "wall_v      .      .      .      .",
                       "wall_v      .      .      .      wall_end_v",
@@ -25,6 +25,8 @@
           { "id": "c_room_south", "piece": "wall_cap_v", "at": [[11, 11]] },   // 모서리 조각(양쪽 끝이 열려 단면이 보임) 대신 끝 기둥 하나(2026-11-13)
           { "piece": "wall_end_h", "at": [[14, 11]] },
           { "piece": "wall_end_v", "at": [[11, 14]] },
+          { "piece": "dirt_h_end", "at": [[15, 11]], "over_border": true },   // 벽 끝이 앞 흙 턱에 닿는 자리(2026-11-15 변 규칙 — 원작처럼 턱이 벽 끝에서 시작)
+          { "piece": "dirt_v_end", "at": [[11, 15]], "over_border": true },
           { "id": "c_pillars", "piece": "pillar", "at": [[6, 9], [9, 6]] },
           { "id": "c_tombs", "piece": "sarcophagus", "at": [[12, 2], [2, 12]] } ] },   // 오른쪽·왼쪽 귀퉁이 석관(2026-11-13 — 방 내부를 더 채움)
       "open_center": [5, 5, 11, 11],

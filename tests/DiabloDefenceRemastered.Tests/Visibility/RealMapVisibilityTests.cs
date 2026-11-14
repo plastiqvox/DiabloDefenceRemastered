@@ -52,7 +52,7 @@ public class RealMapVisibilityTests
         // 피 방: 문 틈 [5,3..4] 으로 들어오는 좁은 쐐기만 보이고 나머지는 가려진다(기준점 포함)
         Assert.True(floors.TryGet("room_blood", out var blood));
         var bloodSeen = blood.Cells.Count(c => f.InSight(c.X, c.Y));
-        Assert.InRange(bloodSeen, 1, 8);    // 81칸 중 문 쐐기
+        Assert.InRange(bloodSeen, 1, 10);   // 81칸 중 문 쐐기(2026-11-15 변 규칙으로 틈 위 벽 끝이 기둥이 되어 하위 1칸 넓어짐)
         Assert.False(f.InSight(5, 5));
         Assert.False(f.InSight(3, 8));
         Assert.True(f.InSight(10, 7));      // 문 틈 칸 자체

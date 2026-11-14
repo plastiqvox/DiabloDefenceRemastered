@@ -184,4 +184,41 @@ public sealed class EliteAffixTests
         var r = t.World.Damage.Requests[t.World.Damage.Count - 1];
         Assert.Equal(DamageFlags.Chill, r.Flags & DamageFlags.Chill);
     }
+
+    [Fact]
+    public void StageUniqueAffixes_Three_FillsThirdSlot()
+    {
+        var melee = Enemy("t_melee", B("chase_melee", new ChaseMeleeParams())) with { Name = "해골" };
+        var aura = Unique("aura_a", "aura");
+        var enchant = Unique("enchant_a", "enchant");
+        var plain = Unique("plain");
+        for (ulong seed = 1; seed <= 10; seed++)
+        {
+            var defs = Defs([melee], stage: m => TestDefs.Stage(m) with { UniqueAffixes = 3 }, affixes: [BerserkElite, aura, enchant, plain]);
+            var t = World(defs, seed);
+            Assert.Equal(3, t.World.Stage!.UniqueAffixes);
+            Assert.True(DirectorSpawns.ElitePack(t.World, melee, 1, 1, 1f) == 1);
+            var lead = Assert.Single(Alive(t));
+            Assert.True(lead.AffixIdx[0] >= 0 && lead.AffixIdx[1] >= 0 && lead.AffixIdx[2] >= 0);
+            var ids = new[] { lead.AffixIdx[0], lead.AffixIdx[1], lead.AffixIdx[2] }.Select(i => t.World.Defs.Affixes[i].Id).ToList();
+            Assert.Equal(3, ids.Distinct().Count());
+            Assert.Equal(4, UniqueNames.Plate(t.World, lead).Affixes!.Split(" · ").Length);   // 종류 + 접두사 셋
+        }
+    }
+
+    [Fact]
+    public void ElitePlate_OnlyForThreeSecondsAfterHit_UniqueAlways()
+    {
+        var melee = Enemy("t_melee", B("chase_melee", new ChaseMeleeParams()));
+        var t = World(DefsWith([melee], [BerserkElite]));
+        var elite = EnemyFactory.Create(t.World, melee, EnemyRank.Elite, [0], t.Hero.Pos + new Vector2(300f, 0f), new SpawnContext(SpawnSource.ElitePack, EntityId.None));
+        var unique = EnemyFactory.Create(t.World, melee, EnemyRank.Unique, [0], t.Hero.Pos + new Vector2(-300f, 0f), new SpawnContext(SpawnSource.ElitePack, EntityId.None));
+        Assert.Equal(0f, UniqueNames.PlateAlpha(elite, 100));    // 아직 안 맞음
+        Assert.Equal(1f, UniqueNames.PlateAlpha(unique, 100));
+        elite.LastHurtTick = 100;
+        Assert.Equal(1f, UniqueNames.PlateAlpha(elite, 100));
+        Assert.Equal(1f, UniqueNames.PlateAlpha(elite, 100 + 149), 3);           // 2.5s 직전
+        Assert.InRange(UniqueNames.PlateAlpha(elite, 100 + 165), 0.4f, 0.6f);   // 2.75s — 흐려지는 중
+        Assert.Equal(0f, UniqueNames.PlateAlpha(elite, 100 + 180));              // 3s
+    }
 }

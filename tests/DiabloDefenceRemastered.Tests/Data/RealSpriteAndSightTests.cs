@@ -24,7 +24,7 @@ public class RealSpriteAndSightTests
     public void Sight_IsSection610Values()
     {
         // 6.10 첫 판 = 합성 시험 값과 같다(합성 월드와 실제 데이터의 시야가 같은 규칙)
-        Assert.Equal(TestDefs.Sight, RealData.Sight());
+        Assert.Equal(TestDefs.Sight with { PaintFog = false }, RealData.Sight());   // 검은 안개 칠만 끔(2026-11-14 사용자 결정) — 시야 규칙 값은 같음
         Assert.Equal(["sight"], RealData.Read("rules/sight.json")["rules"]!.AsObject().Select(p => p.Key));
     }
 

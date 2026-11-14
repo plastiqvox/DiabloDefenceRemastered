@@ -2,10 +2,11 @@ using System.Runtime.CompilerServices;
 
 namespace DiabloDefenceRemastered.Core.Sim;
 
-/// <summary>접두사 번호 두 칸(정의 목록 번호, -1 = 없음).</summary>
-[InlineArray(2)]
-public struct AffixPair
+/// <summary>접두사 번호 세 칸(정의 목록 번호, -1 = 없음). 2026-11-14 두 칸 → 세 칸(우두머리 접두사 3개 — 스테이지 <c>unique_affixes</c>).</summary>
+[InlineArray(MaxAffixes)]
+public struct AffixSlots
 {
+    public const int MaxAffixes = 3;
     private short _e0;
 }
 
@@ -26,7 +27,7 @@ public sealed partial class Enemy : IEntity
     public int DefIndex;
     public Faction Faction;
     public EnemyRank Rank;
-    public AffixPair AffixIdx;
+    public AffixSlots AffixIdx;
     public int SpawnTick;
     public LifeState Life;
 
@@ -102,6 +103,7 @@ public sealed partial class Enemy : IEntity
         Rank = EnemyRank.Normal;
         AffixIdx[0] = -1;
         AffixIdx[1] = -1;
+        AffixIdx[2] = -1;
         SpawnTick = 0;
         Life = LifeState.Entering;
         Pos = PrevPos = Vel = Vector2.Zero;

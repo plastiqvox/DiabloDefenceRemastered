@@ -1,6 +1,7 @@
 using DiabloAssetImporter.Formats;
 using DiabloAssetImporter.Imaging;
 using DiabloAssetImporter.Upscale;
+using DiabloDefenceRemastered.Core.Art;
 
 namespace DiabloAssetImporter.Bake;
 
@@ -96,17 +97,21 @@ internal static class ArenaBaker
         for (var ty = 0; ty < grid.Size; ty++)
             for (var tx = 0; tx < grid.Size; tx++)
             {
-                var mega = grid.MegaTile(tx / 2, ty / 2);
+                var mega = grid.Tileset.ArtTile(grid.MegaTile(tx / 2, ty / 2));   // 별칭이면 그림 번호(2026-11-15)
                 var sub = ts.Til.Subtile(mega, (ty % 2) * 2 + tx % 2);
                 var floor = (grid.Flags(tx, ty) & (CellFlags.BlocksWalk | CellFlags.BlocksProjectiles)) == 0;
+                var fade = EdgeFade(grid, tx, ty);   // 맵 끝 흐림(변 규칙 fade 변만)
                 if (floor)
                 {
                     var bottom = ts.Column(sub, upperOnly: false, bottomOnly: true);
                     var full = RgbaImage.FromIndexed(bottom, pal, null, null);
-                    floorRgba[(tx, ty)] = full.Crop(0, hc - 32, 64, 32);
+                    var floorImg = full.Crop(0, hc - 32, 64, 32);
+                    var cc = iso.CellCenter(tx, ty);
+                    floorRgba[(tx, ty)] = fade is null ? floorImg : fade(floorImg, new Vector2(cc.X - 32, cc.Y - 16), false);
                 }
                 var col = ts.Column(sub, upperOnly: floor);
                 var colImg = Fit(RgbaImage.FromIndexed(col, pal, null, null), hc);
+                if (fade is not null) colImg = fade(colImg, DrawOrder.ColumnTopLeft(iso, tx, ty), true);
                 if (colImg.AlphaBounds() is not null)
                     cells.Add(new ArenaCell(tx, ty, floor ? ArenaCellKind.FloorPiece : ArenaCellKind.Wall, AddFrame(colImg)));
                 if (ts.Entry.Overlay is { } o)
@@ -144,7 +149,10 @@ internal static class ArenaBaker
                 }
                 // 열린 문 위 아치 덧그림(원작 L1S 프레임 — 문을 열면 원작이 그 칸에 얹는다)
                 var overlay = d.OpenOverlay is { } of && ts.OverlayFrame(of) is { } oimg ? AddFrame(Fit(RgbaImage.FromIndexed(oimg, pal, null, null), hc)) : 0;
-                doors.Add(new ArenaDoorCell { Side = side, Dx = d.At.X, Dy = d.At.Y, Closed = Frame(d.Closed), Open = OpenFrame(d.Closed, d.Open), OpenOverlay = overlay });
+                // 0 = 그 상태에서 그리지 않음(2026-11-15 한 짝 문 — 열면 비는 통로 칸·닫혀 있을 때만 있는 벽 칸)
+                var closedFrame = d.Closed > 0 ? Frame(d.Closed) : 0;
+                var openFrame = d.Open <= 0 ? 0 : d.Closed > 0 && d.OpenKeepTop ? OpenFrame(d.Closed, d.Open) : Frame(d.Open);
+                doors.Add(new ArenaDoorCell { Side = side, Dx = d.At.X, Dy = d.At.Y, Closed = closedFrame, Open = openFrame, OpenOverlay = overlay });
             }
 
         var scale = up is null ? 1 : 2;
@@ -193,6 +201,62 @@ internal static class ArenaBaker
         outputs.Add(($"{art}/{ArenaArt.MinimapFile}", Png.Encode(Minimap(grid)), 1));
         outputs.Sort((a, b) => string.CompareOrdinal(a.Item1, b.Item1));
         return outputs;
+    }
+
+    /// <summary>
+    /// 맵 끝 흐림(2026-11-15 사용자 지적 "끝에 있으면 안 되는 타일이 끝에 있어 잘려 보임", 설계서 6.11 "변 규칙"): 바깥 테두리 메가 중 바깥 변 표시가
+    /// 변 규칙 <c>fade</c>(앞 흙 띠 <c>d</c>·문 틈 바닥 <c>f</c>)인 변을 따라 그림을 어둠으로 흐린다 — 맵 끝에서 칼처럼 끊기지 않게.
+    /// 거리 = 그 변의 바깥 경계까지 하위 칸 수(화면 px 를 바닥 높이로 되돌린 값). 바닥 단은 1.5..2칸, 기둥 그림은 원작 흙이 64px 솟아 그려지므로 2..4칸에서 흐린다.
+    /// 변 규칙이 없거나 그 칸이 테두리가 아니면 null(흐리지 않음).
+    /// </summary>
+    private static Func<RgbaImage, Vector2, bool, RgbaImage>? EdgeFade(ArenaGrid grid, int tx, int ty)
+    {
+        if (grid.Tileset.Joins is not { } joins) return null;
+        int m = grid.MegaSize, mx = tx / 2, my = ty / 2;
+        if (mx > 0 && my > 0 && mx < m - 1 && my < m - 1) return null;
+        var table = new TileJoins.Table(joins);
+        var tile = grid.MegaTile(mx, my);
+        var edges = new List<TileJoins.Dir>(2);
+        void Edge(bool on, TileJoins.Dir d)
+        {
+            if (on && table.Side(tile, d) is { } s && s.Split('|').Any(p => p != "x" && table.Fade.Contains(p))) edges.Add(d);
+        }
+        Edge(my == 0, TileJoins.Dir.Ne);
+        Edge(mx == m - 1, TileJoins.Dir.Se);
+        Edge(my == m - 1, TileJoins.Dir.Sw);
+        Edge(mx == 0, TileJoins.Dir.Nw);
+        if (edges.Count == 0) return null;
+        var iso = grid.Iso;
+        var n = iso.N;
+        return (img, topLeft, raised) =>
+        {
+            var o = new RgbaImage(img.Width, img.Height);
+            Array.Copy(img.Pixels, o.Pixels, img.Pixels.Length);
+            // 바닥 단: 턱 선(거리 2) 에서 밝고 1.5 칸에서 검다 — 턱 선 너머 문 틈 바닥은 어둠(인게임 캡처: 더 넓게 흐리면 주인공 빛에 바닥이 턱 밖으로 튀어나와 보였다). 솟은 흙: 2..4칸
+            var (from, width) = raised ? (2f, 2f) : (1.5f, 0.5f);
+            for (var y = 0; y < img.Height; y++)
+                for (var x = 0; x < img.Width; x++)
+                {
+                    var i = (y * img.Width + x) * 4;
+                    if (o.Pixels[i + 3] == 0) continue;
+                    var t = iso.ToTile(new Vector2(topLeft.X + x + 0.5f, topLeft.Y + y + 0.5f));
+                    var k = 1f;
+                    foreach (var d in edges)
+                    {
+                        var dist = d switch
+                        {
+                            TileJoins.Dir.Se => n - 0.5f - t.Tx,
+                            TileJoins.Dir.Sw => n - 0.5f - t.Ty,
+                            TileJoins.Dir.Nw => t.Tx + 0.5f,
+                            _ => t.Ty + 0.5f,
+                        };
+                        var f = Math.Clamp((dist - from) / width, 0f, 1f);
+                        k = Math.Min(k, f * f * (3f - 2f * f));
+                    }
+                    for (var c = 0; c < 3; c++) o.Pixels[i + c] = (byte)(o.Pixels[i + c] * k);
+                }
+            return o;
+        };
     }
 
     /// <summary>기둥 그림을 64×Hc 칸에 바닥 맞춤(덧그림이 더 낮거나 높아도 같은 칸).</summary>
@@ -245,6 +309,8 @@ internal static class ArenaBaker
         var problems = new List<string>();
         foreach (var (mega, props) in def.Props.OrderBy(p => p.Key))
         {
+            // 별칭(2026-11-15)은 원본 번호가 아니다 — 성질을 일부러 그림 번호와 다르게 둔다(앞 문 틈 흙 턱 그림 + 걸을 수 있음)
+            if (def.Aliases.ContainsKey(mega)) continue;
             for (var k = 0; k < 4 && k < props.Length; k++)
             {
                 int sub;

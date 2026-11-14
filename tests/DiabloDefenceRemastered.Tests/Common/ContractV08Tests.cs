@@ -179,15 +179,15 @@ public class ContractV08Tests
         Assert.Contains(SpriteMeta.Parse(meta.Replace("\"scale\": 2", "\"scale\": 4")).Validate(), e => e.Contains("scale 4"));
         Assert.Contains(SpriteMeta.Parse(meta.Replace("\"format\": 3", "\"format\": 2")).Validate(), e => e.Contains("형식 2"));
         Assert.Equal(3, SpriteMeta.CurrentFormat);
-        Assert.Equal(2, ArenaArt.CurrentFormat);
+        Assert.Equal(3, ArenaArt.CurrentFormat);   // 2026-11-15 doors 를 변·문 틈 기준 자리로
         Assert.Equal(3, AssetFormat.Version);
 
         var grid = ArenaLayout.Expand(TestDefs.Map(10));
         var floor = string.Join(", ", ArenaArt.FloorChunks(grid).Select(c => $$"""{ "file": "{{ArenaArt.FloorChunkFile(c)}}", "pos": [{{c.X * 512}}, {{c.Y * 512}}] }"""));
-        var art = $$"""{ "format": 2, "scale": 2, "map": "test_map", "layout_hash": "{{grid.LayoutHash}}", "box": [1280, 768], "floor": [ {{floor}} ], "cells": [] }""";
+        var art = $$"""{ "format": 3, "scale": 2, "map": "test_map", "layout_hash": "{{grid.LayoutHash}}", "box": [1280, 768], "floor": [ {{floor}} ], "cells": [] }""";
         Assert.Empty(ArenaArt.Parse(art).Validate(grid));
         Assert.Contains(ArenaArt.Parse(art.Replace("\"scale\": 2", "\"scale\": 3")).Validate(grid), e => e.Contains("scale 3"));
-        Assert.Contains(ArenaArt.Parse(art.Replace("\"format\": 2", "\"format\": 1")).Validate(grid), e => e.Contains("형식 1"));
+        Assert.Contains(ArenaArt.Parse(art.Replace("\"format\": 3", "\"format\": 1")).Validate(grid), e => e.Contains("형식 1"));
     }
 
     [Fact]

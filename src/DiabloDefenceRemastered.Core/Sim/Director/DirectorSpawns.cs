@@ -142,9 +142,10 @@ public static class DirectorSpawns
         var detour = world.Defs.Rules.Spawn?.PathDetour ?? 1.5f;
         var groupRadius = MathF.Max(30f, world.Defs.Rules.Spawn?.GroupRadius ?? 40f);
         // 무리 공통 접두사 한 번(챔피언 무리는 모두 같은 형 — 기획 9.1)
-        Span<int> affixes = stackalloc int[2];
-        var k = unique ? ranks?.Unique.Affixes ?? 2 : affixCount;
-        var picked = PickAffixes(world, def, unique ? AffixRankUnique : AffixRankElite, Math.Min(k, 2), affixes);
+        Span<int> affixes = stackalloc int[AffixSlots.MaxAffixes];
+        // 우두머리 접두사 수 = 스테이지(액트) unique_affixes → 등급 affixes(2026-11-14 — 뒤쪽 액트는 3)
+        var k = unique ? world.Stage?.UniqueAffixes ?? ranks?.Unique.Affixes ?? 2 : affixCount;
+        var picked = PickAffixes(world, def, unique ? AffixRankUnique : AffixRankElite, Math.Min(k, AffixSlots.MaxAffixes), affixes);
         var made = 0;
         for (var i = 0; i < n; i++)
         {

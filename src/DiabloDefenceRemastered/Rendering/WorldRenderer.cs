@@ -46,6 +46,8 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
     /// <summary>셰이더 빛(7.7 — 셰이더 파일을 못 읽으면 null, 빛 텍스처로).</summary>
     private ShaderLight? _shaderLight;
     private bool _shaderTried;
+    /// <summary>블룸(2026-11-14, 7.7 ⑦b) — 셰이더를 못 읽으면 null.</summary>
+    private BloomRenderer? _bloom;
     private RenderTarget2D? _worldRT;
     private RenderTarget2D? _upRT;
     private int _scale;
@@ -184,6 +186,9 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         // ── 7층 발광(알파 → 가산) ────────────────────────────────
         DrawLayer7(batch, f, prim, toTarget);
 
+        // ── 7층 뒤 블룸(2026-11-14 사용자 요청 — 밝은 것만 번짐, 디버그 겹침·화면 효과는 번지지 않게 그 앞) ───
+        _bloom?.Apply(batch, _worldRT!);
+
         // ── --debug-nav 겹침(월드 px) ─────────────────────────────
         if (_app.Options.DebugNav.Count > 0)
         {
@@ -223,6 +228,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             _shaderTried = true;
             _shaderLight = ShaderLight.TryLoad(device, _app.Log);
             _shaderLight?.Attach(world.Arena);
+            _bloom = BloomRenderer.TryLoad(device, _app.Log);
         }
         // 셰이더 빛이면 LightRT 를 WorldRT 크기로(전체 해상도), 아니면 480×270
         var lightSize = _shaderLight is not null ? new Int2(_worldRT.Width, _worldRT.Height) : new Int2(LightRenderer.Width, LightRenderer.Height);
@@ -723,7 +729,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
 
     private static CarriedLightDef? AffixLight(World w, Enemy e)
     {
-        for (var i = 0; i < 2; i++)
+        for (var i = 0; i < AffixSlots.MaxAffixes; i++)
             if (e.AffixIdx[i] >= 0 && w.Defs.Affixes[e.AffixIdx[i]].Light is { } light) return light;
         return null;
     }
@@ -907,7 +913,10 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         {
             if (e.Removed || e.Dead || e.Rank == EnemyRank.Normal) continue;
             var draw = Vector2.Lerp(e.PrevPos, e.Pos, _alphaInterp);
-            var a = f.Fog ? FogMath.EnemyAlpha(w, e, f.StageTick, f.HeroDraw, draw) : 1f;
+            // 정예는 맞은 뒤 3초만(기획 9.1 — 무리가 많으면 시끄러움), 우두머리는 늘
+            var a = Core.Sim.Enemies.UniqueNames.PlateAlpha(e, w.Tick);
+            if (a <= 0f) continue;
+            if (f.Fog) a *= FogMath.EnemyAlpha(w, e, f.StageTick, f.HeroDraw, draw);
             if (a <= 0f) continue;
             // 디아2식 이름판(2026-11-14, 기획 9.1·9.2): 정예 = 파란 "<접두사> <종류>", 우두머리 = 금색 고유 이름 + 밑에 접두사 줄
             var (name, line2) = Core.Sim.Enemies.UniqueNames.Plate(w, e);
@@ -1017,6 +1026,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         _light?.Dispose();
         _outlines.Dispose();
         _shaderLight?.Dispose();
+        _bloom?.Dispose();
     }
 
     /// <summary>7층 그리기 하나(텍스처·원본·자리·색·알파).</summary>

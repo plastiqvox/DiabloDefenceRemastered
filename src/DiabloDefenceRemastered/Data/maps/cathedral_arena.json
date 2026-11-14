@@ -19,19 +19,19 @@
             "decor_why": "닫힌 문(door_closed 26)은 아래 벽 장식 — 문으로 쓰지 않음(기획 10.3)",
             "grid": [ "blood_wall_corner blood_wall_h blood_wall_h blood_wall_h blood_wall_h wall_corner      ",
                       "blood_wall_v      blood_floor  blood_floor  blood_floor  blood_floor  wall_v",
-                      "blood_wall_v      blood_floor  blood_floor  blood_floor  blood_floor  wall_v",
+                      "blood_wall_v      blood_floor  blood_floor  blood_floor  blood_floor  wall_cap_v",   // 틈 위 벽 끝 기둥(2026-11-15 변 규칙)
                       "blood_wall_v      blood_floor  blood_floor  blood_floor  blood_floor  .",
                       "blood_wall_v      blood_floor  blood_floor  blood_floor  blood_floor  .",
-                      "wall_corner       wall_h       door_closed  wall_h       wall_h       wall_post   " ] },
+                      "wall_corner       wall_h       door_closed  wall_h       wall_h       wall_cap_h  " ] },   // [5,5] 오른쪽 끝 기둥 — ┘ 기둥(3)은 위로 벽이 없으면 머리가 잘려 보인다(2026-11-15)
           // 창살 방(오른쪽 모서리): 위는 둘레, 오른쪽은 앞 턱. 문 = 왼쪽 벽 [13,3..4], 아래 벽에 창살 두 메가
           { "id": "s1_room_grate", "origin": [13, 0], "over_border": true,
             "grid": [ "wall_corner",
                       "wall_v",
-                      "wall_v",
+                      "wall_cap_v",                                            // 틈 위 벽 끝 기둥(2026-11-15 변 규칙)
                       ".",
                       ".",
                       "wall_end_v",                                            // 틈 아래에서 다시 시작하는 벽의 위 끝
-                      "wall_join_h wall_h grate_h grate_h wall_h wall_h" ] },
+                      "wall_join_h wall_h grate_h grate_h wall_h wall_h dirt_h_end" ] },   // [19,6] 벽이 앞 흙 턱에 닿는 자리(2026-11-15 변 규칙)
           // ㄱ 자 짧은 벽(왼쪽 모서리): 둘레와 떼어 출입구 둘(둘레 쪽 하위 5칸 틈 + [6,17..18])
           { "id": "s1_wall_west", "piece": "wall_end_h", "at": [[3, 13]] },
           { "piece": "wall_h", "line": [[4, 13], [5, 13]] },

@@ -293,7 +293,7 @@ public sealed class EnemyThinkSystem : ISimSystem
             else v.GlowAlpha = MathF.Max(v.GlowAlpha, 0.35f);
         }
         // 접두사: 등급 발광(정예 파랑·우두머리 금)을 덮지 않는다 — 덮어서 둘이 같아 보였다(2026-11-14 사용자 지적). 접두사 색은 등급이 없을 때만, 알파는 곱함(유령)
-        for (var i = 0; i < 2; i++)
+        for (var i = 0; i < AffixSlots.MaxAffixes; i++)
         {
             var ai = e.AffixIdx[i];
             if (ai < 0) continue;

@@ -15,7 +15,7 @@ public static class EnemyFactory
         var e = world.Enemies.Add();
         var defs = world.Defs;
         var rankDef = RankOf(world, rank);
-        int a0 = affixes.Length > 0 ? affixes[0] : -1, a1 = affixes.Length > 1 ? affixes[1] : -1;
+        int a0 = affixes.Length > 0 ? affixes[0] : -1, a1 = affixes.Length > 1 ? affixes[1] : -1, a2 = affixes.Length > 2 ? affixes[2] : -1;
 
         e.Def = def;
         e.DefIndex = defs.Enemies.IndexOf(def.Id);
@@ -23,11 +23,12 @@ public static class EnemyFactory
         e.Rank = rank;
         e.AffixIdx[0] = (short)a0;
         e.AffixIdx[1] = (short)a1;
+        e.AffixIdx[2] = (short)a2;
         e.SpawnTick = world.Tick;
         e.Life = life;
         e.Pos = e.PrevPos = pos;
         e.Source = spawn.Source;
-        e.Kit = world.KitFor(def, a0, a1);
+        e.Kit = world.KitFor(def, a0, a1, a2);
 
         var scale = FinalScale(world, def, rank);
         e.FinalScale = scale;

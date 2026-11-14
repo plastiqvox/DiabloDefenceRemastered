@@ -16,13 +16,13 @@
                    { "id": "gate_se", "side": "se" }, { "id": "gate_sw", "side": "sw" } ],
         "place": [
           { "id": "d_room_east", "origin": [11, 0], "over_border": true,
-            "grid": [ "wall_corner",
+            "grid": [ "wall_h",                             // 뒤 둘레 벽이 그대로 이어짐(2026-11-15 변 규칙 — 모서리 조각은 아래로 세로 벽 토막이 매달려 잘려 보였다)
                       ".",
                       ".",
                       "wall_end_v",
                       "wall_join_h grate_h wall_cap_h ." ] },   // [13,4] 끝 기둥: 창살 열린 오른쪽 끝 마감(2026-11-13 — L1 에 그 끝 조각이 없어 단면이 보였다)
           { "id": "d_room_west", "origin": [0, 11], "over_border": true,
-            "grid": [ "wall_corner . . wall_end_h wall_join_v",
+            "grid": [ "wall_v      . . wall_end_h wall_join_v",   // [0,11] 둘레 벽 그대로(같은 이유)
                       ".           . . .          grate_v",
                       ".           . . .          wall_cap_v" ] },   // [4,13] 같은 마감
           { "id": "d_pillars", "piece": "pillar", "at": [[6, 6], [9, 9]] },
