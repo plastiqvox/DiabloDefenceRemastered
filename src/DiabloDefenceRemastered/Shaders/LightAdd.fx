@@ -25,6 +25,7 @@ float3 LightColor;       // 0..1 × 세기
 float4 Iso;              // (32N, H + 16, N, 쓰지 않음)
 float ShadowStrength;    // 0 = 그림자 없음, 1 = 완전히 막음
 float ShadowSkip;        // 시작·끝에서 건너뛸 거리(월드 px) — 벽 자기 칸·벽에 붙은 횃불이 스스로를 가리지 않게
+float FloorSkip;         // 바닥 픽셀의 바닥 쪽 끝 건너뛰기(월드 px — 작게, 벽 바로 뒤 바닥도 그림자)
 
 // 0번 칸은 SpriteBatch 가 패스 적용 뒤 늘 그리는 텍스처(1px 흰색)로 덮는다 — 바닥·막힘 지도는 1·2번 칸에 고정하고, 0번 샘플러는 지워지지 않게 출력에 곱한다(값 1)
 texture SpriteTexture;
@@ -89,13 +90,16 @@ float4 MainPS(VSOut input) : COLOR0
     if (fall <= 0.0)
         return float4(0, 0, 0, 0);
 
+    // 바닥 쪽 끝 건너뛰기: 벽·유닛 픽셀(바닥 y 버퍼에 값 있음)은 자기 칸에 가리지 않게 ShadowSkip, 바닥 픽셀은 FloorSkip 만
+    // (2026-11-15 "벽그림자도 몬스터 그림자정도 어둡기로" — 바닥도 36px 를 건너뛰어 벽 바로 뒤 바닥이 밝게 남았다)
+    float nearSkip = g.a > 0.5 ? ShadowSkip : FloorSkip;
     float occ = 0.0;
-    float span = dist - 2.0 * ShadowSkip;
+    float span = dist - nearSkip - ShadowSkip;
     if (span > 0.0)
     {
         for (int i = 0; i < 16; i++)
         {
-            float s = ShadowSkip + span * (i + 0.5) / 16.0;
+            float s = nearSkip + span * (i + 0.5) / 16.0;
             float2 p = ground + d * (s / dist);
             occ = max(occ, tex2Dlod(OccSampler, float4(CellUv(p), 0, 0)).r);
         }

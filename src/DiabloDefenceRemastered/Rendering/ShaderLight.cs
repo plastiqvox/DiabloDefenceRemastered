@@ -23,6 +23,8 @@ public sealed class ShaderLight : IDisposable
     public const float ShadowStrength = 0.8f;
     /// <summary>그림자 표본에서 바닥 자리·빛 쪽 끝을 건너뛰는 거리(월드 px) — 벽 기둥 자기 칸·벽에 붙은 횃불.</summary>
     public const float ShadowSkip = 36f;
+    /// <summary>바닥 픽셀의 바닥 쪽 끝 건너뛰기(월드 px, 2026-11-15) — 벽 바로 뒤 바닥까지 그림자가 닿게. 벽·유닛 픽셀은 <see cref="ShadowSkip"/>.</summary>
+    public const float FloorSkip = 6f;
     /// <summary>빛 사각형을 위로 더 늘리는 높이(월드 px) — 바닥은 반경 안이지만 그림은 위에 있는 벽(기둥 160)·유닛.</summary>
     public const float LiftMargin = 176f;
     /// <summary>바닥 y 부호화: (y − 카메라 y + 512) × 16 을 16비트로.</summary>
@@ -147,6 +149,7 @@ public sealed class ShaderLight : IDisposable
         p["Iso"]?.SetValue(new Microsoft.Xna.Framework.Vector4(32f * iso.N, iso.H + 16f, iso.N, 0f));
         p["ShadowStrength"]?.SetValue(ShadowStrength);
         p["ShadowSkip"]?.SetValue(ShadowSkip);
+        p["FloorSkip"]?.SetValue(FloorSkip);
         p["GroundTexture"]?.SetValue(GroundRT);
         p["OccTexture"]?.SetValue(_occ);
         batch.Begin(SpriteSortMode.Immediate, Add, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone, _light);

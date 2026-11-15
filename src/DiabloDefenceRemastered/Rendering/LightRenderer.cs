@@ -19,6 +19,13 @@ public readonly record struct ShapeDraw(Texture2D Texture, Rectangle Source, Rec
 /// </summary>
 public readonly record struct PointLight(Vector2 Pos, float Radius, Rgb Color, float Intensity, float Height = 0f);
 
+/// <summary>
+/// 바닥 예고 빛(2026-11-15 사용자 요청 "붉은 궤적도 붉은 조명처럼", "바닥 메쉬에 맞게 3d로"): 예고를 바닥 위 평면 칠 대신 빛 지도에 붉은 빛으로 더한다 —
+/// 바닥 타일 무늬가 그대로 붉게 비치고 그 위 유닛도 물든다. <see cref="Line"/> 이면 A→B 폭 <see cref="Size"/>×2 막대, 아니면 A 중심 반경 <see cref="Size"/> 원.
+/// 전체는 <see cref="Intensity"/>, 진행(<see cref="Progress"/>)만큼은 한 겹 더 밝게.
+/// </summary>
+public readonly record struct GroundLight(bool Line, Vector2 A, Vector2 B, float Size, float Progress, Rgb Color, float Intensity);
+
 /// <summary>프레임 하나의 월드 그리기 값(<c>WorldRenderer</c> 가 채움).</summary>
 public sealed class WorldFrame
 {
@@ -33,6 +40,8 @@ public sealed class WorldFrame
     public readonly List<ShapeDraw> Shapes = [];
     /// <summary>짧은 빛(폭발·장판·투사체) — 자리·반경·색·세기·높이.</summary>
     public readonly List<PointLight> ShortLights = [];
+    /// <summary>바닥 예고 빛(빛 지도에 모양 그대로 가산).</summary>
+    public readonly List<GroundLight> GroundLights = [];
 }
 
 /// <summary>
@@ -140,6 +149,20 @@ public sealed class LightRenderer : IDisposable
             batch.End();
         }
 
+        // ②b 바닥 예고 빛(벽 그림자 없음, 진행만큼 한 겹 더). 빛 지도는 1 에서 잘려 이미 밝은 바닥에 붉은 빛을 더해도 붉어지지 않는다 —
+        // 먼저 모양 안 빛을 예고 색 필터로 곱하고(밝은 곳이 그 색으로 물듦) 그다음 더한다(어두운 곳이 그 색으로 밝아짐)
+        if (f.GroundLights.Count > 0)
+        {
+            batch.Begin(SpriteSortMode.Deferred, LightFilter, SamplerState.LinearClamp, null, null, null, toLight);
+            foreach (var g in f.GroundLights)
+                DrawGround(batch, g, Filter(g.Color, g.Intensity * GroundFilter), Filter(g.Color, g.Intensity * GroundFilter * (GroundProgressBoost - 1f)), default);
+            batch.End();
+            batch.Begin(SpriteSortMode.Deferred, LightAdd, SamplerState.LinearClamp, null, null, null, toLight);
+            foreach (var g in f.GroundLights)
+                DrawGround(batch, g, Lit(g.Color, g.Intensity), Lit(g.Color, g.Intensity * (GroundProgressBoost - 1f)), Lit(g.Color, g.Intensity * 0.6f));
+            batch.End();
+        }
+
         // ③ 안개 합치기
         if (f.Fog && !reveal && arena is not null && w.Defs.Rules.Sight?.PaintFog != false)   // paint_fog 거짓이면 검은 칠 없음(2026-11-14)
         {
@@ -158,6 +181,43 @@ public sealed class LightRenderer : IDisposable
         var min = lighting.UnitMinLight;
         if (min > 0f) MinLight(batch, f, toLight, min);
     }
+
+    /// <summary>예고 진행 부분이 전체보다 더 밝은 배율.</summary>
+    public const float GroundProgressBoost = 1.8f;
+
+    private static Color Lit(Rgb c, float k) => new(c.R / 255f * k, c.G / 255f * k, c.B / 255f * k, 1f);
+
+    /// <summary>필터 세기 배율(예고 세기 × 이 값만큼 색 밖 성분을 깎음, 상한 0.8).</summary>
+    public const float GroundFilter = 0.6f;
+
+    /// <summary>곱하기 필터 색: 빛 × (1 − 값) — 예고 색 성분은 그대로, 나머지를 k 만큼(0..0.8) 깎는다.</summary>
+    private static Color Filter(Rgb c, float k)
+    {
+        k = Math.Clamp(k, 0f, 0.8f);
+        return new Color((1f - c.R / 255f) * k, (1f - c.G / 255f) * k, (1f - c.B / 255f) * k, 1f);
+    }
+
+    /// <summary>예고 모양 하나(막대 또는 원 + 진행 + 원 둘레 번짐 — 번짐 색이 default 면 건너뜀).</summary>
+    private void DrawGround(SpriteBatch batch, in GroundLight g, Color outer, Color inner, Color halo)
+    {
+        if (g.Line)
+        {
+            BatchX.Line(batch, _prim.Pixel, g.A, g.B, g.Size * 2f, outer);
+            BatchX.Line(batch, _prim.Pixel, g.A, Vector2.Lerp(g.A, g.B, g.Progress), g.Size * 2f, inner);
+            return;
+        }
+        if (halo != default) BatchX.Centered(batch, _prim.Light, g.A, new Vector2(g.Size * 2.8f), halo);   // 둘레로 번지는 빛
+        BatchX.Centered(batch, _prim.Circle, g.A, new Vector2(g.Size * 2f), outer);
+        BatchX.Centered(batch, _prim.Circle, g.A, new Vector2(g.Size * 2f * g.Progress), inner);
+    }
+
+    /// <summary>빛 × (1 − 그림 색) — 그림이 0 인 곳(모양 밖)은 그대로.</summary>
+    private static readonly BlendState LightFilter = new()
+    {
+        Name = "LightFilter",
+        ColorBlendFunction = BlendFunction.Add, ColorSourceBlend = Blend.Zero, ColorDestinationBlend = Blend.InverseSourceColor,
+        AlphaBlendFunction = BlendFunction.Add, AlphaSourceBlend = Blend.Zero, AlphaDestinationBlend = Blend.One,
+    };
 
     private static readonly XnaVector2 Vector2Zero = XnaVector2.Zero;
 

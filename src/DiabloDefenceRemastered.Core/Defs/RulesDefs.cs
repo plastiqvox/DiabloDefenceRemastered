@@ -410,6 +410,8 @@ public sealed record RanksDef
     public UniqueNamesDef? UniqueNames { get; init; }
     /// <summary>생성 때 최종 크기(정의 scale × 등급 배율)의 상한(기획 8.1). 넘으면 자르고 몸 반경도 자른 크기로 센다(6.5).</summary>
     public float MaxScale { get; init; } = 1.6f;
+    /// <summary>보스·중간 보스(정의 rank boss·miniboss) 몸 빛(2026-11-15). 정의 빛·접두사 빛이 있으면 그것이 먼저.</summary>
+    public CarriedLightDef? BossLight { get; init; }
 }
 
 /// <summary>정예·우두머리 배율(설계서 6.7·6.10).</summary>
@@ -428,6 +430,8 @@ public sealed record RankDef
     public DefRef<DropTableDef>? DropTable { get; init; }
     public Rgb Glow { get; init; } = Rgb.White;
     public RankPulseDef? Pulse { get; init; }
+    /// <summary>등급 몸 빛(2026-11-15 사용자 요청 "챔피언몹은 연푸른빛, 유니크 보스도") — 셰이더 빛이 바닥·벽에 비춤. 정의 빛·접두사 빛이 있으면 그것이 먼저. 그리기만 바뀐다.</summary>
+    public CarriedLightDef? Light { get; init; }
 }
 
 public sealed record RankPulseDef

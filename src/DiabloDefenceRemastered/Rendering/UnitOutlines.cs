@@ -51,7 +51,11 @@ public sealed class UnitOutlines : IDisposable
     private static readonly DepthStencilState[] WriteRing = [Ring(1), Ring(2), Ring(3)];
     private static readonly DepthStencilState[] PaintRing = [Paint(1), Paint(2), Paint(3)];
 
+    /// <summary>빛처럼 얹을 때 선 자체·번진 테 세기(가산).</summary>
+    public const float LineAlpha = 0.55f, GlowAlpha = 0.9f;
+
     private readonly List<Target> _targets = new(256);
+    private RenderTarget2D? _line, _half, _quarter;
     private AlphaTestEffect? _effect;
 
     public int Count => _targets.Count;
@@ -64,15 +68,24 @@ public sealed class UnitOutlines : IDisposable
     public void Add(Texture2D texture, Rectangle source, RectF dest, float sortY, RectF view, Kind kind) =>
         _targets.Add(new Target(texture, source, dest, Depth(sortY, view), kind));
 
-    /// <summary><c>WorldRT</c>(깊이·스텐실 있음)가 걸린 채로 부른다.</summary>
-    public void Draw(GraphicsDevice device, SpriteBatch batch, Primitives prim, ArenaRenderer arena, RectF view, Matrix toTarget, int targetW, int targetH)
+    /// <summary>
+    /// 윤곽을 자기 타깃(깊이·스텐실 있음)에 그린 뒤 <paramref name="world"/> 에 빛처럼 얹는다(2026-11-15 사용자 요청 "붉은 궤적도 붉은 조명처럼 — 지금은 픽셀로 그린 느낌"):
+    /// 선 자체는 <see cref="LineAlpha"/> 로 약하게, ½·¼ 로 줄여 번진 테를 <see cref="GlowAlpha"/> 로 두 번 가산. 끝나면 <paramref name="world"/> 가 걸린 채로 돌아옴.
+    /// </summary>
+    public void Draw(GraphicsDevice device, SpriteBatch batch, Primitives prim, ArenaRenderer arena, RectF view, Matrix toTarget, RenderTarget2D world)
     {
         if (_targets.Count == 0) return;
+        var targetW = world.Width;
+        var targetH = world.Height;
+        EnsureTargets(device, targetW, targetH);
+        device.SetRenderTarget(_line);
+        device.Clear(ClearOptions.Target | ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Transparent, 1f, 0);
         var fx = _effect ??= new AlphaTestEffect(device) { VertexColorEnabled = true, AlphaFunction = CompareFunction.Greater };
         fx.World = Matrix.Identity;
         fx.View = toTarget;
         fx.Projection = Matrix.CreateOrthographicOffCenter(0, targetW, targetH, 0, 0, -1);
-        device.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Transparent, 1f, 0);
+
+        // 1. 벽 깊이| ClearOptions.Stencil, Color.Transparent, 1f, 0);
 
         // 1. 벽 깊이(효과 값은 End 에서 적용되므로 패스마다 Begin 앞에 정한다)
         fx.ReferenceAlpha = WallAlphaRef;
@@ -120,6 +133,17 @@ public sealed class UnitOutlines : IDisposable
             batch.Draw(prim.Pixel, new Rectangle(0, 0, targetW, targetH), color.ToXna(Alpha));
             batch.End();
         }
+
+        // 5. 번짐: ½ → ¼ 선형 축소(테가 번짐) → world 에 가산(번진 테 두 겹 + 약한 선)
+        Downsample(device, batch, _line!, _half!);
+        Downsample(device, batch, _half!, _quarter!);
+        device.SetRenderTarget(world);
+        batch.Begin(SpriteSortMode.Deferred, BlendState.Additive, SamplerState.LinearClamp);
+        var full = new Rectangle(0, 0, targetW, targetH);
+        batch.Draw(_quarter, full, Color.White * GlowAlpha);
+        batch.Draw(_half, full, Color.White * GlowAlpha);
+        batch.Draw(_line, full, Color.White * LineAlpha);
+        batch.End();
     }
 
     private static void Blit(SpriteBatch batch, in Target t, float dx, float dy) =>
@@ -138,5 +162,31 @@ public sealed class UnitOutlines : IDisposable
         StencilEnable = true, StencilFunction = CompareFunction.Equal, StencilPass = StencilOperation.Keep, ReferenceStencil = value,
     };
 
-    public void Dispose() => _effect?.Dispose();
+    private void EnsureTargets(GraphicsDevice device, int w, int h)
+    {
+        if (_line is not null && _line.Width == w && _line.Height == h) return;
+        _line?.Dispose();
+        _half?.Dispose();
+        _quarter?.Dispose();
+        _line = new RenderTarget2D(device, w, h, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents);
+        _half = new RenderTarget2D(device, Math.Max(1, w / 2), Math.Max(1, h / 2), false, SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.DiscardContents);
+        _quarter = new RenderTarget2D(device, Math.Max(1, w / 4), Math.Max(1, h / 4), false, SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.DiscardContents);
+    }
+
+    private static void Downsample(GraphicsDevice device, SpriteBatch batch, RenderTarget2D src, RenderTarget2D dst)
+    {
+        device.SetRenderTarget(dst);
+        device.Clear(Color.Transparent);
+        batch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.LinearClamp);
+        batch.Draw(src, new Rectangle(0, 0, dst.Width, dst.Height), Color.White);
+        batch.End();
+    }
+
+    public void Dispose()
+    {
+        _effect?.Dispose();
+        _line?.Dispose();
+        _half?.Dispose();
+        _quarter?.Dispose();
+    }
 }
