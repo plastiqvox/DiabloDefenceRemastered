@@ -86,6 +86,9 @@ public sealed class LightRenderer : IDisposable
 
     public RenderTarget2D LightRT { get; }
     public Int2 LightSize { get; }
+
+    /// <summary>예고 불빛 셰이더(2026-11-15 — WorldRenderer 가 넣음, 없으면 모양 텍스처).</summary>
+    public GroundGlowRenderer? Glow { get; set; }
     /// <summary>안개 기억 정도(7.10).</summary>
     public RenderTarget2D MemRT { get; }
     public FogRenderer Fog { get; }
@@ -151,7 +154,14 @@ public sealed class LightRenderer : IDisposable
 
         // ②b 바닥 예고 빛(벽 그림자 없음, 진행만큼 한 겹 더). 빛 지도는 1 에서 잘려 이미 밝은 바닥에 붉은 빛을 더해도 붉어지지 않는다 —
         // 먼저 모양 안 빛을 예고 색 필터로 곱하고(밝은 곳이 그 색으로 물듦) 그다음 더한다(어두운 곳이 그 색으로 밝아짐)
-        if (f.GroundLights.Count > 0)
+        // 불빛 셰이더(Glow)가 있으면 부드러운 모양·번짐·일렁임으로, 없으면 모양 텍스처로
+        if (f.GroundLights.Count > 0 && Glow is { } glow)
+        {
+            var time = f.StageTick / (float)World.TicksPerSecond;
+            glow.Draw(batch, _prim.Pixel, f.GroundLights, toLight, LightSize, LightFilter, filter: true, GroundFilter, time);
+            glow.Draw(batch, _prim.Pixel, f.GroundLights, toLight, LightSize, LightAdd, filter: false, 1f, time);
+        }
+        else if (f.GroundLights.Count > 0)
         {
             batch.Begin(SpriteSortMode.Deferred, LightFilter, SamplerState.LinearClamp, null, null, null, toLight);
             foreach (var g in f.GroundLights)

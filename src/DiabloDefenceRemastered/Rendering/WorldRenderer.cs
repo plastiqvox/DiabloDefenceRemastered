@@ -52,6 +52,8 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
     private BloodPoolRenderer? _blood;
     /// <summary>틸트 시프트 + 비네트(2026-11-15 HD-2D 기법) — 셰이더를 못 읽으면 null.</summary>
     private TiltShiftRenderer? _tilt;
+    /// <summary>바닥 예고 불빛(2026-11-15) — 셰이더를 못 읽으면 null(빛 지도는 모양 텍스처, 테두리 선).</summary>
+    private GroundGlowRenderer? _groundGlow;
     private IReadOnlyList<BloodPool> _bloodPools = [];
     /// <summary>핏웅덩이 밟기 물결(표시 전용 — 월드마다 비움).</summary>
     private readonly BloodRipples _bloodRipples = new();
@@ -212,6 +214,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
 
         // ── 6층 빛·안개 ─────────────────────────────────────────
         CollectEffectLights(f);
+        _light!.Glow = _groundGlow;
         _light!.Build(batch, f, _arena, _app.Options.Reveal);
         device.SetRenderTarget(_worldRT);
         batch.Begin(SpriteSortMode.Deferred, FogBlend.Multiply, SamplerState.LinearClamp);
@@ -272,6 +275,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             _bloom = BloomRenderer.TryLoad(device, _app.Log);
             _blood = BloodPoolRenderer.TryLoad(device, _app.Log);
             _tilt = TiltShiftRenderer.TryLoad(device, _app.Log);
+            _groundGlow = GroundGlowRenderer.TryLoad(device, _app.Log);
         }
         // 셰이더 빛이면 LightRT 를 WorldRT 크기로(전체 해상도), 아니면 480×270
         var lightSize = _shaderLight is not null ? new Int2(_worldRT.Width, _worldRT.Height) : new Int2(LightRenderer.Width, LightRenderer.Height);
@@ -416,7 +420,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
     // ── 1층: 장판·예고 채움·발밑 원 ─────────────────────────────
 
     /// <summary>예고 빛 세기 = 예고 알파(기본 0.35) × 이 값.</summary>
-    private const float TelegraphLight = 4f;
+    private const float TelegraphLight = 2.5f;
     /// <summary>예고 테두리(판정 경계) 알파 — 빛이 주, 테는 경계만 읽게.</summary>
     private const float TelegraphEdgeAlpha = 0.35f;
 
@@ -868,7 +872,8 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
 
         batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, toTarget);
         foreach (var d in _alpha7) BatchX.Blit(batch, d.Texture, d.Dest, new Rectangle(d.Src.X0, d.Src.Y0, d.Src.Width, d.Src.Height), d.Color.ToXna(d.Alpha));
-        // 예고 테두리 한 번 더(알파 0.6 의 2px 선) — 벽 위에서도 범위가 보이게(7.3)
+        // 예고 테두리 한 번 더(2px 선) — 벽 위에서도 범위가 보이게(7.3). 불빛 셰이더가 있으면 그 밝은 테가 대신한다(2026-11-15 "그림판으로 그린 느낌")
+        if (_groundGlow is null)
         foreach (var t in _telegraphs)
         {
             var color = (t.Tint == default ? new Rgb(255, 40, 40) : t.Tint).ToXna(TelegraphEdgeAlpha);   // 판정 경계(빛이 주가 된 뒤 2026-11-15 0.6 → 약하게)
@@ -892,7 +897,14 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         foreach (var d in _additive) BatchX.Blit(batch, d.Texture, d.Dest, new Rectangle(d.Src.X0, d.Src.Y0, d.Src.Width, d.Src.Height), d.Color.ToXna(d.Alpha));
         foreach (var d in _glows) BatchX.Blit(batch, d.Texture, d.Dest, new Rectangle(d.Src.X0, d.Src.Y0, d.Src.Width, d.Src.Height), d.Color.ToXna(d.Alpha));
         batch.End();
+
+        // 바닥에서 올라오는 예고 불빛(2026-11-15 "바닥에서 붉은 불빛이 나는 느낌으로") — 빛 곱하기 뒤 가산이라 밝은 바닥 위에서도 보이고, 블룸이 번지게 한다
+        _groundGlow?.Draw(batch, prim.Pixel, f.GroundLights, toTarget, new Int2(_worldRT!.Width, _worldRT.Height), BlendState.Additive, filter: false,
+                          TelegraphEmissive, f.StageTick / (float)World.TicksPerSecond);
     }
+
+    /// <summary>예고 발광 세기(빛 지도 세기에 곱함).</summary>
+    private const float TelegraphEmissive = 0.1f;
 
     /// <summary>판정 점을 그릴까: <c>hero_hit_radius</c> 가 있는 적 탄이 주인공에서 120px 안(6.20 ⑤). 시뮬레이션과 무관.</summary>
     private static bool HitDotVisible(World w)
@@ -1122,6 +1134,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         _bloom?.Dispose();
         _blood?.Dispose();
         _tilt?.Dispose();
+        _groundGlow?.Dispose();
     }
 
     /// <summary>7층 그리기 하나(텍스처·원본·자리·색·알파).</summary>
