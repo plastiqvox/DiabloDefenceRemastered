@@ -19,7 +19,13 @@
     { "id": "fx_warning_circle", "procedural": "warning_circle", "tint": [255, 40, 40], "alpha": 0.35 },
     // 기획 13.7: 산 웅덩이 acidpud1 1~9(생김, 한 번) → acidpud2 1~4(유지 반복), 반경에 맞춤 — 로트피스트 독 웅덩이. fit_radius 는 첫 값(그림 반폭 어림) — 미리보기로 맞춘다
     { "id": "fx_poison_pool", "sprite": "acidpud2", "frames": [1, 4], "loop": true, "frame_time": 0.1,
-      "intro": { "sprite": "acidpud1", "frames": [1, 9] }, "fit_radius": 40, "blend": "alpha" }
+      "intro": { "sprite": "acidpud1", "frames": [1, 9] }, "fit_radius": 40, "blend": "alpha" },
+    // 포탈(2026-11-15 사용자 결정 "둘레 문을 없애고 출구는 포탈, 적은 붉은 포탈에서"): 열림(16) 한 번 → 유지(16) 반복. 출구 푸른 포탈은 방이 끝날 때까지 그리기가 반복하고,
+    // 적 붉은 포탈은 표시 이벤트라 열림 + 한 바퀴(약 1.9초)만 — rules.rooms.portals
+    { "id": "fx_portal_blue", "sprite": "portal2", "frames": [1, 16], "loop": true, "frame_time": 0.06,
+      "intro": { "sprite": "portal1", "frames": [1, 16] }, "blend": "alpha", "light": { "color": [110, 150, 255], "radius_mul": 2.0 } },
+    { "id": "fx_portal_red", "sprite": "rportal2", "frames": [1, 16], "loop": true, "frame_time": 0.06,
+      "intro": { "sprite": "rportal1", "frames": [1, 16] }, "blend": "alpha", "light": { "color": [255, 70, 50], "radius_mul": 2.0 } }
   ],
   "projectiles": [
     // 기획 13.7: 화살 arrows 원색 ×0.9, 반경 4, 260px/s, 350px, 장애물 막힘. 대체 그림: exe 화살(16방향)

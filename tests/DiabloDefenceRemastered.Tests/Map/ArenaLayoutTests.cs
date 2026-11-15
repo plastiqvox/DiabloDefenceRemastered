@@ -273,9 +273,14 @@ public class ArenaLayoutTests
     public void Errors_Gates()
     {
         var ts = TestDefs.Tileset();
+        // 2026-11-15 포탈 문: 테두리에 그 변 문 조각이 없으면 오류가 아니라 벽을 뚫지 않는 포탈 문(나가는 자리 = 진입점 둘레)
         var noSe = ts with { Gates = new Dictionary<string, GateSetDef> { [TestDefs.Border] = ts.Gates[TestDefs.Border] with { Se = null } } };
-        var errors = ExpandErrors(TestDefs.Map(12, tileset: noSe));
-        Assert.Contains(errors, e => e.Path == "$.layout.gates[2].side" && e.Message.Contains("se"));
+        var portalMap = TestDefs.Map(12, tileset: noSe);
+        var portalErrors = new List<LayoutError>();
+        Assert.NotNull(ArenaLayout.TryExpand(portalMap, noSe, portalErrors));
+        Assert.Empty(portalErrors);
+        Assert.True(GateZones.IsPortal(portalMap, noSe, GateSide.Se));
+        Assert.False(GateZones.IsPortal(portalMap, noSe, GateSide.Nw));
 
         var m = TestDefs.Map(12, place: []);
         var bad = m with

@@ -55,6 +55,11 @@ public sealed record RoomRulesDef
     /// <summary>층이 바뀌는 문(<c>RoomExit.NextFloor</c> ≠ 0)의 넘김 어둠(초, 1.0 — v0.8, 앱 틱 그림 값).</summary>
     public required float TransitionFloor { get; init; }
     public required RoomGatesDef Gates { get; init; }
+    /// <summary>
+    /// 포탈(2026-11-15 사용자 결정 "둘레 문을 없애고 출구는 포탈, 적은 붉은 포탈에서"): 출구 푸른 포탈·적 입구 붉은 포탈 이펙트.
+    /// null 이면 포탈을 그리지 않는다(규칙은 그대로). 문 조각이 없는 테두리의 문이 포탈 문이다(<c>GateZones.IsPortal</c>).
+    /// </summary>
+    public RoomPortalsDef? Portals { get; init; }
     public required ExitsDef Exits { get; init; }
     public required AreaScaleDef AreaScale { get; init; }
     /// <summary>보상 자리(v0.8, 3.6 "보상 자리" — 정리가 끝난 순간 주인공 앞).</summary>
@@ -147,6 +152,14 @@ public sealed record StairsRulesDef
 }
 
 /// <summary>문 이름(v0.7, 6.10). 모두 맵의 문 넷 안(13.5-23 ④).</summary>
+/// <summary>포탈 이펙트(2026-11-15): <see cref="Exit"/> = 출구(방 정리 뒤 열림, 반복), <see cref="Enemy"/> = 적이 나오는 입구(한 번 열림 + 한 바퀴), <see cref="EnemyCooldown"/> 초 안에 같은 입구면 다시 열지 않음.</summary>
+public sealed record RoomPortalsDef
+{
+    public required EffectRef Exit { get; init; }
+    public required EffectRef Enemy { get; init; }
+    public float EnemyCooldown { get; init; } = 1.5f;
+}
+
 public sealed record RoomGatesDef
 {
     /// <summary>일반·정예 방의 들어오는 문 후보(<c>gate_sw</c>·<c>gate_se</c>).</summary>

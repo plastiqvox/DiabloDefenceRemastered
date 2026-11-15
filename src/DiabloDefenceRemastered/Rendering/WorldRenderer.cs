@@ -616,6 +616,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         var iso = _arena.Iso;
         foreach (var (id, gate) in w.Gates)
         {
+            if (IsPortalGate(w, gate)) continue;   // 포탈 문(2026-11-15)은 벽 틈이 없다 — 문·창살 없음
             var from = _placed.Count;
             var sink = GateGrates.Sink(room, id, f.StageTick);
             var passing = GateGrates.EnemyPassing(gate, iso, w.Enemies.Items);   // 적이 드나드는 동안: 창살은 흐리게, 문은 열림
@@ -635,6 +636,26 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
     }
 
     private readonly List<GateGrateArt.Placed> _placed = new(32);
+
+    /// <summary>포탈 문(2026-11-15 — 타일셋에 그 테두리 문 조각이 없어 벽 틈이 없는 문).</summary>
+    private static bool IsPortalGate(World w, GateZone gate) =>
+        w.Map is { } map && w.Arena is { } grid && GateZones.IsPortal(map, grid.Tileset, gate.Side);
+
+    /// <summary>
+    /// 열린 출구 푸른 포탈(2026-11-15 사용자 결정 "출구는 보상 선택지 수만큼 포탈"): 출구 단계부터 그 문 입구 진입점에 <c>rules.rooms.portals.exit</c> 이펙트를
+    /// 열림 한 번 → 유지 반복으로(나이 = 출구 단계에 든 뒤 시간). 포탈 문이 아니면(문·창살 그림) 없음.
+    /// </summary>
+    private IEnumerable<(EffectRef Fx, Vector2 Pos, float Age)> ExitPortals(WorldFrame f)
+    {
+        var w = f.World;
+        if (w.Room is not { Phase: >= RoomPhase.Doors } room || w.Resolved is not { } r || w.Defs.Rules.Rooms?.Portals is not { } portals) yield break;
+        var age = (f.StageTick - room.PhaseTick) * World.Dt;
+        foreach (var exit in room.Exits)
+        {
+            if (!w.Gates.TryGetValue(exit.GateId, out var gate) || !IsPortalGate(w, gate) || !r.TryGetEntry(exit.GateId, out var entry)) continue;
+            yield return (portals.Exit, entry.Inside, age);
+        }
+    }
 
     /// <summary>
     /// 창살 기둥 하나 — 벽처럼 늘 불투명(2026-11-13 사용자 결정, 기획 10.7 — 가려진 유닛은 <see cref="UnitOutlines"/>).
@@ -664,6 +685,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         var openFade = room.Phase >= RoomPhase.Doors ? Math.Clamp(1f - (f.StageTick - room.PhaseTick) / 18f, 0f, 1f) : 1f;
         foreach (var (id, gate) in w.Gates)
         {
+            if (IsPortalGate(w, gate)) continue;                                                                // 포탈 문(2026-11-15) — 붉은 빛·창살 없음
             if (_doorArt is not null && _doorArt.Has(gate.Side)) continue;                                      // 원작 나무 문(4층 — CollectGrates)
             if (_grateArt is not null && _grateArt.TryGet(GateGrates.PieceName(gate.Side), out _)) continue;   // 원작 창살(4층 — CollectGrates)
             var sealedNow = GateSeals.IsSealed(room, id);
@@ -712,6 +734,10 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             var radius = (fx.Event.Radius > 0f ? fx.Event.Radius : 48f * fx.Scale) * light.RadiusMul;
             f.ShortLights.Add(new PointLight(fx.Event.Pos, radius, light.Color, 1f - age / Math.Max(0.01f, duration)));
         }
+        // 열린 출구 푸른 포탈 빛(2026-11-15) — 꺼지지 않는다
+        foreach (var (fx, pos, _) in ExitPortals(f))
+            if (fx.Effect.Def.Light is { } pl)
+                f.ShortLights.Add(new PointLight(pos, 48f * (fx.Scale ?? 1f) * pl.RadiusMul, pl.Color, 1f));
         // 날아가는 투사체 빛(2026-11-13): 바닥 자리 위 light.height 에 뜬 점 빛 — 셰이더 빛이 3D 거리로 바닥·벽에 비춘다
         foreach (var p in f.World.Projectiles.Items)
         {
@@ -771,6 +797,12 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             var age = (f.StageTick - fx.Event.Tick) * World.Dt;
             var tint = Mul(def.Tint, fx.Event.Tint == default ? Rgb.White : fx.Event.Tint);
             CollectEffect(def, age, fx.Event.Pos, fx.Scale, tint, fx.Event.Dir, 0, def.Blend == BlendKind.Additive ? _additive : _alpha7);
+        }
+        // 열린 출구 푸른 포탈(2026-11-15) — 방이 끝날 때까지 반복
+        foreach (var (fx, pos, age) in ExitPortals(f))
+        {
+            var def = fx.Effect.Def;
+            CollectEffect(def, age, pos, fx.Scale ?? 1f, fx.Tint ?? def.Tint, Vector2.Zero, 0, def.Blend == BlendKind.Additive ? _additive : _alpha7);
         }
 
         batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, toTarget);

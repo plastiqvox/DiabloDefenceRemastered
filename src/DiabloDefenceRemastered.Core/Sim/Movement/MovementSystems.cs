@@ -249,6 +249,7 @@ public sealed class CollisionSystem(NavWorld nav, SpatialHash hash) : ISimSystem
         foreach (var (id, zone) in world.Gates)
         {
             if (zone.Cells.Count == 0 || !Art.GateSeals.IsSealed(room, id)) continue;
+            if (world.Map is { } map && GateZones.IsPortal(map, grid.Tileset, zone.Side)) continue;   // 포탈 문(2026-11-15)은 벽 틈이 없고 방 안 바닥이라 막지 않는다
             var t = iso.ToTile(hero.Pos);
             float tx = t.Tx, ty = t.Ty;
             int lo, hi;

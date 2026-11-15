@@ -136,6 +136,8 @@ public sealed partial class World
     /// 문 틈 칸(v0.7, 6.11 — 생성자에서 한 번 <c>GateZones.Compute</c>). 나가는 자리 판정(<c>RoomFlow</c>), 봉인 그리기·문 위 아이콘(WP5), 미니맵 문 점(WP6). 맵 없는 월드는 빈 사전.
     /// </summary>
     public IReadOnlyDictionary<string, GateZone> Gates { get; } = GateZones.Empty;
+    /// <summary>적 입구 붉은 포탈을 마지막으로 연 틱(입구 ID — 표시만, 2026-11-15 <c>DirectorSpawns.OpenEnemyPortal</c>).</summary>
+    public Dictionary<string, int> EnemyPortalTicks { get; } = new(StringComparer.Ordinal);
     /// <summary>외곽 상자 64N × (32N + H)(카메라·생성 띠 기준, 4.1). 맵 없는 시험 월드는 960×540.</summary>
     public Vector2 MapSize { get; set; }
     public ulong Seed { get; }

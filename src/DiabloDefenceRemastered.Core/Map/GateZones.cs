@@ -29,11 +29,23 @@ public static class GateZones
     {
         var m = grid.MegaSize;
         var result = new Dictionary<string, GateZone>(map.Layout.Gates.Count, StringComparer.Ordinal);
+        grid.Tileset.Gates.TryGetValue(map.Layout.Border, out var gateSet);
         foreach (var gate in map.Layout.Gates)
         {
             var at = gate.At ?? (m - 2) / 2;
             if (at < 1 || at + 1 > m - 2 || result.ContainsKey(gate.Id)) continue;
             var cells = new List<Int2>(8);
+            if (gateSet?.Get(gate.Side) is null)
+            {
+                // 포탈 문(2026-11-15): 벽에 틈이 없다 — 나가는 자리 = 그 문 입구의 진입점(inside) 둘레 하위 칸(가로·세로 1칸 안, 걸을 수 있는 칸). 포탈 그림이 그 자리에 선다
+                if (FindEntry(map, gate.Id) is { } inside)
+                    for (var ty = (int)MathF.Floor(inside.Ty - 1f); ty <= (int)MathF.Ceiling(inside.Ty + 1f); ty++)
+                        for (var tx = (int)MathF.Floor(inside.Tx - 1f); tx <= (int)MathF.Ceiling(inside.Tx + 1f); tx++)
+                            if (MathF.Abs(tx - inside.Tx) <= 1f && MathF.Abs(ty - inside.Ty) <= 1f && grid.IsWalkable(tx, ty)) cells.Add(new Int2(tx, ty));
+                cells.Sort(static (a, b) => a.Y != b.Y ? a.Y.CompareTo(b.Y) : a.X.CompareTo(b.X));
+                result.Add(gate.Id, new GateZone(gate.Id, gate.Side, cells));
+                continue;
+            }
             for (var k = at; k <= at + 1; k++)
             {
                 var (mx, my) = ArenaLayout.SideCell(gate.Side, k, m);
@@ -49,6 +61,18 @@ public static class GateZones
         }
         return result;
     }
+
+    /// <summary>그 문 입구의 진입점(하위 타일 좌표). 없으면 null.</summary>
+    private static TileCoord? FindEntry(MapDef map, string gateId)
+    {
+        foreach (var e in map.Entries)
+            if (string.Equals(e.Id, gateId, StringComparison.Ordinal)) return e.InsideTile;
+        return null;
+    }
+
+    /// <summary>문이 포탈 문인가(타일셋 그 테두리에 문 조각이 없어 벽에 틈이 없음, 2026-11-15).</summary>
+    public static bool IsPortal(MapDef map, TilesetDef tileset, GateSide side) =>
+        !tileset.Gates.TryGetValue(map.Layout.Border, out var gs) || gs.Get(side) is null;
 
     /// <summary>변이 맞은편(nw ↔ se, ne ↔ sw)인 문 ID. 그 문이 없거나 맞은편 문이 없으면 null. 들어온 문 바꾸기(<c>RoomState.RemapEntry</c>)가 쓴다.</summary>
     public static string? Opposite(MapDef map, string gateId)

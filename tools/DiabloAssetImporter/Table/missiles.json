@@ -19,6 +19,12 @@
     { "out": "d1/missiles/farrow",   "cl2": "missiles\\farrow{d}.cl2", "dirs": 16, "width": 96 },
     { "out": "d1/missiles/acidpud1", "cl2": "missiles\\acidpud1.cl2", "width": 96 },
     { "out": "d1/missiles/acidpud2", "cl2": "missiles\\acidpud2.cl2", "width": 96 },
+    // 포탈(2026-11-15 사용자 결정 "출구는 포탈, 적은 붉은 포탈에서"): 마을 포탈 portal1(열림 16)·portal2(유지 16), 라자루스 붉은 포탈 rportal1·rportal2 — 폭 96, 높이 최대 128.
+    // 출처: 원본 확인(probe files·probe cl2)
+    { "out": "d1/missiles/portal1",  "cl2": "missiles\\portal1.cl2",  "width": 96 },
+    { "out": "d1/missiles/portal2",  "cl2": "missiles\\portal2.cl2",  "width": 96 },
+    { "out": "d1/missiles/rportal1", "cl2": "missiles\\rportal1.cl2", "width": 96 },
+    { "out": "d1/missiles/rportal2", "cl2": "missiles\\rportal2.cl2", "width": 96 },
 
     // 바닥 아이템(기획 11.1·11.4 V8): 떨어짐 애니 전부(마지막 프레임 = 바닥에 놓임). 책 13·금화 10·물약 16프레임, 칸 96×160.
     // 물약 색은 이름 끝 글자: fbttlebr 붉은(체력 물약), fbttlebb 파란(마력 폭주). 나머지 fbttle·bl·by·db·dy·or·wh 는 쓰지 않음
