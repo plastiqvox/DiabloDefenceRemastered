@@ -154,6 +154,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         f.View = new RectF(cam.X, cam.Y, cam.X + world.ViewSize.X, cam.Y + world.ViewSize.Y);
         f.Shapes.Clear();
         f.ShortLights.Clear();
+        f.GroundLights.Clear();
         _glows.Clear();
         _additive.Clear();
         _alpha7.Clear();
@@ -218,7 +219,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         batch.End();
 
         // ── 6층 뒤: 벽 뒤 유닛 윤곽선(빛에 어두워지지 않게 곱한 뒤, 발광 앞) ─────
-        if (_arena is not null) _outlines.Draw(device, batch, prim, _arena, f.View, toTarget, _worldRT.Width, _worldRT.Height);
+        if (_arena is not null) _outlines.Draw(device, batch, prim, _arena, f.View, toTarget, _worldRT);
 
         // ── 7층 발광(알파 → 가산) ────────────────────────────────
         DrawLayer7(batch, f, prim, toTarget);
@@ -377,6 +378,18 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         f.Shapes.Add(new ShapeDraw(tex, new Rectangle(src.X0, src.Y0, src.Width, src.Height), dest, draw, a, forced, !FrontWallCovers(dest), FogShape: true,
                                    Caster: _arena is not null && _arena.Iso.IsInsideMap(e.Pos)));
         if (e.Visual.GlowAlpha > 0f) _glows.Add(new GlowDraw(tex, src, dest, e.Visual.GlowColor, e.Visual.GlowAlpha * fogA));
+        // 등급·보스 몸 빛(2026-11-15 "챔피언몹은 연푸른빛, 유니크 보스도", "바디 자체에 빛이 나면"): 빛 곱하기 뒤 가산 후광이라 어둠 속에서도 몸이 빛나 보임.
+        // 등급 덧칠이 없는 보스는 몸에도 같은 색 덧칠. 바닥·벽을 비추는 빛은 CollectEffectLights
+        if (e.IsAlive && RankLight(w, e) is { } rl)
+        {
+            if (e.Visual.GlowAlpha <= 0f) _glows.Add(new GlowDraw(tex, src, dest, rl.Color, BodyGlowAlpha * fogA));
+            if (_lightTex is { } halo)
+            {
+                var c = dest.Center;
+                var half = MathF.Max(dest.Width, dest.Height) * 0.65f;
+                _additive.Add(new GlowDraw(halo, new RectI(0, 0, halo.Width, halo.Height), new RectF(c.X - half, c.Y - half, c.X + half, c.Y + half), rl.Color, HaloAlpha * rl.Intensity * fogA));
+            }
+        }
         if (e.HitFlashTime > 0f) _glows.Add(new GlowDraw(tex, src, dest, Rgb.White, 0.8f * fogA));
         if (e.Visual.FlashAlpha > 0f) _glows.Add(new GlowDraw(tex, src, dest, e.Visual.FlashColor, e.Visual.FlashAlpha * fogA));
     }
@@ -401,6 +414,11 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
     }
 
     // ── 1층: 장판·예고 채움·발밑 원 ─────────────────────────────
+
+    /// <summary>예고 빛 세기 = 예고 알파(기본 0.35) × 이 값.</summary>
+    private const float TelegraphLight = 4f;
+    /// <summary>예고 테두리(판정 경계) 알파 — 빛이 주, 테는 경계만 읽게.</summary>
+    private const float TelegraphEdgeAlpha = 0.35f;
 
     private void DrawLayer1(SpriteBatch batch, WorldFrame f, Primitives prim)
     {
@@ -435,18 +453,12 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             _telegraphs.Add(t);
             var color = t.Tint == default ? new Rgb(255, 40, 40) : t.Tint;
             var baseAlpha = t.Effect?.Alpha is > 0f and var ea ? ea : 0.35f;
+            // 바닥 위 평면 칠 대신 빛 지도에 붉은 빛으로(2026-11-15 "붉은 궤적도 붉은 조명처럼", "바닥 메쉬에 맞게 3d로") — 바닥 무늬가 붉게 비침. 판정 모양은 그대로
+            f.GroundLights.Add(new GroundLight(t.Shape != TelegraphShape.Circle, t.Pos, t.End, t.Size, t.Progress, color, baseAlpha * TelegraphLight));
             if (t.Shape == TelegraphShape.Circle)
             {
-                var d = new Vector2(t.Size * 2f);
-                BatchX.Centered(batch, prim.Circle, t.Pos, d, color.ToXna(baseAlpha * 0.5f));
-                BatchX.Centered(batch, prim.Circle, t.Pos, d * t.Progress, color.ToXna(baseAlpha));
                 f.Shapes.Add(new ShapeDraw(prim.Circle, new Rectangle(0, 0, prim.Circle.Width, prim.Circle.Height),
                                            new RectF(t.Pos.X - t.Size, t.Pos.Y - t.Size, t.Pos.X + t.Size, t.Pos.Y + t.Size), t.Pos, 1f, false, false, FogShape: true));
-            }
-            else
-            {
-                BatchX.Line(batch, prim.Pixel, t.Pos, t.End, t.Size * 2f, color.ToXna(baseAlpha * 0.5f));
-                BatchX.Line(batch, prim.Pixel, t.Pos, Vector2.Lerp(t.Pos, t.End, t.Progress), t.Size * 2f, color.ToXna(baseAlpha));
             }
         }
 
@@ -790,10 +802,17 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         // 우두머리 불꽃·냉기·번개 강화(2026-11-14)는 접두사 light — 정의 빛이 없을 때
         foreach (var e in f.World.Enemies.Items)
         {
-            if (!e.IsAlive || (e.Def.Light ?? AffixLight(f.World, e)) is not { } el) continue;
+            if (!e.IsAlive || (e.Def.Light ?? AffixLight(f.World, e) ?? RankLight(f.World, e)) is not { } el) continue;
             f.ShortLights.Add(new PointLight(Vector2.Lerp(e.PrevPos, e.Pos, _alphaInterp), el.Radius, el.Color, el.Intensity, el.Height));
         }
     }
+
+    /// <summary>등급 몸 빛(정예·우두머리 — <c>ranks.*.light</c>) 또는 보스·중간 보스 몸 빛(<c>ranks.boss_light</c>). 없으면 null.</summary>
+    private static CarriedLightDef? RankLight(World w, Enemy e) =>
+        Core.Sim.Enemies.EnemyFactory.RankOf(w, e.Rank)?.Light ?? (e.Def.Rank is DefRank.Miniboss or DefRank.Boss ? w.Defs.Rules.Ranks?.BossLight : null);
+
+    /// <summary>등급 몸 빛 후광 알파(× 빛 세기)·등급 덧칠이 없는 보스의 몸 덧칠 알파.</summary>
+    private const float HaloAlpha = 0.55f, BodyGlowAlpha = 0.3f;
 
     private static CarriedLightDef? AffixLight(World w, Enemy e)
     {
@@ -852,7 +871,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         // 예고 테두리 한 번 더(알파 0.6 의 2px 선) — 벽 위에서도 범위가 보이게(7.3)
         foreach (var t in _telegraphs)
         {
-            var color = (t.Tint == default ? new Rgb(255, 40, 40) : t.Tint).ToXna(0.6f);
+            var color = (t.Tint == default ? new Rgb(255, 40, 40) : t.Tint).ToXna(TelegraphEdgeAlpha);   // 판정 경계(빛이 주가 된 뒤 2026-11-15 0.6 → 약하게)
             if (t.Shape == TelegraphShape.Circle) BatchX.Centered(batch, prim.Ring, t.Pos, new Vector2(t.Size * 2f), color);
             else
             {
