@@ -19,8 +19,8 @@ namespace DiabloDefenceRemastered.Rendering;
 /// </summary>
 public sealed class ShaderLight : IDisposable
 {
-    /// <summary>벽 그림자 진하기(2026-11-13 사용자 결정 "은은하게").</summary>
-    public const float ShadowStrength = 0.45f;
+    /// <summary>벽 그림자 진하기(2026-11-13 사용자 결정 "은은하게" 0.45 → 2026-11-15 "구조물들도 그림자" 0.8 — 벽·기둥 뒤가 뚜렷이 어둡게).</summary>
+    public const float ShadowStrength = 0.8f;
     /// <summary>그림자 표본에서 바닥 자리·빛 쪽 끝을 건너뛰는 거리(월드 px) — 벽 기둥 자기 칸·벽에 붙은 횃불.</summary>
     public const float ShadowSkip = 36f;
     /// <summary>빛 사각형을 위로 더 늘리는 높이(월드 px) — 바닥은 반경 안이지만 그림은 위에 있는 벽(기둥 160)·유닛.</summary>
