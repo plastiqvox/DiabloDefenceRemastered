@@ -26,6 +26,7 @@ public sealed class ConsoleOverlay(GameFlow flow, PlayScene play) : IScene
     {
         _stack = stack;
         flow.LogScene("Console");
+        Input.ImeOff.Apply(flow.Log);   // 한글 입력기 상태여도 영문 자리로
     }
 
     public void Exit() { }

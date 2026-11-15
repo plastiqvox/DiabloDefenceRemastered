@@ -63,6 +63,9 @@ public sealed class GameApp : Game
         _app.Audio = AudioServices.Create(_app);
 
         _stack.Entered = scene => log.Info($"SCENE {SceneName(scene)} app_tick={_loop?.Now.Value ?? 0}");
+        // 한글 입력기가 켜져 있어도 키가 영문 자리로 들어오게 이 창의 입력기를 끈다(2026-11-15 — 치트 콘솔), 창이 앞으로 올 때마다 다시
+        Input.ImeOff.Apply(log);
+        Activated += (_, _) => Input.ImeOff.Apply(log);
         // 자동 조작 메뉴 넘김: 앱 틱마다 씬 스택의 FixedTick 뒤에 AutoplayDriver.Step(WP6 — 시각을 맞추고 맨 위 씬의 AutoStep). 사람 입력은 Update 의 InputMap.Sample.
         // GameFlow 의 종료 요청(타이틀 종료)은 창을 닫는다. 통합 때 이음(13장 WP7 구현 기록의 "잇지 않음" 자리)
         var flow = GameFlow.Of(_app);
