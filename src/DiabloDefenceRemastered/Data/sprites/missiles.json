@@ -13,6 +13,11 @@
     { "id": "farrow",   "source": "atlas", "file": "d1/missiles/farrow.png",   "frame": [96, 96], "directions": 16, "frames": 4,  "origin": [48, 48] },
     { "id": "acidpud1", "source": "atlas", "file": "d1/missiles/acidpud1.png", "frame": [96, 96], "directions": 1,  "frames": 9,  "origin": [48, 48] },
     { "id": "acidpud2", "source": "atlas", "file": "d1/missiles/acidpud2.png", "frame": [96, 96], "directions": 1,  "frames": 4,  "origin": [48, 48] },
+    // 포탈(2026-11-15): 마을 포탈 portal1(열림)·portal2(유지), 라자루스 붉은 포탈 rportal1·rportal2 — 칸 96×128·16프레임(원본 확인), origin 은 칸 아래에서 16 위(바닥에 선 그림 — 캡처로 맞춤)
+    { "id": "portal1",  "source": "atlas", "file": "d1/missiles/portal1.png",  "frame": [96, 128], "directions": 1, "frames": 16, "origin": [48, 112] },
+    { "id": "portal2",  "source": "atlas", "file": "d1/missiles/portal2.png",  "frame": [96, 128], "directions": 1, "frames": 16, "origin": [48, 112] },
+    { "id": "rportal1", "source": "atlas", "file": "d1/missiles/rportal1.png", "frame": [96, 128], "directions": 1, "frames": 16, "origin": [48, 112] },
+    { "id": "rportal2", "source": "atlas", "file": "d1/missiles/rportal2.png", "frame": [96, 128], "directions": 1, "frames": 16, "origin": [48, 112] },
 
     { "id": "icon_magic_missile", "source": "grid", "file": "d1/icons/magic_missile.png", "sheet": [56, 56], "frame": [56, 56], "color_key": null, "origin": [28, 28] },
     { "id": "icon_fireball",      "source": "grid", "file": "d1/icons/fireball.png",      "sheet": [56, 56], "frame": [56, 56], "color_key": null, "origin": [28, 28] },

@@ -79,7 +79,7 @@ public static class RunText
         return result.Victory && result.RunTime < old.BestTime;
     }
 
-    /// <summary>방 상태 줄(8.2): 생존 = 남은 시간, 정리 = <c>남은 적 n</c>, 문 = <c>문을 고르라</c>, 그 밖은 null.</summary>
+    /// <summary>방 상태 줄(8.2): 생존 = 남은 시간, 정리 = <c>남은 적 n</c>, 문 = <c>포탈을 고르라</c>, 그 밖은 null.</summary>
     public static string? RoomStatus(World world, int liveEnemies)
     {
         if (world.Room is not { } room) return null;
@@ -87,7 +87,7 @@ public static class RunText
         {
             RoomPhase.Survive when room.SurviveTicks > 0 => Clock(room.SurviveTicks - room.ClockTicks, ceil: true),
             RoomPhase.Cleanup => $"남은 적 {Number(liveEnemies)}",
-            RoomPhase.Doors => "문을 고르라",
+            RoomPhase.Doors => "포탈을 고르라",   // 2026-11-15 출구 = 포탈
             _ => null,
         };
     }

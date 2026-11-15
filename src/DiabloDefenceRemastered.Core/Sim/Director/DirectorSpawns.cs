@@ -1,4 +1,5 @@
 using DiabloDefenceRemastered.Core.Nav;
+using DiabloDefenceRemastered.Core.Sim.Combat;
 using DiabloDefenceRemastered.Core.Sim.Enemies;
 
 namespace DiabloDefenceRemastered.Core.Sim.Director;
@@ -56,7 +57,21 @@ public static class DirectorSpawns
         return best;
     }
 
-    /// <summary>입구로 들어오는 적들(맵 밖 시작점에서 진입점까지 입장). 여럿이면 입구 둘레로 조금씩 흩는다.</summary>
+    /// <summary>그 입구가 포탈 문인가(2026-11-15 — 벽 틈 없는 문, <see cref="GateZones.IsPortal"/>).</summary>
+    public static bool IsPortalEntry(World world, string entryId) =>
+        world.Map is { } map && world.Arena is { } grid && world.Gates.TryGetValue(entryId, out var zone) && GateZones.IsPortal(map, grid.Tileset, zone.Side);
+
+    /// <summary>적 입구 붉은 포탈(표시만 — 규칙 영향 없음). 같은 입구는 <c>enemy_cooldown</c> 초 안에 다시 열지 않는다.</summary>
+    private static void OpenEnemyPortal(World world, ResolvedEntry entry)
+    {
+        if (world.Defs.Rules.Rooms?.Portals is not { } portals) return;
+        var cooldown = (int)(portals.EnemyCooldown * World.TicksPerSecond);
+        if (world.EnemyPortalTicks.TryGetValue(entry.Id, out var last) && world.Tick - last < cooldown) return;
+        world.EnemyPortalTicks[entry.Id] = world.Tick;
+        CombatFx.Effect(world, portals.Enemy, entry.Inside, 0f, Vector2.Zero);
+    }
+
+    /// <summary>입구로 들어오는 적들(맵 밖 시작점에서 진입점까지 입장 — 포탈 문이면 진입점의 포탈에서 나와 방 안쪽으로). 여럿이면 입구 둘레로 조금씩 흩는다.</summary>
     public static List<Enemy> AtEntry(World world, EnemyDef def, EnemyRank rank, ReadOnlySpan<int> affixes, ResolvedEntry entry, int count,
                                       SpawnSource source, int escortCount = -1)
     {
@@ -64,13 +79,16 @@ public static class DirectorSpawns
         count = SpawnGate.Reserve(world, source, count);
         var dir = MathX.NormalizeOr(entry.Inside - entry.Outside, new Vector2(0, 1));
         var side = new Vector2(-dir.Y, dir.X);
+        // 포탈 문(2026-11-15 사용자 결정 "적은 붉은 포탈이 열리며 나오게"): 벽 틈이 없어 진입점(포탈 자리)에서 생겨 방 안쪽으로 걸어 나온다
+        var portal = IsPortalEntry(world, entry.Id);
+        if (portal && count > 0) OpenEnemyPortal(world, entry);
         for (var i = 0; i < count; i++)
         {
             var lane = (i % 5 - 2) * 14f;
             var back = (i / 5) * 24f;
-            var start = entry.Outside + side * lane - dir * back;
+            var start = portal ? entry.Inside + side * (lane * 0.25f) : entry.Outside + side * lane - dir * back;
             var e = EnemyFactory.Create(world, def, rank, affixes, start, new SpawnContext(source, EntityId.None, escortCount), LifeState.Entering);
-            e.EntryTarget = entry.Inside + side * lane;
+            e.EntryTarget = portal ? entry.Inside + side * lane + dir * (28f + back) : entry.Inside + side * lane;
             list.Add(e);
         }
         return list;

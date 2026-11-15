@@ -74,16 +74,15 @@ public class RealMapTests
     {
         var map = RealData.Cathedral;
         var grid = ArenaLayout.Expand(map);
-        // 네 문 틈: 변 가운데 메가 9·10 → 하위 18..21 이 비어 있고 양옆은 막힘
+        // 포탈 문(2026-11-15 사용자 결정 "둘레 문을 없애고 출구·적 입구는 포탈"): 변 가운데 하위 18..21 도 둘레라 막히고, 나가는 자리는 진입점 둘레 바닥
         foreach (var k in new[] { 18, 19, 20, 21 })
         {
-            Assert.True(grid.IsWalkable(0, k)); Assert.True(grid.IsWalkable(k, 0));
-            Assert.True(grid.IsWalkable(39, k)); Assert.True(grid.IsWalkable(k, 39));
+            Assert.False(grid.IsWalkable(0, k)); Assert.False(grid.IsWalkable(k, 0));
+            Assert.False(grid.IsWalkable(39, k)); Assert.False(grid.IsWalkable(k, 39));
         }
-        Assert.False(grid.IsWalkable(0, 17)); Assert.False(grid.IsWalkable(0, 22));
-        Assert.False(grid.IsWalkable(17, 0)); Assert.False(grid.IsWalkable(22, 0));
-        Assert.False(grid.IsWalkable(39, 17)); Assert.False(grid.IsWalkable(39, 22));
-        Assert.False(grid.IsWalkable(17, 39)); Assert.False(grid.IsWalkable(22, 39));
+        var zones = GateZones.Compute(map, grid);
+        foreach (var e in map.Entries)
+            Assert.Contains(zones[e.Id].Cells, c => c == e.InsideTile.Cell);
 
         // 입구·시작·기준점은 걸을 수 있는 칸, 바깥 시작점은 격자 밖
         foreach (var e in map.Entries)
@@ -143,6 +142,8 @@ public class RealMapTests
         for (var ty = 0; ty < 40; ty++)
             for (var tx = 0; tx < 40; tx++)
             {
+                // 2026-11-15 포탈 문: 실제 맵은 둘레에 문 틈이 없다 — 예의 문 틈 칸(둘레 메가, 예에서만 걸을 수 있음)은 건너뜀
+                if ((tx < 2 || ty < 2 || tx >= 38 || ty >= 38) && synth.IsWalkable(tx, ty)) continue;
                 if (known.TryGetValue((tx, ty), out var k))
                 {
                     Assert.Equal(k, (real.Prop(tx, ty), synth.Prop(tx, ty)));   // 목록이 낡지 않게 — 정말 다른 칸이어야 한다

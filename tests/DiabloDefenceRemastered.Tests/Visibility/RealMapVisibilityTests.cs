@@ -89,24 +89,14 @@ public class RealMapVisibilityTests
     }
 
     [Fact]
-    public void AtGateNw_OutsideMapSeenOnlyThroughGateGap()
+    public void AtGateNw_OutsideMapNotSeen_PortalGatesHaveNoGap()
     {
-        // 뒤 문 gate_nw 진입점 (4, 19.5) → 칸 (4, 20). 둘레 벽(x 0 열) 너머 맵 밖(바로 뒤 6칸)은 문 틈(하위 18..21)으로 난 쐐기만 보인다
+        // 뒤 문 gate_nw 진입점 (4, 19.5) → 칸 (4, 20). 2026-11-15 포탈 문: 둘레 벽(x 0 열)에 틈이 없어 맵 밖은 보이지 않는다(예전 문 틈 쐐기 없음)
         var (t, f, a) = At(4, 20);
         Assert.Equal(new Int2(4, 20), f.CellOf(t.Hero.Pos));
-        var outside = 0;
         for (var ty = -VisibilityField.Pad; ty < 40 + VisibilityField.Pad; ty++)
             for (var tx = -6; tx < 0; tx++)
-            {
-                if (!f.InSight(tx, ty)) continue;
-                outside++;
-                Assert.InRange(ty, 13, 27);   // 문 틈(18..21)에서 퍼지는 쐐기
-            }
-        Assert.True(outside > 0);
-        Assert.True(f.InSight(-3, 19));
-        Assert.False(f.InSight(-3, 12));    // 벽 뒤
-        Assert.False(f.InSight(-3, 28));
-        Assert.True(a.BlocksSight(0, 17));  // 문 틈 양옆 벽
-        Assert.True(a.BlocksSight(0, 22));
+                Assert.False(f.InSight(tx, ty), $"({tx},{ty})");
+        foreach (var k in new[] { 17, 18, 19, 20, 21, 22 }) Assert.True(a.BlocksSight(0, k), $"(0,{k})");
     }
 }

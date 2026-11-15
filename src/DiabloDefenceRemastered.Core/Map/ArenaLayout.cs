@@ -113,17 +113,15 @@ public static class ArenaLayout
             if (!gateIds.Add(gate.Id)) { errors.Add(new($"{path}.id", $"문 ID '{gate.Id}' 가 두 번 있다")); continue; }
             var tiles = gateSet?.Get(gate.Side);
             var sideName = SideName(gate.Side);
-            if (tiles is null)
-            {
-                errors.Add(new($"{path}.side", $"타일셋 '{tileset.Id}' 의 테두리 '{layout.Border}' 에 {sideName} 문이 없다(gates.{layout.Border}.{sideName})"));
-                continue;
-            }
             var at = gate.At ?? (m - 2) / 2;
             if (at < 1 || at + 1 > m - 2)
             {
                 errors.Add(new($"{path}.at", $"문 자리 {at}: 열린 두 칸 {at}·{at + 1} 이 변 안(1..{m - 2})이어야 한다"));
                 continue;
             }
+            // 포탈 문(2026-11-15 사용자 결정 "둘레 문을 없애고 출구·적 입구는 포탈로"): 타일셋에 그 테두리 문 조각이 없으면 벽을 뚫지 않는다 —
+            // 문 ID·변·입구는 그대로 쓰고, 나가는 자리는 방 안 진입점의 포탈(GateZones). 문 조각을 둔 타일셋(시험의 합성 타일셋)은 예전처럼 틈을 낸다
+            if (tiles is null) continue;
             if (tiles.EndA is not null && at - 1 < 1) { errors.Add(new($"{path}.at", $"문 끝 조각 end_a 자리 {at - 1} 가 모서리다")); continue; }
             if (tiles.EndB is not null && at + 2 > m - 2) { errors.Add(new($"{path}.at", $"문 끝 조각 end_b 자리 {at + 2} 가 모서리다")); continue; }
 

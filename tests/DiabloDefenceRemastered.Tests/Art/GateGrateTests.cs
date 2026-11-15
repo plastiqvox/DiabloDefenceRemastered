@@ -83,7 +83,8 @@ public class GateGrateTests
             {
                 var piece = GateGrates.PieceName(zone.Side);
                 Assert.Equal(zone.Side is GateSide.Ne or GateSide.Sw, piece == "grate_h");
-                Assert.Equal(2, GateGrates.Megas(zone).Count);
+                Assert.True(GateZones.IsPortal(map, grid.Tileset, zone.Side));   // 2026-11-15: 실제 맵의 문은 모두 포탈 문(벽 틈 없음)
+                Assert.NotEmpty(zone.Cells);
                 if (map.Mirrored is not { } mirror) continue;
                 var mzones = GateZones.Compute(mirror, ArenaLayout.Expand(mirror));
                 var mz = mzones[GateZones.MirrorGate(id)];

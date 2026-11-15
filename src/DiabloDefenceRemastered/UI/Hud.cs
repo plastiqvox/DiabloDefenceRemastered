@@ -43,7 +43,7 @@ public sealed record HudModel
     public int PassiveSlotsOpen { get; init; }
     /// <summary><c>대성당 4 / 9</c>(방 없는 월드는 null).</summary>
     public string? RoomLine { get; init; }
-    /// <summary>방 상태 줄(생존 남은 시간·<c>남은 적 n</c>·<c>문을 고르라</c>).</summary>
+    /// <summary>방 상태 줄(생존 남은 시간·<c>남은 적 n</c>·<c>포탈을 고르라</c>).</summary>
     public string? RoomStatus { get; init; }
     public IReadOnlyList<RoomStripCell> RoomStrip { get; init; } = [];
     public IReadOnlyList<BossBarLine> BossBars { get; init; } = [];

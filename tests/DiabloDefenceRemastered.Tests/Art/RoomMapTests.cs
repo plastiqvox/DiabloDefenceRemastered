@@ -59,14 +59,14 @@ public class RoomMapTests
         Assert.True(n <= RoomMapRules.SmallRoomMaxN);                       // 작은 방 검사 대상(13.5-23)
         Assert.Equal(new Vector2(2048, 1152), grid.Iso.BoxSize);
 
-        // 네 문 틈: 변 가운데 메가 7·8 → 하위 14..17 이 비어 있고 양옆은 막힘(큰 방과 같은 arch_hall 짜임)
+        // 포탈 문(2026-11-15): 벽에 틈이 없다(변 가운데도 둘레), 나가는 자리는 진입점 둘레 바닥
         foreach (var k in new[] { 14, 15, 16, 17 })
         {
-            Assert.True(grid.IsWalkable(0, k)); Assert.True(grid.IsWalkable(k, 0));
-            Assert.True(grid.IsWalkable(n - 1, k)); Assert.True(grid.IsWalkable(k, n - 1));
+            Assert.False(grid.IsWalkable(0, k)); Assert.False(grid.IsWalkable(k, 0));
+            Assert.False(grid.IsWalkable(n - 1, k)); Assert.False(grid.IsWalkable(k, n - 1));
         }
-        Assert.False(grid.IsWalkable(0, 13)); Assert.False(grid.IsWalkable(0, 18));
-        Assert.False(grid.IsWalkable(13, 0)); Assert.False(grid.IsWalkable(18, 0));
+        var zones = GateZones.Compute(map, grid);
+        Assert.All(map.Entries, e => Assert.Contains(zones[e.Id].Cells, c => c == e.InsideTile.Cell));
     }
 
     [Fact]
