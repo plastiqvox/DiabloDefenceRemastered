@@ -68,7 +68,24 @@ public sealed class InputMap
         if (Hit(Keys.X)) pressed |= UiButtons.Skip;
         if (Hit(Keys.Tab)) pressed |= UiButtons.Minimap;
         if (Hit(Keys.Q)) pressed |= UiButtons.Drink;
+        if (Hit(Keys.OemTilde)) pressed |= UiButtons.Console;   // 치트 콘솔(2026-11-15 임시)
         if (leftDown && !prevLeftDown && frame.MouseInWindow) pressed |= UiButtons.Click;
         frame.Pressed = pressed;
+        frame.Typed = TypedText(keys, prev);
+    }
+
+    /// <summary>이번에 눌린 글자 키(영문 → 소문자, 숫자 줄·숫자판, 띄어쓰기) — 치트 콘솔용. 한글 입력기 상태와 상관없이 키 자리로 읽는다.</summary>
+    public static string TypedText(KeyboardState keys, KeyboardState prev)
+    {
+        var s = "";
+        foreach (var k in keys.GetPressedKeys())
+        {
+            if (prev.IsKeyDown(k)) continue;
+            if (k is >= Keys.A and <= Keys.Z) s += (char)('a' + (k - Keys.A));
+            else if (k is >= Keys.D0 and <= Keys.D9) s += (char)('0' + (k - Keys.D0));
+            else if (k is >= Keys.NumPad0 and <= Keys.NumPad9) s += (char)('0' + (k - Keys.NumPad0));
+            else if (k == Keys.Space) s += ' ';
+        }
+        return s;
     }
 }

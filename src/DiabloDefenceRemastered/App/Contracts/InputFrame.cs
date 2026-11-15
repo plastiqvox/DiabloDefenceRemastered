@@ -24,6 +24,7 @@ public enum UiButtons : uint
     Click = 1 << 14,      // 왼쪽 버튼을 이번에 눌렀다
     Drink = 1 << 15,      // Q — 물약 마시기(v0.9.1 V9, 기획 3절). 판 명령 CommandButtons.Drink 로 간다(단계 2 wp6 — WP1h 요청)
     Blink = 1 << 16,      // Space — 순간이동(보스 묶음 B, 6.20 ⑳). Confirm 과 함께 눌림 — 창이 열려 있으면 창 고르기, 판에서만 CommandButtons.Blink 로 간다
+    Console = 1 << 17,    // ` — 치트 콘솔(2026-11-15 임시, 퀘이크처럼)
 }
 
 /// <summary>
@@ -46,7 +47,14 @@ public sealed class InputFrame
 
     public bool IsPressed(UiButtons button) => (Pressed & button) != 0;
 
-    public void ClearPressed() => Pressed = UiButtons.None;
+    /// <summary>이번 프레임에 새로 친 글자(영문 소문자·숫자·띄어쓰기 — 치트 콘솔용). 한 번만 일어나는 값이라 <see cref="ClearPressed"/> 가 같이 비운다.</summary>
+    public string Typed { get; set; } = "";
+
+    public void ClearPressed()
+    {
+        Pressed = UiButtons.None;
+        Typed = "";
+    }
 
     public void Clear()
     {
@@ -55,5 +63,6 @@ public sealed class InputFrame
         MouseInWindow = false;
         MouseDown = false;
         Pressed = UiButtons.None;
+        Typed = "";
     }
 }

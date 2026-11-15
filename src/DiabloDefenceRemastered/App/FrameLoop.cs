@@ -27,9 +27,11 @@ public sealed class FrameLoop(SceneStack stack, double timeScale, IAutoplayDrive
     public FrameTicks RunFrame(TimeSpan elapsed, Action<InputFrame>? readInput)
     {
         var carried = Input.Pressed;   // 앞 프레임에 틱이 돌지 않아 아직 아무 씬도 받지 못한 눌림(돈 프레임이면 첫 틱 뒤 비워져 None)
+        var carriedText = Input.Typed; // 친 글자(치트 콘솔)도 같이 넘긴다 — 안 넘기면 144Hz 에서 글자가 자주 빠졌다(2026-11-15)
         Input.Clear();
         readInput?.Invoke(Input);
         Input.Pressed |= carried;
+        Input.Typed = carriedText + Input.Typed;
         var first = true;
         return Accumulator.RunFrame(elapsed, TimeScale, tick =>
         {

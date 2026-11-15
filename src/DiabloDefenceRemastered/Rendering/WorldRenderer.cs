@@ -52,6 +52,8 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
     private BloodPoolRenderer? _blood;
     /// <summary>틸트 시프트 + 비네트(2026-11-15 HD-2D 기법) — 셰이더를 못 읽으면 null.</summary>
     private TiltShiftRenderer? _tilt;
+    /// <summary>바닥 예고 불빛(2026-11-15) — 셰이더를 못 읽으면 null(빛 지도는 모양 텍스처, 테두리 선).</summary>
+    private GroundGlowRenderer? _groundGlow;
     private IReadOnlyList<BloodPool> _bloodPools = [];
     /// <summary>핏웅덩이 밟기 물결(표시 전용 — 월드마다 비움).</summary>
     private readonly BloodRipples _bloodRipples = new();
@@ -119,6 +121,10 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
                                world.Gates.Values.SelectMany(z => z.Cells).Select(c => bloodGrid.Iso.CellCenter(c.X, c.Y)))
             : [];
         _bloodRipples.Reset(_bloodPools.Count);
+        // 도착 포탈: 방 월드면 지금 주인공 자리·틱, 들어올 때 푸른 포탈 소리
+        _arrivalTick = world.Room is not null ? world.Tick : -1;
+        _arrivalPos = world.Hero.Pos;
+        if (world.Room is not null && world.Defs.Rules.Rooms?.Portals is { Arrival: > 0f }) _app.Audio?.PlayUi("door_open");
         _footprints.Reset();
     }
 
@@ -200,6 +206,12 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         DrawLayer1(batch, f, prim);
         DrawCorpses(batch, f);
         DrawPickups(batch, f, prim);
+        // 도착 포탈(2026-11-15) — 유닛(4층)보다 먼저: 주인공이 포탈 앞으로 걸어 나오게("포탈 뒤에 주인공이 있는 느낌"), 닫힐 때 줄어듦
+        if (ArrivalPortal(f) is { } arrival)
+        {
+            var def = arrival.Fx.Effect.Def;
+            DrawEffectSprite(batch, f, def, arrival.Age, arrival.Pos - new Vector2(0f, ArrivalBehind), arrival.Scale, arrival.Fx.Tint ?? def.Tint, Vector2.Zero, 0);
+        }
         DrawLayer4(batch, f, prim);
         _arena?.DrawGroup(batch, WallGroup.Front, prim, _shaderLight);
         DrawOutsideEnemies(batch, f, back: false);
@@ -212,6 +224,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
 
         // ── 6층 빛·안개 ─────────────────────────────────────────
         CollectEffectLights(f);
+        _light!.Glow = _groundGlow;
         _light!.Build(batch, f, _arena, _app.Options.Reveal);
         device.SetRenderTarget(_worldRT);
         batch.Begin(SpriteSortMode.Deferred, FogBlend.Multiply, SamplerState.LinearClamp);
@@ -272,6 +285,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             _bloom = BloomRenderer.TryLoad(device, _app.Log);
             _blood = BloodPoolRenderer.TryLoad(device, _app.Log);
             _tilt = TiltShiftRenderer.TryLoad(device, _app.Log);
+            _groundGlow = GroundGlowRenderer.TryLoad(device, _app.Log);
         }
         // 셰이더 빛이면 LightRT 를 WorldRT 크기로(전체 해상도), 아니면 480×270
         var lightSize = _shaderLight is not null ? new Int2(_worldRT.Width, _worldRT.Height) : new Int2(LightRenderer.Width, LightRenderer.Height);
@@ -416,7 +430,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
     // ── 1층: 장판·예고 채움·발밑 원 ─────────────────────────────
 
     /// <summary>예고 빛 세기 = 예고 알파(기본 0.35) × 이 값.</summary>
-    private const float TelegraphLight = 4f;
+    private const float TelegraphLight = 2.5f;
     /// <summary>예고 테두리(판정 경계) 알파 — 빛이 주, 테는 경계만 읽게.</summary>
     private const float TelegraphEdgeAlpha = 0.35f;
 
@@ -699,6 +713,26 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
     /// 열린 출구 푸른 포탈(2026-11-15 사용자 결정 "출구는 보상 선택지 수만큼 포탈"): 출구 단계부터 그 문 입구 진입점에 <c>rules.rooms.portals.exit</c> 이펙트를
     /// 열림 한 번 → 유지 반복으로(나이 = 출구 단계에 든 뒤 시간). 포탈 문이 아니면(문·창살 그림) 없음.
     /// </summary>
+    /// <summary>
+    /// 도착 포탈(2026-11-15 — 방에 들어오면 주인공이 선 자리에 출구 포탈 그림이 <c>portals.arrival</c> 초 열려 있다가 <c>arrival_close</c> 초 동안 줄어들며 닫힘).
+    /// 자리·틱은 <see cref="Attach"/> 때 주인공 자리. 표시 전용. 없으면 null.
+    /// </summary>
+    private (EffectRef Fx, Vector2 Pos, float Age, float Scale)? ArrivalPortal(WorldFrame f)
+    {
+        if (_arrivalTick < 0 || f.World.Room is null || f.World.Defs.Rules.Rooms?.Portals is not { Arrival: > 0f } portals) return null;
+        var age = (f.StageTick - _arrivalTick) * World.Dt;
+        if (age < 0f) return null;
+        var close = MathF.Max(0.01f, portals.ArrivalClose);
+        var scale = age <= portals.Arrival ? 1f : 1f - (age - portals.Arrival) / close;
+        if (scale <= 0f) return null;
+        return (portals.Exit, _arrivalPos, age, scale * (portals.Exit.Scale ?? 1f));
+    }
+
+    private Vector2 _arrivalPos;
+    private int _arrivalTick = -1;
+    /// <summary>도착 포탈을 주인공 발보다 이만큼 뒤(위)에 세운다(px) — 주인공이 포탈 앞에 선 모양.</summary>
+    private const float ArrivalBehind = 6f;
+
     private IEnumerable<(EffectRef Fx, Vector2 Pos, float Age)> ExitPortals(WorldFrame f)
     {
         var w = f.World;
@@ -792,6 +826,8 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         foreach (var (fx, pos, _) in ExitPortals(f))
             if (fx.Effect.Def.Light is { } pl)
                 f.ShortLights.Add(new PointLight(pos, 48f * (fx.Scale ?? 1f) * pl.RadiusMul, pl.Color, 1f));
+        if (ArrivalPortal(f) is { } arrive && arrive.Fx.Effect.Def.Light is { } al)
+            f.ShortLights.Add(new PointLight(arrive.Pos, 48f * arrive.Scale * al.RadiusMul, al.Color, arrive.Scale));
         // 날아가는 투사체 빛(2026-11-13): 바닥 자리 위 light.height 에 뜬 점 빛 — 셰이더 빛이 3D 거리로 바닥·벽에 비춘다
         foreach (var p in f.World.Projectiles.Items)
         {
@@ -868,7 +904,8 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
 
         batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, toTarget);
         foreach (var d in _alpha7) BatchX.Blit(batch, d.Texture, d.Dest, new Rectangle(d.Src.X0, d.Src.Y0, d.Src.Width, d.Src.Height), d.Color.ToXna(d.Alpha));
-        // 예고 테두리 한 번 더(알파 0.6 의 2px 선) — 벽 위에서도 범위가 보이게(7.3)
+        // 예고 테두리 한 번 더(2px 선) — 벽 위에서도 범위가 보이게(7.3). 불빛 셰이더가 있으면 그 밝은 테가 대신한다(2026-11-15 "그림판으로 그린 느낌")
+        if (_groundGlow is null)
         foreach (var t in _telegraphs)
         {
             var color = (t.Tint == default ? new Rgb(255, 40, 40) : t.Tint).ToXna(TelegraphEdgeAlpha);   // 판정 경계(빛이 주가 된 뒤 2026-11-15 0.6 → 약하게)
@@ -892,7 +929,14 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         foreach (var d in _additive) BatchX.Blit(batch, d.Texture, d.Dest, new Rectangle(d.Src.X0, d.Src.Y0, d.Src.Width, d.Src.Height), d.Color.ToXna(d.Alpha));
         foreach (var d in _glows) BatchX.Blit(batch, d.Texture, d.Dest, new Rectangle(d.Src.X0, d.Src.Y0, d.Src.Width, d.Src.Height), d.Color.ToXna(d.Alpha));
         batch.End();
+
+        // 바닥에서 올라오는 예고 불빛(2026-11-15 "바닥에서 붉은 불빛이 나는 느낌으로") — 빛 곱하기 뒤 가산이라 밝은 바닥 위에서도 보이고, 블룸이 번지게 한다
+        _groundGlow?.Draw(batch, prim.Pixel, f.GroundLights, toTarget, new Int2(_worldRT!.Width, _worldRT.Height), BlendState.Additive, filter: false,
+                          TelegraphEmissive, f.StageTick / (float)World.TicksPerSecond);
     }
+
+    /// <summary>예고 발광 세기(빛 지도 세기에 곱함).</summary>
+    private const float TelegraphEmissive = 0.1f;
 
     /// <summary>판정 점을 그릴까: <c>hero_hit_radius</c> 가 있는 적 탄이 주인공에서 120px 안(6.20 ⑤). 시뮬레이션과 무관.</summary>
     private static bool HitDotVisible(World w)
@@ -1122,6 +1166,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         _bloom?.Dispose();
         _blood?.Dispose();
         _tilt?.Dispose();
+        _groundGlow?.Dispose();
     }
 
     /// <summary>7층 그리기 하나(텍스처·원본·자리·색·알파).</summary>

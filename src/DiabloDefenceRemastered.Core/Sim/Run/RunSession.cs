@@ -135,6 +135,26 @@ public sealed class RunSession
         World = Enter(next, reward, 0, _nextOptions, carry);
     }
 
+    /// <summary>치트 무적(2026-11-15 임시 콘솔 <c>god</c>): 켜 두면 새 방 월드에도 <c>Options.God</c> 를 다시 켠다.</summary>
+    public bool CheatGod { get; set; }
+
+    /// <summary>
+    /// 치트 방 이동(2026-11-15 임시 콘솔 <c>next</c>·<c>room</c>·<c>boss</c> — 패턴 보기용): 지금 방을 문 없이 닫고(기록 한 줄, 다음 보상 없음) 같은 액트의
+    /// <paramref name="index"/>(0 부터) 방으로 들어간다. 짐(레벨·무기·체력)은 그대로 가져간다. 판이 진행 중일 때만.
+    /// </summary>
+    public void Warp(int index)
+    {
+        if (_concluded || _suspended) throw new InvalidOperationException("판이 끝났거나 끊었다");
+        if (World.Outcome != RunOutcome.Running) throw new InvalidOperationException($"판이 끝나 간다({World.Outcome})");
+        if ((uint)index >= (uint)Run.Act.Rooms.Count) throw new ArgumentOutOfRangeException(nameof(index), $"방 자리 {index} 가 액트 방 {Run.Act.Rooms.Count}개 밖이다");
+        var carry = _modules.HeroCarry?.Capture(World);
+        if (carry is not null) Run.Carry = carry;
+        CloseRoom(null);
+        Run.NextReward = null;
+        Run.HealOnEnter = false;
+        World = Enter(index, null, 0, _nextOptions, carry);
+    }
+
     /// <summary>
     /// 판 끝 정산(v0.7.1): 판이 끝난 방을 닫는다(<c>RoomRecord.Door = null</c>). <c>Outcome</c> 이 Victory·Defeat 일 때만(아니면 예외).
     /// 두 번째부터는 아무것도 안 하고 같은 <see cref="RunState"/>. 결과 화면·<c>RESULT</c>·<c>RecordResult</c>·시나리오는 이 뒤의 값만 읽는다.
@@ -220,6 +240,7 @@ public sealed class RunSession
         var world = new World(_defs, start);
         _modules.CreateSimulation(world);
         _modules.ApplyRunSetups(world, options);
+        if (CheatGod) world.Options = world.Options with { God = true };
         if (carry is not null) _modules.HeroCarry!.Restore(world, carry);
 
         var room = world.Room!;

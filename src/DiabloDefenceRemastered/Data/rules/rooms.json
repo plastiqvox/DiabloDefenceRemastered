@@ -4,7 +4,7 @@
   "rules": {
     "rooms": { "grace": 3, "cleanup_limit": 25, "elite_spawn_cap": "02:30", "transition": 0.5, "transition_floor": 1.0,
                "gates": { "entry": ["gate_sw", "gate_se"], "boss_entry": "gate_sw", "exits": ["gate_nw", "gate_ne"], "single_exit": "gate_ne" },
-               "portals": { "exit": { "effect": "fx_portal_blue" }, "enemy": { "effect": "fx_portal_red" }, "enemy_cooldown": 1.5 },   // 2026-11-15 둘레 문 → 포탈(출구 푸름, 적 입구 붉음)
+               "portals": { "exit": { "effect": "fx_portal_blue" }, "enemy": { "effect": "fx_portal_red" }, "enemy_cooldown": 1.5, "arrival": 1.6, "arrival_close": 0.5 },   // 2026-11-15 둘레 문 → 포탈(출구 푸름, 적 입구 붉음), 들어올 때 주인공 자리에 도착 포탈 1.6초 → 0.5초 닫힘
                "exits": { "three_chance": 0.4 },
                "area_scale": { "reference": "cathedral_arena", "min": 0.6, "max": 1.0 },
                "reward_spot": { "distance": 100, "spacing": 40, "clearance": 30 }, "fallback_reward": "reward_chest",

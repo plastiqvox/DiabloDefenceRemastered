@@ -108,6 +108,22 @@ public static class RoomFlow
         }
     }
 
+    /// <summary>
+    /// 치트 <c>clear</c>(2026-11-15 임시 — 패턴 보기용 콘솔): 살아 있는 적을 모두 무너뜨리고 보상 단계로. 들어옴·생존·정리 단계에서만(그 뒤면 거짓).
+    /// 마지막 방이면 승리. 보스·정예 방도 같은 길(우두머리를 이긴 것과 같게 보상).
+    /// </summary>
+    public static bool CheatClear(World world)
+    {
+        var room = world.Room;
+        if (room is null || world.Outcome != RunOutcome.Running || room.Phase > RoomPhase.Cleanup) return false;
+        var rules = world.Defs.Rules.Rooms ?? throw new InvalidOperationException("방 월드에 rules.rooms 가 없다");
+        world.CollapseEnemies();
+        room.ClearTick = world.Tick;
+        if (room.IsLastInRun) world.BeginVictory();
+        else BeginReward(world, room, rules);
+        return true;
+    }
+
     private static void EndSurvive(World world, RoomState room)
     {
         world.Events.Current.RoomSurviveEnded.Add(new RoomSurviveEnded(room.Plan.Kind));
