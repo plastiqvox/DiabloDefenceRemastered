@@ -121,6 +121,36 @@ float4 MainPS(VSOut input) : COLOR0
     return float4(col * a, a);
 }
 
+// 핏자국 발자국(2026-11-15 "밟으면 발자국") — 바닥 위 사각형(가로 2a × 세로 a)이 바닥 공간에서는 정사각형 -1..1.
+// 정점 색: R = 모양 씨앗, G = 걷는 방향(바닥 공간 각도 / 2π), A = 진하기. 발바닥 타원 + 뒤꿈치, 노이즈로 번지고 군데군데 빈 자국.
+float4 FootPS(VSOut input) : COLOR0
+{
+    float seed = input.Color.r * 97.0;
+    float ang = input.Color.g * 6.2831853;
+    float2 p = input.Tex * 2.0 - 1.0;
+    float c = cos(ang);
+    float s = sin(ang);
+    float2 q = float2(p.x * c + p.y * s, -p.x * s + p.y * c);     // x = 걷는 쪽
+    float sole = length((q - float2(0.2, 0.0)) / float2(0.48, 0.4));
+    float heel = length((q - float2(-0.5, 0.0)) / float2(0.28, 0.3));
+    float n = Noise(p * 6.0 + float2(seed, seed * 1.3));
+    float shape = min(sole, heel) + (n - 0.5) * 0.4;
+    float a = (1.0 - smoothstep(0.78, 1.0, shape)) * (0.72 + 0.28 * Noise(p * 11.0 + float2(seed * 3.1, seed)));
+    a *= input.Color.a;
+    clip(a - 0.002);
+    float3 col = float3(0.40, 0.04, 0.03);
+    return float4(col * a, a);
+}
+
+technique Footprint
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL MainVS();
+        PixelShader = compile PS_SHADERMODEL FootPS();
+    }
+};
+
 technique BloodPool
 {
     pass P0
