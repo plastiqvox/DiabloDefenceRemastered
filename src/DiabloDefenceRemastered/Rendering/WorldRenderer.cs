@@ -121,6 +121,10 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
                                world.Gates.Values.SelectMany(z => z.Cells).Select(c => bloodGrid.Iso.CellCenter(c.X, c.Y)))
             : [];
         _bloodRipples.Reset(_bloodPools.Count);
+        // 도착 포탈: 방 월드면 지금 주인공 자리·틱, 들어올 때 푸른 포탈 소리
+        _arrivalTick = world.Room is not null ? world.Tick : -1;
+        _arrivalPos = world.Hero.Pos;
+        if (world.Room is not null && world.Defs.Rules.Rooms?.Portals is { Arrival: > 0f }) _app.Audio?.PlayUi("door_open");
         _footprints.Reset();
     }
 
@@ -202,6 +206,12 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         DrawLayer1(batch, f, prim);
         DrawCorpses(batch, f);
         DrawPickups(batch, f, prim);
+        // 도착 포탈(2026-11-15) — 유닛(4층)보다 먼저: 주인공이 포탈 앞으로 걸어 나오게("포탈 뒤에 주인공이 있는 느낌"), 닫힐 때 줄어듦
+        if (ArrivalPortal(f) is { } arrival)
+        {
+            var def = arrival.Fx.Effect.Def;
+            DrawEffectSprite(batch, f, def, arrival.Age, arrival.Pos - new Vector2(0f, ArrivalBehind), arrival.Scale, arrival.Fx.Tint ?? def.Tint, Vector2.Zero, 0);
+        }
         DrawLayer4(batch, f, prim);
         _arena?.DrawGroup(batch, WallGroup.Front, prim, _shaderLight);
         DrawOutsideEnemies(batch, f, back: false);
@@ -703,6 +713,26 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
     /// 열린 출구 푸른 포탈(2026-11-15 사용자 결정 "출구는 보상 선택지 수만큼 포탈"): 출구 단계부터 그 문 입구 진입점에 <c>rules.rooms.portals.exit</c> 이펙트를
     /// 열림 한 번 → 유지 반복으로(나이 = 출구 단계에 든 뒤 시간). 포탈 문이 아니면(문·창살 그림) 없음.
     /// </summary>
+    /// <summary>
+    /// 도착 포탈(2026-11-15 — 방에 들어오면 주인공이 선 자리에 출구 포탈 그림이 <c>portals.arrival</c> 초 열려 있다가 <c>arrival_close</c> 초 동안 줄어들며 닫힘).
+    /// 자리·틱은 <see cref="Attach"/> 때 주인공 자리. 표시 전용. 없으면 null.
+    /// </summary>
+    private (EffectRef Fx, Vector2 Pos, float Age, float Scale)? ArrivalPortal(WorldFrame f)
+    {
+        if (_arrivalTick < 0 || f.World.Room is null || f.World.Defs.Rules.Rooms?.Portals is not { Arrival: > 0f } portals) return null;
+        var age = (f.StageTick - _arrivalTick) * World.Dt;
+        if (age < 0f) return null;
+        var close = MathF.Max(0.01f, portals.ArrivalClose);
+        var scale = age <= portals.Arrival ? 1f : 1f - (age - portals.Arrival) / close;
+        if (scale <= 0f) return null;
+        return (portals.Exit, _arrivalPos, age, scale * (portals.Exit.Scale ?? 1f));
+    }
+
+    private Vector2 _arrivalPos;
+    private int _arrivalTick = -1;
+    /// <summary>도착 포탈을 주인공 발보다 이만큼 뒤(위)에 세운다(px) — 주인공이 포탈 앞에 선 모양.</summary>
+    private const float ArrivalBehind = 6f;
+
     private IEnumerable<(EffectRef Fx, Vector2 Pos, float Age)> ExitPortals(WorldFrame f)
     {
         var w = f.World;
@@ -796,6 +826,8 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         foreach (var (fx, pos, _) in ExitPortals(f))
             if (fx.Effect.Def.Light is { } pl)
                 f.ShortLights.Add(new PointLight(pos, 48f * (fx.Scale ?? 1f) * pl.RadiusMul, pl.Color, 1f));
+        if (ArrivalPortal(f) is { } arrive && arrive.Fx.Effect.Def.Light is { } al)
+            f.ShortLights.Add(new PointLight(arrive.Pos, 48f * arrive.Scale * al.RadiusMul, al.Color, arrive.Scale));
         // 날아가는 투사체 빛(2026-11-13): 바닥 자리 위 light.height 에 뜬 점 빛 — 셰이더 빛이 3D 거리로 바닥·벽에 비춘다
         foreach (var p in f.World.Projectiles.Items)
         {

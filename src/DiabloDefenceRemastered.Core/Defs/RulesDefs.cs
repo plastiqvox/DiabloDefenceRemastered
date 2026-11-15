@@ -158,6 +158,10 @@ public sealed record RoomPortalsDef
     public required EffectRef Exit { get; init; }
     public required EffectRef Enemy { get; init; }
     public float EnemyCooldown { get; init; } = 1.5f;
+    /// <summary>도착 포탈(2026-11-15 — 방에 들어오면 주인공 자리에 출구 포탈 그림): 열려 있는 시간(초). 0 이면 없음. 표시 전용.</summary>
+    public float Arrival { get; init; } = 1.6f;
+    /// <summary>도착 포탈이 줄어들며 닫히는 시간(초).</summary>
+    public float ArrivalClose { get; init; } = 0.5f;
 }
 
 public sealed record RoomGatesDef
