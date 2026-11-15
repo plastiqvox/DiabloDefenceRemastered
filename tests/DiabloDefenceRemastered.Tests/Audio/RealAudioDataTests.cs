@@ -60,7 +60,7 @@ public class RealAudioDataTests
         // 다른 묶음이 정의를 넣으면 사라질 오류(합친 뒤 실제 데이터 시험이 0 을 본다). 이 목록 = 다른 묶음에 넘길 ID
         string[] pending =
         [
-            "$.sound_bindings.effects.fx_bolt_hit", "$.sound_bindings.effects.fx_fire_explosion",
+            "$.sound_bindings.effects.fx_bolt_hit", "$.sound_bindings.effects.fx_fire_explosion", "$.sound_bindings.effects.fx_portal_red",
             "$.sound_bindings.enemies.skeleton_king",
             "$.sound_bindings.hero.sorcerer",
             "$.sound_bindings.music.stage_cathedral",
@@ -148,7 +148,11 @@ public class RealAudioDataTests
         var hurt = defs.Sounds.Get(defs.SoundBindings.Hero["sorcerer"].Hurt!.Id);
         Assert.Equal(["d1/sound/sfx/sorceror/mage69.wav", "d1/sound/sfx/sorceror/mage69b.wav"], hurt.Files);
         Assert.Equal(["d1/sound/sfx/sorceror/mage71.wav"], defs.Sounds.Get(defs.SoundBindings.Hero["sorcerer"].Death!.Id).Files);
-        Assert.Equal("d1/sound/sfx/items/dooropen.wav", Assert.Single(defs.Sounds.Get(defs.SoundBindings.Ui["door_open"].Id).Files));
+        // 2026-11-15 포탈: 출구가 열리면 푸른 포탈 소리, 적 포탈은 다른 소리(사용자 결정 "빨간 포탈 파란포탈 소리 다르게")
+        Assert.Equal("d1/sound/sfx/misc/sentinel.wav", Assert.Single(defs.Sounds.Get(defs.SoundBindings.Ui["door_open"].Id).Files));
+        var red = defs.Sounds.Get(defs.SoundBindings.Effects["fx_portal_red"].Id);
+        Assert.Equal("d1/sound/sfx/misc/elementl.wav", Assert.Single(red.Files));
+        Assert.True(red.Offscreen);
         Assert.False(defs.SoundBindings.Ui.ContainsKey("room_clear"));   // 기획 12.7 v0.8: 방 정리는 소리 없이
         Assert.Equal("snd_invpot", defs.SoundBindings.Ui["potion_drink"].Id);   // v0.9.1 물약 마심 = 물약 소리(v0.8 belt_potion)
     }

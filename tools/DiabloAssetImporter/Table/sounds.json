@@ -72,7 +72,8 @@
     { "path": "sfx\\items\\magic.wav" },
     { "path": "sfx\\items\\magic1.wav" },
     { "path": "sfx\\items\\chest.wav" },
-    { "path": "sfx\\items\\dooropen.wav" },
+    { "path": "sfx\\misc\\sentinel.wav" },
+    { "path": "sfx\\misc\\elementl.wav" },
     { "path": "sfx\\items\\readbook.wav" }
   ]
 }
