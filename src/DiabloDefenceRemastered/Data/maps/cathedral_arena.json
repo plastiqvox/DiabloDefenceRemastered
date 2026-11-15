@@ -14,14 +14,14 @@
         "gates": [ { "id": "gate_nw", "side": "nw" }, { "id": "gate_ne", "side": "ne" },
                    { "id": "gate_se", "side": "se" }, { "id": "gate_sw", "side": "sw" } ],
         "place": [
-          // 피 방 6×6(위 모서리): 바깥 두 벽은 둘레 자리에 겹친다(갇힌 띠 없음). 문 = 오른쪽 벽 [5,3..4] 하위 4칸 틈, 막다른 방
+          // 피 방 6×6(2026-11-15 사용자 결정 — 피 타일을 지우고 보통 벽·바닥, 피는 셰이더 핏웅덩이로. 이름 room_blood 은 그대로)(위 모서리): 바깥 두 벽은 둘레 자리에 겹친다(갇힌 띠 없음). 문 = 오른쪽 벽 [5,3..4] 하위 4칸 틈, 막다른 방
           { "id": "s1_room_blood", "origin": [0, 0], "over_border": true,
             "decor_why": "닫힌 문(door_closed 26)은 아래 벽 장식 — 문으로 쓰지 않음(기획 10.3)",
-            "grid": [ "blood_wall_corner blood_wall_h blood_wall_h blood_wall_h blood_wall_h wall_corner      ",
-                      "blood_wall_v      blood_floor  blood_floor  blood_floor  blood_floor  wall_v",
-                      "blood_wall_v      blood_floor  blood_floor  blood_floor  blood_floor  wall_cap_v",   // 틈 위 벽 끝 기둥(2026-11-15 변 규칙)
-                      "blood_wall_v      blood_floor  blood_floor  blood_floor  blood_floor  .",
-                      "blood_wall_v      blood_floor  blood_floor  blood_floor  blood_floor  .",
+            "grid": [ "wall_corner       wall_h       wall_h       wall_h       wall_h       wall_corner      ",
+                      "wall_v            .            .            .            .            wall_v",
+                      "wall_v            .            .            .            .            wall_cap_v",   // 틈 위 벽 끝 기둥(2026-11-15 변 규칙)
+                      "wall_v            .            .            .            .            .",
+                      "wall_v            .            .            .            .            .",
                       "wall_corner       wall_h       door_closed  wall_h       wall_h       wall_cap_h  " ] },   // [5,5] 오른쪽 끝 기둥 — ┘ 기둥(3)은 위로 벽이 없으면 머리가 잘려 보인다(2026-11-15)
           // 창살 방(오른쪽 모서리): 위는 둘레, 오른쪽은 앞 턱. 문 = 왼쪽 벽 [13,3..4], 아래 벽에 창살 두 메가
           { "id": "s1_room_grate", "origin": [13, 0], "over_border": true,

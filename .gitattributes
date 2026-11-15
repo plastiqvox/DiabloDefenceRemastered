@@ -1,3 +1,6 @@
 * text=auto
 *.png binary
 *.cur binary
+# 가져오기 표는 자원 manifest 의 table_hash 가 파일 바이트로 계산된다(ImportTable.ComputeHash).
+# 줄 끝이 체크아웃마다 바뀌면 내용이 같아도 해시가 어긋나 Release 시작 검사가 멈춘다(2026-11-15) — LF 로 고정.
+tools/DiabloAssetImporter/Table/*.json text eol=lf

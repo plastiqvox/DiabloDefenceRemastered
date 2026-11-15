@@ -60,7 +60,11 @@
     { "id": "snd_magic",     "files": ["d1/sound/sfx/items/magic.wav"],    "category": "ui" },
     { "id": "snd_magic1",    "files": ["d1/sound/sfx/items/magic1.wav"],   "category": "ui", "volume": 0.5 },
     { "id": "snd_chest",     "files": ["d1/sound/sfx/items/chest.wav"],    "category": "ui" },
-    { "id": "snd_dooropen",  "files": ["d1/sound/sfx/items/dooropen.wav"], "category": "ui" },
+    // 포탈(2026-11-15 둘레 문 → 포탈 — 나무 문 소리 dooropen 은 뺐다). 원작은 마을 포탈·붉은 포탈 모두 sentinel(SpellPortal)이지만 사용자 결정으로 둘을 다르게:
+    // 푸른 출구 포탈 = 원작 포탈 소리(출구가 열릴 때 ui.door_open), 붉은 적 포탈 = 원작 엘리멘탈 불 소리(이펙트 fx_portal_red).
+    // 붉은 포탈은 화면 밖에서 열려도 들리게(적이 어디서 오는지 알림) — 같은 틱에 여러 문이 열려도 한 번만.
+    { "id": "snd_portal_blue", "files": ["d1/sound/sfx/misc/sentinel.wav"], "category": "ui" },
+    { "id": "snd_portal_red",  "files": ["d1/sound/sfx/misc/elementl.wav"], "category": "monster", "volume": 0.9, "offscreen": true, "min_interval": 0.4 },
     { "id": "snd_readbook",  "files": ["d1/sound/sfx/items/readbook.wav"], "category": "ui" },
 
     // 단계 2(wp4 — 기획 11.6·11.7·12.7·12.8): 상인에게 삼 = 원작 금화 소리(ui 로 — 줍기 금화와 분류만 다름), 상자 → 책 떨어짐 = flipbook,

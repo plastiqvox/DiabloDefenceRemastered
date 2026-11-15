@@ -22,7 +22,8 @@
     },
     "effects": {
       "fx_fire_explosion": "snd_firimp",
-      "fx_bolt_hit":       "snd_elecimp"
+      "fx_bolt_hit":       "snd_elecimp",
+      "fx_portal_red":     "snd_portal_red"
     },
     "sprite_sets": {
       "set_skelaxe": { "attack": "snd_skelaxe_attack", "hit": "snd_skelaxe_hit", "death": "snd_skelaxe_death" },
@@ -46,7 +47,7 @@
     },
     "ui": {
       "menu_move": "snd_titlemov", "menu_select": "snd_titlslct", "level_up": "snd_magic", "chest_open": "snd_chest",
-      "elite_pack": "snd_magic1", "door_open": "snd_dooropen", "potion_drink": "snd_invpot",
+      "elite_pack": "snd_magic1", "door_open": "snd_portal_blue", "potion_drink": "snd_invpot",
       // 단계 2(wp4): 회복 문 들어옴 = 물약 소리(기획 12.7 물약 보상 invpot), 사기 = 금화, 상자 → 책 = flipbook, 장비 끼우기 = 칸마다.
       // potion_denied·shop_denied 는 걸지 않는다 — 기획 11.7 "원작 '못 함' 소리 sfx\items\ 중, 없으면 무음" 인데 sfx\items 에 그런 소리가 없다(cantdoit 없음, 원본 확인)
       "heal_on_enter": "snd_invpot", "shop_buy": "snd_shop_gold", "chest_drop": "snd_flipbook",

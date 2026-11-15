@@ -225,6 +225,8 @@ internal static class DataRules
                     Err("stages", s.Id, sub, $"{s.Id}: 주인공 빛 반경 {r} 가 {MinHeroLight}~{MaxHeroLight}(화면 반폭) 밖이다(13.5-15)");
             }
             Check(s.Lighting.HeroLight.Radius, ".lighting.hero_light.radius");
+            if (s.Lighting.HeroLight.DrawScale is < 0.5f or > 1f)
+                Err("stages", s.Id, ".lighting.hero_light.draw_scale", $"{s.Id}: 그리는 빛 배율 {s.Lighting.HeroLight.DrawScale} 가 0.5~1 밖이다");
             for (var i = 0; i < s.Events.Count; i++)
                 if (s.Events[i].Params is LightChangeParams lc)
                     for (var j = 0; j < lc.Set.Count; j++)

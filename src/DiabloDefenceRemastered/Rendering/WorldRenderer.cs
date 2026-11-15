@@ -48,6 +48,11 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
     private bool _shaderTried;
     /// <summary>블룸(2026-11-14, 7.7 ⑦b) — 셰이더를 못 읽으면 null.</summary>
     private BloomRenderer? _bloom;
+    /// <summary>바닥 핏웅덩이(2026-11-15) — 셰이더를 못 읽으면 null. 자리는 월드마다 <see cref="_bloodPools"/>.</summary>
+    private BloodPoolRenderer? _blood;
+    private IReadOnlyList<BloodPool> _bloodPools = [];
+    /// <summary>핏웅덩이 밟기 물결(표시 전용 — 월드마다 비움).</summary>
+    private readonly BloodRipples _bloodRipples = new();
     private RenderTarget2D? _worldRT;
     private RenderTarget2D? _upRT;
     private int _scale;
@@ -104,6 +109,12 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             _grateArtStage = world.Stage;
             _grateArtBuilt = true;
         }
+        // 핏웅덩이 자리: 방 씨앗 + 맵 ID(같은 방은 늘 같은 자리), 문(포탈) 칸은 피함
+        _bloodPools = world.Arena is { } bloodGrid && world.Map is { } bloodMap && world.Stage?.BloodPools is { } bloodDef
+            ? BloodPools.Place(bloodGrid, bloodDef, BloodPools.Key(world.Seed, bloodMap.Id),
+                               world.Gates.Values.SelectMany(z => z.Cells).Select(c => bloodGrid.Iso.CellCenter(c.X, c.Y)))
+            : [];
+        _bloodRipples.Reset(_bloodPools.Count);
     }
 
     public void Draw(World world, RenderContext rc, float alpha)
@@ -157,6 +168,17 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         var noShadow = _shaderLight?.NoShadowEffect(toTarget, new Int2(_worldRT!.Width, _worldRT.Height));
         batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, noShadow, toTarget);
         _arena?.DrawFloor(batch, f.View, prim);
+        if (_blood is not null && _bloodPools.Count > 0)
+        {
+            // 핏웅덩이: 바닥 바로 뒤(벽·유닛 앞) — 셰이더가 달라 배치를 잠깐 닫는다. 걷는 주인공·적이 밟으면 물결
+            var bloodTime = tick / (float)World.TicksPerSecond;
+            if (!hero.Dead) _bloodRipples.Observe(_bloodPools, bloodTime, hero.Pos, hero.PrevPos);
+            foreach (var e in world.Enemies.Items)
+                if (e.IsAlive) _bloodRipples.Observe(_bloodPools, bloodTime, e.Pos, e.PrevPos);
+            batch.End();
+            _blood.Draw(batch, prim.Pixel, _bloodPools, _bloodRipples, bloodTime, f.View, toTarget, new Int2(_worldRT!.Width, _worldRT.Height));
+            batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, noShadow, toTarget);
+        }
         DrawOutsideEnemies(batch, f, back: true);
         _arena?.DrawGroup(batch, WallGroup.Back, prim, _shaderLight);
         DrawLayer1(batch, f, prim);
@@ -229,6 +251,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             _shaderLight = ShaderLight.TryLoad(device, _app.Log);
             _shaderLight?.Attach(world.Arena);
             _bloom = BloomRenderer.TryLoad(device, _app.Log);
+            _blood = BloodPoolRenderer.TryLoad(device, _app.Log);
         }
         // 셰이더 빛이면 LightRT 를 WorldRT 크기로(전체 해상도), 아니면 480×270
         var lightSize = _shaderLight is not null ? new Int2(_worldRT.Width, _worldRT.Height) : new Int2(LightRenderer.Width, LightRenderer.Height);
@@ -1059,6 +1082,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         _outlines.Dispose();
         _shaderLight?.Dispose();
         _bloom?.Dispose();
+        _blood?.Dispose();
     }
 
     /// <summary>7층 그리기 하나(텍스처·원본·자리·색·알파).</summary>
