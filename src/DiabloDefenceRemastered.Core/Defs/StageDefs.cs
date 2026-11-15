@@ -33,6 +33,8 @@ public sealed record StageDef : IDef
     /// </summary>
     public IReadOnlyList<ContentBundle> Requires { get; init; } = [];
     public LightingDef Lighting { get; init; } = new();
+    /// <summary>바닥 핏웅덩이(2026-11-15 — 표시 전용, <see cref="Art.BloodPools"/>). 없으면 그리지 않는다.</summary>
+    public BloodPoolsDef? BloodPools { get; init; }
     public StageScaling Scaling { get; init; } = new();
     public EliteChanceDef? EliteChance { get; init; }
     /// <summary>이 액트 우두머리의 접두사 수(2026-11-14 — 뒤쪽 액트는 3, 1~3). 없으면 <c>rules.ranks.unique.affixes</c>.</summary>
@@ -82,10 +84,32 @@ public sealed record LightingDef
     public IReadOnlyList<PointLightDef> Lights { get; init; } = [];
 }
 
+/// <summary>
+/// 바닥 핏웅덩이(2026-11-15 사용자 결정 "기존의 피타일은 제거하고 핏웅덩이 몇군데", "방마다 미리 몇군데"). 표시 전용 — 시뮬레이션과 무관.
+/// 방(월드)마다 씨앗으로 <see cref="Min"/>~<see cref="Max"/> 곳을 고른다(<see cref="Art.BloodPools.Place"/>). 반경은 바닥 가로 px(세로는 절반 — 아이소 바닥).
+/// </summary>
+public sealed record BloodPoolsDef
+{
+    public int Min { get; init; } = 2;
+    public int Max { get; init; } = 4;
+    public float RadiusMin { get; init; } = 28f;
+    public float RadiusMax { get; init; } = 48f;
+    /// <summary>웅덩이 사이 최소 거리(월드 px).</summary>
+    public float MinGap { get; init; } = 180f;
+    /// <summary>문(포탈) 칸에서 떨어질 거리(월드 px).</summary>
+    public float GateMargin { get; init; } = 110f;
+}
+
 public sealed record HeroLightDef
 {
     public Rgb Color { get; init; } = Rgb.White;
+    /// <summary>시야 반경(= 판정 반경, 13.5-15 하한 380).</summary>
     public float Radius { get; init; }
+    /// <summary>
+    /// 그리는 빛 반경 배율(2026-11-15 사용자 요청 "좀더 시야 좁게" — 0.5~1, 기본 1). 화면의 빛만 줄고 시야 판정(<see cref="Radius"/>)은 그대로라
+    /// 빛 밖 시야 안의 적도 보인다(유닛 밝기 하한 <c>unit_min_light</c>) — 원거리 적이 안 보이는 데서 쏘지 않는다(10.5-3).
+    /// </summary>
+    public float DrawScale { get; init; } = 1f;
 }
 
 /// <summary>점 빛 하나. 자리 <c>at</c> = 기준점 ID 또는 하위 타일 좌표 <c>[tx,ty]</c> — <c>World.Lighting</c> 은 로딩 뒤 월드 px 를 가진다.</summary>

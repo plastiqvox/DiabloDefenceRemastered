@@ -34,6 +34,8 @@ public sealed class LightingState
     public float Darkness { get; set; }
     public Rgb HeroLightColor { get; set; } = Rgb.White;
     public float HeroLightRadius { get; set; }
+    /// <summary>그리는 주인공 빛 반경 배율(<c>hero_light.draw_scale</c> — 시야 판정과 무관).</summary>
+    public float HeroLightDrawScale { get; set; } = 1f;
     /// <summary>유닛(주인공·적·시체·획득물) 밝기 하한(0 = 끔, 7.7).</summary>
     public float UnitMinLight { get; set; }
 
@@ -62,6 +64,7 @@ public sealed class LightingState
         Darkness = lighting.Darkness;
         HeroLightColor = lighting.HeroLight.Color;
         HeroLightRadius = lighting.HeroLight.Radius;
+        HeroLightDrawScale = lighting.HeroLight.DrawScale;
         UnitMinLight = lighting.UnitMinLight;
         _lights.Clear();
         _index.Clear();

@@ -116,7 +116,7 @@ public sealed class LightRenderer : IDisposable
 
         // ② 빛 가산(주인공·점 빛 먼저, 짧은 빛은 주인공에게 가까운 순)
         var n = 0;
-        if (lighting.HeroLightRadius > 0f) Put(ref n, LightKind.Hero, f.HeroDraw, lighting.HeroLightRadius, lighting.HeroLightColor, 1f);
+        if (lighting.HeroLightRadius > 0f) Put(ref n, LightKind.Hero, f.HeroDraw, lighting.HeroLightRadius * lighting.HeroLightDrawScale, lighting.HeroLightColor, 1f);
         foreach (var p in lighting.Lights)
             Put(ref n, LightKind.Point, p.Pos, p.Radius, p.Color, LightMath.Intensity(w.Seed, p.Id, f.StageTick, p.Flicker, p.PulsePeriod, p.PulseAmount));
         foreach (var s in f.ShortLights) Put(ref n, LightKind.Short, s.Pos, s.Radius, s.Color, s.Intensity, s.Height);
