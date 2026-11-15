@@ -112,3 +112,99 @@ public sealed class BloodRipples
     /// <summary>웅덩이 <paramref name="pool"/> 의 물결(아직 안 생긴 칸은 Start = -∞).</summary>
     public ReadOnlySpan<BloodRipple> Of(int pool) => pool < _ripples.Length ? _ripples[pool] : [];
 }
+
+/// <summary>핏자국 발자국 하나: 바닥 자리, 걷는 방향(화면 단위 벡터), 찍힌 때(초), 진하기(0..1 — 묻은 피가 줄수록 옅음), 모양 씨앗.</summary>
+public readonly record struct BloodFootprint(Vector2 Pos, Vector2 Dir, float Start, float Strength, float Seed);
+
+/// <summary>
+/// 핏자국 발자국(2026-11-15 사용자 요청 "밟으면 발자국"). 표시 전용 상태 — 월드가 바뀌면 <see cref="Reset"/>.
+/// 핏웅덩이 안(<see cref="Wetting"/>)에 들어가면 발에 피가 묻고(<see cref="WetSteps"/> 걸음), 나와서 <see cref="Stride"/> px 걸을 때마다
+/// 왼발·오른발을 번갈아 찍는다. 걸음마다 진하기가 줄고, 발자국은 <see cref="Life"/> 초 뒤 사라진다(끝 <see cref="FadeTime"/> 초 동안 옅어짐).
+/// 틱마다 한 번만 센다(그리기는 틱보다 자주 불릴 수 있다). 전체 <see cref="Max"/> 개를 넘으면 오래된 것부터 버린다.
+/// </summary>
+public sealed class BloodFootprints
+{
+    public const int WetSteps = 8;
+    public const float Stride = 20f;
+    public const float SideOffset = 3.5f;
+    public const float Life = 9f;
+    public const float FadeTime = 3f;
+    public const int Max = 96;
+    /// <summary>웅덩이 안(-1..1 공간)으로 이만큼 들어가면 발에 피가 묻는다.</summary>
+    public const float Wetting = 0.8f;
+    /// <summary>주인공 키(적은 실제 ID).</summary>
+    public static readonly EntityId HeroKey = new(-1, 0);
+
+    private struct Walker
+    {
+        public int Wet;
+        public float Travel;
+        public bool Left;
+        public int Tick;
+        public int Count;
+    }
+
+    private readonly Dictionary<EntityId, Walker> _walkers = [];
+    private readonly List<BloodFootprint> _prints = [];
+
+    public IReadOnlyList<BloodFootprint> Prints => _prints;
+
+    public void Reset()
+    {
+        _walkers.Clear();
+        _prints.Clear();
+    }
+
+    /// <summary>걷는 것 하나를 이번 틱(<paramref name="tick"/>)에 본다.</summary>
+    public void Observe(EntityId id, IReadOnlyList<BloodPool> pools, int tick, Vector2 pos, Vector2 prev)
+    {
+        var known = _walkers.TryGetValue(id, out var w);
+        if (known && w.Tick == tick) return;
+        w.Tick = tick;
+        foreach (var p in pools)
+            if (BloodRipples.Local(p, pos).Length() <= Wetting)
+            {
+                w.Wet = WetSteps;
+                w.Travel = 0f;
+                _walkers[id] = w;
+                return;
+            }
+        if (w.Wet <= 0)
+        {
+            if (known) _walkers.Remove(id);
+            return;
+        }
+        var step = pos - prev;
+        var len = step.Length();
+        if (len > 0.01f)
+        {
+            w.Travel += len;
+            if (w.Travel >= Stride)
+            {
+                w.Travel = 0f;
+                var dir = step / len;
+                // 바닥 공간(세로 ×2)에서 옆으로 → 화면으로 되돌림
+                var side = Vector2.Normalize(new Vector2(-dir.Y * 2f, dir.X * 0.5f)) * SideOffset * (w.Left ? 1f : -1f);
+                var seed = StableHash.ToUnit(StableHash.Of((uint)id.Slot, (uint)id.Gen, (uint)w.Count));
+                _prints.Add(new BloodFootprint(pos + side, dir, tick / (float)World.TicksPerSecond, w.Wet / (float)WetSteps, seed));
+                if (_prints.Count > Max) _prints.RemoveAt(0);
+                w.Left = !w.Left;
+                w.Wet--;
+                w.Count++;
+            }
+        }
+        _walkers[id] = w;
+    }
+
+    /// <summary>수명이 다한 발자국을 버린다.</summary>
+    public void Expire(float time) => _prints.RemoveAll(p => time - p.Start > Life);
+
+    /// <summary>지금 진하기(0 = 안 보임).</summary>
+    public static float Alpha(BloodFootprint p, float time)
+    {
+        var age = time - p.Start;
+        if (age < 0f || age > Life) return 0f;
+        var fade = age > Life - FadeTime ? (Life - age) / FadeTime : 1f;
+        return p.Strength * fade;
+    }
+}

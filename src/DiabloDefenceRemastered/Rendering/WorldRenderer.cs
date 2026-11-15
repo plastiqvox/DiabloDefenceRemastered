@@ -50,9 +50,13 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
     private BloomRenderer? _bloom;
     /// <summary>바닥 핏웅덩이(2026-11-15) — 셰이더를 못 읽으면 null. 자리는 월드마다 <see cref="_bloodPools"/>.</summary>
     private BloodPoolRenderer? _blood;
+    /// <summary>틸트 시프트 + 비네트(2026-11-15 HD-2D 기법) — 셰이더를 못 읽으면 null.</summary>
+    private TiltShiftRenderer? _tilt;
     private IReadOnlyList<BloodPool> _bloodPools = [];
     /// <summary>핏웅덩이 밟기 물결(표시 전용 — 월드마다 비움).</summary>
     private readonly BloodRipples _bloodRipples = new();
+    /// <summary>핏자국 발자국(표시 전용 — 월드마다 비움).</summary>
+    private readonly BloodFootprints _footprints = new();
     private RenderTarget2D? _worldRT;
     private RenderTarget2D? _upRT;
     private int _scale;
@@ -115,6 +119,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
                                world.Gates.Values.SelectMany(z => z.Cells).Select(c => bloodGrid.Iso.CellCenter(c.X, c.Y)))
             : [];
         _bloodRipples.Reset(_bloodPools.Count);
+        _footprints.Reset();
     }
 
     public void Draw(World world, RenderContext rc, float alpha)
@@ -170,13 +175,23 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         _arena?.DrawFloor(batch, f.View, prim);
         if (_blood is not null && _bloodPools.Count > 0)
         {
-            // 핏웅덩이: 바닥 바로 뒤(벽·유닛 앞) — 셰이더가 달라 배치를 잠깐 닫는다. 걷는 주인공·적이 밟으면 물결
+            // 핏웅덩이: 바닥 바로 뒤(벽·유닛 앞) — 셰이더가 달라 배치를 잠깐 닫는다. 걷는 주인공·적이 밟으면 물결, 나와서 걸으면 핏자국 발자국
             var bloodTime = tick / (float)World.TicksPerSecond;
-            if (!hero.Dead) _bloodRipples.Observe(_bloodPools, bloodTime, hero.Pos, hero.PrevPos);
+            if (!hero.Dead)
+            {
+                _bloodRipples.Observe(_bloodPools, bloodTime, hero.Pos, hero.PrevPos);
+                _footprints.Observe(BloodFootprints.HeroKey, _bloodPools, tick, hero.Pos, hero.PrevPos);
+            }
             foreach (var e in world.Enemies.Items)
-                if (e.IsAlive) _bloodRipples.Observe(_bloodPools, bloodTime, e.Pos, e.PrevPos);
+                if (e.IsAlive)
+                {
+                    _bloodRipples.Observe(_bloodPools, bloodTime, e.Pos, e.PrevPos);
+                    _footprints.Observe(e.Id, _bloodPools, tick, e.Pos, e.PrevPos);
+                }
+            _footprints.Expire(bloodTime);
             batch.End();
             _blood.Draw(batch, prim.Pixel, _bloodPools, _bloodRipples, bloodTime, f.View, toTarget, new Int2(_worldRT!.Width, _worldRT.Height));
+            _blood.DrawFootprints(batch, prim.Pixel, _footprints.Prints, bloodTime, f.View, toTarget, new Int2(_worldRT.Width, _worldRT.Height));
             batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, noShadow, toTarget);
         }
         DrawOutsideEnemies(batch, f, back: true);
@@ -210,6 +225,9 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
 
         // ── 7층 뒤 블룸(2026-11-14 사용자 요청 — 밝은 것만 번짐, 디버그 겹침·화면 효과는 번지지 않게 그 앞) ───
         _bloom?.Apply(batch, _worldRT!);
+
+        // ── 블룸 뒤 틸트 시프트·비네트(2026-11-15 HD-2D 기법 — 주인공 몸 높이의 띠만 또렷, 디버그 겹침·화면 효과는 그 뒤라 흐리지 않음) ───
+        _tilt?.Apply(batch, _worldRT!, (heroDraw.Y - 30f - cam.Y) / world.ViewSize.Y, s);
 
         // ── --debug-nav 겹침(월드 px) ─────────────────────────────
         if (_app.Options.DebugNav.Count > 0)
@@ -252,6 +270,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
             _shaderLight?.Attach(world.Arena);
             _bloom = BloomRenderer.TryLoad(device, _app.Log);
             _blood = BloodPoolRenderer.TryLoad(device, _app.Log);
+            _tilt = TiltShiftRenderer.TryLoad(device, _app.Log);
         }
         // 셰이더 빛이면 LightRT 를 WorldRT 크기로(전체 해상도), 아니면 480×270
         var lightSize = _shaderLight is not null ? new Int2(_worldRT.Width, _worldRT.Height) : new Int2(LightRenderer.Width, LightRenderer.Height);
@@ -1083,6 +1102,7 @@ public sealed class WorldRenderer : IWorldBound, IDisposable
         _shaderLight?.Dispose();
         _bloom?.Dispose();
         _blood?.Dispose();
+        _tilt?.Dispose();
     }
 
     /// <summary>7층 그리기 하나(텍스처·원본·자리·색·알파).</summary>

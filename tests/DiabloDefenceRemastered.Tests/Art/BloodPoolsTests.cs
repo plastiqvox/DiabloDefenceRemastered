@@ -77,6 +77,44 @@ public class BloodPoolsTests
         Assert.DoesNotContain(first, r.Of(0).ToArray());                          // 가장 오래된 것부터 덮음
     }
 
+    /// <summary>
+    /// 핏자국 발자국(2026-11-15 "밟으면 발자국"): 웅덩이 안에서는 피만 묻고, 나와서 20px 마다 좌우 번갈아 8걸음, 갈수록 옅음,
+    /// 같은 틱은 한 번만, 9초 뒤 사라짐(끝 3초 옅어짐). 다른 걷는 것은 따로 센다.
+    /// </summary>
+    [Fact]
+    public void Footprints_AfterPool_AlternateFeet_FadeAndExpire()
+    {
+        var pools = new[] { new BloodPool(new Vector2(100, 100), 40f, 0.3f) };
+        var fp = new BloodFootprints();
+        var id = BloodFootprints.HeroKey;
+        var tick = 0;
+        var pos = new Vector2(100, 100);
+        void Walk(float dx) { var prev = pos; pos += new Vector2(dx, 0f); fp.Observe(id, pools, ++tick, pos, prev); }
+
+        Walk(2f);                                          // 웅덩이 안 — 묻기만
+        Assert.Empty(fp.Prints);
+        while (BloodRipples.Local(pools[0], pos).Length() <= BloodFootprints.Wetting) Walk(2f);
+        for (var i = 0; i < 200; i++) Walk(2f);            // 400px 걸음 — 8걸음만 찍힘
+        Assert.Equal(BloodFootprints.WetSteps, fp.Prints.Count);
+        for (var i = 1; i < fp.Prints.Count; i++)
+        {
+            Assert.True(fp.Prints[i].Strength < fp.Prints[i - 1].Strength);
+            Assert.True(MathF.Sign(fp.Prints[i].Pos.Y - 100f) != MathF.Sign(fp.Prints[i - 1].Pos.Y - 100f), "좌우 번갈아");
+            Assert.InRange(fp.Prints[i].Pos.X - fp.Prints[i - 1].Pos.X, BloodFootprints.Stride - 0.01f, BloodFootprints.Stride + 2.01f);
+        }
+
+        var count = fp.Prints.Count;
+        fp.Observe(id, pools, tick, pos + new Vector2(50, 0), pos);   // 같은 틱 — 세지 않음
+        Assert.Equal(count, fp.Prints.Count);
+
+        var first = fp.Prints[0];
+        Assert.Equal(first.Strength, BloodFootprints.Alpha(first, first.Start + 1f));
+        Assert.Equal(first.Strength * 0.5f, BloodFootprints.Alpha(first, first.Start + BloodFootprints.Life - BloodFootprints.FadeTime * 0.5f), 3);
+        Assert.Equal(0f, BloodFootprints.Alpha(first, first.Start + BloodFootprints.Life + 0.1f));
+        fp.Expire(first.Start + BloodFootprints.Life + 100f);
+        Assert.Empty(fp.Prints);
+    }
+
     [Fact]
     public void RealMaps_NoBloodTiles()
     {

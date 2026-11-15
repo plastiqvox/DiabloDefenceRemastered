@@ -44,6 +44,7 @@ public sealed class BloodPoolRenderer : IDisposable
     {
         if (pools.Count == 0) return;
         var prm = _effect.Parameters;
+        _effect.CurrentTechnique = _effect.Techniques["BloodPool"];
         prm["MatrixTransform"]?.SetValue(toTarget * Matrix.CreateOrthographicOffCenter(0, targetSize.X, targetSize.Y, 0, 0, -1));
         prm["Time"]?.SetValue(time);
         for (var i = 0; i < pools.Count; i++)
@@ -64,6 +65,30 @@ public sealed class BloodPoolRenderer : IDisposable
             batch.Draw(pixel, dest, new Color(p.Seed, 0f, 0f, Opacity));
             batch.End();
         }
+    }
+
+    /// <summary>핏자국 발자국 반 크기(px — 바닥 공간 정사각형 2a, 화면 2a × a).</summary>
+    public const float FootprintHalf = 10f;
+
+    /// <summary>핏자국 발자국(기법 <c>Footprint</c>) — 한 배치. 방향은 바닥 공간 각도(세로 ×2)로 정점 색 G 에.</summary>
+    public void DrawFootprints(SpriteBatch batch, Texture2D pixel, IReadOnlyList<BloodFootprint> prints, float time,
+                               RectF view, Matrix toTarget, Int2 targetSize)
+    {
+        if (prints.Count == 0) return;
+        _effect.CurrentTechnique = _effect.Techniques["Footprint"];
+        _effect.Parameters["MatrixTransform"]?.SetValue(toTarget * Matrix.CreateOrthographicOffCenter(0, targetSize.X, targetSize.Y, 0, 0, -1));
+        batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, _effect);
+        const float a = FootprintHalf;
+        foreach (var p in prints)
+        {
+            var alpha = BloodFootprints.Alpha(p, time);
+            if (alpha <= 0f || p.Pos.X + a < view.X0 || p.Pos.X - a > view.X1 || p.Pos.Y + a < view.Y0 || p.Pos.Y - a > view.Y1) continue;
+            var angle = MathF.Atan2(p.Dir.Y * 2f, p.Dir.X);
+            if (angle < 0f) angle += MathF.Tau;
+            var dest = new Rectangle((int)MathF.Floor(p.Pos.X - a), (int)MathF.Floor(p.Pos.Y - a * 0.5f), (int)(a * 2f), (int)a);
+            batch.Draw(pixel, dest, new Color(p.Seed, angle / MathF.Tau, 0f, alpha * Opacity));
+        }
+        batch.End();
     }
 
     private readonly Microsoft.Xna.Framework.Vector4[] _ripples = new Microsoft.Xna.Framework.Vector4[BloodRipples.PerPool];
