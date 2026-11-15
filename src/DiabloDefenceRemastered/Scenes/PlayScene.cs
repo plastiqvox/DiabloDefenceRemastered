@@ -120,6 +120,12 @@ public sealed class PlayScene : IScene
             return;
         }
 
+        // 치트 콘솔(2026-11-15 임시 — ` 로 연다, 자동 조작 판에서는 열지 않음)
+        if (_policy is null && input.IsPressed(UiButtons.Console))
+        {
+            _stack?.Push(new ConsoleOverlay(_flow, this));
+            return;
+        }
         if (input.IsPressed(UiButtons.Minimap)) _hud.Minimap.Visible = !_hud.Minimap.Visible;
         // 상인 창이 열린 동안 Esc(Pause|Cancel)는 창의 떠나기로 간다 — 일시정지는 P·창 비활성만
         var shopOpen = World.Room?.Shop is { Open: true };
@@ -247,6 +253,25 @@ public sealed class PlayScene : IScene
         Consume(old);                    // 옛 월드의 남은 표시 이벤트(나감 틱 것)는 옛 월드 틱으로 소비하고 비운다(7.11)
         LogInnerRooms(old);
         _session.Advance();
+        LogRooms();
+        var world = World;
+        _maxHpIn = world.Hero.MaxHp;
+        _shop.Sync(null);
+        AttachAll(world);
+        StartActAudio();
+        _lastPhase = world.Room?.Phase ?? RoomPhase.Enter;
+    }
+
+    /// <summary>치트 콘솔 줄(열고 닫아도 남음).</summary>
+    public List<string> ConsoleLog { get; } = [];
+
+    /// <summary>치트 방 이동(콘솔 <c>next</c>·<c>room</c>·<c>boss</c>): <see cref="Advance"/> 와 같은 붙이기를 어두워짐 없이 바로.</summary>
+    public void CheatWarp(int index)
+    {
+        var old = World;
+        Consume(old);
+        LogInnerRooms(old);
+        _session.Warp(index);
         LogRooms();
         var world = World;
         _maxHpIn = world.Hero.MaxHp;
